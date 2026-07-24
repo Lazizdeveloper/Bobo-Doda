@@ -2,26 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Suzani — tokenlar tailwind.config.ts bilan bir xil turishi shart */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #08211a;
+  --bg-card: #0e2e24;
+  --bg-card-hover: #143a2d;
+  --primary: #ffc53d;
+  --on-primary: #08211a;
+  --accent: #a3e635;
+  --text: #f5efe0;
+  --text-muted: #9cb6a6;
+  --text-faint: #7b9a88;
+  --border: rgba(214, 74, 52, 0.4);
+  --border-strong: #d64a34;
+  --danger: #f5355e;
+  --warning: #f58c1f;
+  --success: #4ade80;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+::selection {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ── Imzo element: qizil yugurma chok (running stitch) ────────────────
+   So'zanada naqsh chekkasi qizil ip bilan chokланади. Faqat asosiy
+   panellarda ishlatiladi — har kartada emas (aks holda shovqin bo'ladi). */
+.sb-stitch {
+  position: relative;
+}
+/* Gorizontal chekinish burchak radiusidan o'tadi — kesish (overflow) kerak emas */
+.sb-stitch::before {
+  content: "";
+  position: absolute;
+  inset: 0 14px auto 14px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--border-strong) 0 7px,
+    transparent 7px 13px
+  );
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
+}
+
+@keyframes sb-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.sb-fade-in {
+  animation: sb-fade-in 200ms ease-out;
+}
+
+@keyframes sb-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.sb-skeleton {
+  animation: sb-pulse 1.6s ease-in-out infinite;
 }

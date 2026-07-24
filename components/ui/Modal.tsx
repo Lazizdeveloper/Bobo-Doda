@@ -1,0 +1,99 @@
+"use client";
+
+import { useEffect, useRef, type ReactNode } from "react";
+
+export interface ModalProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}
+
+export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  /* onClose'ni ref orqali ushlaymiz — identifikatori o'zgarsa ham
+     fokus effekti qayta ishlamasin (aks holda har belgida input fokusdan chiqadi) */
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  /* Ochilganda BIR marta: panelga fokus + body scroll qulflash.
+     Faqat [open] ga bog'liq — render'lar orasida qayta ishlamaydi. */
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    panelRef.current?.focus();
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  /* Klaviatura: Escape yopadi, Tab modal ichida aylanadi (focus-trap).
+     Bu effekt fokusni O'G'IRLAMAYDI — faqat Tab/Escape'da ishlaydi. */
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCloseRef.current();
+      if (e.key === "Tab") {
+        const panel = panelRef.current;
+        if (!panel) return;
+        const focusables = panel.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey) {
+          if (active === first || !panel.contains(active)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else if (active === last || !panel.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div
+        className="sb-fade-in absolute inset-0 bg-bg/80"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className="sb-fade-in relative w-full max-w-md rounded-card border border-line bg-card p-6 shadow-overlay"
+      >
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <h3 className="font-heading text-lg font-bold text-ink">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Yopish"
+            className="-mr-1 -mt-1 rounded p-1 text-muted transition-colors duration-150 hover:text-ink"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div className="text-sm text-muted">{children}</div>
+        {footer && <div className="mt-6 flex justify-end gap-3">{footer}</div>}
+      </div>
+    </div>
+  );
+}

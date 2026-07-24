@@ -1,0 +1,38 @@
+# Netlify deploy sozlamasi
+#
+# MUHIM: bu Next.js App Router ilovasi. `app/page.tsx` yo'q — bosh sahifa (`/`)
+# `next.config.mjs` dagi rewrite orqali `public/landing.html` ga yo'naltiriladi.
+# Rewrite Next.js runtime'ini talab qiladi, shuning uchun @netlify/plugin-nextjs
+# SHART. Usiz `/` va barcha `[id]` marshrutlari 404 beradi.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Bosh sahifa — statik landing.
+# Bu next.config.mjs dagi rewrite'ning dublikati: CDN darajasida ishlaydi va
+# runtime bilan bog'liq muammo bo'lsa ham `/` ochilishini kafolatlaydi.
+[[redirects]]
+  from = "/"
+  to = "/landing.html"
+  status = 200
+
+# Xavfsizlik header'lari.
+# next.config.mjs dagi headers() Next marshrutlariga tegishli, lekin `public/`
+# ichidagi statik fayllar (landing.html) CDN'dan to'g'ridan-to'g'ri beriladi —
+# shuning uchun bu yerda ham takrorlanadi.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    X-DNS-Prefetch-Control = "off"
