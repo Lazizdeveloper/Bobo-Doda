@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -10,10 +10,11 @@ import { TagInput } from "@/components/ui/TagInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
-import { createJob } from "@/lib/mock-api";
+import { createJob } from "@/lib/api";
 import type { ServiceCategory } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
+import { useFormDraft } from "@/lib/hooks/useFormDraft";
 
 const MAX_QUESTIONS = 3;
 
@@ -32,6 +33,25 @@ export default function YangiElonPage() {
   const [budgetMax, setBudgetMax] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [publishing, setPublishing] = useState(false);
+  const draftValue = useMemo(
+    () => ({ step, category, title, description, skills, questions, budgetMin, budgetMax }),
+    [step, category, title, description, skills, questions, budgetMin, budgetMax]
+  );
+  const clearDraft = useFormDraft(
+    "draft:buyer:new-job",
+    draftValue,
+    (draft) => {
+      setStep(draft.step);
+      setCategory(draft.category);
+      setTitle(draft.title);
+      setDescription(draft.description);
+      setSkills(draft.skills);
+      setQuestions(draft.questions);
+      setBudgetMin(draft.budgetMin);
+      setBudgetMax(draft.budgetMax);
+    },
+    Boolean(category || title || description || skills.length || questions.length || budgetMin || budgetMax)
+  );
 
   const steps = [
     t("wizard.step1"),
@@ -87,6 +107,7 @@ export default function YangiElonPage() {
         skillsRequired: skills,
         screeningQuestions: questions.map((q) => q.trim()).filter(Boolean),
       });
+      clearDraft();
       toast(t("jwiz.published"));
       router.push(`/xaridor/elonlarim/${job.id}`);
     } catch {

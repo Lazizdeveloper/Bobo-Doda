@@ -31,7 +31,10 @@ export function Sidebar({ items, brand, footer, open, onClose }: SidebarProps) {
   }, [pathname]);
 
   const nav = (
-    <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Asosiy">
+    <nav
+      className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3"
+      aria-label="Asosiy"
+    >
       {items.map((item) => {
         const active = item.exact
           ? pathname === item.href

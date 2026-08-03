@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { getSession, login, register } from "@/lib/mock-api";
+import { getSession, login, register } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 type Mode = "register" | "login";
@@ -56,7 +56,18 @@ function KirishForm() {
     if (!/^\+?\d{9,15}$/.test(phone.replace(/[\s-]/g, ""))) {
       next.phone = t("auth.errPhone");
     }
-    if (password.length < 6) next.password = t("auth.errPassword");
+    if (
+      (mode === "login" && password.length < 6) ||
+      (mode === "register" &&
+        (password.length < 8 ||
+          !/[A-Za-z]/.test(password) ||
+          !/\d/.test(password)))
+    ) {
+      next.password =
+        mode === "register"
+          ? t("security.passwordRules")
+          : t("auth.errPassword");
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }

@@ -55,6 +55,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
     window.localStorage.setItem("sb_lang", next);

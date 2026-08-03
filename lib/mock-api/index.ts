@@ -14,8 +14,11 @@ import type {
   SellerProfile,
   Service,
   Session,
+  SupportTicket,
   User,
   UserRole,
+  VerificationRecord,
+  Dispute,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
 import {
@@ -27,6 +30,14 @@ import {
   text,
   textList,
 } from "@/lib/validate";
+import {
+  assertTransition,
+  contractMachine,
+  jobMachine,
+  milestoneMachine,
+  offerMachine,
+  proposalMachine,
+} from "@/lib/api/state-machines";
 import {
   BUYER_ID,
   SELLER_ID,
@@ -58,12 +69,19 @@ const KEYS = {
   reviews: "sb2_reviews",
   notifications: "sb2_notifications",
   savedJobs: "sb2_saved_jobs",
+  savedMarket: "sb2_saved_market",
+  verifications: "sb2_verifications",
+  supportTickets: "sb2_support_tickets",
+  disputes: "sb2_disputes",
+  preferences: "sb2_preferences",
   balances: "sb2_balances",
   withdrawn: "sb2_withdrawn",
   cards: "sb2_cards",
   session: "sb_session",
   seeded: "sb2_seeded",
 } as const;
+
+export const DATA_CHANGED_EVENT = "bobododa:data-changed";
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -91,6 +109,9 @@ function write<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(
+      new CustomEvent(DATA_CHANGED_EVENT, { detail: { key } })
+    );
   } catch (err) {
     /* localStorage kvotasi to'lsa app qulab tushmasin — toza xato qaytadi */
     if (isQuotaError(err)) throw new Error("STORAGE_FULL");
@@ -203,13 +224,19 @@ export function getSession(): Session | null {
   ensureSeed();
   const session = read<Session | null>(KEYS.session, null);
   if (!session) return null;
+  if (read<string[]>("sb2_blocked_users", []).includes(session.userId)) {
+    window.localStorage.removeItem(KEYS.session);
+    return null;
+  }
   /* Eski (verified maydonisiz) sessiyalarni tasdiqlangan deb qabul qilamiz */
   return { ...session, verified: session.verified ?? true };
 }
 
-/** Joriy sessiya foydalanuvchisi id'si (yo'q bo'lsa demo hisob) */
+/** Joriy sessiya foydalanuvchisi. Data API anonim demo hisobga tushib qolmaydi. */
 function currentUserId(): string {
-  return getSession()?.userId ?? SELLER_ID;
+  const session = getSession();
+  if (!session) throw new Error("NO_SESSION");
+  return session.userId;
 }
 
 /** Shartnoma bo'yicha funksiyalar rolga qarab filtrlanadi */
@@ -226,6 +253,13 @@ function myContractIds(): Set<string> {
       .filter((c) => (asBuyer ? c.buyerId === uid : c.sellerId === uid))
       .map((c) => c.id)
   );
+}
+
+function isThreadParticipant(threadId: string, userId: string): boolean {
+  const contract = read<Contract[]>(KEYS.contracts, []).find((item) => item.id === threadId);
+  if (contract) return contract.buyerId === userId || contract.sellerId === userId;
+  const offer = read<Offer[]>(KEYS.offers, []).find((item) => item.id === threadId);
+  return !!offer && (offer.buyerId === userId || offer.sellerId === userId);
 }
 
 /** Yangi ro'yxatdan o'tgan mutaxassis uchun bo'sh profil */
@@ -262,9 +296,13 @@ export async function register(data: {
 }): Promise<Session> {
   ensureSeed();
   await delay(500);
+  const system = read<{ registration?: boolean }>("sb2_system_settings", {});
+  if (system.registration === false) throw new Error("REGISTRATION_PAUSED");
   const phone = normalizePhone(data.phone);
   const password = text(data.password, LIMITS.password);
-  if (password.length < 6) throw new Error("WEAK_PASSWORD");
+  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    throw new Error("WEAK_PASSWORD");
+  }
   const users = read<User[]>(KEYS.users, []);
   if (users.some((u) => normalizePhone(u.phone) === phone)) {
     throw new Error("PHONE_EXISTS");
@@ -311,6 +349,9 @@ export async function login(data: {
   /* Bir xil xato — telefon bazada bormi-yo'qmi oshkor qilinmaydi */
   if (!user || !user.password || user.password !== data.password) {
     throw new Error("INVALID_CREDENTIALS");
+  }
+  if (read<string[]>("sb2_blocked_users", []).includes(user.id)) {
+    throw new Error("ACCOUNT_BLOCKED");
   }
   const session: Session = {
     userId: user.id,
@@ -499,6 +540,7 @@ export async function createService(
 ): Promise<Service> {
   await delay(500);
   const session = getSession();
+  if (!session || session.role !== "mutaxassis") throw new Error("FORBIDDEN");
   const service: Service = {
     ...data,
     title: text(data.title, LIMITS.title),
@@ -508,7 +550,7 @@ export async function createService(
     deliveryDays: amount(data.deliveryDays, { min: 1, max: 365 }),
     images: (data.images ?? []).slice(0, 10),
     id: uid("s"),
-    sellerId: session?.userId ?? SELLER_ID,
+    sellerId: session.userId,
     currency: "UZS",
     createdAt: new Date().toISOString(),
   };
@@ -608,7 +650,12 @@ export async function createProposal(data: {
 }): Promise<Proposal> {
   await delay(500);
   const session = getSession();
-  const sellerId = session?.userId ?? SELLER_ID;
+  if (!session || session.role !== "mutaxassis") throw new Error("FORBIDDEN");
+  const sellerId = session.userId;
+  const job = read<Job[]>(KEYS.jobs, []).find((item) => item.id === data.jobId);
+  if (!job || job.status !== "ochiq" || job.buyerId === sellerId) {
+    throw new Error("NOT_FOUND");
+  }
   const proposals = read<Proposal[]>(KEYS.proposals, []);
   /* Bir ishga bitta faol taklif — qaytarib olingan bo'lsagina qayta yuborish
      mumkin (Upwork/Fiverr amaliyoti). To'g'ridan-to'g'ri URL orqali kirishdan
@@ -715,6 +762,23 @@ export async function cancelContract(id: string): Promise<Contract> {
     .reduce((sum, m) => sum + m.amount, 0);
   if (refund > 0) creditBalance(contract.buyerId, refund);
 
+  assertTransition(
+    contractMachine,
+    contract.status,
+    "bekor_qilingan",
+    uid2 === contract.buyerId ? "buyer" : "seller"
+  );
+  /* Escrow qaytarilgach child holati funded bo'lib qolmasligi kerak. */
+  if (refund > 0) {
+    write(
+      KEYS.milestones,
+      milestones.map((milestone) =>
+        milestone.contractId === id && milestone.status === "mablaglangan"
+          ? { ...milestone, status: "kutilmoqda" as const }
+          : milestone
+      )
+    );
+  }
   contracts[idx] = { ...contract, status: "bekor_qilingan" };
   write(KEYS.contracts, contracts);
 
@@ -735,6 +799,7 @@ export async function getMilestones(contractId: string): Promise<Milestone[]> {
   ensureSeed();
   applyEscrowRules();
   await delay(200);
+  if (!myContractIds().has(contractId)) throw new Error("NOT_FOUND");
   const milestones = read<Milestone[]>(KEYS.milestones, []);
   return milestones.filter((m) => m.contractId === contractId);
 }
@@ -760,14 +825,10 @@ export async function submitMilestone(id: string): Promise<Milestone> {
     (c) => c.id === milestones[idx].contractId && c.sellerId === currentUserId()
   );
   if (!ownContract) throw new Error("NOT_FOUND");
+  if (ownContract.status !== "faol") throw new Error("BAD_STATE");
   /* Faqat mablag'langan yoki qayta ishlanayotgan bosqichni topshirish mumkin —
      to'lanmagan (kutilmoqda) bosqich topshirilmaydi */
-  if (
-    milestones[idx].status !== "mablaglangan" &&
-    milestones[idx].status !== "ozgartirish_soraldi"
-  ) {
-    throw new Error("BAD_STATE");
-  }
+  assertTransition(milestoneMachine, milestones[idx].status, "topshirildi", "seller");
   const now = new Date();
   const deadline = new Date(now);
   deadline.setDate(deadline.getDate() + 3);
@@ -800,6 +861,8 @@ export async function submitMilestone(id: string): Promise<Milestone> {
 export async function getMessages(contractId: string): Promise<Message[]> {
   ensureSeed();
   await delay(200);
+  const userId = currentUserId();
+  if (!isThreadParticipant(contractId, userId)) throw new Error("NOT_FOUND");
   const messages = read<Message[]>(KEYS.messages, []);
   return messages
     .filter((m) => m.contractId === contractId)
@@ -822,8 +885,8 @@ export async function sendMessage(
   await delay(300);
   const clean = text(body, LIMITS.message);
   if (!clean) throw new Error("EMPTY_MESSAGE");
-  const session = getSession();
-  const senderId = session?.userId ?? SELLER_ID;
+  const senderId = currentUserId();
+  if (!isThreadParticipant(contractId, senderId)) throw new Error("NOT_FOUND");
   const message: Message = {
     id: uid("m"),
     contractId,
@@ -924,17 +987,359 @@ export async function markAllNotificationsRead(): Promise<void> {
 export async function getSavedJobIds(): Promise<string[]> {
   ensureSeed();
   await delay(100);
-  return read<string[]>(KEYS.savedJobs, []);
+  const uid = currentUserId();
+  const saved = read<Record<string, string[]> | string[]>(KEYS.savedJobs, {});
+  /* v8 gacha saqlanganlar umumiy massiv edi. Endi har bir hisob alohida. */
+  return Array.isArray(saved) ? saved : saved[uid] ?? [];
 }
 
 export async function toggleSavedJob(jobId: string): Promise<string[]> {
   await delay(150);
-  const saved = read<string[]>(KEYS.savedJobs, []);
+  const uid = currentUserId();
+  const stored = read<Record<string, string[]> | string[]>(KEYS.savedJobs, {});
+  const byUser = Array.isArray(stored) ? { [uid]: stored } : stored;
+  const saved = byUser[uid] ?? [];
   const next = saved.includes(jobId)
     ? saved.filter((id) => id !== jobId)
     : [...saved, jobId];
-  write(KEYS.savedJobs, next);
+  write(KEYS.savedJobs, { ...byUser, [uid]: next });
   return next;
+}
+
+/* ---------------- Xaridor saqlagan xizmat va mutaxassislar ---------------- */
+
+export async function getSavedMarketIds(): Promise<string[]> {
+  ensureSeed();
+  await delay(100);
+  const uid = currentUserId();
+  const saved = read<Record<string, string[]>>(KEYS.savedMarket, {});
+  return saved[uid] ?? [];
+}
+
+export async function toggleSavedMarketItem(id: string): Promise<string[]> {
+  await delay(150);
+  const uid = currentUserId();
+  const saved = read<Record<string, string[]>>(KEYS.savedMarket, {});
+  const mine = saved[uid] ?? [];
+  const next = mine.includes(id)
+    ? mine.filter((itemId) => itemId !== id)
+    : [...mine, id];
+  write(KEYS.savedMarket, { ...saved, [uid]: next });
+  return next;
+}
+
+/* ---------------- Ishonch markazi: KYC, yordam va nizolar ---------------- */
+
+export async function getVerification(): Promise<VerificationRecord | null> {
+  ensureSeed();
+  await delay(120);
+  const uid = currentUserId();
+  return (
+    read<VerificationRecord[]>(KEYS.verifications, []).find(
+      (record) => record.userId === uid
+    ) ?? null
+  );
+}
+
+export async function submitVerification(
+  input: Omit<
+    VerificationRecord,
+    "userId" | "status" | "submittedAt" | "rejectionReason"
+  >
+): Promise<VerificationRecord> {
+  await delay(450);
+  const uid = currentUserId();
+  const adultCutoff = new Date();
+  adultCutoff.setFullYear(adultCutoff.getFullYear() - 18);
+  const birthDate = new Date(input.birthDate);
+  const validDocuments = input.documents.filter(
+    (document) =>
+      /^data:image\/(png|jpeg|webp);base64,/.test(document) &&
+      document.length <= 1_050_000
+  );
+  if (
+    !input.legalName.trim() ||
+    !input.birthDate ||
+    Number.isNaN(birthDate.getTime()) ||
+    birthDate > adultCutoff ||
+    validDocuments.length < 2
+  ) {
+    throw new Error("INVALID_INPUT");
+  }
+  const records = read<VerificationRecord[]>(KEYS.verifications, []);
+  const next: VerificationRecord = {
+    ...input,
+    legalName: text(input.legalName, LIMITS.name),
+    documents: validDocuments.slice(0, 3),
+    userId: uid,
+    status: "korib_chiqilmoqda",
+    submittedAt: new Date().toISOString(),
+  };
+  const index = records.findIndex((record) => record.userId === uid);
+  if (index >= 0) records[index] = next;
+  else records.push(next);
+  write(KEYS.verifications, records);
+  return next;
+}
+
+export async function getSupportTickets(): Promise<SupportTicket[]> {
+  ensureSeed();
+  await delay(120);
+  const uid = currentUserId();
+  return read<SupportTicket[]>(KEYS.supportTickets, [])
+    .filter((ticket) => ticket.userId === uid)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function createSupportTicket(
+  input: Pick<SupportTicket, "topic" | "subject" | "message">
+): Promise<SupportTicket> {
+  await delay(350);
+  const userId = currentUserId();
+  const ticket: SupportTicket = {
+    id: uid("ticket"),
+    userId,
+    topic: input.topic,
+    subject: text(input.subject, 160),
+    message: text(input.message, LIMITS.message),
+    status: "ochiq",
+    createdAt: new Date().toISOString(),
+  };
+  if (!ticket.subject || !ticket.message) throw new Error("INVALID_INPUT");
+  const tickets = read<SupportTicket[]>(KEYS.supportTickets, []);
+  write(KEYS.supportTickets, [...tickets, ticket]);
+  return ticket;
+}
+
+export async function getDisputeByContract(
+  contractId: string
+): Promise<Dispute | null> {
+  ensureSeed();
+  await delay(120);
+  if (!myContractIds().has(contractId)) return null;
+  return (
+    read<Dispute[]>(KEYS.disputes, []).find(
+      (dispute) => dispute.contractId === contractId
+    ) ?? null
+  );
+}
+
+export async function openDispute(
+  contractId: string,
+  input: Pick<Dispute, "reason" | "description" | "evidence">
+): Promise<Dispute> {
+  await delay(450);
+  const userId = currentUserId();
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const index = contracts.findIndex(
+    (contract) =>
+      contract.id === contractId &&
+      (contract.buyerId === userId || contract.sellerId === userId) &&
+      contract.status === "faol"
+  );
+  if (index < 0) throw new Error("NOT_ALLOWED");
+  assertTransition(contractMachine, contracts[index].status, "nizo", userId === contracts[index].buyerId ? "buyer" : "seller");
+  const disputes = read<Dispute[]>(KEYS.disputes, []);
+  if (disputes.some((dispute) => dispute.contractId === contractId)) {
+    throw new Error("ALREADY_EXISTS");
+  }
+  const dispute: Dispute = {
+    id: uid("dispute"),
+    contractId,
+    openedBy: userId,
+    reason: input.reason,
+    description: text(input.description, LIMITS.message),
+    evidence: input.evidence.slice(0, 5),
+    status: "ochiq",
+    createdAt: new Date().toISOString(),
+  };
+  if (!dispute.description) throw new Error("INVALID_INPUT");
+  contracts[index] = { ...contracts[index], status: "nizo" };
+  write(KEYS.contracts, contracts);
+  write(KEYS.disputes, [...disputes, dispute]);
+  const otherId =
+    contracts[index].buyerId === userId
+      ? contracts[index].sellerId
+      : contracts[index].buyerId;
+  pushNotification(
+    otherId,
+    "bosqich",
+    "ntf.disputeOpened",
+    `${contracts[index].buyerId === otherId ? "/xaridor" : "/mutaxassis"}/shartnomalar/${contractId}`,
+    { title: contracts[index].title }
+  );
+  return dispute;
+}
+
+export interface AccountPreferences {
+  messages: boolean;
+  contracts: boolean;
+  payments: boolean;
+  marketing: boolean;
+}
+
+export async function getAccountPreferences(): Promise<AccountPreferences> {
+  ensureSeed();
+  await delay(100);
+  const userId = currentUserId();
+  const all = read<Record<string, AccountPreferences>>(KEYS.preferences, {});
+  return (
+    all[userId] ?? {
+      messages: true,
+      contracts: true,
+      payments: true,
+      marketing: false,
+    }
+  );
+}
+
+export async function saveAccountPreferences(
+  preferences: AccountPreferences
+): Promise<void> {
+  await delay(180);
+  const userId = currentUserId();
+  const all = read<Record<string, AccountPreferences>>(KEYS.preferences, {});
+  write(KEYS.preferences, { ...all, [userId]: preferences });
+}
+
+export async function exportCurrentUserData(): Promise<Record<string, unknown>> {
+  ensureSeed();
+  await delay(250);
+  const userId = currentUserId();
+  const contracts = read<Contract[]>(KEYS.contracts, []).filter(
+    (item) => item.buyerId === userId || item.sellerId === userId
+  );
+  const contractIds = new Set(contracts.map((item) => item.id));
+  return {
+    exportedAt: new Date().toISOString(),
+    user: read<User[]>(KEYS.users, []).find((item) => item.id === userId),
+    profile: read<Record<string, SellerProfile>>(KEYS.profiles, {})[userId],
+    services: read<Service[]>(KEYS.services, []).filter(
+      (item) => item.sellerId === userId
+    ),
+    jobs: read<Job[]>(KEYS.jobs, []).filter((item) => item.buyerId === userId),
+    proposals: read<Proposal[]>(KEYS.proposals, []).filter(
+      (item) => item.sellerId === userId
+    ),
+    offers: read<Offer[]>(KEYS.offers, []).filter(
+      (item) => item.buyerId === userId || item.sellerId === userId
+    ),
+    contracts,
+    milestones: read<Milestone[]>(KEYS.milestones, []).filter((item) =>
+      contractIds.has(item.contractId)
+    ),
+    messages: read<Message[]>(KEYS.messages, []).filter((item) =>
+      contractIds.has(item.contractId)
+    ),
+    reviews: read<Review[]>(KEYS.reviews, []).filter(
+      (item) => item.sellerId === userId || contractIds.has(item.contractId)
+    ),
+    verification: await getVerification(),
+    supportTickets: await getSupportTickets(),
+    preferences: await getAccountPreferences(),
+  };
+}
+
+export async function deleteCurrentAccount(): Promise<void> {
+  await delay(350);
+  const userId = currentUserId();
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  if (
+    contracts.some(
+      (item) =>
+        (item.buyerId === userId || item.sellerId === userId) &&
+        (item.status === "faol" ||
+          item.status === "imzolangan" ||
+          item.status === "nizo")
+    )
+  ) {
+    throw new Error("ACTIVE_CONTRACTS");
+  }
+  write(
+    KEYS.users,
+    read<User[]>(KEYS.users, []).filter((item) => item.id !== userId)
+  );
+  const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
+  delete profiles[userId];
+  write(KEYS.profiles, profiles);
+  write(
+    KEYS.services,
+    read<Service[]>(KEYS.services, []).filter((item) => item.sellerId !== userId)
+  );
+  write(
+    KEYS.jobs,
+    read<Job[]>(KEYS.jobs, []).filter((item) => item.buyerId !== userId)
+  );
+  write(
+    KEYS.cards,
+    read<PaymentCard[]>(KEYS.cards, []).filter((item) => item.userId !== userId)
+  );
+  write(
+    KEYS.notifications,
+    read<AppNotification[]>(KEYS.notifications, []).filter(
+      (item) => item.userId !== userId
+    )
+  );
+  write(
+    KEYS.proposals,
+    read<Proposal[]>(KEYS.proposals, []).filter((item) => item.sellerId !== userId)
+  );
+  write(
+    KEYS.offers,
+    read<Offer[]>(KEYS.offers, []).filter(
+      (item) => item.buyerId !== userId && item.sellerId !== userId
+    )
+  );
+  write(
+    KEYS.verifications,
+    read<VerificationRecord[]>(KEYS.verifications, []).filter(
+      (item) => item.userId !== userId
+    )
+  );
+  write(
+    KEYS.supportTickets,
+    read<SupportTicket[]>(KEYS.supportTickets, []).filter(
+      (item) => item.userId !== userId
+    )
+  );
+  write(
+    KEYS.disputes,
+    read<Dispute[]>(KEYS.disputes, []).filter(
+      (item) => item.openedBy !== userId
+    )
+  );
+  /* Yakunlangan moliyaviy yozuvlar boshqa taraf va audit uchun saqlanadi,
+     lekin foydalanuvchi nomi anonimlashtiriladi. */
+  write(
+    KEYS.contracts,
+    contracts.map((item) => ({
+      ...item,
+      buyerName: item.buyerId === userId ? "O'chirilgan foydalanuvchi" : item.buyerName,
+      sellerName:
+        item.sellerId === userId ? "O'chirilgan foydalanuvchi" : item.sellerName,
+    }))
+  );
+  const preferences = read<Record<string, AccountPreferences>>(
+    KEYS.preferences,
+    {}
+  );
+  delete preferences[userId];
+  write(KEYS.preferences, preferences);
+  const balances = read<Record<string, number>>(KEYS.balances, {});
+  delete balances[userId];
+  write(KEYS.balances, balances);
+  const withdrawn = read<Record<string, number>>(KEYS.withdrawn, {});
+  delete withdrawn[userId];
+  write(KEYS.withdrawn, withdrawn);
+  const savedJobs = read<Record<string, string[]> | string[]>(KEYS.savedJobs, {});
+  if (!Array.isArray(savedJobs)) {
+    delete savedJobs[userId];
+    write(KEYS.savedJobs, savedJobs);
+  }
+  const savedMarket = read<Record<string, string[]>>(KEYS.savedMarket, {});
+  delete savedMarket[userId];
+  write(KEYS.savedMarket, savedMarket);
+  window.localStorage.removeItem(KEYS.session);
 }
 
 /* ---------------- Taklifni qaytarib olish ---------------- */
@@ -947,6 +1352,14 @@ export async function withdrawProposal(id: string): Promise<Proposal> {
     (p) => p.id === id && p.sellerId === currentUserId()
   );
   if (idx < 0) throw new Error("NOT_FOUND");
+  assertTransition(
+    proposalMachine,
+    proposals[idx].status,
+    "qaytarib_olingan",
+    "seller"
+  );
+  const job = read<Job[]>(KEYS.jobs, []).find((item) => item.id === proposals[idx].jobId);
+  if (!job || job.status !== "ochiq") throw new Error("BAD_STATE");
   proposals[idx] = { ...proposals[idx], status: "qaytarib_olingan" };
   write(KEYS.proposals, proposals);
 
@@ -1075,6 +1488,7 @@ export async function createJob(data: {
   await delay(500);
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
+  if (session.role !== "xaridor") throw new Error("FORBIDDEN");
   const users = read<User[]>(KEYS.users, []);
   const user = users.find((u) => u.id === session.userId);
   const jobs = read<Job[]>(KEYS.jobs, []);
@@ -1111,6 +1525,7 @@ export async function closeJob(id: string): Promise<Job> {
   const jobs = read<Job[]>(KEYS.jobs, []);
   const idx = jobs.findIndex((j) => j.id === id && j.buyerId === uid2);
   if (idx < 0) throw new Error("NOT_FOUND");
+  assertTransition(jobMachine, jobs[idx].status, "yopilgan", "buyer");
   jobs[idx] = { ...jobs[idx], status: "yopilgan" };
   write(KEYS.jobs, jobs);
 
@@ -1154,21 +1569,28 @@ export async function setProposalStatus(
 ): Promise<Proposal> {
   await delay(300);
   const proposals = read<Proposal[]>(KEYS.proposals, []);
+  const proposal = proposals.find((item) => item.id === id);
+  if (!proposal) throw new Error("NOT_FOUND");
+  const job = read<Job[]>(KEYS.jobs, []).find(
+    (item) => item.id === proposal.jobId && item.buyerId === currentUserId()
+  );
+  if (!job || job.status !== "ochiq") throw new Error("NOT_FOUND");
   const idx = proposals.findIndex((p) => p.id === id);
   if (idx < 0) throw new Error("NOT_FOUND");
+  assertTransition(proposalMachine, proposals[idx].status, status, "buyer");
   proposals[idx] = { ...proposals[idx], status };
   write(KEYS.proposals, proposals);
 
-  const job = read<Job[]>(KEYS.jobs, []).find(
+  const notificationJob = read<Job[]>(KEYS.jobs, []).find(
     (j) => j.id === proposals[idx].jobId
   );
-  if (job && (status === "suhbat" || status === "rad_etildi")) {
+  if (notificationJob && (status === "suhbat" || status === "rad_etildi")) {
     pushNotification(
       proposals[idx].sellerId,
       "taklif",
       status === "suhbat" ? "ntf.proposalInterview" : "ntf.proposalRejected",
       `/mutaxassis/takliflarim/${proposals[idx].id}`,
-      { title: job.title }
+      { title: notificationJob.title }
     );
   }
   return proposals[idx];
@@ -1188,6 +1610,7 @@ export async function hireProposal(
   await delay(600);
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
+  if (session.role !== "xaridor") throw new Error("FORBIDDEN");
   const proposals = read<Proposal[]>(KEYS.proposals, []);
   const pIdx = proposals.findIndex((p) => p.id === proposalId);
   if (pIdx < 0 || !milestonesInput.length) throw new Error("NOT_FOUND");
@@ -1198,6 +1621,15 @@ export async function hireProposal(
   if (jIdx < 0 || jobs[jIdx].buyerId !== session.userId)
     throw new Error("NOT_FOUND");
   const job = jobs[jIdx];
+  if (job.status !== "ochiq") throw new Error("BAD_STATE");
+  assertTransition(proposalMachine, proposal.status, "yollandi", "buyer");
+  if (
+    read<Contract[]>(KEYS.contracts, []).some(
+      (contract) => contract.jobId === job.id && contract.sellerId === proposal.sellerId
+    )
+  ) {
+    throw new Error("DUPLICATE");
+  }
 
   const users = read<User[]>(KEYS.users, []);
   const buyerName = users.find((u) => u.id === session.userId)?.fullName ?? "";
@@ -1293,6 +1725,9 @@ export async function createOffer(data: {
   await delay(500);
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
+  if (session.role !== "xaridor" || session.userId === data.sellerId) {
+    throw new Error("FORBIDDEN");
+  }
   const offers = read<Offer[]>(KEYS.offers, []);
   /* Bitta mutaxassisga bitta kutilayotgan taklif */
   const hasPending = offers.some(
@@ -1305,7 +1740,9 @@ export async function createOffer(data: {
 
   const users = read<User[]>(KEYS.users, []);
   const buyerName = users.find((u) => u.id === session.userId)?.fullName ?? "";
-  const sellerName = users.find((u) => u.id === data.sellerId)?.fullName ?? "";
+  const seller = users.find((u) => u.id === data.sellerId && u.role === "mutaxassis");
+  if (!seller) throw new Error("NOT_FOUND");
+  const sellerName = seller.fullName;
 
   const offer: Offer = {
     id: uid("o"),
@@ -1387,6 +1824,7 @@ export async function acceptOffer(id: string): Promise<Contract> {
   );
   if (idx < 0) throw new Error("NOT_FOUND");
   const offer = offers[idx];
+  assertTransition(offerMachine, offer.status, "qabul_qilindi", "seller");
 
   const service = offer.serviceId
     ? read<Service[]>(KEYS.services, []).find((s) => s.id === offer.serviceId)
@@ -1455,6 +1893,7 @@ export async function withdrawOffer(id: string): Promise<Offer> {
     (o) => o.id === id && o.buyerId === uid2 && o.status === "yuborilgan"
   );
   if (idx < 0) throw new Error("NOT_FOUND");
+  assertTransition(offerMachine, offers[idx].status, "bekor_qilingan", "buyer");
   offers[idx] = { ...offers[idx], status: "bekor_qilingan" };
   write(KEYS.offers, offers);
   pushNotification(
@@ -1476,6 +1915,7 @@ export async function declineOffer(id: string): Promise<Offer> {
     (o) => o.id === id && o.sellerId === uid2 && o.status === "yuborilgan"
   );
   if (idx < 0) throw new Error("NOT_FOUND");
+  assertTransition(offerMachine, offers[idx].status, "rad_etildi", "seller");
   offers[idx] = { ...offers[idx], status: "rad_etildi" };
   write(KEYS.offers, offers);
   pushNotification(
@@ -1511,6 +1951,8 @@ function findOwnMilestone(
    mumkin. Pul har bosqich qabul qilinganda mutaxassisga o'tadi. */
 export async function fundContract(id: string): Promise<Contract> {
   await delay(700);
+  const system = read<{ paymentsPaused?: boolean }>("sb2_system_settings", {});
+  if (system.paymentsPaused) throw new Error("PAYMENTS_PAUSED");
   const uid2 = currentUserId();
   const contracts = read<Contract[]>(KEYS.contracts, []);
   const idx = contracts.findIndex(
@@ -1518,9 +1960,13 @@ export async function fundContract(id: string): Promise<Contract> {
   );
   if (idx < 0) throw new Error("NOT_FOUND");
   const contract = contracts[idx];
+  assertTransition(contractMachine, contract.status, "faol", "buyer");
 
   /* Barcha kutilayotgan bosqichlar bir to'lovda mablag'lanadi */
   const milestones = read<Milestone[]>(KEYS.milestones, []);
+  if (!milestones.some((milestone) => milestone.contractId === id && milestone.status === "kutilmoqda")) {
+    throw new Error("BAD_STATE");
+  }
   const updated = milestones.map((m) =>
     m.contractId === id && m.status === "kutilmoqda"
       ? { ...m, status: "mablaglangan" as const }
@@ -1649,7 +2095,8 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
   const milestones = read<Milestone[]>(KEYS.milestones, []);
   const contracts = read<Contract[]>(KEYS.contracts, []);
   const { idx, contract } = findOwnMilestone(id, milestones, contracts);
-  if (milestones[idx].status !== "topshirildi") throw new Error("BAD_STATE");
+  if (contract.status !== "faol") throw new Error("BAD_STATE");
+  assertTransition(milestoneMachine, milestones[idx].status, "qabul_qilindi", "buyer");
   milestones[idx] = {
     ...milestones[idx],
     status: "qabul_qilindi",
@@ -1684,7 +2131,13 @@ export async function requestRevision(
   const milestones = read<Milestone[]>(KEYS.milestones, []);
   const contracts = read<Contract[]>(KEYS.contracts, []);
   const { idx, contract } = findOwnMilestone(id, milestones, contracts);
-  if (milestones[idx].status !== "topshirildi") throw new Error("BAD_STATE");
+  if (contract.status !== "faol") throw new Error("BAD_STATE");
+  assertTransition(
+    milestoneMachine,
+    milestones[idx].status,
+    "ozgartirish_soraldi",
+    "buyer"
+  );
   milestones[idx] = {
     ...milestones[idx],
     status: "ozgartirish_soraldi",
@@ -1715,6 +2168,7 @@ export async function createReview(
     (c) => c.id === contractId && c.buyerId === session.userId
   );
   if (!contract) throw new Error("NOT_FOUND");
+  if (contract.status !== "yakunlangan") throw new Error("BAD_STATE");
   const reviews = read<Review[]>(KEYS.reviews, []);
   if (reviews.some((r) => r.contractId === contractId))
     throw new Error("ALREADY_REVIEWED");
@@ -1748,6 +2202,26 @@ export async function updateUserName(fullName: string): Promise<void> {
     users[idx] = { ...users[idx], fullName: clean };
     write(KEYS.users, users);
   }
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  await delay(350);
+  const session = getSession();
+  if (!session) throw new Error("NO_SESSION");
+  const users = read<User[]>(KEYS.users, []);
+  const index = users.findIndex((user) => user.id === session.userId);
+  if (index < 0 || users[index].password !== currentPassword) {
+    throw new Error("INVALID_CURRENT_PASSWORD");
+  }
+  const cleaned = text(newPassword, LIMITS.password);
+  if (cleaned.length < 8 || !/[A-Za-z]/.test(cleaned) || !/\d/.test(cleaned)) {
+    throw new Error("WEAK_PASSWORD");
+  }
+  users[index] = { ...users[index], password: cleaned };
+  write(KEYS.users, users);
 }
 
 export { SELLER_ID, BUYER_ID };

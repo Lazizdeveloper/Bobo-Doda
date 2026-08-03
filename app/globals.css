@@ -4,6 +4,9 @@
 
 /* Suzani — tokenlar tailwind.config.ts bilan bir xil turishi shart */
 :root {
+  --font-onest: "Onest";
+  --font-unbounded: "Unbounded";
+  --font-mono: "JetBrains Mono";
   --bg: #08211a;
   --bg-card: #0e2e24;
   --bg-card-hover: #143a2d;
@@ -15,7 +18,7 @@
   --text-faint: #7b9a88;
   --border: rgba(214, 74, 52, 0.4);
   --border-strong: #d64a34;
-  --danger: #f5355e;
+  --danger: #ff7892;
   --warning: #f58c1f;
   --success: #4ade80;
 }

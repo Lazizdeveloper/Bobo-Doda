@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { OfferStatusBadge } from "@/components/shared/StatusBadge";
@@ -19,7 +19,7 @@ import {
   sendMessage,
   withdrawOffer,
   SELLER_ID,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Message, Offer } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -223,27 +223,17 @@ export default function TaklifTafsilotiXaridorPage() {
       )}
 
       {/* Bekor qilish modali */}
-      <Modal
+      <ConfirmDialog
         open={withdrawOpen}
-        onClose={() => setWithdrawOpen(false)}
         title={t("offer.withdrawTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setWithdrawOpen(false)}
-              disabled={withdrawing}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={withdrawing} onClick={handleWithdraw}>
-              {t("offer.withdraw")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("offer.withdrawDesc")}</p>
-      </Modal>
+        description={t("offer.withdrawDesc")}
+        confirmLabel={t("offer.withdraw")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={withdrawing}
+        onConfirm={handleWithdraw}
+        onCancel={() => setWithdrawOpen(false)}
+      />
     </div>
   );
 }

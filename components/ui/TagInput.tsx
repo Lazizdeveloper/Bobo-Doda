@@ -73,7 +73,7 @@ export function TagInput({
           onKeyDown={handleKeyDown}
           onBlur={addTag}
           placeholder={value.length ? "" : placeholder}
-          className="min-w-24 flex-1 bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none"
+          className="min-w-24 flex-1 rounded-sm bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         />
       </div>
       {error && (

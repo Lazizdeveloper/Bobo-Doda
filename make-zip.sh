@@ -30,7 +30,7 @@ ITEMS=(
   tailwind.config.ts
   tsconfig.json
   next-env.d.ts
-  .eslintrc.json
+  eslint.config.mjs
 )
 
 for item in "${ITEMS[@]}"; do
@@ -41,7 +41,7 @@ for item in "${ITEMS[@]}"; do
 done
 
 # Eski nusxa tekshiruvi — build'ni yiqitgan asosiy sabab shu edi.
-for stale in JobBazar jobbazar bobo-doda backup eski; do
+for stale in JobBazar jobbazar SkillBozor skillbozor BoboDoda bobododa bobo-doda backup eski; do
   if [ -d "$stale" ]; then
     echo "XATO: '$stale/' jildi topildi — bu loyihaning eski nusxasi." >&2
     echo "      Uni o'chiring yoki loyihadan tashqariga ko'chiring, keyin qayta urining." >&2

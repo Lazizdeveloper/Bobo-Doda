@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast";
 import { ServiceCard } from "@/components/shared/ServiceCard";
-import { deleteService, getServices, updateService } from "@/lib/mock-api";
+import { deleteService, getServices, updateService } from "@/lib/api";
 import type { Service, ServiceStatus } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -114,26 +114,24 @@ export default function XizmatlarimPage() {
         </div>
       )}
 
-      <Modal
+      <ConfirmDialog
         open={!!toDelete}
-        onClose={() => setToDelete(null)}
         title={t("services.deleteTitle")}
-        footer={
+        description={
           <>
-            <Button variant="ghost" onClick={() => setToDelete(null)} disabled={busy}>
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" onClick={handleDelete} loading={busy}>
-              {t("common.delete")}
-            </Button>
+            <p>{t("services.deleteDesc")}</p>
+            {toDelete && (
+              <p className="mt-2 font-medium text-ink">{toDelete.title}</p>
+            )}
           </>
         }
-      >
-        <p>{t("services.deleteDesc")}</p>
-        {toDelete && (
-          <p className="mt-2 font-medium text-ink">{toDelete.title}</p>
-        )}
-      </Modal>
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={busy}
+        onConfirm={handleDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }

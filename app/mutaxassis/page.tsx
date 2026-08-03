@@ -19,7 +19,7 @@ import {
   getServices,
   getSession,
   SELLER_ID,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type {
   Contract,
   Job,

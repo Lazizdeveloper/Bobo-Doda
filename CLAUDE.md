@@ -56,8 +56,8 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
 ## Qamrov
 - Ikkala tomon (mutaxassis + xaridor kabinetlari) bitta umumiy localStorage
   bazada — akkaunt almashtirib ikki tomonlama oqimni sinash mumkin.
-- Backend, real Telegram/to'lov, admin, soatlik shartnoma, Connects, nizo
-  ochish formasi — YO'Q.
+- Backend, real Telegram/to'lov, admin, soatlik shartnoma va Connects — YO'Q.
+  Nizo ochish, sabab/dalil yuborish va shartnomani muzlatish frontend oqimi bor.
 - Komponent kutubxonalari ishlatilmaydi — hammasi `/components/ui` da noldan.
 
 ## Stack
@@ -71,12 +71,10 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   alohida qatlam — yetishmasa uz'ga tushadi), Context + `useT()` hook. Til
   `sb_lang` da. Yangi UI matni qo'shsangiz **uch tilга ham** yozing (en.ts ga
   ham). `LangSwitch` — UZ/RU/EN.
-- **Valyuta (global o'zgartkich)**: `lib/currency.ts` — Markaziy Osiyo 5 valyutasi
-  (UZS/KZT/KGS/TJS/TMT), belgi tilга qarab lokallashadi. `CurrencySwitch` header'da,
-  til yonida; tanlov `sb_currency` da. **MOCK: konvertatsiya YO'Q** — `formatMoney`
-  faqat belgini almashtiradi, raqam o'zgarmaydi. `formatMoney(amount, lang)` imzosi
-  o'zgarmagan (valyuta modul-store'dan o'qiladi); qayta render `useT()` konteksti
-  orqali. Maydon yorliqlarida valyuta so'zi yo'q (masalan "Narx", "Summa").
+- **Valyuta**: joriy ma'lumot modeli summalarni UZS'da saqlaydi va `formatMoney`
+  doim UZS ko'rsatadi. Avvalgi faqat belgini almashtiradigan global switch
+  moliyaviy jihatdan noto'g'ri bo'lgani uchun header'dan olib tashlangan.
+  KZT/KGS/TJS/TMT faqat backend real FX kursi va asl valyutani qaytarganda yoqiladi.
 - TrustBadge mantiqla: `computeBadge()` lib/types.ts da (5+/4.5→ishonchli, 25+/4.8→top).
 
 ## Dizayn tili: "Suzani" (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
@@ -159,6 +157,11 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
 - Sharh: yakunlangan shartnoma workroom'ida bir marta (`createReview`,
   `Review.buyerName` ochiq profillar uchun).
 - Katalog (`getSpecialists`) chala (bio bo'sh) profillarni ko'rsatmaydi.
+- **Ishonch markazi**: ikkala rol uchun KYC/verifikatsiya, hujjat yuklash,
+  support ticketlar, notification/privacy sozlamalari, data export va xavfsiz
+  account deletion frontend oqimlari mavjud.
+- **Huquqiy/payment holatlari**: foydalanish shartlari, maxfiylik, oferta hamda
+  success/pending/failed/expired/refunded callback ekranlari mavjud.
 
 ## Platforma tahlilidan kelgan qo'shimchalar (Upwork/Fiverr/Kwork amaliyoti)
 - **Escrow avto-qabul**: `applyEscrowRules()` — muddati o'tgan `topshirildi`

@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { TrustBadge as TrustBadgeType } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -13,7 +14,8 @@ const tones: Record<TrustBadgeType, BadgeTone> = {
 export function TrustBadge({ badge }: { badge: TrustBadgeType }) {
   const { t } = useT();
   return (
-    <Badge tone={tones[badge]}>
+    <Tooltip content={t(`badge.${badge}Hint`)}>
+      <Badge tone={tones[badge]}>
       {badge === "top_mutaxassis" && (
         <svg
           width="10"
@@ -43,7 +45,8 @@ export function TrustBadge({ badge }: { badge: TrustBadgeType }) {
           />
         </svg>
       )}
-      {t(`badge.${badge}`)}
-    </Badge>
+        {t(`badge.${badge}`)}
+      </Badge>
+    </Tooltip>
   );
 }

@@ -9,12 +9,16 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { MilestoneItem } from "@/components/shared/MilestoneItem";
 import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
+import { DisputeControl } from "@/components/shared/DisputeControl";
+import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
 import {
   cancelContract,
@@ -26,7 +30,7 @@ import {
   sendMessage,
   submitMilestone,
   SELLER_ID,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Contract, Message, Milestone, Review } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -56,21 +60,36 @@ export default function ShartnomaWorkroomPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const loadVersionRef = useRef(0);
 
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
-  function reload() {
-    getContract(params.id).then((found) => {
-      setContract(found);
-      if (found) {
-        getMilestones(found.id).then(setMilestones);
-        getMessages(found.id).then(setMessages);
-        getReviewByContract(found.id).then(setReview);
+  async function reload() {
+    const version = ++loadVersionRef.current;
+    setContract(undefined);
+    try {
+      const found = await getContract(params.id);
+      if (version !== loadVersionRef.current) return;
+      if (!found) {
+        setContract(null);
+        return;
       }
-    });
+      const [nextMilestones, nextMessages, nextReview] = await Promise.all([
+        getMilestones(found.id),
+        getMessages(found.id),
+        getReviewByContract(found.id),
+      ]);
+      if (version !== loadVersionRef.current) return;
+      setContract(found);
+      setMilestones(nextMilestones);
+      setMessages(nextMessages);
+      setReview(nextReview);
+    } catch {
+      if (version === loadVersionRef.current) setContract(null);
+    }
   }
 
   useEffect(() => {
@@ -154,6 +173,12 @@ export default function ShartnomaWorkroomPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.contracts"), href: "/mutaxassis/shartnomalar" },
+          { label: contract.title },
+        ]}
+      />
       {/* Sarlavha */}
       <Card padding="lg" stitch>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -203,9 +228,7 @@ export default function ShartnomaWorkroomPage() {
         </div>
       )}
       {contract.status === "nizo" && (
-        <p className="rounded-card border border-danger/25 bg-danger/5 p-4 text-xs text-muted">
-          {t("contract.disputeNote")}
-        </p>
+        <DisputeSummary contractId={contract.id} />
       )}
       {contract.status === "bekor_qilingan" && (
         <p className="rounded-card border border-line bg-card p-4 text-xs text-muted">
@@ -310,8 +333,12 @@ export default function ShartnomaWorkroomPage() {
       </Card>
 
       {/* Shartnomani bekor qilish */}
-      {canCancel && (
-        <div className="flex justify-end">
+      {(canCancel || contract.status === "faol") && (
+        <div className="flex justify-end gap-2">
+          {contract.status === "faol" && (
+            <DisputeControl contractId={contract.id} onOpened={reload} />
+          )}
+          {canCancel && (
           <Button
             variant="ghost"
             size="sm"
@@ -320,31 +347,22 @@ export default function ShartnomaWorkroomPage() {
           >
             {t("contract.cancel")}
           </Button>
+          )}
         </div>
       )}
 
       {/* Bekor qilish modali */}
-      <Modal
+      <ConfirmDialog
         open={cancelOpen}
-        onClose={() => setCancelOpen(false)}
         title={t("contract.cancelTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setCancelOpen(false)}
-              disabled={cancelling}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={cancelling} onClick={handleCancel}>
-              {t("contract.cancel")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("contract.cancelDesc")}</p>
-      </Modal>
+        description={t("contract.cancelDesc")}
+        confirmLabel={t("contract.cancel")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={cancelling}
+        onConfirm={handleCancel}
+        onCancel={() => setCancelOpen(false)}
+      />
 
       {/* Ishni topshirish modali */}
       <Modal

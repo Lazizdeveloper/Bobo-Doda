@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Input } from "@/components/ui/Input";
+import { Pagination } from "@/components/ui/Pagination";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { JobCard } from "@/components/shared/JobCard";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { CATEGORIES } from "@/lib/category-fields";
 import {
   getJobs,
   getSavedJobIds,
   getSellerProfile,
   toggleSavedJob,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Job, SellerProfile } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -46,6 +48,9 @@ export default function IshElonlariPage() {
   const [category, setCategory] = useState("all");
   const [budget, setBudget] = useState<BudgetFilter>("all");
   const [sort, setSort] = useState<Sort>("new");
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(search, 250);
+  const PER_PAGE = 10;
 
   useEffect(() => {
     getJobs().then(setJobs);
@@ -53,11 +58,16 @@ export default function IshElonlariPage() {
     getSavedJobIds().then(setSavedIds);
   }, []);
 
+  /* Filtr/tab/qidiruv o'zgarsa — birinchi sahifaga */
+  useEffect(() => {
+    setPage(1);
+  }, [tab, category, budget, sort, debouncedSearch]);
+
   async function handleToggleSave(jobId: string) {
     setSavedIds(await toggleSavedJob(jobId));
   }
 
-  const query = search.trim().toLowerCase();
+  const query = debouncedSearch.trim().toLowerCase();
   const filtered = (jobs ?? [])
     .filter((j) => {
       if (tab === "saved") return savedIds.includes(j.id);
@@ -86,6 +96,13 @@ export default function IshElonlariPage() {
         ? t("jobs.emptyMatching")
         : t("jobs.empty");
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice(
+    (currentPage - 1) * PER_PAGE,
+    currentPage * PER_PAGE
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -111,11 +128,12 @@ export default function IshElonlariPage() {
 
       {/* Qidiruv va filtrlar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Input
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder={t("jobs.searchPh")}
           aria-label={t("jobs.searchPh")}
+          clearLabel={t("search.clear")}
         />
         <Select
           aria-label={t("jobs.category")}
@@ -157,7 +175,7 @@ export default function IshElonlariPage() {
         <EmptyState title={emptyTitle} />
       ) : (
         <div className="flex flex-col gap-4">
-          {filtered.map((job) => (
+          {paged.map((job) => (
             <JobCard
               key={job.id}
               job={job}
@@ -166,6 +184,19 @@ export default function IshElonlariPage() {
             />
           ))}
         </div>
+      )}
+
+      {jobs && filtered.length > PER_PAGE && (
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          onChange={setPage}
+          labels={{
+            prev: t("pager.prev"),
+            next: t("pager.next"),
+            page: t("pager.page"),
+          }}
+        />
       )}
     </div>
   );

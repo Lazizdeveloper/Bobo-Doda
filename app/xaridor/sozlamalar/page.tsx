@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { CardManager } from "@/components/shared/cards";
-import { getCards, getCurrentUser, logout, updateUserName } from "@/lib/mock-api";
+import { AccountControls } from "@/components/shared/AccountControls";
+import { AccountSecurity } from "@/components/shared/AccountSecurity";
+import { getCards, getCurrentUser, logout, updateUserName } from "@/lib/api";
 import type { PaymentCard } from "@/lib/types";
 import { useT, type Lang } from "@/lib/i18n";
 
@@ -101,6 +103,7 @@ export default function XaridorSozlamalarPage() {
             options={[
               { value: "uz", label: "O'zbekcha" },
               { value: "ru", label: "Русский" },
+              { value: "en", label: "English" },
             ]}
             value={lang}
             onChange={(value) => setLang(value as Lang)}
@@ -119,6 +122,9 @@ export default function XaridorSozlamalarPage() {
         </div>
       </Card>
 
+      <AccountSecurity />
+      <AccountControls />
+
       {/* Hisob */}
       <Card padding="lg">
         <h2 className="font-heading text-base font-bold text-ink">
@@ -133,23 +139,16 @@ export default function XaridorSozlamalarPage() {
         </Button>
       </Card>
 
-      <Modal
+      <ConfirmDialog
         open={logoutOpen}
-        onClose={() => setLogoutOpen(false)}
         title={t("settings.logoutTitle")}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setLogoutOpen(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" onClick={handleLogout}>
-              {t("common.logout")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("settings.logoutDesc")}</p>
-      </Modal>
+        description={t("settings.logoutDesc")}
+        confirmLabel={t("common.logout")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        onConfirm={handleLogout}
+        onCancel={() => setLogoutOpen(false)}
+      />
     </div>
   );
 }

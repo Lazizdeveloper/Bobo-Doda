@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
@@ -22,7 +23,7 @@ import {
   getSpecialists,
   setProposalStatus,
   type Specialist,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Contract, Job, Proposal } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -114,6 +115,12 @@ export default function ElonTafsilotiPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.myJobs"), href: "/xaridor/elonlarim" },
+          { label: job.title },
+        ]}
+      />
       {/* E'lon sarlavhasi */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -303,50 +310,30 @@ export default function ElonTafsilotiPage() {
       </section>
 
       {/* Rad etish modali */}
-      <Modal
+      <ConfirmDialog
         open={!!rejectTarget}
-        onClose={() => setRejectTarget(null)}
         title={t("bprop.rejectTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setRejectTarget(null)}
-              disabled={busy}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={busy} onClick={handleReject}>
-              {t("bprop.reject")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("bprop.rejectDesc")}</p>
-      </Modal>
+        description={t("bprop.rejectDesc")}
+        confirmLabel={t("bprop.reject")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={busy}
+        onConfirm={handleReject}
+        onCancel={() => setRejectTarget(null)}
+      />
 
-      {/* E'lonni yopish modali */}
-      <Modal
+      {/* E'lonni yopish */}
+      <ConfirmDialog
         open={closeOpen}
-        onClose={() => setCloseOpen(false)}
         title={t("bjobs.closeTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setCloseOpen(false)}
-              disabled={busy}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={busy} onClick={handleCloseJob}>
-              {t("bjobs.close")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("bjobs.closeDesc")}</p>
-      </Modal>
+        description={t("bjobs.closeDesc")}
+        confirmLabel={t("bjobs.close")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={busy}
+        onConfirm={handleCloseJob}
+        onCancel={() => setCloseOpen(false)}
+      />
     </div>
   );
 }

@@ -14,7 +14,7 @@ import {
   getContracts,
   getCurrentUser,
   getJobProposals,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Contract, Job, Milestone, Proposal } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";

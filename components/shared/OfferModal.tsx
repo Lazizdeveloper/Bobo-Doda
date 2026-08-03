@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
-import { createOffer } from "@/lib/mock-api";
+import { createOffer } from "@/lib/api";
 import type { Service } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 

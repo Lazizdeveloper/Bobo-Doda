@@ -1,12 +1,11 @@
 import type { Lang } from "@/lib/i18n/dictionary";
-import { currencyLabel, getCurrency } from "@/lib/currency";
+import { currencyLabel } from "@/lib/currency";
 
-/* Summa — joriy valyuta belgisi bilan (belgi tilga qarab lokallashadi).
-   Valyuta modul-darajali store'dan o'qiladi; imzoga currency qo'shilmagan,
-   shuning uchun barcha chaqiruv joyi o'zgarmaydi. Qayta render useT() orqali. */
+/* Barcha joriy marketplace yozuvlari UZS'da saqlanadi. Konvertatsiya kursi
+   serverdan kelmaguncha boshqa belgi qo'yish moliyaviy jihatdan noto'g'ri. */
 export function formatMoney(amount: number, lang: Lang = "uz"): string {
   const formatted = new Intl.NumberFormat("ru-RU").format(amount);
-  return `${formatted} ${currencyLabel(getCurrency(), lang)}`;
+  return `${formatted} ${currencyLabel("UZS", lang)}`;
 }
 
 export function formatDate(iso: string, lang: Lang = "uz"): string {

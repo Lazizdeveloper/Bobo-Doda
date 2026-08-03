@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
-import { CurrencySwitch } from "@/components/shared/CurrencySwitch";
 import { Logo } from "@/components/shared/Logo";
 import {
+  DATA_CHANGED_EVENT,
   getCurrentUser,
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -38,10 +38,21 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (user) setName(user.fullName);
-    });
-    getNotifications().then(setNotifications);
+    function refresh() {
+      getCurrentUser().then((user) => {
+        if (user) setName(user.fullName);
+      });
+      getNotifications().then(setNotifications);
+    }
+    refresh();
+    window.addEventListener(DATA_CHANGED_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(DATA_CHANGED_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -97,7 +108,6 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <CurrencySwitch />
         <LangSwitch />
 
         {/* Bildirishnomalar */}

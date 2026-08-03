@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -17,7 +18,7 @@ import {
   getProposals,
   getSavedJobIds,
   toggleSavedJob,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Job } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -61,6 +62,12 @@ export default function IshEloniPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.jobs"), href: "/mutaxassis/ish-elonlari" },
+          { label: job.title },
+        ]}
+      />
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="primary">{t(`cat.${job.category}`)}</Badge>

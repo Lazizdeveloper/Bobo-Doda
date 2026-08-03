@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
-import { createProposal, getJob, getProposals, getServices } from "@/lib/mock-api";
+import { createProposal, getJob, getProposals, getServices } from "@/lib/api";
 import type { Job } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -178,6 +178,7 @@ export default function TaklifYuborishPage() {
                       type="button"
                       onClick={() => toggleImage(src)}
                       aria-pressed={selected}
+                      aria-label={`${t("prop.fromServices")} ${i + 1}`}
                       className={`relative overflow-hidden rounded-input border-2 transition-colors duration-150 ${
                         selected ? "border-primary" : "border-line hover:border-faint"
                       }`}

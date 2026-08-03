@@ -31,7 +31,7 @@ const config: Config = {
         "line-strong": "#D64A34",
         /* Semantik — faqat status/xabar uchun.
            danger qizil chokdan ajralib turishi uchun qip-qizil emas, qirmizi */
-        danger: "#F5355E",
+        danger: "#FF7892",
         warning: "#F58C1F",
         success: "#4ADE80",
       },

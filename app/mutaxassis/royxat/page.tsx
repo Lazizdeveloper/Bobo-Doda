@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/Textarea";
 import { TagInput } from "@/components/ui/TagInput";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
-import { completeSellerProfile, getCurrentUser } from "@/lib/mock-api";
+import { completeSellerProfile, getCurrentUser } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { LIMITS } from "@/lib/validate";
 
 interface Errors {
   fullName?: string;
@@ -49,6 +50,7 @@ export default function RoyxatPage() {
     const next: Errors = {};
     if (!fullName.trim()) next.fullName = t("onboard.errName");
     if (bio.trim().length < 20) next.bio = t("onboard.errBio");
+    if (bio.trim().length > LIMITS.bio) next.bio = t("onboard.errBioLong");
     if (!skills.length) next.skills = t("onboard.errSkills");
     if (!categories.length) next.categories = t("onboard.errCategories");
     if (!location.trim()) next.location = t("onboard.errLocation");
@@ -97,6 +99,8 @@ export default function RoyxatPage() {
           onChange={(e) => setBio(e.target.value)}
           placeholder={t("onboard.bioPh")}
           error={errors.bio}
+          maxLength={LIMITS.bio}
+          hint={`${bio.length}/${LIMITS.bio}`}
         />
         <TagInput
           label={t("onboard.skills")}

@@ -8,7 +8,7 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
 import { Tabs } from "@/components/ui/Tabs";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import { getAllMilestones, getContracts } from "@/lib/mock-api";
+import { getAllMilestones, getContracts } from "@/lib/api";
 import type { Contract, ContractStatus, Milestone } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";

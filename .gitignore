@@ -40,3 +40,6 @@ next-env.d.ts
 
 # claude code local settings
 .claude/settings.local.json
+
+# ikkinchi dev server build papkasi (npm run dev)
+/.next-admin/

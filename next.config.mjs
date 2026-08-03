@@ -11,8 +11,8 @@
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: blob:",
   "connect-src 'self'",
   "frame-ancestors 'none'",
@@ -31,8 +31,22 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  /* Build papkasi. Odatda ".next". Dev'da ikki server bir vaqtda ishlaganda
+     (asosiy + admin) har biriga alohida papka beriladi (NEXT_DIST_DIR) — aks
+     holda ular bitta ".next" ni buzadi. Production build env qo'ymaydi →
+     doim ".next" ishlatiladi, ya'ni ishlab chiqarishga ta'sir yo'q. */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'; connect-src 'self'" },
+        ],
+      },
+    ];
   },
   async rewrites() {
     return [

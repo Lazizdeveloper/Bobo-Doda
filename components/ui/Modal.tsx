@@ -12,19 +12,27 @@ export interface ModalProps {
 
 export function Modal({ open, onClose, title, children, footer }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   /* onClose'ni ref orqali ushlaymiz — identifikatori o'zgarsa ham
      fokus effekti qayta ishlamasin (aks holda har belgida input fokusdan chiqadi) */
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   /* Ochilganda BIR marta: panelga fokus + body scroll qulflash.
      Faqat [open] ga bog'liq — render'lar orasida qayta ishlamaydi. */
   useEffect(() => {
     if (!open) return;
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     document.body.style.overflow = "hidden";
     panelRef.current?.focus();
     return () => {
       document.body.style.overflow = "";
+      previousFocusRef.current?.focus();
     };
   }, [open]);
 

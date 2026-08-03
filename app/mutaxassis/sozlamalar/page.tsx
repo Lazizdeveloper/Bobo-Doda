@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
@@ -15,6 +16,8 @@ import { FileUpload } from "@/components/ui/FileUpload";
 import { useToast } from "@/components/ui/Toast";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CardManager } from "@/components/shared/cards";
+import { AccountControls } from "@/components/shared/AccountControls";
+import { AccountSecurity } from "@/components/shared/AccountSecurity";
 import { CATEGORIES } from "@/lib/category-fields";
 import {
   getCards,
@@ -23,7 +26,7 @@ import {
   logout,
   setAvailability,
   updateSellerProfile,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type {
   LanguageLevel,
   PaymentCard,
@@ -32,6 +35,7 @@ import type {
   ServiceCategory,
 } from "@/lib/types";
 import { useT, type Lang } from "@/lib/i18n";
+import { LIMITS } from "@/lib/validate";
 
 const LEVELS: LanguageLevel[] = ["native", "fluent", "intermediate", "basic"];
 
@@ -136,6 +140,7 @@ export default function SozlamalarPage() {
     const next: typeof errors = {};
     if (!fullName.trim()) next.fullName = t("onboard.errName");
     if (bio.trim().length < 20) next.bio = t("onboard.errBio");
+    if (bio.trim().length > LIMITS.bio) next.bio = t("onboard.errBioLong");
     if (!location.trim()) next.location = t("onboard.errLocation");
     setErrors(next);
     if (Object.keys(next).length) return;
@@ -196,13 +201,14 @@ export default function SozlamalarPage() {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               error={errors.bio}
+              maxLength={LIMITS.bio}
             />
             <p
               className={`mt-1 text-2xs ${
                 bio.trim().length >= 50 ? "text-success" : "text-faint"
               }`}
             >
-              {t("settings.bioHint")} · {bio.trim().length}/50
+              {t("settings.bioHint")} · {bio.length}/{LIMITS.bio}
             </p>
           </div>
           <TagInput
@@ -352,6 +358,7 @@ export default function SozlamalarPage() {
             options={[
               { value: "uz", label: "O'zbekcha" },
               { value: "ru", label: "Русский" },
+              { value: "en", label: "English" },
             ]}
             value={lang}
             onChange={(value) => setLang(value as Lang)}
@@ -385,6 +392,9 @@ export default function SozlamalarPage() {
         </div>
       </Card>
 
+      <AccountSecurity />
+      <AccountControls />
+
       {/* Hisob */}
       <Card padding="lg">
         <h2 className="font-heading text-base font-bold text-ink">
@@ -399,23 +409,16 @@ export default function SozlamalarPage() {
         </Button>
       </Card>
 
-      <Modal
+      <ConfirmDialog
         open={logoutOpen}
-        onClose={() => setLogoutOpen(false)}
         title={t("settings.logoutTitle")}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setLogoutOpen(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" onClick={handleLogout}>
-              {t("common.logout")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("settings.logoutDesc")}</p>
-      </Modal>
+        description={t("settings.logoutDesc")}
+        confirmLabel={t("common.logout")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        onConfirm={handleLogout}
+        onCancel={() => setLogoutOpen(false)}
+      />
 
       {/* Portfolio ish qo'shish */}
       <Modal

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { ServiceWizard } from "@/components/shared/ServiceWizard";
-import { getService, getSession, SELLER_ID } from "@/lib/mock-api";
+import { getService, getSession, SELLER_ID } from "@/lib/api";
 import type { Service } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 

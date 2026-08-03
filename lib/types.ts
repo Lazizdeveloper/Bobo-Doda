@@ -261,6 +261,53 @@ export interface AppNotification {
   createdAt: string;
 }
 
+export type VerificationStatus =
+  | "boshlanmagan"
+  | "korib_chiqilmoqda"
+  | "tasdiqlangan"
+  | "rad_etilgan";
+
+export interface VerificationRecord {
+  userId: string;
+  status: VerificationStatus;
+  country: "UZ" | "KZ" | "KG" | "TJ" | "TM";
+  documentType: "passport" | "id_card";
+  legalName: string;
+  birthDate: string;
+  documents: string[];
+  submittedAt?: string;
+  rejectionReason?: string;
+}
+
+export type SupportTopic =
+  | "tolov"
+  | "shartnoma"
+  | "nizo"
+  | "hisob"
+  | "texnik"
+  | "boshqa";
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  topic: SupportTopic;
+  subject: string;
+  message: string;
+  status: "ochiq" | "javob_berildi" | "yopilgan";
+  createdAt: string;
+}
+
+export interface Dispute {
+  id: string;
+  contractId: string;
+  openedBy: string;
+  reason: "scope" | "quality" | "deadline" | "payment" | "communication" | "other";
+  description: string;
+  evidence: string[];
+  status: "ochiq" | "korib_chiqilmoqda" | "hal_qilindi";
+  createdAt: string;
+}
+
 export function computeBadge(
   completedContracts: number,
   rating: number

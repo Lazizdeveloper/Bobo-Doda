@@ -5,8 +5,9 @@ import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
-import { addCard, removeCard } from "@/lib/mock-api";
+import { addCard, removeCard } from "@/lib/api";
 import type { CardType, PaymentCard } from "@/lib/types";
 import { detectCardType } from "@/lib/validate";
 import { useT } from "@/lib/i18n";
@@ -252,23 +253,17 @@ export function CardManager({
         onAdded={(card) => onChange([card, ...cards])}
       />
 
-      <Modal
+      <ConfirmDialog
         open={!!toRemove}
-        onClose={() => setToRemove(null)}
         title={t("card.removeTitle")}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setToRemove(null)} disabled={removing}>
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={removing} onClick={handleRemove}>
-              {t("common.delete")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("card.removeDesc")}</p>
-      </Modal>
+        description={t("card.removeDesc")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={removing}
+        onConfirm={handleRemove}
+        onCancel={() => setToRemove(null)}
+      />
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
   getReviews,
   getSellerProfile,
   getServices,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Contract, Review, SellerProfile, Service, User } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -174,7 +174,9 @@ export default function ProfilPage() {
           <h2 className="font-heading text-lg font-bold text-ink">
             {t("profile.about")}
           </h2>
-          <p className="mt-2 whitespace-pre-line text-sm text-muted">{profile.bio}</p>
+          <p className="mt-2 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm text-muted">
+            {profile.bio}
+          </p>
         </div>
         <div>
           <h3 className="text-xs font-medium uppercase tracking-wide text-faint">

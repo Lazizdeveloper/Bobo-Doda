@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { chooseRole, getSession } from "@/lib/mock-api";
+import { chooseRole, getSession } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export default function RolTanlashPage() {

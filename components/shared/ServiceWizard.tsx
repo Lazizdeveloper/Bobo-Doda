@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -13,10 +13,11 @@ import { FileUpload } from "@/components/ui/FileUpload";
 import { Stepper } from "@/components/ui/Stepper";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES, categoryFields, type CategoryField } from "@/lib/category-fields";
-import { createService, updateService } from "@/lib/mock-api";
+import { createService, updateService } from "@/lib/api";
 import type { Service, ServiceCategory } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
+import { useFormDraft } from "@/lib/hooks/useFormDraft";
 
 interface ServiceWizardProps {
   initial?: Service;
@@ -42,6 +43,25 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
   const [days, setDays] = useState(initial ? String(initial.deliveryDays) : "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<"publish" | "draft" | null>(null);
+  const draftValue = useMemo(
+    () => ({ step, category, title, description, fields, images, price, days }),
+    [step, category, title, description, fields, images, price, days]
+  );
+  const clearDraft = useFormDraft(
+    `draft:seller:service:${initial?.id ?? "new"}`,
+    draftValue,
+    (draft) => {
+      setStep(draft.step);
+      setCategory(draft.category);
+      setTitle(draft.title);
+      setDescription(draft.description);
+      setFields(draft.fields);
+      setImages(draft.images);
+      setPrice(draft.price);
+      setDays(draft.days);
+    },
+    Boolean(category || title || description || Object.keys(fields).length || images.length || price || days)
+  );
 
   const steps = [
     t("wizard.step1"),
@@ -123,6 +143,7 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
         await createService(data);
         toast(kind === "publish" ? t("wizard.published") : t("wizard.draftSaved"));
       }
+      clearDraft();
       router.push("/mutaxassis/xizmatlarim");
     } catch {
       toast(t("common.error"), "error");

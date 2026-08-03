@@ -4,16 +4,25 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Input } from "@/components/ui/Input";
+import { Pagination } from "@/components/ui/Pagination";
 import { RatingStars } from "@/components/ui/RatingStars";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { TrustBadge } from "@/components/ui/TrustBadge";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { CATEGORIES } from "@/lib/category-fields";
-import { getPublicServices, getSpecialists, type Specialist } from "@/lib/mock-api";
+import {
+  getPublicServices,
+  getSavedMarketIds,
+  getSpecialists,
+  toggleSavedMarketItem,
+  type Specialist,
+} from "@/lib/api";
 import type { Service } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -29,17 +38,39 @@ export default function BozorPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<Sort>("new");
+  const [savedIds, setSavedIds] = useState<string[] | null>(null);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(search, 250);
+  const PER_PAGE = 12;
+
+  /* Filtr/tab/qidiruv o'zgarsa — birinchi sahifaga qaytish */
+  useEffect(() => {
+    setPage(1);
+  }, [tab, category, sort, savedOnly, debouncedSearch]);
 
   useEffect(() => {
-    getPublicServices().then(setServices);
-    getSpecialists().then(setSpecialists);
+    Promise.all([
+      getPublicServices(),
+      getSpecialists(),
+      getSavedMarketIds(),
+    ]).then(([nextServices, nextSpecialists, nextSaved]) => {
+      setServices(nextServices);
+      setSpecialists(nextSpecialists);
+      setSavedIds(nextSaved);
+    });
   }, []);
 
+  async function toggleSaved(id: string) {
+    setSavedIds(await toggleSavedMarketItem(id));
+  }
+
   const sellerById = new Map(specialists?.map((s) => [s.user.id, s]));
-  const query = search.trim().toLowerCase();
+  const query = debouncedSearch.trim().toLowerCase();
 
   const filteredServices = (services ?? [])
     .filter((s) => category === "all" || s.category === category)
+    .filter((s) => !savedOnly || savedIds?.includes(s.id))
     .filter(
       (s) =>
         !query ||
@@ -59,6 +90,7 @@ export default function BozorPage() {
     });
 
   const filteredSpecialists = (specialists ?? [])
+    .filter((s) => !savedOnly || savedIds?.includes(s.user.id))
     .filter(
       (s) => category === "all" || s.profile.categories.includes(category)
     )
@@ -71,7 +103,19 @@ export default function BozorPage() {
     )
     .sort((a, b) => b.profile.rating - a.profile.rating);
 
-  const loading = !services || !specialists;
+  const loading = !services || !specialists || !savedIds;
+
+  /* Client-side pagination (backend-ready: keyin API offset/limit'ga o'tadi) */
+  const activeCount =
+    tab === "services" ? filteredServices.length : filteredSpecialists.length;
+  const totalPages = Math.max(1, Math.ceil(activeCount / PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PER_PAGE;
+  const pagedServices = filteredServices.slice(pageStart, pageStart + PER_PAGE);
+  const pagedSpecialists = filteredSpecialists.slice(
+    pageStart,
+    pageStart + PER_PAGE
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,11 +145,12 @@ export default function BozorPage() {
 
       {/* Qidiruv va filtrlar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Input
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder={t("market.searchPh")}
           aria-label={t("market.searchPh")}
+          clearLabel={t("search.clear")}
         />
         <Select
           aria-label={t("jobs.category")}
@@ -131,6 +176,32 @@ export default function BozorPage() {
         )}
       </div>
 
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          variant={savedOnly ? "secondary" : "ghost"}
+          size="sm"
+          aria-pressed={savedOnly}
+          onClick={() => setSavedOnly((value) => !value)}
+          className={savedOnly ? "border-primary/60 text-primary" : ""}
+        >
+          <BookmarkIcon filled={savedOnly} />
+          {t("market.savedOnly")}
+          {savedIds && savedIds.length > 0 && (
+            <span className="rounded-full bg-primary/15 px-1.5 text-2xs text-primary">
+              {savedIds.length}
+            </span>
+          )}
+        </Button>
+        <span className="text-2xs text-faint" aria-live="polite">
+          {!loading &&
+            activeCount > 0 &&
+            t("pager.showing")
+              .replace("{from}", String(pageStart + 1))
+              .replace("{to}", String(Math.min(pageStart + PER_PAGE, activeCount)))
+              .replace("{total}", String(activeCount))}
+        </span>
+      </div>
+
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2">
           <SkeletonCard />
@@ -138,18 +209,23 @@ export default function BozorPage() {
         </div>
       ) : tab === "services" ? (
         filteredServices.length === 0 ? (
-          <EmptyState title={t("market.empty")} />
+          <EmptyState title={t(savedOnly ? "market.emptySaved" : "market.empty")} />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {filteredServices.map((service) => {
+            {pagedServices.map((service) => {
               const seller = sellerById.get(service.sellerId);
               return (
-                <Link
+                <Card
                   key={service.id}
-                  href={`/xaridor/bozor/xizmat/${service.id}`}
-                  className="block"
+                  padding="none"
+                  hoverable
+                  className="relative flex h-full flex-col overflow-hidden"
                 >
-                  <Card padding="none" hoverable className="flex h-full flex-col overflow-hidden">
+                  <Link
+                    href={`/xaridor/bozor/xizmat/${service.id}`}
+                    className="absolute inset-0 z-0 rounded-card"
+                    aria-label={service.title}
+                  />
                     {service.images[0] && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -158,9 +234,18 @@ export default function BozorPage() {
                         className="aspect-[3/1.4] w-full border-b border-line object-cover"
                       />
                     )}
-                    <div className="flex flex-1 flex-col gap-2.5 p-4">
-                      <div className="flex flex-wrap items-center gap-2">
+                    <div className="pointer-events-none relative z-10 flex flex-1 flex-col gap-2.5 p-4">
+                      <div className="flex items-start justify-between gap-2">
                         <Badge tone="primary">{t(`cat.${service.category}`)}</Badge>
+                        <button
+                          type="button"
+                          onClick={() => void toggleSaved(service.id)}
+                          aria-label={t(savedIds?.includes(service.id) ? "market.unsave" : "market.save")}
+                          aria-pressed={savedIds?.includes(service.id)}
+                          className="pointer-events-auto -mr-1 -mt-1 rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
+                        >
+                          <BookmarkIcon filled={savedIds?.includes(service.id)} />
+                        </button>
                       </div>
                       <h3 className="font-heading text-sm font-bold text-ink">
                         {service.title}
@@ -186,23 +271,27 @@ export default function BozorPage() {
                         </span>
                       </div>
                     </div>
-                  </Card>
-                </Link>
+                </Card>
               );
             })}
           </div>
         )
       ) : filteredSpecialists.length === 0 ? (
-        <EmptyState title={t("market.empty")} />
+        <EmptyState title={t(savedOnly ? "market.emptySaved" : "market.empty")} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {filteredSpecialists.map(({ user, profile }) => (
-            <Link
+          {pagedSpecialists.map(({ user, profile }) => (
+            <Card
               key={user.id}
-              href={`/xaridor/bozor/mutaxassis/${user.id}`}
-              className="block"
+              hoverable
+              className="relative flex h-full flex-col gap-3"
             >
-              <Card hoverable className="flex h-full flex-col gap-3">
+              <Link
+                href={`/xaridor/bozor/mutaxassis/${user.id}`}
+                className="absolute inset-0 z-0 rounded-card"
+                aria-label={user.fullName}
+              />
+              <div className="pointer-events-none relative z-10 flex h-full flex-col gap-3">
                 <div className="flex items-start gap-3">
                   <Avatar name={user.fullName} />
                   <div className="min-w-0 flex-1">
@@ -218,9 +307,20 @@ export default function BozorPage() {
                       </p>
                     )}
                   </div>
-                  <Badge tone={profile.available ? "success" : "neutral"}>
-                    {t(profile.available ? "avail.on" : "avail.off")}
-                  </Badge>
+                  <div className="pointer-events-auto flex items-center gap-1">
+                    <Badge tone={profile.available ? "success" : "neutral"}>
+                      {t(profile.available ? "avail.on" : "avail.off")}
+                    </Badge>
+                    <button
+                      type="button"
+                      onClick={() => void toggleSaved(user.id)}
+                      aria-label={t(savedIds?.includes(user.id) ? "market.unsave" : "market.save")}
+                      aria-pressed={savedIds?.includes(user.id)}
+                      className="rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
+                    >
+                      <BookmarkIcon filled={savedIds?.includes(user.id)} />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                   <RatingStars value={profile.rating} showValue />
@@ -236,11 +336,43 @@ export default function BozorPage() {
                 <span className="mt-auto border-t border-line pt-3 text-xs font-medium text-primary">
                   {t("market.viewProfile")} →
                 </span>
-              </Card>
-            </Link>
+              </div>
+            </Card>
           ))}
         </div>
       )}
+
+      {!loading && activeCount > PER_PAGE && (
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          onChange={setPage}
+          labels={{
+            prev: t("pager.prev"),
+            next: t("pager.next"),
+            page: t("pager.page"),
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function BookmarkIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 20 20"
+      fill={filled ? "currentColor" : "none"}
+      aria-hidden="true"
+    >
+      <path
+        d="M5 3.5h10v13L10 13l-5 3.5v-13Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

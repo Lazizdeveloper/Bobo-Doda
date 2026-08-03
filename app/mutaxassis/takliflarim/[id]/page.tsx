@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { ProposalStatusBadge } from "@/components/shared/StatusBadge";
@@ -15,7 +15,7 @@ import {
   getJob,
   getProposal,
   withdrawProposal,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Contract, Job, Proposal } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -157,27 +157,17 @@ export default function TaklifTafsilotiPage() {
         )}
       </div>
 
-      <Modal
+      <ConfirmDialog
         open={withdrawOpen}
-        onClose={() => setWithdrawOpen(false)}
         title={t("prop.withdrawTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setWithdrawOpen(false)}
-              disabled={withdrawing}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={withdrawing} onClick={handleWithdraw}>
-              {t("prop.withdraw")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("prop.withdrawDesc")}</p>
-      </Modal>
+        description={t("prop.withdrawDesc")}
+        confirmLabel={t("prop.withdraw")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={withdrawing}
+        onConfirm={handleWithdraw}
+        onCancel={() => setWithdrawOpen(false)}
+      />
     </div>
   );
 }

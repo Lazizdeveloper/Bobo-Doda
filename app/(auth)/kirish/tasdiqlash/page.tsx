@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { getSession, verifyTelegram } from "@/lib/mock-api";
+import { getSession, verifyTelegram } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export default function TasdiqlashPage() {
@@ -105,7 +105,6 @@ export default function TasdiqlashPage() {
               {t("auth.verifyBtn")}
             </Button>
           </form>
-          <p className="mt-4 text-center text-2xs text-faint">{t("auth.mockNote")}</p>
         </>
       )}
     </Card>

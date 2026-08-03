@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { JobStatusBadge } from "@/components/shared/StatusBadge";
-import { getBuyerJobs, getJobProposals } from "@/lib/mock-api";
+import { getBuyerJobs, getJobProposals } from "@/lib/api";
 import type { Job, JobStatus, Proposal } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";

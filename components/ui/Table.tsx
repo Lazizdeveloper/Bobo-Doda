@@ -50,9 +50,21 @@ export function Table<T>({
               <tr
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+                tabIndex={onRowClick ? 0 : undefined}
+                aria-label={onRowClick ? "Batafsil ko‘rish" : undefined}
                 className={`border-b border-line last:border-b-0 ${
                   onRowClick
-                    ? "cursor-pointer transition-colors duration-150 hover:bg-card-hover"
+                    ? "cursor-pointer transition-colors duration-150 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                     : ""
                 }`}
               >
@@ -74,9 +86,21 @@ export function Table<T>({
             <div
               key={rowKey(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onKeyDown={
+                onRowClick
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onRowClick(row);
+                      }
+                    }
+                  : undefined
+              }
+              role={onRowClick ? "button" : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
               className={`rounded-card border border-line bg-card p-4 ${
                 onRowClick
-                  ? "cursor-pointer transition-colors duration-150 hover:bg-card-hover"
+                  ? "cursor-pointer transition-colors duration-150 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   : ""
               }`}
             >

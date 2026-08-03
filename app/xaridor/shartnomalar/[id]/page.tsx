@@ -10,12 +10,16 @@ import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
+import { DisputeControl } from "@/components/shared/DisputeControl";
+import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import {
   ContractStatusBadge,
   MilestoneStatusBadge,
@@ -33,7 +37,7 @@ import {
   requestRevision,
   sendMessage,
   SELLER_ID,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Contract, Message, Milestone, Review } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -50,7 +54,7 @@ export default function XaridorWorkroomPage() {
 
   /* Modallar */
   const [fundOpen, setFundOpen] = useState(false);
-  const [payMethod, setPayMethod] = useState("karta");
+  const [payMethod, setPayMethod] = useState<"karta" | "click" | "payme">("karta");
   /* To'lov 2 bosqichli: usul tanlash → SMS (3DS) tasdiqlash */
   const [payPhase, setPayPhase] = useState<"method" | "sms">("method");
   const [smsCode, setSmsCode] = useState("");
@@ -72,21 +76,36 @@ export default function XaridorWorkroomPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const loadVersionRef = useRef(0);
 
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
-  function reload() {
-    getContract(params.id).then((found) => {
-      setContract(found);
-      if (found) {
-        getMilestones(found.id).then(setMilestones);
-        getMessages(found.id).then(setMessages);
-        getReviewByContract(found.id).then(setReview);
+  async function reload() {
+    const version = ++loadVersionRef.current;
+    setContract(undefined);
+    try {
+      const found = await getContract(params.id);
+      if (version !== loadVersionRef.current) return;
+      if (!found) {
+        setContract(null);
+        return;
       }
-    });
+      const [nextMilestones, nextMessages, nextReview] = await Promise.all([
+        getMilestones(found.id),
+        getMessages(found.id),
+        getReviewByContract(found.id),
+      ]);
+      if (version !== loadVersionRef.current) return;
+      setContract(found);
+      setMilestones(nextMilestones);
+      setMessages(nextMessages);
+      setReview(nextReview);
+    } catch {
+      if (version === loadVersionRef.current) setContract(null);
+    }
   }
 
   useEffect(() => {
@@ -109,7 +128,7 @@ export default function XaridorWorkroomPage() {
   /* 2-bosqich: SMS-kod bilan to'lovni yakunlash */
   async function handleFund() {
     if (!contract) return;
-    if (!/^\d{6}$/.test(smsCode)) {
+    if (payMethod === "karta" && !/^\d{6}$/.test(smsCode)) {
       setSmsError(t("pay.smsError"));
       return;
     }
@@ -226,6 +245,12 @@ export default function XaridorWorkroomPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.contracts"), href: "/xaridor/shartnomalar" },
+          { label: contract.title },
+        ]}
+      />
       {/* Sarlavha */}
       <Card padding="lg" stitch>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -307,9 +332,7 @@ export default function XaridorWorkroomPage() {
       )}
 
       {contract.status === "nizo" && (
-        <p className="rounded-card border border-danger/25 bg-danger/5 p-4 text-xs text-muted">
-          {t("contract.disputeNote")}
-        </p>
+        <DisputeSummary contractId={contract.id} />
       )}
       {contract.status === "bekor_qilingan" && (
         <p className="rounded-card border border-line bg-card p-4 text-xs text-muted">
@@ -545,8 +568,12 @@ export default function XaridorWorkroomPage() {
       </Card>
 
       {/* Shartnomani bekor qilish */}
-      {canCancel && (
-        <div className="flex justify-end">
+      {(canCancel || contract.status === "faol") && (
+        <div className="flex justify-end gap-2">
+          {contract.status === "faol" && (
+            <DisputeControl contractId={contract.id} onOpened={reload} />
+          )}
+          {canCancel && (
           <Button
             variant="ghost"
             size="sm"
@@ -555,31 +582,22 @@ export default function XaridorWorkroomPage() {
           >
             {t("contract.cancel")}
           </Button>
+          )}
         </div>
       )}
 
       {/* Bekor qilish modali */}
-      <Modal
+      <ConfirmDialog
         open={cancelOpen}
-        onClose={() => setCancelOpen(false)}
         title={t("contract.cancelTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setCancelOpen(false)}
-              disabled={busy}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={busy} onClick={handleCancel}>
-              {t("contract.cancel")}
-            </Button>
-          </>
-        }
-      >
-        <p>{t("contract.cancelDesc")}</p>
-      </Modal>
+        description={t("contract.cancelDesc")}
+        confirmLabel={t("contract.cancel")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={busy}
+        onConfirm={handleCancel}
+        onCancel={() => setCancelOpen(false)}
+      />
 
       {/* Shartnomani faollashtirish (to'liq oldindan to'lov) — 2 bosqich */}
       <Modal
@@ -621,11 +639,12 @@ export default function XaridorWorkroomPage() {
                 <p className="mb-2 text-xs font-medium text-muted">{t("pay.method")}</p>
                 <RadioGroup
                   options={[
-                    { value: "karta", label: t("pay.cardOption"), description: "Visa · Mastercard · Uzcard · Humo" },
-                    { value: "local", label: t("pay.localOption"), description: t("pay.localHint") },
+                    { value: "karta", label: t("pay.cardOption"), description: "Visa · Mastercard · Uzcard · Humo · 3D Secure" },
+                    { value: "click", label: "Click", description: t("pay.clickHint") },
+                    { value: "payme", label: "Payme", description: t("pay.paymeHint") },
                   ]}
                   value={payMethod}
-                  onChange={setPayMethod}
+                  onChange={(value) => setPayMethod(value as "karta" | "click" | "payme")}
                 />
               </div>
               <p className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
@@ -637,21 +656,39 @@ export default function XaridorWorkroomPage() {
               <p className="text-xs text-muted">
                 {payMethod === "karta"
                   ? t("pay.smsHint")
-                  : t("pay.redirectNote").replace("{app}", t("pay.localOption"))}
+                  : t("pay.redirectNote").replace(
+                      "{app}",
+                      payMethod === "click" ? "Click" : "Payme"
+                    )}
               </p>
-              <Input
-                value={smsCode}
-                onChange={(e) => {
-                  setSmsCode(e.target.value.replace(/\D/g, "").slice(0, 6));
-                  setSmsError("");
-                }}
-                inputMode="numeric"
-                placeholder="••••••"
-                aria-label={t("pay.confirmTitle")}
-                error={smsError}
-                className="text-center text-lg tracking-[0.5em]"
-                autoFocus
-              />
+              {payMethod === "karta" ? (
+                <Input
+                  value={smsCode}
+                  onChange={(e) => {
+                    setSmsCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                    setSmsError("");
+                  }}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="••••••"
+                  aria-label={t("pay.confirmTitle")}
+                  error={smsError}
+                  className="text-center text-lg tracking-[0.5em]"
+                  autoFocus
+                />
+              ) : (
+                <div className="flex items-center gap-3 rounded-input border border-primary/25 bg-primary/5 p-4">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-btn bg-primary/15 font-heading text-xs font-bold text-primary">
+                    {payMethod === "click" ? "CL" : "PM"}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-ink">
+                      {payMethod === "click" ? "Click" : "Payme"}
+                    </p>
+                    <p className="text-2xs text-muted">{t("pay.secureRedirect")}</p>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -17,7 +17,7 @@ import {
   getSentOffers,
   getSession,
   SELLER_ID,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Message } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";

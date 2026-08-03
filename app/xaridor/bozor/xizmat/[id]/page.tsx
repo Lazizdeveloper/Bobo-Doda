@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -12,7 +13,7 @@ import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { OfferModal } from "@/components/shared/OfferModal";
-import { getService, getSpecialist, type Specialist } from "@/lib/mock-api";
+import { getService, getSpecialist, type Specialist } from "@/lib/api";
 import type { Service } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -43,6 +44,12 @@ export default function XizmatTafsilotiPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.market"), href: "/xaridor/bozor" },
+          { label: service.title },
+        ]}
+      />
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="primary">{t(`cat.${service.category}`)}</Badge>

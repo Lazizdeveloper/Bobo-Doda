@@ -13,7 +13,7 @@ import {
   OfferStatusBadge,
   ProposalStatusBadge,
 } from "@/components/shared/StatusBadge";
-import { getIncomingOffers, getJobs, getProposals } from "@/lib/mock-api";
+import { getIncomingOffers, getJobs, getProposals } from "@/lib/api";
 import type { Job, Offer, Proposal, ProposalStatus } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";

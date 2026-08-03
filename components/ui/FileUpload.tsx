@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 
 /** Xavfsizlik: faqat rasm turlari va 2MB gacha (localStorage DoS himoyasi) */
-const MAX_BYTES = 2 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export interface FileUploadProps {
@@ -13,6 +13,7 @@ export interface FileUploadProps {
   value: string[];
   onChange: (images: string[]) => void;
   max?: number;
+  maxBytes?: number;
   error?: string;
 }
 
@@ -21,6 +22,7 @@ export function FileUpload({
   value,
   onChange,
   max = 5,
+  maxBytes = DEFAULT_MAX_BYTES,
   error,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +36,7 @@ export function FileUpload({
     const picked = Array.from(files).slice(0, remaining);
     /* Tur va hajm tekshiruvi — noto'g'ri fayllar rad etiladi */
     const valid = picked.filter(
-      (f) => ALLOWED_TYPES.includes(f.type) && f.size <= MAX_BYTES
+      (f) => ALLOWED_TYPES.includes(f.type) && f.size <= maxBytes
     );
     if (valid.length < picked.length) setFileError(t("upload.rejected"));
     if (!valid.length) {

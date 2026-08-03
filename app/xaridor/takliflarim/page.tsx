@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { OfferStatusBadge } from "@/components/shared/StatusBadge";
-import { getSentOffers } from "@/lib/mock-api";
+import { getSentOffers } from "@/lib/api";
 import type { Offer } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";

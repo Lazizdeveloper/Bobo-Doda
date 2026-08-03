@@ -15,7 +15,7 @@ import {
   getCards,
   getContracts,
   withdrawBalance,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Contract, Milestone, PaymentCard } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";

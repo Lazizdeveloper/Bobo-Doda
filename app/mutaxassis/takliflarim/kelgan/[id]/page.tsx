@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { OfferStatusBadge } from "@/components/shared/StatusBadge";
@@ -22,7 +22,7 @@ import {
   getSession,
   sendMessage,
   SELLER_ID,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Message, Offer, Service } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -247,58 +247,39 @@ export default function KelganTaklifPage() {
       )}
 
       {/* Qabul qilish modali */}
-      <Modal
+      <ConfirmDialog
         open={acceptOpen}
-        onClose={() => setAcceptOpen(false)}
         title={t("soffer.acceptTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setAcceptOpen(false)}
-              disabled={busy}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button loading={busy} onClick={handleAccept}>
-              {t("soffer.accept")}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between rounded-input border border-line bg-bg p-3">
-            <span className="text-xs text-muted">{offer.title}</span>
-            <span className="font-heading text-base font-bold text-ink">
-              {formatMoney(offer.budget, lang)}
-            </span>
+        description={
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between rounded-input border border-line bg-bg p-3">
+              <span className="text-xs text-muted">{offer.title}</span>
+              <span className="font-heading text-base font-bold text-ink">
+                {formatMoney(offer.budget, lang)}
+              </span>
+            </div>
+            <p>{t("soffer.acceptDesc")}</p>
           </div>
-          <p>{t("soffer.acceptDesc")}</p>
-        </div>
-      </Modal>
-
-      {/* Rad etish modali */}
-      <Modal
-        open={declineOpen}
-        onClose={() => setDeclineOpen(false)}
-        title={t("soffer.declineTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setDeclineOpen(false)}
-              disabled={busy}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button variant="danger" loading={busy} onClick={handleDecline}>
-              {t("bprop.reject")}
-            </Button>
-          </>
         }
-      >
-        <p>{t("soffer.declineDesc")}</p>
-      </Modal>
+        confirmLabel={t("soffer.accept")}
+        cancelLabel={t("common.cancel")}
+        loading={busy}
+        onConfirm={handleAccept}
+        onCancel={() => setAcceptOpen(false)}
+      />
+
+      {/* Rad etish */}
+      <ConfirmDialog
+        open={declineOpen}
+        title={t("soffer.declineTitle")}
+        description={t("soffer.declineDesc")}
+        confirmLabel={t("bprop.reject")}
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        loading={busy}
+        onConfirm={handleDecline}
+        onCancel={() => setDeclineOpen(false)}
+      />
     </div>
   );
 }

@@ -12,7 +12,7 @@ export const LIMITS = {
   password: 100,
   title: 200,
   headline: 160,
-  bio: 2000,
+  bio: 1000,
   description: 5000,
   message: 5000,
   coverLetter: 5000,

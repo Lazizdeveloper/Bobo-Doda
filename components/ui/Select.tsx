@@ -32,7 +32,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={inputId}
           aria-invalid={!!error}
-          className={`h-10 w-full appearance-none rounded-input border bg-card px-3 text-sm text-ink transition-colors duration-150 focus:border-primary focus:outline-none ${
+          className={`h-10 w-full appearance-none rounded-input border bg-card px-3 text-sm text-ink transition-colors duration-150 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
             error ? "border-danger" : "border-line"
           } ${className}`}
           {...rest}

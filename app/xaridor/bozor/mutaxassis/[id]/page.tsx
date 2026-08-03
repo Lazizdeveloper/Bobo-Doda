@@ -17,7 +17,7 @@ import {
   getReviewsForSeller,
   getSpecialist,
   type Specialist,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Review, Service } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -98,7 +98,7 @@ export default function MutaxassisProfiliPage() {
           <h2 className="font-heading text-lg font-bold text-ink">
             {t("profile.about")}
           </h2>
-          <p className="mt-2 whitespace-pre-line text-sm text-muted">
+          <p className="mt-2 whitespace-pre-line break-words [overflow-wrap:anywhere] text-sm text-muted">
             {profile.bio}
           </p>
         </div>

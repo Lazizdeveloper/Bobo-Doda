@@ -1,28 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Onest, Unbounded } from "next/font/google";
+import "@fontsource/onest/400.css";
+import "@fontsource/onest/500.css";
+import "@fontsource/onest/700.css";
+import "@fontsource/unbounded/700.css";
+import "@fontsource/unbounded/800.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "@fontsource/jetbrains-mono/700.css";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/ui/Toast";
-
-/* Sarlavha: Unbounded — keng, geometrik, o'ziga xos (kam ishlatiladi) */
-const unbounded = Unbounded({
-  subsets: ["latin", "cyrillic"],
-  weight: ["700", "800"],
-  variable: "--font-unbounded",
-});
-
-/* Matn: Onest — kirill uchun mo'ljallab chizilgan, iliq gumanistik */
-const onest = Onest({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-onest",
-});
-
-/* Raqam/summa: bir xil kenglikdagi raqamlar (.sb-num) */
-const mono = JetBrains_Mono({
-  subsets: ["latin", "cyrillic"],
-  weight: ["500", "700"],
-  variable: "--font-mono",
-});
+import { OfflineSupport } from "@/components/shared/OfflineSupport";
 
 export const metadata: Metadata = {
   title: "Bobo&Doda — Mutaxassislar bozori",
@@ -43,11 +30,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uz">
-      <body
-        className={`${onest.variable} ${unbounded.variable} ${mono.variable} font-sans antialiased`}
-      >
+      <body className="font-sans antialiased">
         <LanguageProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <OfflineSupport />
+            {children}
+          </ToastProvider>
         </LanguageProvider>
       </body>
     </html>

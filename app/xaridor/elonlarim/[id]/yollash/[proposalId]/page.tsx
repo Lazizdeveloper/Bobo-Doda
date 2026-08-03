@@ -17,7 +17,7 @@ import {
   getSpecialist,
   hireProposal,
   type Specialist,
-} from "@/lib/mock-api";
+} from "@/lib/api";
 import type { Job, Proposal } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
