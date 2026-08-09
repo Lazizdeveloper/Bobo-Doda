@@ -56,7 +56,7 @@ export default function TranslationsPage() {
       <AdminPageHeader
         title="Tarjimalar (Lokalizatsiya)"
         description="Platforma matnlarini 3 tilda boshqarish."
-        action={<Button onClick={() => { setForm({}); setOpen(true); }}>Yangi tarjima qo'shish</Button>}
+        action={<Button onClick={() => { setForm({}); setOpen(true); }}>Yangi tarjima qo&apos;shish</Button>}
       />
       <Table
         columns={columns}

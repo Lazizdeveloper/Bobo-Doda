@@ -34,6 +34,7 @@ export interface AuthService {
   register(input: { phone: string; password: string; fullName: string }): Promise<Model.Session>;
   verifyTelegram(code: string): Promise<Model.Session>;
   chooseRole(role: Model.UserRole): Promise<Model.Session>;
+  resetPassword(input: { phone: string; code: string; newPassword: string }): Promise<void>;
   logout(): void;
 }
 
@@ -63,6 +64,7 @@ export interface UsersService {
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   exportData(): Promise<Record<string, unknown>>;
   deleteAccount(): Promise<void>;
+  reportUser(input: { targetUserId: string; contractId?: string; offerId?: string; reason: Model.ReportReason; description: string }): Promise<void>;
 }
 
 /** Ochiq katalog: mutaxassis profillari va ular haqidagi sharhlar */

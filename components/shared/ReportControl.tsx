@@ -6,7 +6,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
-import { reportUser } from "@/lib/api";
+import { usersService } from "@/lib/api";
 import type { ReportReason } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -36,7 +36,7 @@ export function ReportControl({
     }
     setSaving(true);
     try {
-      await reportUser({ targetUserId, contractId, offerId, reason, description });
+      await usersService.reportUser({ targetUserId, contractId, offerId, reason, description });
       setOpen(false);
       setDescription("");
       toast(t("report.submitted"));

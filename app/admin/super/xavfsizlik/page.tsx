@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Table, type TableColumn } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/format";
+import { Modal } from "@/components/ui/Modal";
 
 interface SecuritySession {
   id: string;
@@ -60,8 +61,8 @@ export default function SecurityCenterPage() {
       />
 
       <Card padding="lg" className="mb-6 border-danger/40">
-        <h2 className="font-heading text-base font-bold text-danger">Barcha sessiyalarni to'xtatish</h2>
-        <p className="mt-2 text-sm text-muted">Ushbu amal barcha foydalanuvchilarni tizimdan chiqarib yuboradi va ularni qayta kirishga majbur qiladi. Bu faqat xavfsizlik insidenti yuz berganda qo'llanilishi kerak.</p>
+        <h2 className="font-heading text-base font-bold text-danger">Barcha sessiyalarni to&apos;xtatish</h2>
+        <p className="mt-2 text-sm text-muted">Ushbu amal barcha foydalanuvchilarni tizimdan chiqarib yuboradi va ularni qayta kirishga majbur qiladi. Bu faqat xavfsizlik insidenti yuz berganda qo&apos;llanilishi kerak.</p>
         <div className="mt-4">
           <Button variant="danger" onClick={() => setConfirmOpen(true)} disabled={loading || sessions.length === 0}>
             Barcha sessiyalarni majburiy uzish
@@ -93,7 +94,7 @@ export default function SecurityCenterPage() {
       </Card>
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Barcha sessiyalarni uzish">
-        <p className="text-sm text-muted">Haqiqatan ham barcha faol sessiyalarni uzishni xohlaysizmi? Bu amalni bekor qilib bo'lmaydi.</p>
+        <p className="text-sm text-muted">Haqiqatan ham barcha faol sessiyalarni uzishni xohlaysizmi? Bu amalni bekor qilib bo&apos;lmaydi.</p>
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="ghost" onClick={() => setConfirmOpen(false)}>Bekor qilish</Button>
           <Button variant="danger" onClick={terminateAll} disabled={loading}>{loading ? "Bajarilmoqda..." : "Tasdiqlash"}</Button>

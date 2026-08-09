@@ -63,7 +63,7 @@ export default function CategoriesPage() {
       <AdminPageHeader
         title="Kategoriyalar"
         description="Marketplace xizmat toifalarini boshqarish va tartiblash."
-        action={<Button onClick={() => { setForm({ order: categories.length + 1 }); setOpen(true); }}>Toifa qo'shish</Button>}
+        action={<Button onClick={() => { setForm({ order: categories.length + 1 }); setOpen(true); }}>Toifa qo&apos;shish</Button>}
       />
       <Table
         columns={columns}

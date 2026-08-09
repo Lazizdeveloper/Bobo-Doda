@@ -285,174 +285,12 @@ function appData<T>(key: string, fallback: T): T {
   return read<T>(key, fallback);
 }
 
-const seedWithdrawals: WithdrawalRequest[] = [
-  {
-    id: "wdr-1",
-    userId: "u-1",
-    userName: "Aziz Karimov",
-    userRole: "mutaxassis",
-    amount: 1200000,
-    currency: "UZS",
-    cardDetails: "Uzcard ****5678",
-    status: "kutilmoqda",
-    createdAt: "2026-08-08T12:00:00.000Z",
-  },
-  {
-    id: "wdr-2",
-    userId: "u-s2",
-    userName: "Madina Abdullayeva",
-    userRole: "mutaxassis",
-    amount: 450000,
-    currency: "UZS",
-    cardDetails: "Humo ****1122",
-    status: "kutilmoqda",
-    createdAt: "2026-08-09T02:30:00.000Z",
-  },
-  {
-    id: "wdr-3",
-    userId: "u-s3",
-    userName: "Bekzod Rahmonov",
-    userRole: "mutaxassis",
-    amount: 2300000,
-    currency: "UZS",
-    cardDetails: "Uzcard ****9988",
-    status: "tasdiqlangan",
-    createdAt: "2026-08-05T09:00:00.000Z",
-    processedAt: "2026-08-05T14:30:00.000Z",
-    processedBy: "Dilnoza Rahimova",
-  },
-  {
-    id: "wdr-4",
-    userId: "u-s4",
-    userName: "Nilufar Karimova",
-    userRole: "mutaxassis",
-    amount: 300000,
-    currency: "UZS",
-    cardDetails: "Visa ****4433",
-    status: "rad_etilgan",
-    createdAt: "2026-08-06T15:00:00.000Z",
-    processedAt: "2026-08-07T10:00:00.000Z",
-    processedBy: "Dilnoza Rahimova",
-    rejectionReason: "Karta egasining ismi foydalanuvchi ismiga mos kelmadi.",
-  }
-];
+const seedWithdrawals: WithdrawalRequest[] = [];
 
-const seedReports: Report[] = [
-  {
-    id: "rep-1",
-    reporterId: "u-b2",
-    targetUserId: "u-1",
-    reason: "other",
-    description: "Mutaxassis shartnoma shartlarini buzdi, topshiriqni bajarmasdan aloqani uzib qo'ydi.",
-    status: "yangi",
-    createdAt: "2026-08-07T10:15:00.000Z",
-  },
-  {
-    id: "rep-2",
-    reporterId: "u-b1",
-    targetUserId: "u-s2",
-    reason: "spam",
-    description: "Keraksiz xizmatlarni takroran taklif qilyapti va reklama xabarlari yubormoqda.",
-    status: "korib_chiqildi",
-    createdAt: "2026-08-05T08:00:00.000Z",
-  },
-  {
-    id: "rep-3",
-    reporterId: "u-1",
-    targetUserId: "u-b3",
-    reason: "abuse",
-    description: "Haqoratli so'zlar ishlatdi va shartnomadan tashqari bepul ish qilishni talab qildi.",
-    status: "yangi",
-    createdAt: "2026-08-09T01:00:00.000Z",
-  }
-];
+const seedReports: Report[] = [];
 
-const seedTransactions: TransactionRecord[] = [
-  {
-    id: "tx-1",
-    type: "deposit",
-    userId: "u-b2",
-    userName: "Jasur Toshpo'latov",
-    amount: 5000000,
-    currency: "UZS",
-    referenceId: "card-b2",
-    description: "Hamyon balansi to'ldirildi",
-    createdAt: "2026-08-01T10:00:00.000Z",
-  },
-  {
-    id: "tx-2",
-    type: "escrow_mablaglash",
-    userId: "u-b2",
-    userName: "Jasur Toshpo'latov",
-    amount: 4000000,
-    currency: "UZS",
-    referenceId: "c-2",
-    description: "Shartnoma #c-2 uchun escrow mablag'lash",
-    createdAt: "2026-08-01T10:05:00.000Z",
-  },
-  {
-    id: "tx-3",
-    type: "milestone_tolov",
-    userId: "u-1",
-    userName: "Aziz Karimov",
-    amount: 1500000,
-    currency: "UZS",
-    referenceId: "ms-2a",
-    description: "Milestone #1 qabul qilindi va to'landi",
-    createdAt: "2026-08-04T16:00:00.000Z",
-  },
-  {
-    id: "tx-4",
-    type: "refund",
-    userId: "u-b1",
-    userName: "Dilnoza Rahimova",
-    amount: 800000,
-    currency: "UZS",
-    referenceId: "c-1",
-    description: "Shartnoma #c-1 bekor qilinishi sababli qaytarildi",
-    createdAt: "2026-08-03T11:00:00.000Z",
-  },
-  {
-    id: "tx-5",
-    type: "yechish",
-    userId: "u-1",
-    userName: "Aziz Karimov",
-    amount: 1500000,
-    currency: "UZS",
-    referenceId: "wdr-3",
-    description: "Uzcard ****5678 kartasiga yechib olindi",
-    createdAt: "2026-08-05T14:30:00.000Z",
-  }
-];
-const seedTickets: SupportTicket[] = [
-  {
-    id: "tkt-1",
-    userId: "u-b2",
-    topic: "tolov",
-    subject: "Escrow to'lovi o'tmadi, Humo kartamdan pul yechildi",
-    message: "Click orqali shartnomani mablag'lantirgan edim, SMS kod kiritgandan so'ng xatolik berdi lekin pul yechildi. Iltimos tekshirib bering.",
-    status: "ochiq",
-    createdAt: "2026-08-08T10:00:00.000Z",
-  },
-  {
-    id: "tkt-2",
-    userId: "u-1",
-    topic: "hisob",
-    subject: "Balansni yechib olish muddati qancha?",
-    message: "Mening Uzcard kartamga pul yechish so'rovim qancha vaqtda tasdiqlanadi? 2 soat bo'ldi hali ham kutilmoqda turibdi.",
-    status: "javob_berildi",
-    createdAt: "2026-08-09T03:00:00.000Z",
-  },
-  {
-    id: "tkt-3",
-    userId: "u-s2",
-    topic: "shartnoma",
-    subject: "Mijoz asossiz rad etmoqda",
-    message: "Shartnoma bo'yicha dizaynni to'liq topshirdim, lekin mijoz o'zgartirishlar so'rab asossiz cho'zyapti. Arbitraj aralashishini so'rayman.",
-    status: "ochiq",
-    createdAt: "2026-08-07T15:30:00.000Z",
-  }
-];
+const seedTransactions: TransactionRecord[] = [];
+const seedTickets: SupportTicket[] = [];
 
 export function getAdminData() {
   let reports = read<Report[]>("sb2_reports", []);
@@ -482,7 +320,7 @@ export function getAdminData() {
   const moderationDetails = read<Record<string, { status: string; reason?: string; suspendedUntil?: string; suspendedAt?: string; deactivatedAt?: string; deletedAt?: string }>>("sb2_user_moderation_details", {});
 
   const allUsers = appData<User[]>("sb2_users", seedUsers);
-  const safeUsers = allUsers.map(({ password, ...safe }) => safe);
+  const safeUsers = allUsers.map(({ password: _password, ...safe }) => safe);
 
   return {
     users: safeUsers as User[],

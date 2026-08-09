@@ -29,6 +29,7 @@ export const authService: AuthService = {
   register: (input) => call(() => mock.register(input)),
   verifyTelegram: (code) => call(() => mock.verifyTelegram(code)),
   chooseRole: (role) => call(() => mock.chooseRole(role)),
+  resetPassword: (input) => call(() => mock.resetPassword(input)),
   logout: mock.logout,
 };
 
@@ -44,6 +45,7 @@ export const usersService: UsersService = {
   changePassword: (current, next) => call(() => mock.changePassword(current, next)),
   exportData: () => call(mock.exportCurrentUserData),
   deleteAccount: () => call(mock.deleteCurrentAccount),
+  reportUser: (input) => call(() => mock.reportUser(input)),
 };
 
 export const catalogService: CatalogService = {

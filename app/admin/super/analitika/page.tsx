@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-card border border-line bg-card p-6">
-          <h3 className="font-heading text-lg font-bold text-ink mb-4">Kategoriyalar bo'yicha daromad</h3>
+          <h3 className="font-heading text-lg font-bold text-ink mb-4">Kategoriyalar bo&apos;yicha daromad</h3>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted">2. Ro'yxatdan o'tish</span>
+              <span className="text-xs text-muted">2. Ro&apos;yxatdan o&apos;tish</span>
               <div className="flex items-center gap-2">
                 <div className="h-6 bg-card-hover rounded w-3/4 border border-line"></div>
                 <span className="text-sm font-bold w-12 text-right">45%</span>

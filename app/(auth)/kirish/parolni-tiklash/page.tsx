@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
-import { resetPassword } from "@/lib/api";
+import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 type Phase = "phone" | "reset";
@@ -64,7 +64,7 @@ export default function ParolniTiklashPage() {
 
     setSaving(true);
     try {
-      await resetPassword({ phone: phone.trim(), code, newPassword: password });
+      await authService.resetPassword({ phone: phone.trim(), code, newPassword: password });
       toast(t("auth.resetSuccess"));
       router.push("/kirish?tab=kirish");
     } catch (err) {
