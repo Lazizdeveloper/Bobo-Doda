@@ -77,3 +77,65 @@ export function HealthRow({
     </div>
   );
 }
+
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalRows,
+  rowsPerPage,
+  onRowsPerPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalRows: number;
+  rowsPerPage: number;
+  onRowsPerPageChange?: (limit: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-muted">
+      <div>
+        <span>Jami {totalRows} tadan {(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, totalRows)} {"ko'rsatilmoqda"}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        {onRowsPerPageChange && (
+          <div className="flex items-center gap-1.5">
+            <span>Limit:</span>
+            <select
+              aria-label="Sahifadagi qatorlar soni"
+              value={rowsPerPage}
+              onChange={(e) => onRowsPerPageChange(Number(e.target.value))}
+              className="rounded border border-line bg-card px-2 py-1 text-ink outline-none focus:border-primary"
+            >
+              {[10, 25, 50, 100].map((limit) => (
+                <option key={limit} value={limit}>{limit}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="flex gap-1">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="rounded border border-line bg-card px-2.5 py-1 text-ink hover:bg-card-hover disabled:opacity-50 disabled:pointer-events-none"
+          >
+            Ortga
+          </button>
+          <span className="flex items-center px-2">
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="rounded border border-line bg-card px-2.5 py-1 text-ink hover:bg-card-hover disabled:opacity-50 disabled:pointer-events-none"
+          >
+            Oldinga
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

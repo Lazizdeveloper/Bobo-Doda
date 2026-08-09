@@ -168,6 +168,15 @@ function KirishForm() {
             {errors.form}
           </p>
         )}
+        {isLogin && (
+          <button
+            type="button"
+            onClick={() => router.push("/kirish/parolni-tiklash")}
+            className="self-end text-2xs font-medium text-primary hover:underline"
+          >
+            {t("auth.forgotPassword")}
+          </button>
+        )}
         <Button type="submit" size="lg" loading={loading} className="mt-2 w-full">
           {isLogin ? t("auth.loginBtn") : t("auth.registerBtn")}
         </Button>

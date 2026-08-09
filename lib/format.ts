@@ -18,6 +18,14 @@ export function formatDate(iso: string, lang: Lang = "uz"): string {
   });
 }
 
+/** "2026-08" kabi yil-oy kalitini qisqa oy nomiga aylantiradi (masalan "Avg 26") */
+export function formatMonth(yearMonth: string, lang: Lang = "uz"): string {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const d = new Date(year, (month ?? 1) - 1, 1);
+  const locale = lang === "ru" ? "ru-RU" : lang === "en" ? "en-US" : "uz-UZ";
+  return d.toLocaleDateString(locale, { month: "short", year: "2-digit" });
+}
+
 export function formatTime(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });

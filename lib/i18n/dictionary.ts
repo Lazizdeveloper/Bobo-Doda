@@ -255,6 +255,24 @@ export const dictionary: Record<string, Entry> = {
   "dispute.status_ochiq": { uz: "Ochiq", ru: "Открыт" },
   "dispute.status_korib_chiqilmoqda": { uz: "Ko'rib chiqilmoqda", ru: "На рассмотрении" },
   "dispute.status_hal_qilindi": { uz: "Hal qilindi", ru: "Решён" },
+
+  /* Foydalanuvchini shikoyat qilish (xulq-atvor, Dispute'dan farqli) */
+  "report.open": { uz: "Shikoyat qilish", ru: "Пожаловаться" },
+  "report.title": { uz: "Foydalanuvchini shikoyat qilish", ru: "Пожаловаться на пользователя" },
+  "report.warning": {
+    uz: "Shikoyatingiz moderatsiya jamoasiga yuboriladi. Moliyaviy yoki ijro bilan bog'liq muammo bo'lsa, buning o'rniga Nizo oching.",
+    ru: "Жалоба будет отправлена модераторам. Если проблема связана с оплатой или выполнением работы, откройте Спор вместо этого.",
+  },
+  "report.reason": { uz: "Sabab", ru: "Причина" },
+  "report.reason_spam": { uz: "Spam", ru: "Спам" },
+  "report.reason_abuse": { uz: "Haqoratli xatti-harakat", ru: "Оскорбительное поведение" },
+  "report.reason_fraud": { uz: "Firibgarlik", ru: "Мошенничество" },
+  "report.reason_harassment": { uz: "Bezorilik", ru: "Домогательство" },
+  "report.reason_other": { uz: "Boshqa sabab", ru: "Другая причина" },
+  "report.description": { uz: "Nima bo'lganini tasvirlab bering", ru: "Опишите, что произошло" },
+  "report.required": { uz: "Kamida 10 belgili tushuntirish kiriting", ru: "Введите описание не короче 10 символов" },
+  "report.submit": { uz: "Shikoyat yuborish", ru: "Отправить жалобу" },
+  "report.submitted": { uz: "Shikoyat yuborildi, ko'rib chiqamiz", ru: "Жалоба отправлена, мы её рассмотрим" },
   "ntf.disputeOpened": {
     uz: "\"{title}\" shartnomasi bo'yicha nizo ochildi",
     ru: "По контракту «{title}» открыт спор",
@@ -344,6 +362,32 @@ export const dictionary: Record<string, Entry> = {
     uz: "Bu raqam allaqachon ro'yxatdan o'tgan — tizimga kiring",
     ru: "Этот номер уже зарегистрирован — войдите в систему",
   },
+  "auth.forgotPassword": { uz: "Parolni unutdingizmi?", ru: "Забыли пароль?" },
+  "auth.resetTitle": { uz: "Parolni tiklash", ru: "Восстановление пароля" },
+  "auth.resetSubtitle": {
+    uz: "Telefon raqamingizni kiriting — tasdiqlash kodi yuboramiz",
+    ru: "Введите номер телефона — мы отправим код подтверждения",
+  },
+  "auth.resetSendCode": { uz: "Kod yuborish", ru: "Отправить код" },
+  "auth.resetNewPassword": { uz: "Yangi parol", ru: "Новый пароль" },
+  "auth.resetConfirmPassword": {
+    uz: "Yangi parolni takrorlang",
+    ru: "Повторите новый пароль",
+  },
+  "auth.resetSubmit": { uz: "Parolni saqlash", ru: "Сохранить пароль" },
+  "auth.resetSuccess": {
+    uz: "Parol yangilandi — endi kiring",
+    ru: "Пароль обновлён — теперь войдите",
+  },
+  "auth.errUserNotFound": {
+    uz: "Bu raqam bilan hisob topilmadi",
+    ru: "Аккаунт с этим номером не найден",
+  },
+  "auth.errPasswordMatch": {
+    uz: "Parollar mos kelmadi",
+    ru: "Пароли не совпадают",
+  },
+  "auth.backToLogin": { uz: "Kirishga qaytish", ru: "Вернуться ко входу" },
   "auth.noAccount": { uz: "Akkountingiz yo'qmi?", ru: "Нет аккаунта?" },
   "auth.haveAccount": { uz: "Akkountingiz bormi?", ru: "Уже есть аккаунт?" },
   "auth.regVerifyNote": {
@@ -639,6 +683,15 @@ export const dictionary: Record<string, Entry> = {
     ru: "Контракт отменён. Средства из эскроу возвращены на счёт Bobo&Doda заказчика (можно вывести на карту в разделе «Расходы»).",
   },
   "contract.cancel": { uz: "Shartnomani bekor qilish", ru: "Отменить контракт" },
+  "contract.hireAgainTitle": {
+    uz: "Yana bu mutaxassis bilan ishlaysizmi?",
+    ru: "Хотите снова поработать с этим специалистом?",
+  },
+  "contract.hireAgainDesc": {
+    uz: "{name}ga yangi ishingiz uchun to'lovsiz taklif yuboring",
+    ru: "Отправьте {name} новое бесплатное предложение по вашей задаче",
+  },
+  "contract.hireAgain": { uz: "Qayta yollash", ru: "Нанять снова" },
   "contract.cancelTitle": {
     uz: "Shartnoma bekor qilinsinmi?",
     ru: "Отменить контракт?",
@@ -710,6 +763,7 @@ export const dictionary: Record<string, Entry> = {
     ru: "Пока нет сообщений — напишите первым",
   },
   "chat.you": { uz: "Siz", ru: "Вы" },
+  "chat.attach": { uz: "Rasm biriktirish", ru: "Прикрепить изображение" },
 
   /* Xabarlar sahifasi */
   "messages.title": { uz: "Xabarlar", ru: "Сообщения" },
@@ -720,6 +774,10 @@ export const dictionary: Record<string, Entry> = {
 
   /* Daromad */
   "earn.title": { uz: "Daromad", ru: "Доход" },
+  "earn.monthlyBreakdown": {
+    uz: "Oxirgi 6 oy",
+    ru: "Последние 6 месяцев",
+  },
   "earn.paid": { uz: "Jami to'langan", ru: "Всего выплачено" },
   "earn.pending": { uz: "Kutilayotgan", ru: "Ожидается" },
   "earn.pendingHint": {
@@ -1006,6 +1064,22 @@ export const dictionary: Record<string, Entry> = {
     uz: "Yangi buyurtmalarga tayyorman",
     ru: "Готов(а) к новым заказам",
   },
+  "settings.availUntilLabel": {
+    uz: "Qachongacha band (ixtiyoriy)",
+    ru: "До какого числа заняты (необязательно)",
+  },
+  "settings.availUntilHint": {
+    uz: "Bu sanadan keyin \"tayyor\" holatiga avtomatik qaytasiz",
+    ru: "После этой даты статус автоматически вернётся в «готов к работе»",
+  },
+  "avail.until": {
+    uz: "{date} gacha band",
+    ru: "Занят до {date}",
+  },
+  "profile.identityVerified": {
+    uz: "Shaxsi tasdiqlangan",
+    ru: "Личность подтверждена",
+  },
 
   /* Avto-qabul eslatmasi */
   "ms.autoAcceptNote": {
@@ -1074,6 +1148,7 @@ export const dictionary: Record<string, Entry> = {
     uz: "Xizmat yoki mutaxassis qidirish...",
     ru: "Поиск услуги или специалиста...",
   },
+  "market.recentSearches": { uz: "Oxirgi qidiruvlar:", ru: "Недавние запросы:" },
   "market.empty": {
     uz: "Hech narsa topilmadi — filtrlarni o'zgartirib ko'ring",
     ru: "Ничего не найдено — попробуйте изменить фильтры",

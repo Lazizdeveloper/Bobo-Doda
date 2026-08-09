@@ -1,106 +1,86 @@
-# Backend integration contract
+# Backend API Architecture & Integration Blueprint
 
-The UI imports application data only through `lib/api`. The current adapter
-delegates to `lib/mock-api`; backend work should replace `lib/api/client.ts`
-without changing pages or components.
+This document defines the production API architecture intended to replace `lib/mock-api`. The frontend relies strictly on `lib/api/client.ts` as the bridge.
 
-## Boundaries
+## 1. Authentication & RBAC
 
-- `auth`: session, login, registration, verification, role selection
-- `users`: current user, buyer/seller profiles and account settings
-- `jobs`: create, list, detail, edit/close
-- `proposals`: submit, list, employer review, withdraw and hire
-- `offers`: create, list, accept, decline and withdraw
-- `contracts`: list, detail, cancellation and lifecycle
-- `milestones`: funding, submission, revision and acceptance
-- `payments`: intents, provider hand-off, capture, refund, payout and ledger
-- `messages`: contract/offer threads and messages
-- `notifications`: user-owned notification feed
-- `reviews`: eligibility, submission and publication
-- `disputes`: case creation, evidence, response and resolution
-- `admin`: authentication, permissions, moderation, audit and incidents
+- **JWT Strategy**: Access tokens (15m expiry, stateless), Refresh tokens (7d expiry, stored in DB/Redis for revocation).
+- **Session Security**: Multi-device sessions supported. Force logout available via Admin/SuperAdmin endpoints mapping to Redis token blacklists.
+- **Roles**:
+  - `Buyer`: Creates jobs, sends offers, funds escrow.
+  - `Specialist`: Creates services, submits proposals, submits work.
+  - `Admin`: Operational queues (KYC, Disputes, Withdrawals, Reports).
+  - `SuperAdmin`: System settings, admin roles, global analytics, security center.
+- **OTP**: Registration, Login, and Password Reset require a 6-digit OTP verified via a backend service (Telegram integration/SMS).
 
-Interface definitions live in `lib/api/contracts.ts`. Entity transition rules
-live in `lib/api/state-machines.ts`. Backend implementations must enforce the
-same transitions and actor permissions server-side; frontend checks are only UX.
+## 2. Escrow & Payments System
 
-## Response and error conventions
+The core of the platform is the milestone-based escrow system.
 
-Single-resource operations resolve to the typed DTO. List endpoints should use:
+### Escrow Lifecycle:
+1. **Contract Signed**: Buyer and Specialist agree on a Contract and its Milestones. Status: `signed`.
+2. **Funding**: Buyer pays the full contract amount. Status changes to `active`. Escrow ledger is credited. Milestone statuses become `mablaglangan`.
+3. **Submission**: Specialist submits a milestone. Status: `topshirildi`.
+4. **Acceptance & Payout**: Buyer accepts, or 3-day auto-accept job fires. Status: `qabul_qilindi`. Ledger moves funds from Escrow to Specialist's available balance minus commission.
+5. **Revisions**: Buyer can request changes (`ozgartirish_soraldi`).
+6. **Refunds/Cancellation**: Unfunded contracts are cancelled. Funded contracts require mutual agreement or Admin dispute resolution to refund.
 
-```ts
-interface ApiPage<T> {
-  items: T[];
-  nextCursor: string | null;
-  total?: number;
-}
-```
+### Wallet & Ledger:
+Immutable double-entry ledger. Types: `deposit`, `escrow`, `release`, `refund`, `withdrawal`, `commission`.
 
-All failures must normalize to `ApiErrorShape` from `lib/api/errors.ts`.
+## 3. Core API Endpoints
 
-- `401 UNAUTHENTICATED`: no valid session
-- `403 FORBIDDEN`: authenticated but action is not permitted
-- `404 NOT_FOUND`: resource absent or deliberately hidden by ownership policy
-- `410 DELETED` / `EXPIRED`: known terminal resource
-- `409 CONFLICT` / `INVALID_TRANSITION`: stale version or illegal lifecycle action
-- `422 VALIDATION`: field errors
-- `429 RATE_LIMITED`: retry according to server metadata
-- `503 PAYMENTS_PAUSED`: operational guard
+All endpoints require JWT `Authorization: Bearer <token>` unless marked public.
 
-Mutations should accept an idempotency key. Concurrent updates should use an
-entity version or ETag and return `409` when stale.
+### Auth (`/api/v1/auth`)
+- `POST /register`: Request OTP.
+- `POST /verify`: Verify OTP & issue tokens.
+- `POST /login`: Request OTP.
+- `POST /refresh`: Issue new access token.
+- `POST /logout`: Invalidate refresh token.
 
-## Authentication
+### Users & Profiles (`/api/v1/users`)
+- `GET /me`: Current user (password omitted).
+- `PATCH /me`: Update settings.
+- `GET /specialists`: Paginated catalogue of active specialists.
+- `GET /specialists/:id`: Public profile.
 
-Do not store access tokens in `localStorage`. Prefer an HttpOnly, Secure,
-SameSite cookie session. Every endpoint must verify resource-level ownership;
-route visibility is not authorization.
+### Jobs & Proposals (`/api/v1/jobs`)
+- `POST /`: Create job.
+- `GET /`: Search jobs (Buyer owns, or Specialist browsing).
+- `POST /:jobId/proposals`: Submit bid.
+- `POST /:jobId/proposals/:proposalId/hire`: Convert bid to Contract.
 
-Admin authentication is a separate security boundary with MFA and server-side
-RBAC. Audit events are append-only and cannot be edited by admins.
+### Contracts & Escrow (`/api/v1/contracts`)
+- `GET /`: List user's contracts.
+- `POST /:id/fund`: Initiate Click/Payme intent.
+- `POST /:id/milestones/:mId/submit`: Submit work (requires attachment ID).
+- `POST /:id/milestones/:mId/accept`: Release funds to Specialist.
+- `POST /:id/cancel`: Cancel contract & refund if applicable.
 
-## Payment hand-off
+### Admin & Moderation (`/api/v1/admin`)
+- `GET /queues/kyc`: Pending verifications.
+- `POST /queues/kyc/:id/approve`: Approve KYC.
+- `GET /queues/withdrawals`: Pending payouts.
+- `POST /queues/withdrawals/:id/approve`: Process payout via gateway.
+- `POST /security/revoke-all`: SuperAdmin only. Invalidate all user sessions via Redis.
 
-Card PAN/CVV must be collected by provider-hosted fields or redirect flows.
-The application receives provider tokens/references only. Payment status changes
-come from verified webhooks, not from the browser redirect alone.
+## 4. Notifications & Websockets
+- **WebSocket (WSS)**: Connect with JWT. Used for:
+  - Real-time chat messages (`/api/v1/messages`).
+  - Contract state changes.
+  - Push notifications.
+- **Offline Delivery**: BullMQ workers send fallback emails or Telegram alerts for unread notifications after 15 minutes.
 
-Required identifiers:
+## 5. File Handling & CDN
+Files (Avatars, Portfolios, Deliverables) must bypass the Node.js process:
+1. Client requests a pre-signed URL: `POST /api/v1/storage/upload-url` (MIME, size checked).
+2. Client uploads directly to S3.
+3. Client sends the S3 object key to the backend resource (e.g. `POST /api/v1/messages`).
+4. Backend triggers ClamAV scan worker. If infected, file is deleted and user notified.
 
-- internal payment ID
-- provider reference
-- contract and milestone IDs
-- idempotency key
-- immutable ledger entry IDs
-- correlation/request ID
-
-## Pagination and cancellation
-
-Production list endpoints use cursor pagination and stable sorting. Search and
-filter state belongs in URL query parameters. Every request adapter accepts an
-`AbortSignal`; route/filter changes cancel obsolete requests.
-
-## Route result model
-
-Dynamic resources distinguish:
-
-- loading
-- available
-- unauthenticated
-- forbidden
-- not found
-- deleted
-- expired
-- transient failure
-
-The adapter maps HTTP status/error codes to these states. It must not turn all
-authorization and network failures into an empty list.
-
-## Backend acceptance criteria
-
-1. Contract tests cover every service interface.
-2. State-machine transition tests cover allowed and denied actors.
-3. Ownership tests attempt cross-account reads and writes.
-4. Payment mutations are idempotent and transactionally consistent.
-5. Playwright lifecycle, stress and accessibility suites pass against the API.
-6. No page imports storage, transport details, or backend-specific SDKs.
+## 6. Real-time Search
+- Implement PostgreSQL Full-Text Search (FTS) or Elasticsearch for:
+  - `/api/v1/jobs?q=veb`
+  - `/api/v1/specialists?q=dizayn`
+  - `categories` and `skills` facet filtering.

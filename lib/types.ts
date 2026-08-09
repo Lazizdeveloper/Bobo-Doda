@@ -56,6 +56,8 @@ export interface SellerProfile {
   memberSince: string;
   /** yangi buyurtmalarga tayyorlik holati */
   available: boolean;
+  /** band bo'lsa, qachon avtomatik "tayyor"ga qaytishi (ISO sana, ixtiyoriy) */
+  availableUntil?: string;
 }
 
 export type ServiceCategory =
@@ -207,6 +209,8 @@ export interface Message {
   contractId: string;
   senderId: string;
   text: string;
+  /** ixtiyoriy ilova — bitta rasm, base64 data-URL */
+  image?: string;
   createdAt: string;
 }
 
@@ -305,6 +309,28 @@ export interface Dispute {
   description: string;
   evidence: string[];
   status: "ochiq" | "korib_chiqilmoqda" | "hal_qilindi";
+  createdAt: string;
+}
+
+/* Foydalanuvchini shikoyat qilish — suiiste'mol/firibgarlik/spam signali,
+   moderatsiya uchun (hozircha faqat qayd etiladi, admin ko'rib chiqish
+   navbati keyingi bosqichda qo'shiladi). */
+export type ReportReason =
+  | "spam"
+  | "abuse"
+  | "fraud"
+  | "harassment"
+  | "other";
+
+export interface Report {
+  id: string;
+  reporterId: string;
+  targetUserId: string;
+  contractId?: string;
+  offerId?: string;
+  reason: ReportReason;
+  description: string;
+  status: "yangi" | "korib_chiqildi";
   createdAt: string;
 }
 

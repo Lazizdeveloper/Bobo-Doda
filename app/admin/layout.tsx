@@ -77,9 +77,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     ...operationalItems,
     ...(admin?.role === "super_admin"
       ? [
+          { href: "/admin/super/analitika", label: "Global Analitika", icon: <Icon>GA</Icon> },
           { href: "/admin/super/adminlar", label: "Adminlar", icon: <Icon>SA</Icon> },
           { href: "/admin/audit", label: "Adminlar auditi", icon: <Icon>LG</Icon> },
           { href: "/admin/super/tizim", label: "Tizim sozlamalari", icon: <Icon>SYS</Icon> },
+          { href: "/admin/super/kategoriyalar", label: "Kategoriyalar", icon: <Icon>CAT</Icon> },
+          { href: "/admin/super/tarjimalar", label: "Tarjimalar", icon: <Icon>TR</Icon> },
+          { href: "/admin/super/xavfsizlik", label: "Xavfsizlik", icon: <Icon>SEC</Icon> },
         ]
       : []),
   ];
@@ -151,5 +155,9 @@ function routePermission(pathname: string): AdminPermission | null {
   if (pathname.startsWith("/admin/audit")) return "audit";
   if (pathname.startsWith("/admin/super/adminlar")) return "admins";
   if (pathname.startsWith("/admin/super/tizim")) return "system";
+  if (pathname.startsWith("/admin/super/kategoriyalar")) return "system";
+  if (pathname.startsWith("/admin/super/tarjimalar")) return "system";
+  if (pathname.startsWith("/admin/super/xavfsizlik")) return "system";
+  if (pathname.startsWith("/admin/super/analitika")) return "system";
   return null;
 }

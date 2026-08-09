@@ -13,7 +13,7 @@ import { CardPicker } from "@/components/shared/cards";
 import { contractsService, milestonesService, paymentsService } from "@/lib/api";
 import type { PaymentCard } from "@/lib/types";
 import type { Contract, Milestone } from "@/lib/types";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMonth, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 const PENDING_STATUSES = ["mablaglangan", "topshirildi", "ozgartirish_soraldi"];
@@ -67,6 +67,22 @@ export default function DaromadPage() {
   const payments = [...paid].sort((a, b) =>
     (b.approvedAt ?? "").localeCompare(a.approvedAt ?? "")
   );
+
+  /* Oxirgi 6 oy bo'yicha daromad — approvedAt'ga qarab guruhlangan
+     (bo'sh oylar ham ko'rsatiladi, tendensiya ko'rinishi uchun) */
+  const monthlyTotals = new Map<string, number>();
+  for (const m of paid) {
+    if (!m.approvedAt) continue;
+    const key = m.approvedAt.slice(0, 7);
+    monthlyTotals.set(key, (monthlyTotals.get(key) ?? 0) + m.amount);
+  }
+  const now = new Date();
+  const monthly = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return { key, amount: monthlyTotals.get(key) ?? 0 };
+  });
+  const monthlyMax = Math.max(1, ...monthly.map((m) => m.amount));
 
   async function handleWithdraw() {
     if (!cardId) return;
@@ -141,6 +157,37 @@ export default function DaromadPage() {
           </>
         )}
       </div>
+
+      {/* Oylik daromad tendensiyasi */}
+      {milestones && paid.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-lg font-bold text-ink">
+            {t("earn.monthlyBreakdown")}
+          </h2>
+          <Card>
+            <div className="flex items-end justify-between gap-2 sm:gap-4">
+              {monthly.map((m) => (
+                <div key={m.key} className="flex flex-1 flex-col items-center gap-2">
+                  <span className="text-2xs font-medium text-ink">
+                    {m.amount > 0 ? formatMoney(m.amount, lang) : "—"}
+                  </span>
+                  <div className="flex h-24 w-full items-end rounded-input bg-bg">
+                    <div
+                      className="w-full rounded-input bg-primary transition-[height] duration-300"
+                      style={{
+                        height: `${Math.max(4, (m.amount / monthlyMax) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-2xs text-faint">
+                    {formatMonth(m.key, lang)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </section>
+      )}
 
       {/* So'nggi to'lovlar */}
       <section className="flex flex-col gap-3">

@@ -39,3 +39,31 @@ export interface AuditEvent {
   target: string;
   createdAt: string;
 }
+
+export interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: "mutaxassis" | "xaridor";
+  amount: number;
+  currency: "UZS";
+  cardDetails: string;
+  status: "kutilmoqda" | "tasdiqlangan" | "rad_etilgan" | "korib_chiqilmoqda";
+  createdAt: string;
+  processedAt?: string;
+  processedBy?: string;
+  rejectionReason?: string;
+}
+
+export interface TransactionRecord {
+  id: string;
+  type: "deposit" | "escrow_mablaglash" | "milestone_tolov" | "refund" | "yechish";
+  userId: string;
+  userName: string;
+  amount: number;
+  currency: "UZS";
+  referenceId: string;
+  description: string;
+  createdAt: string;
+}
+
