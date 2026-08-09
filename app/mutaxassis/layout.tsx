@@ -6,7 +6,7 @@ import { Sidebar, type SidebarItem } from "@/components/ui/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { SkipLink } from "@/components/shared/SkipLink";
 import { Logo } from "@/components/shared/Logo";
-import { getSession } from "@/lib/api";
+import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 function NavIcon({ path }: { path: string }) {
@@ -42,7 +42,7 @@ export default function MutaxassisLayout({ children }: { children: ReactNode }) 
   const isOnboarding = pathname === "/mutaxassis/royxat";
 
   useEffect(() => {
-    const session = getSession();
+    const session = authService.getSession();
     if (!session) {
       router.replace("/kirish");
       return;

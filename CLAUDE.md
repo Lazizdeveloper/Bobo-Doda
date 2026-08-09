@@ -61,7 +61,18 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
 - Komponent kutubxonalari ishlatilmaydi — hammasi `/components/ui` da noldan.
 
 ## Stack
-- Next.js 14 App Router + TypeScript + Tailwind CSS.
+- Next.js 16 App Router + React 19 + TypeScript + Tailwind CSS.
+- **API chegarasi (`/lib/api`) — UI FAQAT shu yerdan import qiladi.**
+  Ekranlar domen service'larini chaqiradi (`contractsService.list()`,
+  `paymentsService.fundContract(id)` …), loose funksiyalarni EMAS.
+  `contracts.ts` (typed interfeyslar+DTO) · `errors.ts` (`ApiError` taksonomiyasi)
+  · `state-machines.ts` · `client.ts` (**adapter — backend'da faqat shu fayl
+  almashadi**) · `index.ts`. Eski `export * from "@/lib/mock-api"` tikuvi
+  OLIB TASHLANGAN — `@/lib/mock-api` dan to'g'ridan-to'g'ri import qilinmasin,
+  yangi operatsiya qo'shilsa avval `contracts.ts` ga interfeys yoziladi.
+- Yuklash xatosi: har bir ekranda `loadError` holati + `<ErrorState>` (qayta
+  urinish tugmasi bilan). **Xato hech qachon bo'sh ro'yxatga aylantirilmaydi** —
+  aks holda foydalanuvchi ma'lumot o'chgan deb o'ylaydi.
 - Ma'lumot: `/lib/mock-api` — async funksiyalar, localStorage (`sb2_*` kalitlar),
   `seed.ts` (`SEED_VERSION` bilan — versiya oshsa mock ma'lumot qayta yoziladi
   va sessiya tozalanadi). Ko'p seller: u-1 (demo) + u-s2/u-s3/u-s4 (katalog uchun).
@@ -77,31 +88,52 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   KZT/KGS/TJS/TMT faqat backend real FX kursi va asl valyutani qaytarganda yoqiladi.
 - TrustBadge mantiqla: `computeBadge()` lib/types.ts da (5+/4.5→ishonchli, 25+/4.8→top).
 
-## Dizayn tili: "Suzani" (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
-Ilhom — o'zbek so'zana kashtasi: to'q archa-yashil mato, zarg'aldoq sariq va
-yashil naqsh, hammasi **qizil ip bilan chok qilingan**.
-Qoida: **yashil = muhit (fon) · sariq = harakat (CTA/urg'u) · qizil = chiziq**.
-- Fon: `bg` #08211A, `card` #0E2E24, `card-hover` #143A2D
-- Harakat: `primary` #FFC53D (sariq). **To'ldirilgan sariq ustida matn doim
-  `text-on-primary` (#08211A)** — hech qachon `text-ink` emas.
-- Urg'u: `accent` #A3E635 (yosh yashil — sariq bilan yashil orasidagi ko'prik)
-- Matn: `ink` #F5EFE0, `muted` #9CB6A6, `faint` #7B9A88
-- Chegara: `line` rgba(214,74,52,.40), `line-strong` #D64A34 — qizil chok ipi
-- Semantik (faqat status/xabar): `danger` #F5355E (qirmizi — qizil chokdan
-  ataylab farq qiladi), `warning` #F58C1F, `success` #4ADE80
+## Dizayn tili: "Suzani Light" (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
+Ilhom — o'zbek so'zana kashtasi, ammo **oq mato** ustida: fon oq, naqsh va chok
+**yashil ip bilan** tikilgan.
+Qoida: **oq = muhit (fon) · yashil = harakat (CTA/urg'u) · yashil chok = chiziq**.
+Barcha matn/fon juftliklari WCAG AA (>=4.5:1) bo'yicha hisoblab tekshirilgan —
+yangi rang qo'shilsa ham shu chegara saqlanishi shart.
+- Fon: `bg` #FFFFFF, `card` #FFFFFF, `card-hover` #F2F8F4,
+  `surface` #F5FAF7 (ichki "botiq" panel — eski to'q fonli bloklar o'rniga).
+  **Oq kartani oq fondan `border-line` + `shadow-card` ajratadi.**
+- Harakat: `primary` #15803D (o'rmon yashil), `primary-hover` #116632.
+  **To'ldirilgan yashil ustida matn doim `text-on-primary` (#FFFFFF)** —
+  hech qachon `text-ink` emas.
+- Urg'u: `accent` #4D7C0F (zaytun-lime — eski so'zana lime'ining o'qiladigan varianti)
+- Jarayon holati: `info` #0F766E (archa-ko'kish yashil)
+- Matn: `ink` #0C1F16, `muted` #4C6156, `faint` #5E7568
+- Chegara: `line` #DDEAE3 (ajratgich), `line-strong` #15803D (yashil chok ipi),
+  `field` #7B9587 — **forma elementlari chegarasi** (WCAG 1.4.11 uchun 3:1).
+  Input/Select/Textarea/Checkbox `border-field` ishlatadi, `border-line` emas.
+- Semantik (faqat status/xabar): `danger` #DC2626, `warning` #B45309,
+  `success` #15803D
+- **`-deep` variantlar** (`primary-deep` #0E5C2C, `accent-deep` #3F6A0A,
+  `info-deep` #0B5A54, `success-deep` #0E5C2C, `warning-deep` #8F4208,
+  `danger-deep` #B4161B): matn O'Z RANGINING ochiq to'ldirishi (`bg-X/10`)
+  ustida turganda ishlatiladi — to'liq rang u yerda AA dan o'tmaydi.
+  Qoida: `bg-X/10` bor joyda matn `text-X-deep`.
+- **Yashil ohanglar bir ro'yxatda to'qnashmasin**: `StatusBadge` da jarayon
+  holatlari `info` (faol, mablag'langan, ko'rib chiqilmoqda), tugagan holatlar
+  `success`, suhbat `accent`. Aks holda ikki yashil badge farqlanmaydi.
 - Shrift: Unbounded (`font-heading` — FAQAT `font-bold`/`font-extrabold`, boshqa
   og'irlik yuklanmaydi), Onest (`font-sans`), JetBrains Mono (`font-mono` —
   karta raqami va shunga o'xshash); 12–28px shkala
 - Radius: karta 14px, tugma/input 10px
+- Soya: `shadow-card` (karta), `shadow-card-hover`, `shadow-overlay` (modal/
+  panel), `shadow-raised` (yashil tugma ostidagi to'q yashil chiziq).
+- **Modal/drawer pardasi `bg-ink/40`** — oq fonda `bg-bg/80` ko'rinmaydi.
 - **Imzo element — yugurma chok (running stitch)**: `<Card stitch>` (panel
-  tepasida qizil chok) va `shadow-raised` (sariq tugma ostidagi qizil chiziq).
-  Faqat asosiy panellarda — hozir 3 joyda: xaridor "Harakat talab qilinadi"
-  bloki va ikkala rolning shartnoma workroom sarlavhasi. Har kartaga qo'yilsa
-  shovqin bo'ladi.
+  tepasida yashil chok) va `shadow-raised`. Faqat asosiy panellarda — hozir
+  3 joyda: xaridor "Harakat talab qilinadi" bloki va ikkala rolning shartnoma
+  workroom sarlavhasi. Har kartaga qo'yilsa shovqin bo'ladi.
 - Animatsiya minimal (hover 150ms, modal/toast `sb-fade-in` 200ms, skeleton),
   `prefers-reduced-motion` hurmat qilinadi.
-- Landing (`public/landing.html`) mustaqil CSS, lekin ayni shu tokenlar bilan
-  (`--yellow`/`--lime`/`--red`/`--stitch-h`/`--stitch-v`).
+- Landing (`public/landing.html`) mustaqil CSS, lekin ayni shu tokenlar bilan.
+  DIQQAT: u yerdagi o'zgaruvchi nomlari tarixiy (`--yellow` = harakat yashili,
+  `--lime` = zaytun urg'u, `--red` = yashil chok) — qiymatlar yangi palitrada.
+- Namunaviy portfolio rasmlari (`seed.ts` → `svgImg`) ham yumshoq yashil
+  tonlarda; to'q/sariq blok qo'yilmasin.
 
 ## Oqim
 `/kirish` ikki tabli: **Ro'yxatdan o'tish** (ism + telefon + parol,
@@ -233,6 +265,23 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
 faollashtirish oqimini sinash), c-2 (4 bosqichli faol, ms-2b topshirilgan —
 qabul/o'zgartirish), j-6 da 2 ta taklif (yollash), o-2 yuborilgan Offer (chat).
 Demo mutaxassis (+998901234567 / demo123): o-1 kelgan Offer (qabul/rad), c-2 seller tomoni, c-3 da
-o'zgartirish so'ralgan. `npx tsc --noEmit`,
-`npm run build`, `npm run lint` toza bo'lishi shart. Responsive: 360–430 /
-768–1024 / 1280px+.
+o'zgartirish so'ralgan. `npm run verify` (lint + typecheck + build) toza
+bo'lishi shart. Responsive: 360–430 / 768–1024 / 1280px+ (360px da gorizontal
+skroll BO'LMASIN — header o'ng bloki shu sababli ixchamlashtirilgan).
+
+**E2E/a11y suitlarini ishga tushirish** (`npm run test:e2e`, `npm run test:a11y`):
+ular ishlab turgan serverga ulanadi va standart manzil `127.0.0.1:3001`
+(admin testlari uchun `:3100`). Dev serverda kompilyatsiya 30s timeout'ga
+tiqilib qolishi mumkin, shuning uchun **production build'ga qarshi** yuriting:
+
+```bash
+npm run build && npx next start -p 3001
+TEST_BASE_URL=http://127.0.0.1:3001 node scripts/lifecycle-test.cjs
+TEST_BASE_URL=http://127.0.0.1:3001 node scripts/stress-test.cjs
+TEST_BASE_URL=http://127.0.0.1:3001 node scripts/admin-logic-test.cjs
+TEST_BASE_URL=http://127.0.0.1:3001 node scripts/admin-stress-test.cjs
+TEST_BASE_URL=http://127.0.0.1:3001 node scripts/accessibility-test.cjs
+```
+
+Har biri `{"ok": true}` qaytarishi shart. accessibility-test axe bilan
+WCAG 2 A/AA ni tekshiradi — rang kontrasti shu yerda ushlanadi.

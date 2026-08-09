@@ -26,10 +26,11 @@ function daysAhead(n: number): string {
   return d.toISOString();
 }
 
-/* Palitradagi ranglar bilan kichik namunaviy portfolio rasmi */
+/* Palitradagi ranglar bilan kichik namunaviy portfolio rasmi.
+   Suzani Light: oq kartada yumshoq yashil tonlar — to'q blok emas. */
 function svgImg(fill: string): string {
   const f = fill.replace("#", "%23");
-  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Crect width='240' height='160' fill='${f}'/%3E%3Ccircle cx='120' cy='80' r='36' fill='%23A3E635' fill-opacity='.28'/%3E%3C/svg%3E`;
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Crect width='240' height='160' fill='${f}'/%3E%3Ccircle cx='120' cy='80' r='36' fill='%2315803D' fill-opacity='.16'/%3E%3C/svg%3E`;
 }
 
 /** Demo xaridor hisobi (c-2 shartnoma va j-6 ochiq e'lon egasi) */
@@ -84,7 +85,7 @@ export const seedProfile: SellerProfile = {
       title: "Onlayn kiyim do'koni uchun logotip va brending",
       description:
         "Zamonaviy minimal logotip, rang palitrasi va Instagram shablonlari. Brend tanilishi 3 oyda sezilarli oshdi.",
-      image: svgImg("#FFC53D"),
+      image: svgImg("#E8F3D6"),
       category: "dizayn",
     },
     {
@@ -92,7 +93,7 @@ export const seedProfile: SellerProfile = {
       title: "Restoran uchun buyurtma qabul qiluvchi Telegram bot",
       description:
         "Menyu, savat, to'lov va kuryer paneli bilan to'liq bot. Kuniga 150+ buyurtmani avtomatik qayta ishlaydi.",
-      image: svgImg("#A3E635"),
+      image: svgImg("#DCF2E3"),
       category: "dasturlash",
     },
     {
@@ -100,7 +101,7 @@ export const seedProfile: SellerProfile = {
       title: "Fitnes mobil ilova uchun UI/UX dizayn",
       description:
         "28 ekranlik interaktiv Figma prototipi va dizayn tizimi. Dasturchilarga topshirishga tayyor holda.",
-      image: svgImg("#143A2D"),
+      image: svgImg("#D9EEE9"),
       category: "dizayn",
     },
     {
@@ -108,7 +109,7 @@ export const seedProfile: SellerProfile = {
       title: "Qurilish kompaniyasi uchun korporativ sayt",
       description:
         "Next.js'da tez yuklanadigan, SEO'ga mos 8 sahifali sayt. Google PageSpeed bahosi 98/100.",
-      image: svgImg("#143A2D"),
+      image: svgImg("#D9EEE9"),
       category: "dasturlash",
     },
   ],
@@ -139,14 +140,14 @@ export const seedProfiles: Record<string, SellerProfile> = {
         id: "pf-s2-1",
         title: "Milliy taomlar restorani uchun to'liq brending",
         description: "Logotip, menyu dizayni, tashqi belgi va ijtimoiy tarmoq uslubi.",
-        image: svgImg("#FFC53D"),
+        image: svgImg("#E8F3D6"),
         category: "dizayn",
       },
       {
         id: "pf-s2-2",
         title: "Bolalar kiyimi brendi uchun qadoq dizayni",
         description: "Qadoq, yorliq va sovg'a qutilari seriyasi.",
-        image: svgImg("#A3E635"),
+        image: svgImg("#DCF2E3"),
         category: "dizayn",
       },
     ],
@@ -173,7 +174,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
         id: "pf-s3-1",
         title: "Turizm agentligi uchun 12 ta reklama roligi",
         description: "Rang korreksiyasi, motion grafika va subtitrlar bilan.",
-        image: svgImg("#143A2D"),
+        image: svgImg("#D9EEE9"),
         category: "video",
       },
     ],
@@ -318,7 +319,7 @@ export const seedServices: Service[] = [
     price: 500000,
     currency: "UZS",
     deliveryDays: 3,
-    images: [svgImg("#FFC53D"), svgImg("#A3E635")],
+    images: [svgImg("#E8F3D6"), svgImg("#DCF2E3")],
     status: "active",
     createdAt: daysAgo(120),
   },
@@ -336,7 +337,7 @@ export const seedServices: Service[] = [
     price: 2500000,
     currency: "UZS",
     deliveryDays: 7,
-    images: [svgImg("#143A2D")],
+    images: [svgImg("#D9EEE9")],
     status: "active",
     createdAt: daysAgo(95),
   },
@@ -351,7 +352,7 @@ export const seedServices: Service[] = [
     price: 800000,
     currency: "UZS",
     deliveryDays: 5,
-    images: [svgImg("#143A2D")],
+    images: [svgImg("#D9EEE9")],
     status: "active",
     createdAt: daysAgo(60),
   },
@@ -400,7 +401,7 @@ export const seedServices: Service[] = [
     price: 3500000,
     currency: "UZS",
     deliveryDays: 10,
-    images: [svgImg("#FFC53D")],
+    images: [svgImg("#E8F3D6")],
     status: "active",
     createdAt: daysAgo(200),
   },
@@ -415,7 +416,7 @@ export const seedServices: Service[] = [
     price: 1200000,
     currency: "UZS",
     deliveryDays: 5,
-    images: [svgImg("#A3E635")],
+    images: [svgImg("#DCF2E3")],
     status: "active",
     createdAt: daysAgo(90),
   },
@@ -430,7 +431,7 @@ export const seedServices: Service[] = [
     price: 400000,
     currency: "UZS",
     deliveryDays: 2,
-    images: [svgImg("#143A2D")],
+    images: [svgImg("#D9EEE9")],
     status: "active",
     createdAt: daysAgo(100),
   },
@@ -445,7 +446,7 @@ export const seedServices: Service[] = [
     price: 900000,
     currency: "UZS",
     deliveryDays: 4,
-    images: [svgImg("#143A2D")],
+    images: [svgImg("#D9EEE9")],
     status: "active",
     createdAt: daysAgo(45),
   },
@@ -460,7 +461,7 @@ export const seedServices: Service[] = [
     price: 250000,
     currency: "UZS",
     deliveryDays: 3,
-    images: [svgImg("#FFC53D")],
+    images: [svgImg("#E8F3D6")],
     status: "active",
     createdAt: daysAgo(50),
   },
@@ -654,7 +655,7 @@ export const seedProposals: Proposal[] = [
         answer: "4 bosqich: arxitektura va sxema, asosiy buyurtma oqimi, admin panel va statistika, yakuniy sozlash.",
       },
     ],
-    attachedImages: [svgImg("#143A2D")],
+    attachedImages: [svgImg("#D9EEE9")],
     status: "yollandi",
     createdAt: daysAgo(8),
   },
@@ -675,7 +676,7 @@ export const seedProposals: Proposal[] = [
         answer: "Logotip 4 kun, to'liq brend kitobi bilan 9 kun.",
       },
     ],
-    attachedImages: [svgImg("#FFC53D"), svgImg("#A3E635")],
+    attachedImages: [svgImg("#E8F3D6"), svgImg("#DCF2E3")],
     status: "suhbat",
     createdAt: daysAgo(1),
   },
@@ -717,7 +718,7 @@ export const seedProposals: Proposal[] = [
     coverLetter:
       "Assalomu alaykum! Intervyu formatidagi kanallar bilan 2 yildan beri ishlayman — hozir 3 ta kanalning doimiy montajchisiman. 8 ta videoni haftasiga 2 tadan, rang korreksiyasi va dinamik subtitrlar bilan topshiraman. Birinchi videoni sinov sifatida 2 kunda ko'rsata olaman.",
     screeningAnswers: [],
-    attachedImages: [svgImg("#143A2D")],
+    attachedImages: [svgImg("#D9EEE9")],
     status: "yuborilgan",
     createdAt: hoursAgo(6),
   },
@@ -729,7 +730,7 @@ export const seedProposals: Proposal[] = [
     coverLetter:
       "Salom! Asosiy yo'nalishim dizayn bo'lsa-da, video uchun intro/outro va motion grafika to'plamini ham o'zim tayyorlayman — kanal bir xil vizual uslubga ega bo'ladi. Montaj + grafika birga: 8 video, har biriga maxsus preview rasm ham kiradi.",
     screeningAnswers: [],
-    attachedImages: [svgImg("#FFC53D")],
+    attachedImages: [svgImg("#E8F3D6")],
     status: "yuborilgan",
     createdAt: daysAgo(1),
   },

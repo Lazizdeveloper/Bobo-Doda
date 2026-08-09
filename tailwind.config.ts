@@ -1,9 +1,11 @@
 import type { Config } from "tailwindcss";
 
-/* ── Suzani dizayn tizimi ──────────────────────────────────────────────
-   Ilhom: o'zbek so'zana kashtasi — to'q archa-yashil mato ustiga
-   zarg'aldoq sariq va yashil naqsh, hammasi qizil ip bilan chok qilingan.
-   Yashil = muhit (fon), sariq = harakat (tugma/urg'u), qizil = chiziq.
+/* ── Suzani Light dizayn tizimi ────────────────────────────────────────
+   Oq mato ustiga yashil kashta. Fon — oq, harakat — yashil, chok — yashil.
+   Yashil oilasi: primary (o'rmon yashil) · accent (zaytun-lime) ·
+   info (archa-ko'kish yashil). Semantik ranglar faqat status uchun:
+   danger (qizil) va warning (kahrabo).
+   Barcha matn/fon juftliklari WCAG AA (>=4.5:1) bo'yicha tekshirilgan.
    BOSHQA RANG QO'SHILMASIN. */
 const config: Config = {
   content: [
@@ -13,27 +15,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        /* Mato — to'q archa yashil */
-        bg: "#08211A",
-        card: "#0E2E24",
-        "card-hover": "#143A2D",
-        /* Harakat — zarg'aldoq sariq. Ustidagi matn doim on-primary */
-        primary: "#FFC53D",
-        "on-primary": "#08211A",
-        /* Urg'u — yosh yashil (sariq bilan yashil orasidagi ko'prik) */
-        accent: "#A3E635",
-        /* Matn — oqartirilmagan mato rangi */
-        ink: "#F5EFE0",
-        muted: "#9CB6A6",
-        faint: "#7B9A88",
-        /* Chiziq — qizil ip chok */
-        line: "rgba(214, 74, 52, .40)",
-        "line-strong": "#D64A34",
-        /* Semantik — faqat status/xabar uchun.
-           danger qizil chokdan ajralib turishi uchun qip-qizil emas, qirmizi */
-        danger: "#FF7892",
-        warning: "#F58C1F",
-        success: "#4ADE80",
+        /* Mato — oq */
+        bg: "#FFFFFF",
+        card: "#FFFFFF",
+        "card-hover": "#F2F8F4",
+        /* Yumshoq yashil-oq to'ldirish: jadval sarlavhasi, ikkilamchi panel */
+        surface: "#F5FAF7",
+        /* Harakat — o'rmon yashil. Ustidagi matn doim on-primary (oq) */
+        primary: "#15803D",
+        "primary-hover": "#116632",
+        "on-primary": "#FFFFFF",
+        /* Urg'u — zaytun-lime (eski so'zana lime'ining o'qiladigan varianti) */
+        accent: "#4D7C0F",
+        /* Jarayon holati — archa-ko'kish yashil (yakunlangan yashildan farqli) */
+        info: "#0F766E",
+        /* Matn */
+        ink: "#0C1F16",
+        muted: "#4C6156",
+        faint: "#5E7568",
+        /* Chiziq — yashil chok ipi */
+        line: "#DDEAE3",
+        "line-strong": "#15803D",
+        /* Forma elementi chegarasi — WCAG 1.4.11 uchun 3:1 */
+        field: "#7B9587",
+        /* Semantik — faqat status/xabar uchun */
+        danger: "#DC2626",
+        warning: "#B45309",
+        success: "#15803D",
+        /* "deep" variantlar — o'z rangining ochiq to'ldirishi (/10) ustida
+           matn AA (>=4.5:1) bo'lishi uchun. Faqat Badge/tint bloklarida. */
+        "primary-deep": "#0E5C2C",
+        "accent-deep": "#3F6A0A",
+        "info-deep": "#0B5A54",
+        "success-deep": "#0E5C2C",
+        "warning-deep": "#8F4208",
+        "danger-deep": "#B4161B",
       },
       fontFamily: {
         heading: ["var(--font-unbounded)", "sans-serif"],
@@ -55,9 +71,12 @@ const config: Config = {
         input: "10px",
       },
       boxShadow: {
-        overlay: "0 8px 32px rgba(0,0,0,.55)",
-        /* Sariq tugmaning "ko'tarilgan" hissi */
-        raised: "0 2px 0 0 #D64A34",
+        /* Oq fonda karta chegarasini kuchaytiruvchi yumshoq ko'tarilish */
+        card: "0 1px 2px rgba(12,31,22,.06)",
+        "card-hover": "0 4px 14px rgba(12,31,22,.10)",
+        overlay: "0 16px 40px rgba(12,31,22,.16)",
+        /* Yashil tugmaning "ko'tarilgan" hissi — ostidagi to'q yashil chiziq */
+        raised: "0 2px 0 0 #0E5C2C",
       },
     },
   },

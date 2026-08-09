@@ -47,7 +47,7 @@ export function Sidebar({ items, brand, footer, open, onClose }: SidebarProps) {
             className={`flex items-center gap-3 rounded-btn px-3 py-2.5 text-sm transition-colors duration-150 ${
               active
                 ? "relative bg-primary/15 font-semibold text-ink before:absolute before:inset-y-1.5 before:left-0 before:w-1 before:rounded-full before:bg-primary"
-                : "text-muted hover:bg-card hover:text-ink"
+                : "text-muted hover:bg-card-hover hover:text-ink"
             }`}
           >
             <span className={active ? "text-primary" : "text-faint"} aria-hidden="true">
@@ -63,7 +63,7 @@ export function Sidebar({ items, brand, footer, open, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-card lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-surface lg:flex">
         <div className="flex h-16 items-center px-6">{brand}</div>
         {nav}
         {footer && <div className="border-t border-line p-3">{footer}</div>}
@@ -73,11 +73,11 @@ export function Sidebar({ items, brand, footer, open, onClose }: SidebarProps) {
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
           <div
-            className="sb-fade-in absolute inset-0 bg-bg/80"
+            className="sb-fade-in absolute inset-0 bg-ink/40"
             onClick={onClose}
             aria-hidden="true"
           />
-          <aside className="sb-fade-in absolute inset-y-0 left-0 flex w-64 flex-col border-r border-line bg-card">
+          <aside className="sb-fade-in absolute inset-y-0 left-0 flex w-64 flex-col border-r border-line bg-card shadow-overlay">
             <div className="flex h-16 items-center justify-between px-6">
               {brand}
               <button

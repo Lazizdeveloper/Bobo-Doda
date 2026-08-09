@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
@@ -10,12 +11,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { JobCard } from "@/components/shared/JobCard";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { CATEGORIES } from "@/lib/category-fields";
-import {
-  getJobs,
-  getSavedJobIds,
-  getSellerProfile,
-  toggleSavedJob,
-} from "@/lib/api";
+import { jobsService, savedService, usersService } from "@/lib/api";
 import type { Job, SellerProfile } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -51,12 +47,24 @@ export default function IshElonlariPage() {
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search, 250);
   const PER_PAGE = 10;
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getJobs().then(setJobs);
-    getSellerProfile().then(setProfile);
-    getSavedJobIds().then(setSavedIds);
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      jobsService.list(),
+      usersService.getSellerProfile(),
+      savedService.listJobIds(),
+    ])
+      .then(([jobList, profileData, ids]) => {
+        setJobs(jobList);
+        setProfile(profileData);
+        setSavedIds(ids);
+      })
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   /* Filtr/tab/qidiruv o'zgarsa — birinchi sahifaga */
   useEffect(() => {
@@ -64,7 +72,7 @@ export default function IshElonlariPage() {
   }, [tab, category, budget, sort, debouncedSearch]);
 
   async function handleToggleSave(jobId: string) {
-    setSavedIds(await toggleSavedJob(jobId));
+    setSavedIds(await savedService.toggleJob(jobId));
   }
 
   const query = debouncedSearch.trim().toLowerCase();
@@ -166,7 +174,9 @@ export default function IshElonlariPage() {
         />
       </div>
 
-      {!jobs ? (
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : !jobs ? (
         <div className="flex flex-col gap-4">
           <SkeletonCard />
           <SkeletonCard />

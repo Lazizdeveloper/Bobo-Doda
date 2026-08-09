@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
-import { changePassword } from "@/lib/api";
+import { usersService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export function AccountSecurity() {
@@ -32,7 +32,7 @@ export function AccountSecurity() {
     }
     setSaving(true);
     try {
-      await changePassword(currentPassword, newPassword);
+      await usersService.changePassword(currentPassword, newPassword);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");

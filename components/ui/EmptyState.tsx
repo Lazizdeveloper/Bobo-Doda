@@ -9,7 +9,7 @@ export interface EmptyStateProps {
 
 export function EmptyState({ title, description, action, icon }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-line bg-card/50 px-6 py-12 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-field bg-surface px-6 py-12 text-center">
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-card-hover text-muted">
         {icon ?? (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">

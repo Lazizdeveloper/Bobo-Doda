@@ -66,11 +66,14 @@ export function normalizeApiError(error: unknown): ApiError {
       cause: error,
     });
   }
+  /* Noma'lum xato = server tomoni (5xx) deb qaraladi: bu odatda o'tkinchi,
+     shuning uchun UI qayta urinish tugmasini ko'rsatadi. Qaytarib bo'lmaydigan
+     holatlar (401/403/404/409/422) yuqoridagi LEGACY_CODES da aniq berilgan. */
   return new ApiError({
     code: "UNKNOWN",
     message,
     status: 500,
-    retryable: false,
+    retryable: true,
     cause: error,
   });
 }

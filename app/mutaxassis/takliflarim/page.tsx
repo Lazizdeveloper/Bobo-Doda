@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import {
   OfferStatusBadge,
   ProposalStatusBadge,
 } from "@/components/shared/StatusBadge";
-import { getIncomingOffers, getJobs, getProposals } from "@/lib/api";
+import { jobsService, offersService, proposalsService } from "@/lib/api";
 import type { Job, Offer, Proposal, ProposalStatus } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -36,12 +37,24 @@ export default function TakliflarimPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getProposals().then(setProposals);
-    getJobs().then(setJobs);
-    getIncomingOffers().then(setOffers);
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      proposalsService.listMine(),
+      jobsService.list(),
+      offersService.listIncoming(),
+    ])
+      .then(([proposalList, jobList, offerList]) => {
+        setProposals(proposalList);
+        setJobs(jobList);
+        setOffers(offerList);
+      })
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   const jobById = new Map(jobs.map((j) => [j.id, j]));
 
@@ -58,6 +71,10 @@ export default function TakliflarimPage() {
         {t("props.title")}
       </h1>
 
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : (
+        <>
       {/* Buyurtmachilardan kelgan to'g'ridan-to'g'ri takliflar */}
       {offers.length > 0 && (
         <section className="flex flex-col gap-3">
@@ -170,6 +187,8 @@ export default function TakliflarimPage() {
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );

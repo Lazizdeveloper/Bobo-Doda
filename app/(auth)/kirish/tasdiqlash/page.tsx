@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { getSession, verifyTelegram } from "@/lib/api";
+import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export default function TasdiqlashPage() {
@@ -15,7 +15,7 @@ export default function TasdiqlashPage() {
 
   /* Sessiya guard'i: sessiyasiz kirish yo'q, tasdiqlangan bo'lsa kabinetga */
   useEffect(() => {
-    const session = getSession();
+    const session = authService.getSession();
     if (!session) {
       router.replace("/kirish");
       return;
@@ -47,7 +47,7 @@ export default function TasdiqlashPage() {
     }
     setLoading(true);
     try {
-      const session = await verifyTelegram(code);
+      const session = await authService.verifyTelegram(code);
       router.push(session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
     } catch {
       setError(t("auth.codeError"));

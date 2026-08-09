@@ -1,21 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { CardPicker } from "@/components/shared/cards";
-import {
-  getAllMilestones,
-  getCards,
-  getContracts,
-  getWithdrawnTotal,
-  withdrawFunds,
-} from "@/lib/api";
+import { contractsService, milestonesService, paymentsService } from "@/lib/api";
 import type { PaymentCard } from "@/lib/types";
 import type { Contract, Milestone } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -33,16 +28,27 @@ export default function DaromadPage() {
   const [cardId, setCardId] = useState("");
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getAllMilestones().then(setMilestones);
-    getContracts().then(setContracts);
-    getWithdrawnTotal().then(setWithdrawn);
-    getCards().then((c) => {
-      setCards(c);
-      if (c[0]) setCardId(c[0].id);
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      milestonesService.listMine(),
+      contractsService.list(),
+      paymentsService.getWithdrawnTotal(),
+      paymentsService.getCards(),
+    ])
+      .then(([milestoneList, contractList, withdrawnTotal, cardList]) => {
+        setMilestones(milestoneList);
+        setContracts(contractList);
+        setWithdrawn(withdrawnTotal);
+        setCards(cardList);
+        if (cardList[0]) setCardId(cardList[0].id);
+      })
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   const contractById = new Map(contracts.map((c) => [c.id, c]));
 
@@ -66,8 +72,8 @@ export default function DaromadPage() {
     if (!cardId) return;
     setWithdrawing(true);
     try {
-      await withdrawFunds(cardId);
-      setWithdrawn(await getWithdrawnTotal());
+      await paymentsService.withdrawEarnings(cardId);
+      setWithdrawn(await paymentsService.getWithdrawnTotal());
       toast(t("earn.withdrawn"));
       setWithdrawOpen(false);
     } catch {
@@ -91,6 +97,10 @@ export default function DaromadPage() {
         </Button>
       </div>
 
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : (
+        <>
       {/* Statistika */}
       <div className="grid gap-4 sm:grid-cols-3">
         {!milestones ? (
@@ -202,6 +212,8 @@ export default function DaromadPage() {
           />
         )}
       </section>
+        </>
+      )}
 
       {/* Pul yechish modali (mock) */}
       <Modal
@@ -228,7 +240,7 @@ export default function DaromadPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between rounded-input border border-line bg-bg p-3">
+          <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
             <span className="text-xs text-muted">{t("earn.withdrawable")}</span>
             <span className="font-heading text-base font-bold text-success">
               {formatMoney(withdrawable, lang)}

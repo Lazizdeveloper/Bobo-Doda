@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Pagination } from "@/components/ui/Pagination";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -16,14 +17,8 @@ import { Tabs } from "@/components/ui/Tabs";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { CATEGORIES } from "@/lib/category-fields";
-import {
-  getPublicServices,
-  getSavedMarketIds,
-  getSpecialists,
-  toggleSavedMarketItem,
-  type Specialist,
-} from "@/lib/api";
-import type { Service } from "@/lib/types";
+import { catalogService, savedService, servicesService } from "@/lib/api";
+import type { Service, Specialist } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -41,6 +36,7 @@ export default function BozorPage() {
   const [savedIds, setSavedIds] = useState<string[] | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
   const [page, setPage] = useState(1);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const debouncedSearch = useDebouncedValue(search, 250);
   const PER_PAGE = 12;
 
@@ -49,20 +45,26 @@ export default function BozorPage() {
     setPage(1);
   }, [tab, category, sort, savedOnly, debouncedSearch]);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoadError(null);
     Promise.all([
-      getPublicServices(),
-      getSpecialists(),
-      getSavedMarketIds(),
-    ]).then(([nextServices, nextSpecialists, nextSaved]) => {
-      setServices(nextServices);
-      setSpecialists(nextSpecialists);
-      setSavedIds(nextSaved);
-    });
+      servicesService.listPublic(),
+      catalogService.listSpecialists(),
+      savedService.listMarketIds(),
+    ])
+      .then(([nextServices, nextSpecialists, nextSaved]) => {
+        setServices(nextServices);
+        setSpecialists(nextSpecialists);
+        setSavedIds(nextSaved);
+      })
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
 
+  useEffect(load, [load]);
+
   async function toggleSaved(id: string) {
-    setSavedIds(await toggleSavedMarketItem(id));
+    setSavedIds(await savedService.toggleMarketItem(id));
   }
 
   const sellerById = new Map(specialists?.map((s) => [s.user.id, s]));
@@ -187,7 +189,7 @@ export default function BozorPage() {
           <BookmarkIcon filled={savedOnly} />
           {t("market.savedOnly")}
           {savedIds && savedIds.length > 0 && (
-            <span className="rounded-full bg-primary/15 px-1.5 text-2xs text-primary">
+            <span className="rounded-full bg-primary/10 px-1.5 text-2xs text-primary-deep">
               {savedIds.length}
             </span>
           )}
@@ -202,7 +204,9 @@ export default function BozorPage() {
         </span>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : loading ? (
         <div className="grid gap-4 md:grid-cols-2">
           <SkeletonCard />
           <SkeletonCard />

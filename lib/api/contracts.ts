@@ -41,6 +41,43 @@ export interface UsersService {
   getCurrent(): Promise<Model.User | null>;
   getSellerProfile(): Promise<Model.SellerProfile>;
   updateName(fullName: string): Promise<void>;
+  completeSellerProfile(input: {
+    fullName: string;
+    bio: string;
+    skills: string[];
+    categories: string[];
+    location: string;
+  }): Promise<void>;
+  updateSellerProfile(input: {
+    fullName: string;
+    bio: string;
+    headline?: string;
+    skills?: string[];
+    location?: string;
+    languages?: Model.ProfileLanguage[];
+    portfolio?: Model.PortfolioItem[];
+  }): Promise<void>;
+  setAvailability(available: boolean): Promise<void>;
+  getPreferences(): Promise<Model.AccountPreferences>;
+  savePreferences(preferences: Model.AccountPreferences): Promise<void>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  exportData(): Promise<Record<string, unknown>>;
+  deleteAccount(): Promise<void>;
+}
+
+/** Ochiq katalog: mutaxassis profillari va ular haqidagi sharhlar */
+export interface CatalogService {
+  listSpecialists(): Promise<Model.Specialist[]>;
+  getSpecialist(userId: string): Promise<Model.Specialist | null>;
+  listSellerReviews(sellerId: string): Promise<Model.Review[]>;
+}
+
+/** Saqlangan (bookmark) elementlar — e'lonlar va bozor kartalari */
+export interface SavedService {
+  listJobIds(): Promise<string[]>;
+  toggleJob(jobId: string): Promise<string[]>;
+  listMarketIds(): Promise<string[]>;
+  toggleMarketItem(id: string): Promise<string[]>;
 }
 
 export interface ServicesService {
@@ -56,6 +93,15 @@ export interface JobsService {
   list(): Promise<Model.Job[]>;
   get(id: string): Promise<Model.Job | null>;
   listMine(): Promise<Model.Job[]>;
+  create(input: {
+    title: string;
+    description: string;
+    category: Model.Job["category"];
+    budgetMin: number;
+    budgetMax: number;
+    skillsRequired: string[];
+    screeningQuestions: string[];
+  }): Promise<Model.Job>;
   close(id: string): Promise<Model.Job>;
 }
 
@@ -63,11 +109,38 @@ export interface ProposalsService {
   listMine(): Promise<Model.Proposal[]>;
   get(id: string): Promise<Model.Proposal | null>;
   listForJob(jobId: string): Promise<Model.Proposal[]>;
+  create(input: {
+    jobId: string;
+    bidAmount: number;
+    coverLetter: string;
+    screeningAnswers: { question: string; answer: string }[];
+    attachedImages: string[];
+  }): Promise<Model.Proposal>;
+  setStatus(
+    id: string,
+    status: "korib_chiqilmoqda" | "suhbat" | "rad_etildi"
+  ): Promise<Model.Proposal>;
+  hire(
+    proposalId: string,
+    milestones: {
+      title: string;
+      description: string;
+      amount: number;
+      dueDate: string;
+    }[]
+  ): Promise<Model.Contract>;
   withdraw(id: string): Promise<Model.Proposal>;
 }
 
 export interface OffersService {
   get(id: string): Promise<Model.Offer | null>;
+  create(input: {
+    sellerId: string;
+    serviceId?: string;
+    title: string;
+    message: string;
+    budget: number;
+  }): Promise<Model.Offer>;
   listSent(): Promise<Model.Offer[]>;
   listIncoming(): Promise<Model.Offer[]>;
   accept(id: string): Promise<Model.Contract>;
@@ -93,6 +166,17 @@ export interface PaymentsService {
   fundContract(id: string): Promise<Model.Contract>;
   getBalance(): Promise<number>;
   getCards(): Promise<Model.PaymentCard[]>;
+  addCard(input: {
+    number: string;
+    holderName: string;
+    expiry: string;
+  }): Promise<Model.PaymentCard>;
+  removeCard(id: string): Promise<void>;
+  /** Mutaxassis daromadini bog'langan kartaga yechish */
+  withdrawEarnings(cardId: string): Promise<void>;
+  /** Xaridor balansidagi (qaytgan escrow) mablag'ni kartaga yechish */
+  withdrawBalance(cardId: string): Promise<number>;
+  getWithdrawnTotal(): Promise<number>;
 }
 
 export interface MessagesService {
@@ -115,6 +199,10 @@ export interface ReviewsService {
 
 export interface DisputesService {
   getForContract(contractId: string): Promise<Model.Dispute | null>;
+  open(
+    contractId: string,
+    input: Pick<Model.Dispute, "reason" | "description" | "evidence">
+  ): Promise<Model.Dispute>;
 }
 
 export interface VerificationService {

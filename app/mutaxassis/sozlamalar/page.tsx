@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -19,14 +20,7 @@ import { CardManager } from "@/components/shared/cards";
 import { AccountControls } from "@/components/shared/AccountControls";
 import { AccountSecurity } from "@/components/shared/AccountSecurity";
 import { CATEGORIES } from "@/lib/category-fields";
-import {
-  getCards,
-  getCurrentUser,
-  getSellerProfile,
-  logout,
-  setAvailability,
-  updateSellerProfile,
-} from "@/lib/api";
+import { authService, paymentsService, usersService } from "@/lib/api";
 import type {
   LanguageLevel,
   PaymentCard,
@@ -69,25 +63,35 @@ export default function SozlamalarPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    Promise.all([getCurrentUser(), getSellerProfile()]).then(([user, profile]) => {
-      if (user) setFullName(user.fullName);
-      setHeadline(profile.headline);
-      setBio(profile.bio);
-      setSkills(profile.skills);
-      setLocation(profile.location);
-      setLanguages(profile.languages);
-      setPortfolio(profile.portfolio);
-      setAvailable(profile.available);
-      setLoading(false);
-    });
-    getCards().then(setCards);
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      usersService.getCurrent(),
+      usersService.getSellerProfile(),
+      paymentsService.getCards(),
+    ])
+      .then(([user, profile, cardList]) => {
+        if (user) setFullName(user.fullName);
+        setHeadline(profile.headline);
+        setBio(profile.bio);
+        setSkills(profile.skills);
+        setLocation(profile.location);
+        setLanguages(profile.languages);
+        setPortfolio(profile.portfolio);
+        setAvailable(profile.available);
+        setCards(cardList);
+        setLoading(false);
+      })
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   async function handleAvailability(next: boolean) {
     setAvailable(next);
-    await setAvailability(next);
+    await usersService.setAvailability(next);
     toast(t("settings.saved"));
   }
 
@@ -147,7 +151,7 @@ export default function SozlamalarPage() {
 
     setSaving(true);
     try {
-      await updateSellerProfile({
+      await usersService.updateSellerProfile({
         fullName: fullName.trim(),
         headline: headline.trim(),
         bio: bio.trim(),
@@ -165,10 +169,11 @@ export default function SozlamalarPage() {
   }
 
   function handleLogout() {
-    logout();
+    authService.logout();
     router.push("/kirish");
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (loading) return <SkeletonCard />;
 
   return (

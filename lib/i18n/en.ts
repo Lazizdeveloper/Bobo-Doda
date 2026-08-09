@@ -35,6 +35,13 @@ export const en: Record<string, string> = {
   "search.noResults": "No results for “{query}”",
 
   /* 404 & error pages */
+  "err.loadFailed": "Could not load data",
+  "err.network": "No connection — check your internet",
+  "err.unauthenticated": "Your session expired — please sign in again",
+  "err.forbidden": "You don't have access to this data",
+  "err.notFound": "Data not found",
+  "err.rateLimited": "Too many requests — please try again shortly",
+  "err.retry": "Retry",
   "err.notFoundTitle": "Page not found",
   "err.notFoundDesc": "This address doesn't exist or was removed. Check the link.",
   "err.crashTitle": "Something went wrong",

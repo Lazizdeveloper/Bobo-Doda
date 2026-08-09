@@ -24,9 +24,9 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`rounded-card border border-line bg-card ${stitch ? "sb-stitch" : ""} ${paddingClasses[padding]} ${
+      className={`rounded-card border border-line bg-card shadow-card ${stitch ? "sb-stitch" : ""} ${paddingClasses[padding]} ${
         hoverable
-          ? "transition-colors duration-150 hover:border-line-strong hover:bg-card-hover"
+          ? "transition-all duration-150 hover:border-line-strong hover:bg-card-hover hover:shadow-card-hover"
           : ""
       } ${className}`}
       {...rest}

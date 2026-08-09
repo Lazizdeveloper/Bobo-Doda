@@ -17,7 +17,7 @@ export function LangSwitch() {
           type="button"
           onClick={() => setLang(option)}
           aria-pressed={lang === option}
-          className={`rounded-[8px] px-2.5 py-1 text-2xs font-medium uppercase transition-colors duration-150 ${
+          className={`rounded-[8px] px-1.5 py-1 text-2xs font-medium uppercase sm:px-2.5 transition-colors duration-150 ${
             lang === option
               ? "bg-primary text-on-primary"
               : "text-muted hover:text-ink"

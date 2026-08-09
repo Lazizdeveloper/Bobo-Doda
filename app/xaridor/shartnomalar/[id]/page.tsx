@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -24,20 +25,7 @@ import {
   ContractStatusBadge,
   MilestoneStatusBadge,
 } from "@/components/shared/StatusBadge";
-import {
-  acceptMilestone,
-  cancelContract,
-  createReview,
-  fundContract,
-  getContract,
-  getMessages,
-  getMilestones,
-  getReviewByContract,
-  getSession,
-  requestRevision,
-  sendMessage,
-  SELLER_ID,
-} from "@/lib/api";
+import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService } from "@/lib/api";
 import type { Contract, Message, Milestone, Review } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -51,6 +39,7 @@ export default function XaridorWorkroomPage() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [review, setReview] = useState<Review | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
   /* Modallar */
   const [fundOpen, setFundOpen] = useState(false);
@@ -78,35 +67,36 @@ export default function XaridorWorkroomPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const loadVersionRef = useRef(0);
 
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
-
-  async function reload() {
+  const reload = useCallback(async () => {
     const version = ++loadVersionRef.current;
     setContract(undefined);
+    setLoadError(null);
     try {
-      const found = await getContract(params.id);
+      const found = await contractsService.get(params.id);
       if (version !== loadVersionRef.current) return;
       if (!found) {
         setContract(null);
         return;
       }
       const [nextMilestones, nextMessages, nextReview] = await Promise.all([
-        getMilestones(found.id),
-        getMessages(found.id),
-        getReviewByContract(found.id),
+        milestonesService.list(found.id),
+        messagesService.list(found.id),
+        reviewsService.getForContract(found.id),
       ]);
       if (version !== loadVersionRef.current) return;
       setContract(found);
       setMilestones(nextMilestones);
       setMessages(nextMessages);
       setReview(nextReview);
-    } catch {
-      if (version === loadVersionRef.current) setContract(null);
+    } catch (error) {
+      /* Yuklash xatosi "topilmadi" EMAS — alohida holat ko'rsatiladi */
+      if (version === loadVersionRef.current) setLoadError(error);
     }
-  }
+  }, [params.id]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: "end" });
@@ -134,7 +124,7 @@ export default function XaridorWorkroomPage() {
     }
     setBusy(true);
     try {
-      await fundContract(contract.id);
+      await paymentsService.fundContract(contract.id);
       toast(t("cfund.done"));
       setFundOpen(false);
       reload();
@@ -149,7 +139,7 @@ export default function XaridorWorkroomPage() {
     if (!acceptTarget) return;
     setBusy(true);
     try {
-      await acceptMilestone(acceptTarget.id);
+      await milestonesService.accept(acceptTarget.id);
       toast(t("bms.accepted"));
       setAcceptTarget(null);
       reload();
@@ -168,7 +158,7 @@ export default function XaridorWorkroomPage() {
     }
     setBusy(true);
     try {
-      await requestRevision(revisionTarget.id, revisionComment);
+      await milestonesService.requestRevision(revisionTarget.id, revisionComment);
       toast(t("bms.revisionSent"));
       setRevisionTarget(null);
       setRevisionComment("");
@@ -184,7 +174,7 @@ export default function XaridorWorkroomPage() {
     if (!contract) return;
     setBusy(true);
     try {
-      await cancelContract(contract.id);
+      await contractsService.cancel(contract.id);
       toast(t("contract.cancelled"));
       setCancelOpen(false);
       reload();
@@ -204,7 +194,7 @@ export default function XaridorWorkroomPage() {
     }
     setReviewSaving(true);
     try {
-      const created = await createReview(contract.id, rating, reviewComment);
+      const created = await reviewsService.create(contract.id, rating, reviewComment);
       setReview(created);
       toast(t("brev.done"));
     } catch {
@@ -220,7 +210,7 @@ export default function XaridorWorkroomPage() {
     if (!text || !contract) return;
     setSending(true);
     try {
-      const message = await sendMessage(contract.id, text);
+      const message = await messagesService.send(contract.id, text);
       setMessages((prev) => [...prev, message]);
       setDraft("");
     } catch {
@@ -230,10 +220,11 @@ export default function XaridorWorkroomPage() {
     }
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={reload} />;
   if (contract === undefined) return <SkeletonCard />;
   if (contract === null) return <EmptyState title={t("contract.notFound")} />;
 
-  const myId = getSession()?.userId ?? SELLER_ID;
+  const myId = authService.getSession()?.userId ?? null;
   const actionable = contract.status === "faol";
   /* Imzolangan yoki faol shartnomani bekor qilish mumkin; tekshiruvdagi ish
      bo'lsa bloklanadi (avval uni hal qilish kerak) */
@@ -363,10 +354,10 @@ export default function XaridorWorkroomPage() {
                     aria-hidden="true"
                     className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-2xs font-bold ${
                       milestone.status === "qabul_qilindi"
-                        ? "bg-success/20 text-success"
+                        ? "bg-success/10 text-success-deep"
                         : milestone.status === "kutilmoqda"
                           ? "bg-card-hover text-faint"
-                          : "bg-primary/15 text-primary"
+                          : "bg-primary/10 text-primary-deep"
                     }`}
                   >
                     {i + 1}
@@ -442,7 +433,7 @@ export default function XaridorWorkroomPage() {
               {milestone.status === "ozgartirish_soraldi" && (
                 <div className="flex flex-col gap-2 pl-9">
                   {milestone.revisionComment && (
-                    <div className="rounded-input border border-danger/25 bg-bg p-3">
+                    <div className="rounded-input border border-danger/25 bg-surface p-3">
                       <p className="text-2xs font-medium uppercase tracking-wide text-danger">
                         {t("ms.revisionNote")}
                       </p>
@@ -626,7 +617,7 @@ export default function XaridorWorkroomPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between rounded-input border border-line bg-bg p-3">
+          <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
             <span className="text-xs text-muted">{t("cfund.total")}</span>
             <span className="font-heading text-base font-bold text-ink">
               {formatMoney(contract.totalAmount, lang)}
@@ -678,7 +669,7 @@ export default function XaridorWorkroomPage() {
                 />
               ) : (
                 <div className="flex items-center gap-3 rounded-input border border-primary/25 bg-primary/5 p-4">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-btn bg-primary/15 font-heading text-xs font-bold text-primary">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-btn bg-primary/10 font-heading text-xs font-bold text-primary-deep">
                     {payMethod === "click" ? "CL" : "PM"}
                   </span>
                   <div>
@@ -716,7 +707,7 @@ export default function XaridorWorkroomPage() {
       >
         <div className="flex flex-col gap-3">
           {acceptTarget && (
-            <div className="flex items-center justify-between rounded-input border border-line bg-bg p-3">
+            <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
               <span className="text-xs text-muted">{acceptTarget.title}</span>
               <span className="font-heading text-base font-bold text-success">
                 {formatMoney(acceptTarget.amount, lang)}

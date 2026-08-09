@@ -22,7 +22,7 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
-    ".next-admin/**",
+    ".next-*/**",
     "node_modules/**",
     "next-env.d.ts",
     "public/sw.js",

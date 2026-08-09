@@ -27,7 +27,7 @@ export function Avatar({ name, src, size = "md", className = "" }: AvatarProps) 
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-primary/20 font-heading font-bold text-primary ${sizeClasses[size]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-primary/10 font-heading font-bold text-primary-deep ${sizeClasses[size]} ${className}`}
     >
       {initials(name)}
     </span>

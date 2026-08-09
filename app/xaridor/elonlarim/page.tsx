@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { JobStatusBadge } from "@/components/shared/StatusBadge";
-import { getBuyerJobs, getJobProposals } from "@/lib/api";
+import { jobsService, proposalsService } from "@/lib/api";
 import type { Job, JobStatus, Proposal } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -21,23 +22,33 @@ export default function ElonlarimPage() {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [counts, setCounts] = useState<Map<string, number>>(new Map());
   const [filter, setFilter] = useState<Filter>("all");
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getBuyerJobs().then(async (list) => {
-      setJobs(list);
-      /* Har bir e'lon uchun haqiqiy kelgan takliflar soni */
-      const results = await Promise.all(list.map((j) => getJobProposals(j.id)));
-      const map = new Map<string, number>();
-      list.forEach((job, i) => {
-        map.set(
-          job.id,
-          results[i].filter((p: Proposal) => p.status !== "qaytarib_olingan")
-            .length
+  const load = useCallback(() => {
+    setLoadError(null);
+    jobsService
+      .listMine()
+      .then(async (list) => {
+        setJobs(list);
+        /* Har bir e'lon uchun haqiqiy kelgan takliflar soni */
+        const results = await Promise.all(
+          list.map((j) => proposalsService.listForJob(j.id))
         );
-      });
-      setCounts(map);
-    });
+        const map = new Map<string, number>();
+        list.forEach((job, i) => {
+          map.set(
+            job.id,
+            results[i].filter((p: Proposal) => p.status !== "qaytarib_olingan")
+              .length
+          );
+        });
+        setCounts(map);
+      })
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   const filtered =
     jobs?.filter((j) => filter === "all" || j.status === filter) ?? [];
@@ -71,7 +82,9 @@ export default function ElonlarimPage() {
         ]}
       />
 
-      {!jobs ? (
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : !jobs ? (
         <SkeletonCard />
       ) : filtered.length === 0 ? (
         <EmptyState
@@ -112,7 +125,7 @@ export default function ElonlarimPage() {
                     <span
                       className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-2xs font-bold ${
                         (counts.get(job.id) ?? 0) > 0
-                          ? "bg-primary/15 text-primary"
+                          ? "bg-primary/10 text-primary-deep"
                           : "bg-card-hover text-faint"
                       }`}
                     >

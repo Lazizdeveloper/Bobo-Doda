@@ -316,3 +316,17 @@ export function computeBadge(
   if (completedContracts >= 5 && rating >= 4.5) return "ishonchli";
   return "yangi";
 }
+
+/** Ochiq katalogdagi mutaxassis: hisob + sotuvchi profili */
+export interface Specialist {
+  user: User;
+  profile: SellerProfile;
+}
+
+/** Bildirishnoma kanallari bo'yicha hisob sozlamalari */
+export interface AccountPreferences {
+  messages: boolean;
+  contracts: boolean;
+  payments: boolean;
+  marketing: boolean;
+}

@@ -2,6 +2,7 @@ import * as mock from "@/lib/mock-api";
 import * as adminMock from "@/lib/admin-api";
 import type {
   AuthService,
+  CatalogService,
   ContractsService,
   DisputesService,
   JobsService,
@@ -12,6 +13,7 @@ import type {
   PaymentsService,
   ProposalsService,
   ReviewsService,
+  SavedService,
   ServicesService,
   SupportService,
   UsersService,
@@ -34,6 +36,27 @@ export const usersService: UsersService = {
   getCurrent: () => call(mock.getCurrentUser),
   getSellerProfile: () => call(mock.getSellerProfile),
   updateName: (name) => call(() => mock.updateUserName(name)),
+  completeSellerProfile: (input) => call(() => mock.completeSellerProfile(input)),
+  updateSellerProfile: (input) => call(() => mock.updateSellerProfile(input)),
+  setAvailability: (available) => call(() => mock.setAvailability(available)),
+  getPreferences: () => call(mock.getAccountPreferences),
+  savePreferences: (preferences) => call(() => mock.saveAccountPreferences(preferences)),
+  changePassword: (current, next) => call(() => mock.changePassword(current, next)),
+  exportData: () => call(mock.exportCurrentUserData),
+  deleteAccount: () => call(mock.deleteCurrentAccount),
+};
+
+export const catalogService: CatalogService = {
+  listSpecialists: () => call(mock.getSpecialists),
+  getSpecialist: (userId) => call(() => mock.getSpecialist(userId)),
+  listSellerReviews: (sellerId) => call(() => mock.getReviewsForSeller(sellerId)),
+};
+
+export const savedService: SavedService = {
+  listJobIds: () => call(mock.getSavedJobIds),
+  toggleJob: (jobId) => call(() => mock.toggleSavedJob(jobId)),
+  listMarketIds: () => call(mock.getSavedMarketIds),
+  toggleMarketItem: (id) => call(() => mock.toggleSavedMarketItem(id)),
 };
 
 export const servicesService: ServicesService = {
@@ -49,6 +72,7 @@ export const jobsService: JobsService = {
   list: () => call(mock.getJobs),
   get: (id) => call(() => mock.getJob(id)),
   listMine: () => call(mock.getBuyerJobs),
+  create: (input) => call(() => mock.createJob(input)),
   close: (id) => call(() => mock.closeJob(id)),
 };
 
@@ -56,11 +80,15 @@ export const proposalsService: ProposalsService = {
   listMine: () => call(mock.getProposals),
   get: (id) => call(() => mock.getProposal(id)),
   listForJob: (id) => call(() => mock.getJobProposals(id)),
+  create: (input) => call(() => mock.createProposal(input)),
+  setStatus: (id, status) => call(() => mock.setProposalStatus(id, status)),
+  hire: (proposalId, milestones) => call(() => mock.hireProposal(proposalId, milestones)),
   withdraw: (id) => call(() => mock.withdrawProposal(id)),
 };
 
 export const offersService: OffersService = {
   get: (id) => call(() => mock.getOffer(id)),
+  create: (input) => call(() => mock.createOffer(input)),
   listSent: () => call(mock.getSentOffers),
   listIncoming: () => call(mock.getIncomingOffers),
   accept: (id) => call(() => mock.acceptOffer(id)),
@@ -86,6 +114,11 @@ export const paymentsService: PaymentsService = {
   fundContract: (id) => call(() => mock.fundContract(id)),
   getBalance: () => call(mock.getBalance),
   getCards: () => call(mock.getCards),
+  addCard: (input) => call(() => mock.addCard(input)),
+  removeCard: (id) => call(() => mock.removeCard(id)),
+  withdrawEarnings: (cardId) => call(() => mock.withdrawFunds(cardId)),
+  withdrawBalance: (cardId) => call(() => mock.withdrawBalance(cardId)),
+  getWithdrawnTotal: () => call(mock.getWithdrawnTotal),
 };
 
 export const messagesService: MessagesService = {
@@ -108,6 +141,7 @@ export const reviewsService: ReviewsService = {
 
 export const disputesService: DisputesService = {
   getForContract: (id) => call(() => mock.getDisputeByContract(id)),
+  open: (contractId, input) => call(() => mock.openDispute(contractId, input)),
 };
 
 export const verificationService: VerificationService = {
@@ -126,3 +160,10 @@ export const adminService = {
   hasPermission: adminMock.hasPermission,
   getAuditEvents: adminMock.getAuditEvents,
 };
+
+/**
+ * Ma'lumot o'zgargani haqidagi signal — ekranlar shu hodisada qayta o'qiydi.
+ * Hozir mock adapter localStorage yozuvidan keyin chiqaradi; backend'da bu
+ * websocket/SSE push yoki kesh invalidatsiyasi bilan almashtiriladi.
+ */
+export const DATA_CHANGED_EVENT = mock.DATA_CHANGED_EVENT;

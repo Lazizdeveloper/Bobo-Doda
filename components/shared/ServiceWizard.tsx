@@ -13,7 +13,7 @@ import { FileUpload } from "@/components/ui/FileUpload";
 import { Stepper } from "@/components/ui/Stepper";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES, categoryFields, type CategoryField } from "@/lib/category-fields";
-import { createService, updateService } from "@/lib/api";
+import { servicesService } from "@/lib/api";
 import type { Service, ServiceCategory } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -137,10 +137,10 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
         status,
       };
       if (isEdit) {
-        await updateService(initial.id, data);
+        await servicesService.update(initial.id, data);
         toast(t("wizard.changesSaved"));
       } else {
-        await createService(data);
+        await servicesService.create(data);
         toast(kind === "publish" ? t("wizard.published") : t("wizard.draftSaved"));
       }
       clearDraft();
@@ -264,7 +264,7 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
                   className={`rounded-card border p-4 text-center text-sm transition-colors duration-150 ${
                     category === cat
                       ? "border-primary bg-primary/10 font-medium text-ink"
-                      : "border-line bg-bg text-muted hover:bg-card-hover hover:text-ink"
+                      : "border-field bg-card text-muted hover:border-primary hover:bg-card-hover hover:text-ink"
                   }`}
                 >
                   {t(`cat.${cat}`)}

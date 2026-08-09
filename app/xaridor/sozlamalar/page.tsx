@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { CardManager } from "@/components/shared/cards";
 import { AccountControls } from "@/components/shared/AccountControls";
 import { AccountSecurity } from "@/components/shared/AccountSecurity";
-import { getCards, getCurrentUser, logout, updateUserName } from "@/lib/api";
+import { authService, paymentsService, usersService } from "@/lib/api";
 import type { PaymentCard } from "@/lib/types";
 import { useT, type Lang } from "@/lib/i18n";
 
@@ -28,17 +29,23 @@ export default function XaridorSozlamalarPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (user) {
-        setFullName(user.fullName);
-        setPhone(user.phone);
-      }
-      setLoading(false);
-    });
-    getCards().then(setCards);
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([usersService.getCurrent(), paymentsService.getCards()])
+      .then(([user, cardList]) => {
+        if (user) {
+          setFullName(user.fullName);
+          setPhone(user.phone);
+        }
+        setCards(cardList);
+        setLoading(false);
+      })
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
@@ -48,7 +55,7 @@ export default function XaridorSozlamalarPage() {
     }
     setSaving(true);
     try {
-      await updateUserName(fullName.trim());
+      await usersService.updateName(fullName.trim());
       toast(t("settings.saved"));
     } catch {
       toast(t("common.error"), "error");
@@ -58,10 +65,11 @@ export default function XaridorSozlamalarPage() {
   }
 
   function handleLogout() {
-    logout();
+    authService.logout();
     router.push("/kirish");
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (loading) return <SkeletonCard />;
 
   return (

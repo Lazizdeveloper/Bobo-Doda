@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -9,12 +9,13 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { OfferModal } from "@/components/shared/OfferModal";
-import { getService, getSpecialist, type Specialist } from "@/lib/api";
-import type { Service } from "@/lib/types";
+import { catalogService, servicesService } from "@/lib/api";
+import type { Service, Specialist } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -25,15 +26,28 @@ export default function XizmatTafsilotiPage() {
   const [service, setService] = useState<Service | null | undefined>(undefined);
   const [seller, setSeller] = useState<Specialist | null>(null);
   const [offerOpen, setOfferOpen] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getService(params.id).then((found) => {
-      setService(found && found.status === "active" ? found : null);
-      if (found) getSpecialist(found.sellerId).then(setSeller);
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    servicesService
+      .get(params.id)
+      .then(async (found) => {
+        setService(found && found.status === "active" ? found : null);
+        if (found) setSeller(await catalogService.getSpecialist(found.sellerId));
+      })
+      .catch(setLoadError);
   }, [params.id]);
 
-  if (service === undefined) return <SkeletonCard />;
+  useEffect(load, [load]);
+
+  if (service === undefined) {
+    return loadError ? (
+      <ErrorState error={loadError} onRetry={load} />
+    ) : (
+      <SkeletonCard />
+    );
+  }
   if (service === null) return <EmptyState title={t("svc.notFound")} />;
 
   /* Kategoriya maydonlari qiymatlarini o'qish uchun */

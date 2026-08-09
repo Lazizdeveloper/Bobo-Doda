@@ -1,21 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { ProposalStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  getContracts,
-  getJob,
-  getProposal,
-  withdrawProposal,
-} from "@/lib/api";
+import { contractsService, jobsService, proposalsService } from "@/lib/api";
 import type { Contract, Job, Proposal } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -32,24 +28,34 @@ export default function TaklifTafsilotiPage() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getProposal(params.id).then((found) => {
-      setProposal(found);
-      if (found) {
-        getJob(found.jobId).then(setJob);
-        getContracts().then((all) =>
-          setContract(all.find((c) => c.jobId === found.jobId) ?? null)
-        );
-      }
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    proposalsService
+      .get(params.id)
+      .then((found) => {
+        setProposal(found);
+        if (found) {
+          return Promise.all([
+            jobsService.get(found.jobId),
+            contractsService.list(),
+          ]).then(([jobData, allContracts]) => {
+            setJob(jobData);
+            setContract(allContracts.find((c) => c.jobId === found.jobId) ?? null);
+          });
+        }
+      })
+      .catch(setLoadError);
   }, [params.id]);
+
+  useEffect(load, [load]);
 
   async function handleWithdraw() {
     if (!proposal) return;
     setWithdrawing(true);
     try {
-      const updated = await withdrawProposal(proposal.id);
+      const updated = await proposalsService.withdraw(proposal.id);
       setProposal(updated);
       toast(t("prop.withdrawn"));
       setWithdrawOpen(false);
@@ -60,6 +66,7 @@ export default function TaklifTafsilotiPage() {
     }
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (proposal === undefined) return <SkeletonCard />;
   if (proposal === null) return <EmptyState title={t("common.notFound")} />;
 

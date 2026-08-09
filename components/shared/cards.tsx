@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
-import { addCard, removeCard } from "@/lib/api";
+import { paymentsService } from "@/lib/api";
 import type { CardType, PaymentCard } from "@/lib/types";
 import { detectCardType } from "@/lib/validate";
 import { useT } from "@/lib/i18n";
@@ -103,7 +103,7 @@ export function AddCardModal({
   async function handleAdd() {
     setSaving(true);
     try {
-      const card = await addCard({ number, holderName: holder, expiry });
+      const card = await paymentsService.addCard({ number, holderName: holder, expiry });
       toast(t("card.added"));
       onAdded(card);
       reset();
@@ -214,7 +214,7 @@ export function CardManager({
     if (!toRemove) return;
     setRemoving(true);
     try {
-      await removeCard(toRemove.id);
+      await paymentsService.removeCard(toRemove.id);
       onChange(cards.filter((c) => c.id !== toRemove.id));
       toast(t("card.removed"));
       setToRemove(null);
@@ -228,7 +228,7 @@ export function CardManager({
   return (
     <div className="flex flex-col gap-3">
       {cards.length === 0 ? (
-        <p className="rounded-input border border-dashed border-line bg-card/50 px-3 py-4 text-center text-xs text-faint">
+        <p className="rounded-input border border-dashed border-field bg-surface px-3 py-4 text-center text-xs text-faint">
           {t("card.empty")}
         </p>
       ) : (

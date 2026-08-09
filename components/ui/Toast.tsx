@@ -53,13 +53,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           >
             {item.kind === "success" ? (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
-                <circle cx="8" cy="8" r="7" stroke="#4ADE80" strokeWidth="1.5" />
-                <path d="M5 8.3 7 10.3 11 5.8" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="8" cy="8" r="7" stroke="#15803D" strokeWidth="1.5" />
+                <path d="M5 8.3 7 10.3 11 5.8" stroke="#15803D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             ) : (
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
-                <circle cx="8" cy="8" r="7" stroke="#F5355E" strokeWidth="1.5" />
-                <path d="M8 4.5v4M8 11v.5" stroke="#F5355E" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="8" cy="8" r="7" stroke="#DC2626" strokeWidth="1.5" />
+                <path d="M8 4.5v4M8 11v.5" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             )}
             {item.text}

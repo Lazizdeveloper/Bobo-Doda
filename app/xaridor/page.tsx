@@ -1,20 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  getAllMilestones,
-  getBuyerJobs,
-  getContracts,
-  getCurrentUser,
-  getJobProposals,
-} from "@/lib/api";
+import { contractsService, jobsService, milestonesService, proposalsService, usersService } from "@/lib/api";
 import type { Contract, Job, Milestone, Proposal } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -26,26 +21,42 @@ export default function XaridorDashboardPage() {
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [newProposals, setNewProposals] = useState<Map<string, number>>(new Map());
   const [name, setName] = useState("");
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getContracts().then(setContracts);
-    getAllMilestones().then(setMilestones);
-    getCurrentUser().then((user) => user && setName(user.fullName));
-    getBuyerJobs().then(async (list) => {
-      setJobs(list);
-      /* Har bir ochiq e'lon bo'yicha yangi (yuborilgan) takliflar soni */
-      const counts = new Map<string, number>();
-      const open = list.filter((j) => j.status === "ochiq");
-      const results = await Promise.all(open.map((j) => getJobProposals(j.id)));
-      open.forEach((job, i) => {
-        const fresh = results[i].filter(
-          (p: Proposal) => p.status === "yuborilgan"
-        ).length;
-        if (fresh > 0) counts.set(job.id, fresh);
-      });
-      setNewProposals(counts);
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      contractsService.list(),
+      milestonesService.listMine(),
+      usersService.getCurrent(),
+      jobsService.listMine(),
+    ])
+      .then(async ([contractList, milestoneList, user, jobList]) => {
+        setContracts(contractList);
+        setMilestones(milestoneList);
+        if (user) setName(user.fullName);
+        setJobs(jobList);
+        /* Har bir ochiq e'lon bo'yicha yangi (yuborilgan) takliflar soni */
+        const counts = new Map<string, number>();
+        const open = jobList.filter((j) => j.status === "ochiq");
+        const results = await Promise.all(
+          open.map((j) => proposalsService.listForJob(j.id))
+        );
+        open.forEach((job, i) => {
+          const fresh = results[i].filter(
+            (p: Proposal) => p.status === "yuborilgan"
+          ).length;
+          if (fresh > 0) counts.set(job.id, fresh);
+        });
+        setNewProposals(counts);
+      })
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
+
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
 
   const loading = !contracts || !jobs || !milestones;
 
@@ -228,7 +239,7 @@ export default function XaridorDashboardPage() {
                       {job?.title}
                     </p>
                   </div>
-                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/15 px-2 text-xs font-bold text-primary">
+                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-bold text-primary-deep">
                     {count}
                   </span>
                 </Link>

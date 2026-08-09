@@ -6,7 +6,7 @@ import { Sidebar, type SidebarItem } from "@/components/ui/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { Logo } from "@/components/shared/Logo";
 import { SkipLink } from "@/components/shared/SkipLink";
-import { getSession } from "@/lib/api";
+import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 function NavIcon({ path }: { path: string }) {
@@ -38,7 +38,7 @@ export default function XaridorLayout({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const session = getSession();
+    const session = authService.getSession();
     if (!session) {
       router.replace("/kirish");
       return;

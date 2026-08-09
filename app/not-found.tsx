@@ -24,7 +24,7 @@ export default function NotFound() {
           </div>
           <Link
             href="/"
-            className="inline-flex h-11 items-center justify-center rounded-btn bg-primary px-6 text-sm font-medium text-on-primary shadow-raised transition-all duration-150 hover:brightness-95"
+            className="inline-flex h-11 items-center justify-center rounded-btn bg-primary px-6 text-sm font-medium text-on-primary shadow-raised transition-all duration-150 hover:bg-primary-hover"
           >
             {t("common.home")}
           </Link>

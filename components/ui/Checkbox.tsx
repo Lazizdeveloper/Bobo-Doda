@@ -19,7 +19,7 @@ export function Checkbox({ label, id, className = "", ...rest }: CheckboxProps) 
         <input
           type="checkbox"
           id={inputId}
-          className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-line bg-card transition-colors duration-150 checked:border-primary checked:bg-primary"
+          className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-field bg-card transition-colors duration-150 checked:border-primary checked:bg-primary"
           {...rest}
         />
         <svg
@@ -30,7 +30,7 @@ export function Checkbox({ label, id, className = "", ...rest }: CheckboxProps) 
         >
           <path
             d="M4 8.5 7 11.5 12 5"
-            stroke="#08211A"
+            stroke="#FFFFFF"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"

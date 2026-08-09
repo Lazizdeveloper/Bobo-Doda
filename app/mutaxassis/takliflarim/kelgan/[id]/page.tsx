@@ -1,28 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { OfferStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  acceptOffer,
-  declineOffer,
-  getMessages,
-  getOffer,
-  getService,
-  getSession,
-  sendMessage,
-  SELLER_ID,
-} from "@/lib/api";
+import { authService, messagesService, offersService, servicesService } from "@/lib/api";
 import type { Message, Offer, Service } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -42,16 +34,28 @@ export default function KelganTaklifPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getOffer(params.id).then((found) => {
-      setOffer(found);
-      if (found) {
-        getMessages(found.id).then(setMessages);
-        if (found.serviceId) getService(found.serviceId).then(setService);
-      }
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    offersService
+      .get(params.id)
+      .then((found) => {
+        setOffer(found);
+        if (found) {
+          return Promise.all([
+            messagesService.list(found.id),
+            found.serviceId ? servicesService.get(found.serviceId) : Promise.resolve(null),
+          ]).then(([msgs, svc]) => {
+            setMessages(msgs);
+            setService(svc);
+          });
+        }
+      })
+      .catch(setLoadError);
   }, [params.id]);
+
+  useEffect(load, [load]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: "end" });
@@ -61,7 +65,7 @@ export default function KelganTaklifPage() {
     if (!offer) return;
     setBusy(true);
     try {
-      const contract = await acceptOffer(offer.id);
+      const contract = await offersService.accept(offer.id);
       toast(t("soffer.accepted"));
       router.push(`/mutaxassis/shartnomalar/${contract.id}`);
     } catch {
@@ -74,7 +78,7 @@ export default function KelganTaklifPage() {
     if (!offer) return;
     setBusy(true);
     try {
-      const updated = await declineOffer(offer.id);
+      const updated = await offersService.decline(offer.id);
       setOffer(updated);
       toast(t("bprop.rejected"));
       setDeclineOpen(false);
@@ -91,7 +95,7 @@ export default function KelganTaklifPage() {
     if (!text || !offer) return;
     setSending(true);
     try {
-      const message = await sendMessage(offer.id, text);
+      const message = await messagesService.send(offer.id, text);
       setMessages((prev) => [...prev, message]);
       setDraft("");
     } catch {
@@ -101,10 +105,11 @@ export default function KelganTaklifPage() {
     }
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (offer === undefined) return <SkeletonCard />;
   if (offer === null) return <EmptyState title={t("offer.notFound")} />;
 
-  const myId = getSession()?.userId ?? SELLER_ID;
+  const myId = authService.getSession()?.userId ?? null;
   const pending = offer.status === "yuborilgan";
 
   return (
@@ -252,7 +257,7 @@ export default function KelganTaklifPage() {
         title={t("soffer.acceptTitle")}
         description={
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between rounded-input border border-line bg-bg p-3">
+            <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
               <span className="text-xs text-muted">{offer.title}</span>
               <span className="font-heading text-base font-bold text-ink">
                 {formatMoney(offer.budget, lang)}

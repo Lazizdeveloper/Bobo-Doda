@@ -9,13 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
-import {
-  getContracts,
-  getCurrentUser,
-  getReviews,
-  getSellerProfile,
-  getServices,
-} from "@/lib/api";
+import { contractsService, reviewsService, servicesService, usersService } from "@/lib/api";
 import type { Contract, Review, SellerProfile, Service, User } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -31,11 +25,11 @@ export default function ProfilPage() {
 
   useEffect(() => {
     Promise.all([
-      getCurrentUser(),
-      getSellerProfile(),
-      getServices(),
-      getReviews(),
-      getContracts(),
+      usersService.getCurrent(),
+      usersService.getSellerProfile(),
+      servicesService.listMine(),
+      reviewsService.listMine(),
+      contractsService.list(),
     ]).then(([u, p, s, r, c]) => {
       setUser(u);
       setProfile(p);
@@ -142,7 +136,7 @@ export default function ProfilPage() {
             </div>
             {/* Ishonch signali — akkount Telegram orqali tasdiqlangan */}
             <div className="mt-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2.5 py-1 text-2xs font-medium text-success">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-2xs font-medium text-success-deep">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path d="M8 1.5 13.5 4v3.6c0 3.3-2.3 6.1-5.5 6.9-3.2-.8-5.5-3.6-5.5-6.9V4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
                   <path d="M5.8 8l1.6 1.6 2.8-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -309,7 +303,7 @@ export default function ProfilPage() {
                   {distribution.map((row) => (
                     <div key={row.star} className="flex items-center gap-2 text-2xs">
                       <span className="w-3 text-faint">{row.star}</span>
-                      <svg width="11" height="11" viewBox="0 0 16 16" fill="#FFC53D" aria-hidden="true">
+                      <svg width="11" height="11" viewBox="0 0 16 16" fill="#15803D" aria-hidden="true">
                         <path d="M8 1.5l2 4.1 4.5.6-3.3 3.2.8 4.5L8 11.8l-4 2.1.8-4.5L1.5 6.2 6 5.6 8 1.5Z" />
                       </svg>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-hover">

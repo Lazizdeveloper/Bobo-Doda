@@ -4,6 +4,7 @@ export type BadgeTone =
   | "neutral"
   | "primary"
   | "accent"
+  | "info"
   | "success"
   | "warning"
   | "danger";
@@ -15,14 +16,17 @@ export interface BadgeProps {
 }
 
 /* Har bir tonda o'z rangidagi ingichka halqa — status yorliqlari
-   to'q yashil fonda aniq "kesilgan" bo'lib ko'rinsin. */
+   oq fonda aniq "kesilgan" bo'lib ko'rinsin. Yashil oilasidagi tonlar
+   (primary/accent/info/success) bir ro'yxatda uchrashmasligi uchun
+   StatusBadge'da ohang taqsimoti ataylab ajratilgan. */
 const toneClasses: Record<BadgeTone, string> = {
   neutral: "bg-card-hover text-muted ring-1 ring-line",
-  primary: "bg-primary/15 text-primary ring-1 ring-primary/40",
-  accent: "bg-accent/15 text-accent ring-1 ring-accent/40",
-  success: "bg-success/15 text-success ring-1 ring-success/40",
-  warning: "bg-warning/15 text-warning ring-1 ring-warning/40",
-  danger: "bg-danger/15 text-danger ring-1 ring-danger/40",
+  primary: "bg-primary/10 text-primary-deep ring-1 ring-primary/30",
+  accent: "bg-accent/10 text-accent-deep ring-1 ring-accent/30",
+  info: "bg-info/10 text-info-deep ring-1 ring-info/30",
+  success: "bg-success/10 text-success-deep ring-1 ring-success/30",
+  warning: "bg-warning/10 text-warning-deep ring-1 ring-warning/30",
+  danger: "bg-danger/10 text-danger-deep ring-1 ring-danger/30",
 };
 
 export function Badge({ children, tone = "neutral", className = "" }: BadgeProps) {

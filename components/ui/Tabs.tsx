@@ -36,7 +36,7 @@ export function Tabs({ items, value, onChange }: TabsProps) {
             {typeof item.count === "number" && (
               <span
                 className={`ml-1.5 rounded-full px-1.5 py-0.5 text-2xs ${
-                  active ? "bg-primary/15 text-primary" : "bg-card-hover text-faint"
+                  active ? "bg-primary/10 text-primary-deep" : "bg-card-hover text-faint"
                 }`}
               >
                 {item.count}

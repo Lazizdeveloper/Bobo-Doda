@@ -26,7 +26,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         id={inputId}
         aria-invalid={!!error}
         className={`h-10 w-full rounded-input border bg-card px-3 text-sm text-ink placeholder:text-faint transition-colors duration-150 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
-          error ? "border-danger" : "border-line"
+          error ? "border-danger" : "border-field"
         } ${className}`}
         {...rest}
       />

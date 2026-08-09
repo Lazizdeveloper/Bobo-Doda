@@ -1,24 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { useToast } from "@/components/ui/Toast";
-import {
-  getBuyerJobs,
-  getProposal,
-  getSpecialist,
-  hireProposal,
-  type Specialist,
-} from "@/lib/api";
-import type { Job, Proposal } from "@/lib/types";
+import { catalogService, jobsService, proposalsService } from "@/lib/api";
+import type { Job, Proposal, Specialist } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -46,26 +41,33 @@ export default function YollashPage() {
   const [rows, setRows] = useState<MilestoneRow[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hiring, setHiring] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getBuyerJobs().then((jobs) =>
-      setJob(jobs.find((j) => j.id === params.id) ?? null)
-    );
-    getProposal(params.proposalId).then((found) => {
-      setProposal(found);
-      if (found) {
-        getSpecialist(found.sellerId).then(setSpec);
-        /* Boshlang'ich: butun taklif bitta bosqich sifatida */
-        setRows([
-          {
-            title: "",
-            amount: String(found.bidAmount),
-            dueDate: defaultDue(14),
-          },
-        ]);
-      }
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      jobsService.listMine(),
+      proposalsService.get(params.proposalId),
+    ])
+      .then(async ([jobs, found]) => {
+        setJob(jobs.find((j) => j.id === params.id) ?? null);
+        setProposal(found);
+        if (found) {
+          setSpec(await catalogService.getSpecialist(found.sellerId));
+          /* Boshlang'ich: butun taklif bitta bosqich sifatida */
+          setRows([
+            {
+              title: "",
+              amount: String(found.bidAmount),
+              dueDate: defaultDue(14),
+            },
+          ]);
+        }
+      })
+      .catch(setLoadError);
   }, [params.id, params.proposalId]);
+
+  useEffect(load, [load]);
 
   function setRow(i: number, patch: Partial<MilestoneRow>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -103,7 +105,7 @@ export default function YollashPage() {
     if (!proposal || !validate()) return;
     setHiring(true);
     try {
-      const contract = await hireProposal(
+      const contract = await proposalsService.hire(
         proposal.id,
         rows.map((r) => ({
           title: r.title.trim(),
@@ -120,7 +122,13 @@ export default function YollashPage() {
     }
   }
 
-  if (job === undefined || proposal === undefined) return <SkeletonCard />;
+  if (job === undefined || proposal === undefined) {
+    return loadError ? (
+      <ErrorState error={loadError} onRetry={load} />
+    ) : (
+      <SkeletonCard />
+    );
+  }
   if (job === null || proposal === null || job.status !== "ochiq") {
     return <EmptyState title={t("common.notFound")} />;
   }
@@ -170,10 +178,10 @@ export default function YollashPage() {
         {rows.map((row, i) => (
           <div
             key={i}
-            className="flex flex-col gap-3 rounded-card border border-line bg-bg p-4"
+            className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4"
           >
             <div className="flex items-center justify-between">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-2xs font-bold text-primary">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-2xs font-bold text-primary-deep">
                 {i + 1}
               </span>
               {rows.length > 1 && (

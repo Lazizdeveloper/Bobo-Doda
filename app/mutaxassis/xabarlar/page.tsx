@@ -1,23 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import {
   ContractStatusBadge,
   OfferStatusBadge,
 } from "@/components/shared/StatusBadge";
-import {
-  getAllMessages,
-  getContracts,
-  getIncomingOffers,
-  getMessages,
-  getSession,
-  SELLER_ID,
-} from "@/lib/api";
+import { authService, contractsService, messagesService, offersService } from "@/lib/api";
 import type { Message } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -35,12 +29,14 @@ interface Thread {
 export default function XabarlarPage() {
   const { t, lang } = useT();
   const [threads, setThreads] = useState<Thread[] | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  const myId = getSession()?.userId ?? SELLER_ID;
+  const myId = authService.getSession()?.userId ?? null;
 
-  useEffect(() => {
-    Promise.all([getAllMessages(), getContracts(), getIncomingOffers()]).then(
-      async ([messages, contracts, offers]) => {
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([messagesService.listMine(), contractsService.list(), offersService.listIncoming()])
+      .then(async ([messages, contracts, offers]) => {
         const list: Thread[] = [];
 
         /* Shartnoma suhbatlari */
@@ -68,7 +64,7 @@ export default function XabarlarPage() {
         /* Kelgan taklif suhbatlari (qabul qilinganlari shartnomaga ko'chgan) */
         const openOffers = offers.filter((o) => o.status !== "qabul_qilindi");
         const offerThreads = await Promise.all(
-          openOffers.map((o) => getMessages(o.id))
+          openOffers.map((o) => messagesService.list(o.id))
         );
         openOffers.forEach((offer, i) => {
           const msgs = offerThreads[i];
@@ -85,9 +81,12 @@ export default function XabarlarPage() {
 
         list.sort((a, b) => b.last.createdAt.localeCompare(a.last.createdAt));
         setThreads(list);
-      }
-    );
+      })
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,7 +94,9 @@ export default function XabarlarPage() {
         {t("messages.title")}
       </h1>
 
-      {!threads ? (
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : !threads ? (
         <SkeletonCard />
       ) : threads.length === 0 ? (
         <EmptyState title={t("messages.empty")} />

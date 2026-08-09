@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
-import { createOffer } from "@/lib/api";
+import { offersService } from "@/lib/api";
 import type { Service } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -41,7 +41,7 @@ export function OfferModal({ open, onClose, sellerId, service }: OfferModalProps
 
     setSending(true);
     try {
-      const offer = await createOffer({
+      const offer = await offersService.create({
         sellerId,
         serviceId: service?.id,
         title: service?.title ?? subject,
@@ -78,7 +78,7 @@ export function OfferModal({ open, onClose, sellerId, service }: OfferModalProps
     >
       <div className="flex flex-col gap-4">
         {service ? (
-          <p className="rounded-input border border-line bg-bg p-3 text-xs">
+          <p className="rounded-input border border-line bg-surface p-3 text-xs">
             <span className="font-medium text-ink">{service.title}</span>
           </p>
         ) : (

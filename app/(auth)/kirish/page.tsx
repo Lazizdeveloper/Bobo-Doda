@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { getSession, login, register } from "@/lib/api";
+import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 type Mode = "register" | "login";
@@ -34,7 +34,7 @@ function KirishForm() {
   /* Tasdiqlangan sessiya bilan qayta ro'yxatdan o'tib bo'lmaydi —
      o'z kabinetiga yo'naltiriladi (dublikat hisoblar oldini oladi) */
   useEffect(() => {
-    const session = getSession();
+    const session = authService.getSession();
     if (!session || !session.verified) return;
     if (session.role === "xaridor") router.replace("/xaridor");
     if (session.role === "mutaxassis" && session.profileDone)
@@ -79,12 +79,12 @@ function KirishForm() {
     setErrors({});
     try {
       if (mode === "register") {
-        await register({ fullName: fullName.trim(), phone: phone.trim(), password });
+        await authService.register({ fullName: fullName.trim(), phone: phone.trim(), password });
         router.push("/rol-tanlash");
       } else {
         /* Onboarding chala qolgan bo'lsa, kabinet guard'lari kerakli
            bosqichga (profil / tasdiqlash) o'zi yo'naltiradi */
-        const session = await login({ phone: phone.trim(), password });
+        const session = await authService.login({ phone: phone.trim(), password });
         if (session.role === "xaridor") router.push("/xaridor");
         else if (session.role === "mutaxassis") router.push("/mutaxassis");
         else router.push("/rol-tanlash");
@@ -111,7 +111,7 @@ function KirishForm() {
         {isLogin ? t("auth.loginSubtitle") : t("auth.subtitle")}
       </p>
 
-      <div className="mt-6 flex rounded-input border border-line bg-bg p-1">
+      <div className="mt-6 flex rounded-input border border-line bg-surface p-1">
         {(
           [
             ["register", t("auth.tabRegister")],
@@ -124,7 +124,9 @@ function KirishForm() {
             onClick={() => switchMode(m)}
             aria-pressed={mode === m}
             className={`h-9 flex-1 rounded-[8px] text-sm font-medium transition-colors duration-150 ${
-              mode === m ? "bg-card text-ink" : "text-muted hover:text-ink"
+              mode === m
+                ? "bg-card text-ink shadow-card"
+                : "text-muted hover:text-ink"
             }`}
           >
             {label}
@@ -200,7 +202,7 @@ function KirishForm() {
         )}
       </p>
 
-      <div className="mt-6 flex items-start gap-3 rounded-input border border-line bg-bg p-3">
+      <div className="mt-6 flex items-start gap-3 rounded-input border border-line bg-surface p-3">
         <svg
           width="16"
           height="16"

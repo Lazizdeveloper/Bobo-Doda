@@ -85,9 +85,41 @@ to'liq qaytariladi va client-side sahifalanadi (`Pagination` komponenti,
 qayta urinishi ikki marta yechmasligi uchun). Backend gateway (Payme/Click/karta)
 `providerReference` ni to'ldiradi; `status` webhook orqali yangilanadi.
 
-## Migratsiya tikuvi (seam)
+## Migratsiya tikuvi (seam) — YOPILGAN
 
-`index.ts` da vaqtincha `export * from "@/lib/mock-api"` bor — eski ekranlar
-adapterga to'liq ko'chguncha barqaror qolishi uchun. **Barcha ekran domen
-service'lariga o'tgach bu qatorni olib tashlang** — shunda mock butunlay
-`client.ts` orqasida qoladi va bitta faylni almashtirish kifoya.
+Ilgari `index.ts` da vaqtincha `export * from "@/lib/mock-api"` bor edi.
+**U olib tashlandi.** Endi barcha ekranlar faqat domen service'larini import
+qiladi (`contractsService`, `paymentsService`, `catalogService`, `savedService`
+va h.k.) — mock butunlay `client.ts` orqasida.
+
+Amaldagi holat:
+
+- `app/` va `components/` ichida `@/lib/mock-api` importi **0 ta**.
+- `@/lib/api` dan import qilinadigan yagona no-service nom —
+  `DATA_CHANGED_EVENT` (ma'lumot yangilanganini bildiruvchi signal; backend'da
+  websocket/SSE push yoki kesh invalidatsiyasiga almashadi).
+- Model tiplari (`Specialist`, `AccountPreferences` va boshqalar) `@/lib/types`
+  da — mock qatlamida emas.
+
+### Yangi operatsiya qo'shish tartibi
+
+1. `contracts.ts` ga metodni **interfeysga** yozing (DTO bilan).
+2. `client.ts` da uni amalga oshiring (`call(() => ...)` ichida).
+3. Ekranda service orqali chaqiring. Loose funksiya eksport qilinmaydi.
+
+Shu tartib buzilmasa, backend'ga o'tish **faqat `client.ts` ni almashtirish**
+bo'lib qoladi.
+
+## Yuklash xatolari (UI shartnomasi)
+
+Har bir ekranda `loadError` holati bor va `<ErrorState error onRetry>` bilan
+ko'rsatiladi (`components/ui/ErrorState.tsx`). Qoidalar:
+
+- **Xato hech qachon bo'sh ro'yxatga aylantirilmaydi** va "topilmadi" ham
+  emas: `null` qaytishi (topilmadi) va `throw` (xato) alohida holatlar.
+- `ApiError.code` ga qarab matn tanlanadi: `UNAUTHENTICATED` (sessiya tugadi),
+  `FORBIDDEN`, `NOT_FOUND`, `NETWORK`, `RATE_LIMITED`, aks holda umumiy xato.
+- `retryable` bo'lsa "Qayta urinish" tugmasi chiqadi.
+- Header (har sahifada turadi) fon yangilanishida xatoni yutadi — sessiya
+  tugaganda ekran xato bilan to'lib ketmasligi uchun; yo'naltirishni layout
+  guard'i bajaradi.

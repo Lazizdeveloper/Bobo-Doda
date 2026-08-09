@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { FileUpload } from "@/components/ui/FileUpload";
 import { Input } from "@/components/ui/Input";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
-import { createProposal, getJob, getProposals, getServices } from "@/lib/api";
+import { jobsService, proposalsService, servicesService } from "@/lib/api";
 import type { Job } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -32,24 +33,31 @@ export default function TaklifYuborishPage() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getJob(params.id).then((found) => {
-      setJob(found);
-      if (found) setAnswers(found.screeningQuestions.map(() => ""));
-    });
-    getProposals().then((proposals) =>
-      setAlreadySent(
-        proposals.some(
-          (p) => p.jobId === params.id && p.status !== "qaytarib_olingan"
-        )
-      )
-    );
-    getServices().then((services) =>
-      setServiceImages(services.flatMap((s) => s.images))
-    );
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      jobsService.get(params.id),
+      proposalsService.listMine(),
+      servicesService.listMine(),
+    ])
+      .then(([found, proposals, services]) => {
+        setJob(found);
+        if (found) setAnswers(found.screeningQuestions.map(() => ""));
+        setAlreadySent(
+          proposals.some(
+            (p) => p.jobId === params.id && p.status !== "qaytarib_olingan"
+          )
+        );
+        setServiceImages(services.flatMap((s) => s.images));
+      })
+      .catch(setLoadError);
   }, [params.id]);
 
+  useEffect(load, [load]);
+
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (job === undefined) return <SkeletonCard />;
   if (job === null || job.status !== "ochiq") {
     return <EmptyState title={job === null ? t("job.notFound") : t("job.closedNote")} />;
@@ -78,7 +86,7 @@ export default function TaklifYuborishPage() {
 
     setSending(true);
     try {
-      await createProposal({
+      await proposalsService.create({
         jobId: job.id,
         bidAmount: Number(bid),
         coverLetter: cover.trim(),
@@ -192,7 +200,7 @@ export default function TaklifYuborishPage() {
                       {selected && (
                         <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary">
                           <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                            <path d="M3.5 8.5 6.5 11.5 12.5 5" stroke="#08211A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M3.5 8.5 6.5 11.5 12.5 5" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </span>
                       )}

@@ -1,24 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { OfferModal } from "@/components/shared/OfferModal";
-import {
-  getPublicServices,
-  getReviewsForSeller,
-  getSpecialist,
-  type Specialist,
-} from "@/lib/api";
-import type { Review, Service } from "@/lib/types";
+import { catalogService, servicesService } from "@/lib/api";
+import type { Review, Service, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -31,16 +27,32 @@ export default function MutaxassisProfiliPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [offerOpen, setOfferOpen] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getSpecialist(params.id).then(setSpecialist);
-    getPublicServices().then((all) =>
-      setServices(all.filter((s) => s.sellerId === params.id))
-    );
-    getReviewsForSeller(params.id).then(setReviews);
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      catalogService.getSpecialist(params.id),
+      servicesService.listPublic(),
+      catalogService.listSellerReviews(params.id),
+    ])
+      .then(([spec, allServices, reviewList]) => {
+        setSpecialist(spec);
+        setServices(allServices.filter((s) => s.sellerId === params.id));
+        setReviews(reviewList);
+      })
+      .catch(setLoadError);
   }, [params.id]);
 
-  if (specialist === undefined) return <SkeletonCard />;
+  useEffect(load, [load]);
+
+  if (specialist === undefined) {
+    return loadError ? (
+      <ErrorState error={loadError} onRetry={load} />
+    ) : (
+      <SkeletonCard />
+    );
+  }
   if (specialist === null) return <EmptyState title={t("spec.notFound")} />;
 
   const { user, profile } = specialist;
@@ -77,7 +89,7 @@ export default function MutaxassisProfiliPage() {
               </span>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2.5 py-1 text-2xs font-medium text-success">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-2xs font-medium text-success-deep">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path d="M8 1.5 13.5 4v3.6c0 3.3-2.3 6.1-5.5 6.9-3.2-.8-5.5-3.6-5.5-6.9V4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
                   <path d="M5.8 8l1.6 1.6 2.8-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />

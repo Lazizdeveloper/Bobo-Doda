@@ -45,6 +45,28 @@ export const dictionary: Record<string, Entry> = {
   },
 
   /* 404 va xatolik sahifalari */
+  "err.loadFailed": {
+    uz: "Ma'lumotni yuklab bo'lmadi",
+    ru: "Не удалось загрузить данные",
+  },
+  "err.network": {
+    uz: "Internet aloqasi yo'q — ulanishni tekshiring",
+    ru: "Нет соединения — проверьте интернет",
+  },
+  "err.unauthenticated": {
+    uz: "Sessiya tugadi — qaytadan kiring",
+    ru: "Сессия истекла — войдите снова",
+  },
+  "err.forbidden": {
+    uz: "Bu ma'lumotga ruxsatingiz yo'q",
+    ru: "У вас нет доступа к этим данным",
+  },
+  "err.notFound": { uz: "Ma'lumot topilmadi", ru: "Данные не найдены" },
+  "err.rateLimited": {
+    uz: "Juda ko'p so'rov — biroz kutib qayta urining",
+    ru: "Слишком много запросов — попробуйте позже",
+  },
+  "err.retry": { uz: "Qayta urinish", ru: "Повторить" },
   "err.notFoundTitle": { uz: "Sahifa topilmadi", ru: "Страница не найдена" },
   "err.notFoundDesc": {
     uz: "Bu manzil mavjud emas yoki o'chirilgan. Havolani tekshirib ko'ring.",

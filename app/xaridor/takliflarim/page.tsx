@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { OfferStatusBadge } from "@/components/shared/StatusBadge";
-import { getSentOffers } from "@/lib/api";
+import { offersService } from "@/lib/api";
 import type { Offer } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -16,10 +17,18 @@ import { useT } from "@/lib/i18n";
 export default function XaridorTakliflarimPage() {
   const { t, lang } = useT();
   const [offers, setOffers] = useState<Offer[] | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getSentOffers().then(setOffers);
+  const load = useCallback(() => {
+    setLoadError(null);
+    offersService
+      .listSent()
+      .then(setOffers)
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,7 +39,9 @@ export default function XaridorTakliflarimPage() {
         <p className="mt-1 text-sm text-muted">{t("offers.subtitle")}</p>
       </div>
 
-      {!offers ? (
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : !offers ? (
         <SkeletonCard />
       ) : offers.length === 0 ? (
         <EmptyState

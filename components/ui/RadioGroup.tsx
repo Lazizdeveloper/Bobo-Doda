@@ -38,8 +38,8 @@ export function RadioGroup({
             key={opt.value}
             className={`flex cursor-pointer items-start gap-3 rounded-input border p-3 transition-colors duration-150 ${
               value === opt.value
-                ? "border-primary bg-primary/5"
-                : "border-line bg-card hover:bg-card-hover"
+                ? "border-primary bg-primary/5 shadow-card"
+                : "border-line bg-card hover:border-field hover:bg-card-hover"
             }`}
           >
             <input
@@ -48,7 +48,7 @@ export function RadioGroup({
               value={opt.value}
               checked={value === opt.value}
               onChange={() => onChange(opt.value)}
-              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border border-line bg-card transition-colors duration-150 checked:border-[5px] checked:border-primary"
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border border-field bg-card transition-colors duration-150 checked:border-[5px] checked:border-primary"
             />
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-medium text-ink">{opt.label}</span>

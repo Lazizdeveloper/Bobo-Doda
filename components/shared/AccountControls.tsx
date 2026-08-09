@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import {
-  deleteCurrentAccount,
-  exportCurrentUserData,
-  getAccountPreferences,
-  saveAccountPreferences,
-  type AccountPreferences,
-} from "@/lib/api";
+import { usersService } from "@/lib/api";
+import type { AccountPreferences } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
 const DEFAULTS: AccountPreferences = {
@@ -34,15 +30,22 @@ export function AccountControls() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getAccountPreferences().then(setPreferences);
+  const load = useCallback(() => {
+    setLoadError(null);
+    usersService
+      .getPreferences()
+      .then(setPreferences)
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   async function savePreferences() {
     setSaving(true);
     try {
-      await saveAccountPreferences(preferences);
+      await usersService.savePreferences(preferences);
       toast(t("settings.saved"));
     } finally {
       setSaving(false);
@@ -52,7 +55,7 @@ export function AccountControls() {
   async function exportData() {
     setExporting(true);
     try {
-      const data = await exportCurrentUserData();
+      const data = await usersService.exportData();
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
@@ -74,7 +77,7 @@ export function AccountControls() {
     if (deleteText !== t("privacy.deleteWord")) return;
     setDeleting(true);
     try {
-      await deleteCurrentAccount();
+      await usersService.deleteAccount();
       router.replace("/kirish");
     } catch (error) {
       toast(
@@ -89,38 +92,42 @@ export function AccountControls() {
 
   return (
     <>
-      <Card padding="lg">
-        <h2 className="font-heading text-base font-bold text-ink">
-          {t("privacy.notifications")}
-        </h2>
-        <p className="mt-1 text-xs text-muted">{t("privacy.notificationsHint")}</p>
-        <div className="mt-4 flex flex-col gap-3">
-          {(["messages", "contracts", "payments", "marketing"] as const).map(
-            (key) => (
-              <Checkbox
-                key={key}
-                label={t(`privacy.${key}`)}
-                checked={preferences[key]}
-                onChange={(event) =>
-                  setPreferences((value) => ({
-                    ...value,
-                    [key]: event.target.checked,
-                  }))
-                }
-              />
-            )
-          )}
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="mt-4"
-          loading={saving}
-          onClick={savePreferences}
-        >
-          {t("common.save")}
-        </Button>
-      </Card>
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : (
+        <Card padding="lg">
+          <h2 className="font-heading text-base font-bold text-ink">
+            {t("privacy.notifications")}
+          </h2>
+          <p className="mt-1 text-xs text-muted">{t("privacy.notificationsHint")}</p>
+          <div className="mt-4 flex flex-col gap-3">
+            {(["messages", "contracts", "payments", "marketing"] as const).map(
+              (key) => (
+                <Checkbox
+                  key={key}
+                  label={t(`privacy.${key}`)}
+                  checked={preferences[key]}
+                  onChange={(event) =>
+                    setPreferences((value) => ({
+                      ...value,
+                      [key]: event.target.checked,
+                    }))
+                  }
+                />
+              )
+            )}
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-4"
+            loading={saving}
+            onClick={savePreferences}
+          >
+            {t("common.save")}
+          </Button>
+        </Card>
+      )}
 
       <Card padding="lg">
         <h2 className="font-heading text-base font-bold text-ink">

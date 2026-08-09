@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { TagInput } from "@/components/ui/TagInput";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
-import { completeSellerProfile, getCurrentUser } from "@/lib/api";
+import { usersService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { LIMITS } from "@/lib/validate";
 
@@ -33,12 +34,19 @@ export default function RoyxatPage() {
   const [location, setLocation] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (user?.fullName) setFullName(user.fullName);
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    usersService
+      .getCurrent()
+      .then((user) => {
+        if (user?.fullName) setFullName(user.fullName);
+      })
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   function toggleCategory(cat: string) {
     setCategories((prev) =>
@@ -63,7 +71,7 @@ export default function RoyxatPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await completeSellerProfile({
+      await usersService.completeSellerProfile({
         fullName: fullName.trim(),
         bio: bio.trim(),
         skills,
@@ -77,6 +85,8 @@ export default function RoyxatPage() {
       setLoading(false);
     }
   }
+
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
 
   return (
     <Card padding="lg">

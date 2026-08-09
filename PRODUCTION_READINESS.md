@@ -1,7 +1,18 @@
 # Bobo&Doda production readiness
 
-Holat: frontend mahsulot oqimlari tayyor; real launch server va operatsion
-infratuzilmasiz mumkin emas.
+Holat: frontend mahsulot oqimlari tayyor va **backend ulanishiga tayyor**;
+real launch server va operatsion infratuzilmasiz mumkin emas.
+
+Frontend tomonidan bajarilgan (launch uchun old shart):
+
+- UI faqat `lib/api` domen service'lari orqali ishlaydi; mock adapter butunlay
+  `client.ts` orqasida (`export * from "@/lib/mock-api"` tikuvi yopilgan).
+  Backend'ga o'tish = bitta faylni almashtirish.
+- Har bir operatsiya `contracts.ts` da typed interfeys bilan qoplangan.
+- Yuklash xatolari `ApiError` taksonomiyasi bo'yicha ekranda ko'rsatiladi
+  (`ErrorState`, qayta urinish bilan); xato bo'sh ro'yxatga aylanmaydi.
+- Sessiya yo'q bo'lganda UI demo hisob identifikatoriga tushmaydi (ilgari
+  `?? SELLER_ID` xabar egaligini noto'g'ri hisoblardi).
 
 ## P0 — launchni bloklaydi
 

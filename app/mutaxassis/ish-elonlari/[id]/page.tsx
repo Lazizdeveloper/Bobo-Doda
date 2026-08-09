@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -9,16 +9,11 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { JobStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  getJob,
-  getJobs,
-  getProposals,
-  getSavedJobIds,
-  toggleSavedJob,
-} from "@/lib/api";
+import { jobsService, proposalsService, savedService } from "@/lib/api";
 import type { Job } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -30,31 +25,40 @@ export default function IshEloniPage() {
   const [alreadySent, setAlreadySent] = useState(false);
   const [saved, setSaved] = useState(false);
   const [buyerJobsCount, setBuyerJobsCount] = useState(0);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getJob(params.id).then((found) => {
-      setJob(found);
-      if (found) {
-        getJobs().then((all) =>
-          setBuyerJobsCount(all.filter((j) => j.buyerId === found.buyerId).length)
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      jobsService.get(params.id),
+      proposalsService.listMine(),
+      savedService.listJobIds(),
+    ])
+      .then(([found, proposals, ids]) => {
+        setJob(found);
+        setAlreadySent(
+          proposals.some(
+            (p) => p.jobId === params.id && p.status !== "qaytarib_olingan"
+          )
         );
-      }
-    });
-    getProposals().then((proposals) =>
-      setAlreadySent(
-        proposals.some(
-          (p) => p.jobId === params.id && p.status !== "qaytarib_olingan"
-        )
-      )
-    );
-    getSavedJobIds().then((ids) => setSaved(ids.includes(params.id)));
+        setSaved(ids.includes(params.id));
+        if (found) {
+          return jobsService.list().then((all) =>
+            setBuyerJobsCount(all.filter((j) => j.buyerId === found.buyerId).length)
+          );
+        }
+      })
+      .catch(setLoadError);
   }, [params.id]);
 
+  useEffect(load, [load]);
+
   async function handleToggleSave() {
-    const ids = await toggleSavedJob(params.id);
+    const ids = await savedService.toggleJob(params.id);
     setSaved(ids.includes(params.id));
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (job === undefined) return <SkeletonCard />;
   if (job === null) return <EmptyState title={t("job.notFound")} />;
 
@@ -155,7 +159,7 @@ export default function IshEloniPage() {
                 className={`rounded-input border p-3 text-xs ${
                   alreadySent
                     ? "border-success/30 bg-success/5 text-muted"
-                    : "border-line bg-bg text-faint"
+                    : "border-line bg-surface text-faint"
                 }`}
               >
                 {alreadySent ? t("job.alreadySent") : t("job.closedNote")}

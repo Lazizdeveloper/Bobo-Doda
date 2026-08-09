@@ -39,10 +39,10 @@ function PaymentResultContent() {
           <span
             className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
               success
-                ? "bg-success/15 text-success"
+                ? "bg-success/10 text-success-deep"
                 : status === "pending"
-                  ? "bg-warning/15 text-warning"
-                  : "bg-danger/15 text-danger"
+                  ? "bg-warning/10 text-warning-deep"
+                  : "bg-danger/10 text-danger-deep"
             }`}
           >
             {success ? "✓" : status === "pending" ? "…" : "×"}
@@ -54,7 +54,7 @@ function PaymentResultContent() {
             {t(`paymentResult.${status}Desc`)}
           </p>
           {reference && (
-            <p className="mt-4 rounded-input border border-line bg-bg p-3 font-mono text-xs text-faint">
+            <p className="mt-4 rounded-input border border-line bg-surface p-3 font-mono text-xs text-faint">
               {reference}
             </p>
           )}
@@ -74,7 +74,7 @@ function PaymentResultContent() {
 
 function PaymentResultFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg">
+    <div className="flex min-h-screen items-center justify-center bg-surface">
       <div className="sb-skeleton h-40 w-full max-w-md rounded-card bg-card" />
     </div>
   );

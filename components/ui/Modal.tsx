@@ -77,7 +77,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
       aria-label={title}
     >
       <div
-        className="sb-fade-in absolute inset-0 bg-bg/80"
+        className="sb-fade-in absolute inset-0 bg-ink/40"
         onClick={onClose}
         aria-hidden="true"
       />

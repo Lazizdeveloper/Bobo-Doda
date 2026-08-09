@@ -28,7 +28,7 @@ export default function Error({
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="flex w-full max-w-md flex-col items-center gap-5 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-danger/15 text-danger">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-danger/10 text-danger-deep">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 8v5M12 16v.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
@@ -44,7 +44,7 @@ export default function Error({
             <button
               type="button"
               onClick={reset}
-              className="inline-flex h-11 items-center justify-center rounded-btn bg-primary px-6 text-sm font-medium text-on-primary shadow-raised transition-all duration-150 hover:brightness-95"
+              className="inline-flex h-11 items-center justify-center rounded-btn bg-primary px-6 text-sm font-medium text-on-primary shadow-raised transition-all duration-150 hover:bg-primary-hover"
             >
               {t("common.retry")}
             </button>

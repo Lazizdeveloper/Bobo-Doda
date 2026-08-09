@@ -4,14 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
-import { Logo } from "@/components/shared/Logo";
-import {
-  DATA_CHANGED_EVENT,
-  getCurrentUser,
-  getNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "@/lib/api";
+import { Logo, LogoMark } from "@/components/shared/Logo";
+import { notificationsService, usersService, DATA_CHANGED_EVENT } from "@/lib/api";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -38,11 +32,21 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    /* Header har bir sahifada turadi va fokus/storage hodisalarida qayta o'qiydi.
+       Backend'da sessiya tugasa (401) yoki tarmoq uzilsa, har bir hodisa
+       ushlanmagan rejection berardi — shuning uchun xatolar shu yerda yutiladi:
+       eski ko'rsatkich saqlanadi, foydalanuvchini layout guard'i yo'naltiradi. */
     function refresh() {
-      getCurrentUser().then((user) => {
-        if (user) setName(user.fullName);
-      });
-      getNotifications().then(setNotifications);
+      usersService
+        .getCurrent()
+        .then((user) => {
+          if (user) setName(user.fullName);
+        })
+        .catch(() => {});
+      notificationsService
+        .list()
+        .then(setNotifications)
+        .catch(() => setNotifications([]));
     }
     refresh();
     window.addEventListener(DATA_CHANGED_EVENT, refresh);
@@ -75,8 +79,12 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
   }
 
   async function handleMarkAll() {
-    await markAllNotificationsRead();
-    setNotifications(await getNotifications());
+    try {
+      await notificationsService.markAllRead();
+      setNotifications(await notificationsService.list());
+    } catch {
+      /* server rad etsa ro'yxat o'zgarmaydi — keyingi refresh haqiqiy holatni beradi */
+    }
   }
 
   /* Bildirishnoma ochilganda o'qilgan deb belgilanadi */
@@ -86,28 +94,37 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
-    void markNotificationRead(id);
+    /* optimistik: UI allaqachon o'qilgan deb belgilangan, server xatosi ekranni buzmaydi */
+    notificationsService.markRead(id).catch(() => {});
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-line bg-bg/95 px-4 backdrop-blur sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-2 border-b border-line bg-bg/95 px-3 backdrop-blur sm:gap-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
           aria-label={t("nav.openMenu")}
-          className="rounded-btn p-2 text-muted transition-colors duration-150 hover:bg-card hover:text-ink lg:hidden"
+          className="rounded-btn p-2 text-muted transition-colors duration-150 hover:bg-card-hover hover:text-ink lg:hidden"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         </button>
-        <span className="lg:hidden">
+        {/* Eng tor ekranda (<400px) faqat belgi — so'z kesilib qolmasin */}
+        <span className="hidden min-[400px]:inline lg:hidden">
           <Logo href={base} />
         </span>
+        <Link
+          href={base}
+          aria-label="Bobo&Doda"
+          className="inline-flex min-[400px]:hidden"
+        >
+          <LogoMark />
+        </Link>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
         <LangSwitch />
 
         {/* Bildirishnomalar */}
@@ -117,7 +134,7 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
             onClick={() => setPanelOpen((open) => !open)}
             aria-label={t("ntf.open")}
             aria-expanded={panelOpen}
-            className="relative rounded-btn p-2 text-muted transition-colors duration-150 hover:bg-card hover:text-ink"
+            className="relative rounded-btn p-2 text-muted transition-colors duration-150 hover:bg-card-hover hover:text-ink"
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path
@@ -154,7 +171,7 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
                     <button
                       type="button"
                       onClick={handleMarkAll}
-                      className="text-2xs font-medium text-primary transition-colors duration-150 hover:text-ink"
+                      className="text-2xs font-medium text-primary transition-colors duration-150 hover:text-primary-hover"
                     >
                       {t("ntf.markAll")}
                     </button>
@@ -177,7 +194,7 @@ export function Header({ onMenuClick, base = "/mutaxassis" }: HeaderProps) {
                       >
                         <span
                           className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                            n.read ? "bg-card-hover text-faint" : "bg-primary/15 text-primary"
+                            n.read ? "bg-card-hover text-faint" : "bg-primary/10 text-primary-deep"
                           }`}
                           aria-hidden="true"
                         >

@@ -6,30 +6,33 @@
 <title>Bobo&amp;Doda — Onlayn xizmatlar bozori</title>
 <meta name="description" content="Bobo&amp;Doda — mutaxassislar mahoratini sotadigan, buyurtmachilar ishonch bilan sotib oladigan onlayn bozor. To'lov kafolati bilan.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#08211A">
+<meta name="theme-color" content="#FFFFFF">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
 <style>
 /* ══════════════════════════════════════════════════════════════════
-   Bobo&Doda — "Suzani" dizayn tili
-   O'zbek so'zana kashtasi: to'q archa-yashil mato, zarg'aldoq sariq va
-   yashil naqsh, hammasi QIZIL IP bilan chok qilingan.
-   yashil = muhit · sariq = harakat · qizil = chiziq/chok
+   Bobo&Doda — "Suzani Light" dizayn tili
+   Oq mato ustiga yashil kashta: fon oq, naqsh va chok yashil ipda.
+   oq = muhit · yashil = harakat · yashil chok = chiziq
    ══════════════════════════════════════════════════════════════════ */
 :root{
-  --bg:#08211A;
-  --bg-card:#0E2E24;
-  --bg-card-2:#0B2820;
-  --yellow:#FFC53D;
-  --yellow-soft:rgba(255,197,61,.14);
-  --lime:#A3E635;
-  --lime-soft:rgba(163,230,53,.12);
-  --red:#D64A34;
-  --red-soft:rgba(214,74,52,.12);
-  --text:#F5EFE0;
-  --muted:#9CB6A6;
-  --line:rgba(214,74,52,.40);
+  --bg:#FFFFFF;
+  --bg-card:#FFFFFF;
+  --bg-card-2:#F5FAF7;
+  /* harakat rangi (tarixiy nom "yellow" — endi o'rmon yashil) */
+  --yellow:#15803D;
+  --yellow-soft:rgba(21,128,61,.10);
+  /* urg'u (tarixiy nom "lime" — endi zaytun-lime) */
+  --lime:#4D7C0F;
+  --lime-soft:rgba(77,124,15,.10);
+  /* chok ipi (tarixiy nom "red" — endi yashil chok) */
+  --red:#15803D;
+  --red-soft:rgba(21,128,61,.10);
+  --on-action:#FFFFFF;
+  --text:#0C1F16;
+  --muted:#4C6156;
+  --line:#DDEAE3;
   --radius:18px;
   --font-head:'Unbounded',sans-serif;
   --font-body:'Onest',sans-serif;
@@ -65,7 +68,7 @@ nav{
   position:fixed;top:0;left:0;right:0;z-index:100;
   display:flex;align-items:center;justify-content:space-between;
   padding:18px 48px;
-  background:rgba(8,33,26,.82);
+  background:rgba(255,255,255,.85);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-bottom:1px solid var(--line);
 }
@@ -87,9 +90,9 @@ nav{
   transition:transform .2s,box-shadow .2s,filter .2s,border-color .2s,color .2s;
 }
 /* Sariq tugma — ostida qizil chiziq: qo'lda bo'yalgan bozor lavhasi */
-.btn-primary{background:var(--yellow);color:var(--bg);box-shadow:0 3px 0 0 var(--red)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 5px 0 0 var(--red);filter:brightness(1.04)}
-.btn-primary:active{transform:translateY(1px);box-shadow:0 2px 0 0 var(--red)}
+.btn-primary{background:var(--yellow);color:var(--on-action);box-shadow:0 3px 0 0 #0E5C2C}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 5px 0 0 #0E5C2C;filter:brightness(1.06)}
+.btn-primary:active{transform:translateY(1px);box-shadow:0 2px 0 0 #0E5C2C}
 .btn-ghost{color:var(--text);border:1px solid var(--line);background:transparent}
 .btn-ghost:hover{border-color:var(--red);color:var(--yellow)}
 .btn-lg{padding:15px 34px;font-size:16px;border-radius:14px}
@@ -104,8 +107,8 @@ nav{
   position:absolute;top:6%;left:50%;transform:translateX(-50%);
   width:min(880px,150vw);height:min(880px,150vw);pointer-events:none;max-width:110vw;
   background:
-    repeating-radial-gradient(circle at 50% 50%,rgba(214,74,52,.30) 0 1.5px,transparent 1.5px 34px),
-    radial-gradient(circle at 50% 50%,rgba(163,230,53,.08) 0%,transparent 62%);
+    repeating-radial-gradient(circle at 50% 50%,rgba(21,128,61,.22) 0 1.5px,transparent 1.5px 34px),
+    radial-gradient(circle at 50% 50%,rgba(77,124,15,.07) 0%,transparent 62%);
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000 20%,transparent 72%);
   mask-image:radial-gradient(circle at 50% 50%,#000 20%,transparent 72%);
   animation:breathe 9s ease-in-out infinite;
@@ -143,7 +146,7 @@ h1 .accent{color:var(--yellow)}
 .node-icon{
   width:76px;height:76px;border-radius:20px;display:flex;align-items:center;justify-content:center;
   background:var(--bg-card);border:1px solid var(--line);
-  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  box-shadow:0 8px 32px rgba(12,31,22,.12);
 }
 .node-icon svg{width:34px;height:34px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .node.shield .node-icon{
@@ -153,7 +156,7 @@ h1 .accent{color:var(--yellow)}
 }
 .node.shield .node-icon svg{stroke:var(--yellow);width:42px;height:42px}
 @keyframes shieldPulse{
-  0%,32%,100%{box-shadow:0 8px 32px rgba(0,0,0,.5)}
+  0%,32%,100%{box-shadow:0 8px 32px rgba(12,31,22,.12)}
   42%,58%{box-shadow:0 0 0 4px var(--yellow-soft),0 0 0 5px var(--red)}
 }
 .node-label{font-size:13.5px;font-weight:600;color:var(--muted)}
@@ -222,7 +225,7 @@ h2 .accent{color:var(--yellow)}
   background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);
   padding:28px 24px;transition:transform .25s,border-color .25s,background .25s;cursor:pointer;
 }
-.cat:hover{transform:translateY(-5px);border-color:var(--red);background:#143A2D}
+.cat:hover{transform:translateY(-5px);border-color:var(--red);background:#F2F8F4}
 .cat svg{width:30px;height:30px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:16px}
 .cat:hover svg{stroke:var(--yellow)}
 .cat h3{font-family:var(--font-head);font-weight:700;font-size:15px;letter-spacing:-.02em;margin-bottom:6px}
@@ -339,7 +342,7 @@ footer{border-top:1px solid var(--line);padding:56px 48px 40px;max-width:1240px;
 .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 .mobile-menu{
   position:fixed;top:69px;left:0;right:0;z-index:99;
-  background:rgba(8,33,26,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:rgba(255,255,255,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border-bottom:1px solid var(--line);
   display:flex;flex-direction:column;gap:4px;padding:16px 20px 22px;
   transform:translateY(-12px);opacity:0;pointer-events:none;transition:.28s ease;
@@ -349,8 +352,8 @@ footer{border-top:1px solid var(--line);padding:56px 48px 40px;max-width:1240px;
   color:var(--text);text-decoration:none;font-size:16px;font-weight:500;
   padding:13px 8px;border-radius:10px;transition:background .2s;
 }
-.mobile-menu a:hover{background:rgba(255,197,61,.08)}
-.mobile-menu .btn-primary{text-align:center;margin-top:10px;color:var(--bg)}
+.mobile-menu a:hover{background:var(--yellow-soft)}
+.mobile-menu .btn-primary{text-align:center;margin-top:10px;color:var(--on-action)}
 .mobile-menu .btn-ghost{text-align:center;margin-top:10px}
 
 /* ---------- Fokus va harakat ---------- */

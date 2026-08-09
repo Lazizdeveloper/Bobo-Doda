@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -9,22 +9,15 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { useToast } from "@/components/ui/Toast";
 import { JobStatusBadge, ProposalStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  closeJob,
-  getBuyerJobs,
-  getContracts,
-  getJobProposals,
-  getSpecialists,
-  setProposalStatus,
-  type Specialist,
-} from "@/lib/api";
-import type { Contract, Job, Proposal } from "@/lib/types";
+import { catalogService, contractsService, jobsService, proposalsService } from "@/lib/api";
+import type { Contract, Job, Proposal, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -42,33 +35,38 @@ export default function ElonTafsilotiPage() {
   const [rejectTarget, setRejectTarget] = useState<Proposal | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getBuyerJobs().then((jobs) =>
-      setJob(jobs.find((j) => j.id === params.id) ?? null)
-    );
-    getSpecialists().then((list) =>
-      setSpecialists(new Map(list.map((s) => [s.user.id, s])))
-    );
-    /* Bu e'lon bo'yicha ochilgan shartnoma (yollangandan keyin) */
-    getContracts().then((all) =>
-      setContract(all.find((c) => c.jobId === params.id) ?? null)
-    );
-    /* Ochilganda yangi takliflar "ko'rib chiqilmoqda"ga o'tadi (Upwork: viewed) */
-    getJobProposals(params.id).then(async (list) => {
-      const fresh = list.filter((p) => p.status === "yuborilgan");
-      for (const p of fresh) {
-        await setProposalStatus(p.id, "korib_chiqilmoqda");
-      }
-      setProposals(fresh.length ? await getJobProposals(params.id) : list);
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      jobsService.listMine(),
+      catalogService.listSpecialists(),
+      /* Bu e'lon bo'yicha ochilgan shartnoma (yollangandan keyin) */
+      contractsService.list(),
+      proposalsService.listForJob(params.id),
+    ])
+      .then(async ([jobs, specialistList, allContracts, list]) => {
+        setJob(jobs.find((j) => j.id === params.id) ?? null);
+        setSpecialists(new Map(specialistList.map((s) => [s.user.id, s])));
+        setContract(allContracts.find((c) => c.jobId === params.id) ?? null);
+        /* Ochilganda yangi takliflar "ko'rib chiqilmoqda"ga o'tadi (Upwork: viewed) */
+        const fresh = list.filter((p) => p.status === "yuborilgan");
+        for (const p of fresh) {
+          await proposalsService.setStatus(p.id, "korib_chiqilmoqda");
+        }
+        setProposals(fresh.length ? await proposalsService.listForJob(params.id) : list);
+      })
+      .catch(setLoadError);
   }, [params.id]);
+
+  useEffect(load, [load]);
 
   async function handleInterview(proposal: Proposal) {
     setBusy(true);
     try {
-      await setProposalStatus(proposal.id, "suhbat");
-      setProposals(await getJobProposals(params.id));
+      await proposalsService.setStatus(proposal.id, "suhbat");
+      setProposals(await proposalsService.listForJob(params.id));
       toast(t("bprop.interviewSet"));
     } catch {
       toast(t("common.error"), "error");
@@ -81,8 +79,8 @@ export default function ElonTafsilotiPage() {
     if (!rejectTarget) return;
     setBusy(true);
     try {
-      await setProposalStatus(rejectTarget.id, "rad_etildi");
-      setProposals(await getJobProposals(params.id));
+      await proposalsService.setStatus(rejectTarget.id, "rad_etildi");
+      setProposals(await proposalsService.listForJob(params.id));
       toast(t("bprop.rejected"));
       setRejectTarget(null);
     } catch {
@@ -96,7 +94,7 @@ export default function ElonTafsilotiPage() {
     if (!job) return;
     setBusy(true);
     try {
-      const updated = await closeJob(job.id);
+      const updated = await jobsService.close(job.id);
       setJob(updated);
       toast(t("bjobs.closed"));
       setCloseOpen(false);
@@ -107,7 +105,13 @@ export default function ElonTafsilotiPage() {
     }
   }
 
-  if (job === undefined) return <SkeletonCard />;
+  if (job === undefined) {
+    return loadError ? (
+      <ErrorState error={loadError} onRetry={load} />
+    ) : (
+      <SkeletonCard />
+    );
+  }
   if (job === null) return <EmptyState title={t("job.notFound")} />;
 
   const visible = proposals.filter((p) => p.status !== "qaytarib_olingan");
@@ -214,7 +218,7 @@ export default function ElonTafsilotiPage() {
                   </div>
 
                   {/* Narx */}
-                  <div className="flex items-center justify-between rounded-input border border-line bg-bg p-3">
+                  <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
                     <span className="text-xs text-muted">{t("props.bid")}</span>
                     <span className="font-heading text-base font-bold text-ink">
                       {formatMoney(proposal.bidAmount, lang)}

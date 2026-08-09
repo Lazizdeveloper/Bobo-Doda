@@ -40,13 +40,13 @@ export function AdminLoginForm({
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-bg px-4 py-10">
+    <main className="grid min-h-screen place-items-center bg-surface px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center">
           <Logo href={homeHref} />
         </div>
         <Card padding="lg" stitch>
-          <span className="rounded-full bg-danger/10 px-2.5 py-1 text-2xs font-bold uppercase tracking-wide text-danger">
+          <span className="rounded-full bg-danger/10 px-2.5 py-1 text-2xs font-bold uppercase tracking-wide text-danger-deep">
             Restricted access
           </span>
           <h1 className="mt-3 font-heading text-2xl font-extrabold text-ink">{title}</h1>

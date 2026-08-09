@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
-import { openDispute } from "@/lib/api";
+import { disputesService } from "@/lib/api";
 import type { Dispute } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -34,7 +34,7 @@ export function DisputeControl({
     }
     setSaving(true);
     try {
-      await openDispute(contractId, { reason, description, evidence });
+      await disputesService.open(contractId, { reason, description, evidence });
       setOpen(false);
       toast(t("dispute.opened"));
       onOpened();

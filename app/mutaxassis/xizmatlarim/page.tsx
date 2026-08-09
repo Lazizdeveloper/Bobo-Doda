@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast";
 import { ServiceCard } from "@/components/shared/ServiceCard";
-import { deleteService, getServices, updateService } from "@/lib/api";
+import { servicesService } from "@/lib/api";
 import type { Service, ServiceStatus } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -22,10 +23,14 @@ export default function XizmatlarimPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [toDelete, setToDelete] = useState<Service | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getServices().then(setServices);
+  const load = useCallback(() => {
+    setLoadError(null);
+    servicesService.listMine().then(setServices).catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   const filtered =
     services?.filter((s) => filter === "all" || s.status === filter) ?? [];
@@ -37,8 +42,8 @@ export default function XizmatlarimPage() {
     setBusy(true);
     try {
       const nextStatus = service.status === "active" ? "paused" : "active";
-      await updateService(service.id, { status: nextStatus });
-      setServices(await getServices());
+      await servicesService.update(service.id, { status: nextStatus });
+      setServices(await servicesService.listMine());
       toast(nextStatus === "active" ? t("services.activated") : t("services.paused"));
     } catch {
       toast(t("common.error"), "error");
@@ -51,8 +56,8 @@ export default function XizmatlarimPage() {
     if (!toDelete) return;
     setBusy(true);
     try {
-      await deleteService(toDelete.id);
-      setServices(await getServices());
+      await servicesService.remove(toDelete.id);
+      setServices(await servicesService.listMine());
       toast(t("services.deleted"));
       setToDelete(null);
     } catch {
@@ -84,7 +89,9 @@ export default function XizmatlarimPage() {
         ]}
       />
 
-      {!services ? (
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : !services ? (
         <div className="grid gap-4 md:grid-cols-2">
           <SkeletonCard />
           <SkeletonCard />

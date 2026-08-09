@@ -34,7 +34,7 @@ export function Table<T>({
       >
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
-            <tr className="border-b border-line">
+            <tr className="border-b border-line bg-surface">
               {columns.map((col) => (
                 <th
                   key={col.key}

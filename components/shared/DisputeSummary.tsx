@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { getDisputeByContract } from "@/lib/api";
+import { disputesService } from "@/lib/api";
 import type { Dispute } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -12,11 +13,20 @@ import { useT } from "@/lib/i18n";
 export function DisputeSummary({ contractId }: { contractId: string }) {
   const { t, lang } = useT();
   const [dispute, setDispute] = useState<Dispute | null | undefined>();
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getDisputeByContract(contractId).then(setDispute);
+  const load = useCallback(() => {
+    setLoadError(null);
+    disputesService
+      .getForContract(contractId)
+      .then(setDispute)
+      /* Yuklash xatosi "nizo yo'q" EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, [contractId]);
 
+  useEffect(load, [load]);
+
+  if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (dispute === undefined) return <Skeleton className="h-28 w-full" />;
   if (!dispute) {
     return (

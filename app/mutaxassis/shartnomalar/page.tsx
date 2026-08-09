@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
 import { Tabs } from "@/components/ui/Tabs";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import { getAllMilestones, getContracts } from "@/lib/api";
+import { contractsService, milestonesService } from "@/lib/api";
 import type { Contract, ContractStatus, Milestone } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -23,11 +24,20 @@ export default function ShartnomalarPage() {
   const [contracts, setContracts] = useState<Contract[] | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getContracts().then(setContracts);
-    getAllMilestones().then(setMilestones);
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([contractsService.list(), milestonesService.listMine()])
+      .then(([contractList, milestoneList]) => {
+        setContracts(contractList);
+        setMilestones(milestoneList);
+      })
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   function progress(contractId: string): string {
     const list = milestones.filter((m) => m.contractId === contractId);
@@ -57,7 +67,9 @@ export default function ShartnomalarPage() {
         ]}
       />
 
-      {!contracts ? (
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : !contracts ? (
         <SkeletonCard />
       ) : filtered.length === 0 ? (
         <EmptyState

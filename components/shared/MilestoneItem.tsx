@@ -41,10 +41,10 @@ export function MilestoneItem({
             aria-hidden="true"
             className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-2xs font-bold ${
               milestone.status === "qabul_qilindi"
-                ? "bg-success/20 text-success"
+                ? "bg-success/10 text-success-deep"
                 : dimmed
                   ? "bg-card-hover text-faint"
-                  : "bg-primary/15 text-primary"
+                  : "bg-primary/10 text-primary-deep"
             }`}
           >
             {index + 1}
@@ -104,7 +104,7 @@ export function MilestoneItem({
       {milestone.status === "ozgartirish_soraldi" && (
         <div className="flex flex-col gap-3 pl-9">
           {milestone.revisionComment && (
-            <div className="rounded-input border border-danger/25 bg-bg p-3">
+            <div className="rounded-input border border-danger/25 bg-surface p-3">
               <p className="text-2xs font-medium uppercase tracking-wide text-danger">
                 {t("ms.revisionNote")}
               </p>

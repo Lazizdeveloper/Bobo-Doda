@@ -6,7 +6,7 @@ import { LangSwitch } from "@/components/shared/LangSwitch";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-surface">
       <header className="flex h-16 items-center justify-between px-4 sm:px-8">
         <Logo href="/kirish" />
         <LangSwitch />

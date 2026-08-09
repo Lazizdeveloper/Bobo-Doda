@@ -3,7 +3,7 @@
 /* Eng yuqori darajadagi xato chegarasi (root layout ham yiqilsa ishlaydi).
    Bu komponent root layout O'RNIGA render bo'ladi — shuning uchun i18n/provider
    kontekstiga kira olmaydi va o'z <html>/<body> ini beradi. globals.css yuklanmasligi
-   mumkin, shu bois brend ranglar inline yozilgan (Suzani palitrasi). */
+   mumkin, shu bois brend ranglar inline yozilgan (Suzani Light palitrasi). */
 export default function GlobalError({
   reset,
 }: {
@@ -20,8 +20,8 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: 24,
-          background: "#08211A",
-          color: "#F5EFE0",
+          background: "#FFFFFF",
+          color: "#0C1F16",
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
         }}
       >
@@ -31,8 +31,9 @@ export default function GlobalError({
             width: "100%",
             maxWidth: 420,
             textAlign: "center",
-            background: "#0E2E24",
-            border: "1px solid rgba(214,74,52,.4)",
+            background: "#FFFFFF",
+            border: "1px solid #DDEAE3",
+            boxShadow: "0 16px 40px rgba(12,31,22,.10)",
             borderRadius: 14,
             padding: "40px 28px",
           }}
@@ -47,7 +48,7 @@ export default function GlobalError({
               right: 24,
               height: 3,
               background:
-                "repeating-linear-gradient(90deg,#D64A34 0 7px,transparent 7px 13px)",
+                "repeating-linear-gradient(90deg,#15803D 0 7px,transparent 7px 13px)",
             }}
           />
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 10px" }}>
@@ -55,7 +56,7 @@ export default function GlobalError({
           </h1>
           <p
             style={{
-              color: "#9CB6A6",
+              color: "#4C6156",
               fontSize: 14,
               lineHeight: 1.6,
               margin: "0 0 24px",
@@ -69,15 +70,15 @@ export default function GlobalError({
             type="button"
             onClick={() => reset()}
             style={{
-              background: "#FFC53D",
-              color: "#08211A",
+              background: "#15803D",
+              color: "#FFFFFF",
               border: 0,
               borderRadius: 10,
               padding: "12px 26px",
               fontWeight: 600,
               fontSize: 15,
               cursor: "pointer",
-              boxShadow: "0 3px 0 0 #D64A34",
+              boxShadow: "0 3px 0 0 #0E5C2C",
             }}
           >
             Try again · Qayta urinish

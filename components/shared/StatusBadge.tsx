@@ -24,7 +24,7 @@ export function ServiceStatusBadge({ status }: { status: ServiceStatus }) {
 
 const contractTones: Record<ContractStatus, BadgeTone> = {
   imzolangan: "warning",
-  faol: "primary",
+  faol: "info",
   yakunlangan: "success",
   bekor_qilingan: "neutral",
   nizo: "danger",
@@ -37,7 +37,7 @@ export function ContractStatusBadge({ status }: { status: ContractStatus }) {
 
 const milestoneTones: Record<MilestoneStatus, BadgeTone> = {
   kutilmoqda: "neutral",
-  mablaglangan: "primary",
+  mablaglangan: "info",
   topshirildi: "warning",
   qabul_qilindi: "success",
   ozgartirish_soraldi: "danger",
@@ -50,7 +50,7 @@ export function MilestoneStatusBadge({ status }: { status: MilestoneStatus }) {
 
 const proposalTones: Record<ProposalStatus, BadgeTone> = {
   yuborilgan: "neutral",
-  korib_chiqilmoqda: "primary",
+  korib_chiqilmoqda: "info",
   suhbat: "accent",
   yollandi: "success",
   rad_etildi: "danger",
@@ -63,7 +63,7 @@ export function ProposalStatusBadge({ status }: { status: ProposalStatus }) {
 }
 
 const offerTones: Record<OfferStatus, BadgeTone> = {
-  yuborilgan: "primary",
+  yuborilgan: "info",
   qabul_qilindi: "success",
   rad_etildi: "neutral",
   bekor_qilingan: "neutral",

@@ -1,25 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { OfferStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  getMessages,
-  getOffer,
-  getSession,
-  sendMessage,
-  withdrawOffer,
-  SELLER_ID,
-} from "@/lib/api";
+import { authService, messagesService, offersService } from "@/lib/api";
 import type { Message, Offer } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -36,13 +30,20 @@ export default function TaklifTafsilotiXaridorPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getOffer(params.id).then((found) => {
-      setOffer(found);
-      if (found) getMessages(found.id).then(setMessages);
-    });
+  const load = useCallback(() => {
+    setLoadError(null);
+    offersService
+      .get(params.id)
+      .then(async (found) => {
+        setOffer(found);
+        if (found) setMessages(await messagesService.list(found.id));
+      })
+      .catch(setLoadError);
   }, [params.id]);
+
+  useEffect(load, [load]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: "end" });
@@ -52,7 +53,7 @@ export default function TaklifTafsilotiXaridorPage() {
     if (!offer) return;
     setWithdrawing(true);
     try {
-      const updated = await withdrawOffer(offer.id);
+      const updated = await offersService.withdraw(offer.id);
       setOffer(updated);
       toast(t("offer.withdrawn"));
       setWithdrawOpen(false);
@@ -69,7 +70,7 @@ export default function TaklifTafsilotiXaridorPage() {
     if (!text || !offer) return;
     setSending(true);
     try {
-      const message = await sendMessage(offer.id, text);
+      const message = await messagesService.send(offer.id, text);
       setMessages((prev) => [...prev, message]);
       setDraft("");
     } catch {
@@ -79,10 +80,16 @@ export default function TaklifTafsilotiXaridorPage() {
     }
   }
 
-  if (offer === undefined) return <SkeletonCard />;
+  if (offer === undefined) {
+    return loadError ? (
+      <ErrorState error={loadError} onRetry={load} />
+    ) : (
+      <SkeletonCard />
+    );
+  }
   if (offer === null) return <EmptyState title={t("offer.notFound")} />;
 
-  const myId = getSession()?.userId ?? SELLER_ID;
+  const myId = authService.getSession()?.userId ?? null;
   const pending = offer.status === "yuborilgan";
 
   return (

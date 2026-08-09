@@ -10,7 +10,7 @@ import { TagInput } from "@/components/ui/TagInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
-import { createJob } from "@/lib/api";
+import { jobsService } from "@/lib/api";
 import type { ServiceCategory } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -98,7 +98,7 @@ export default function YangiElonPage() {
     if (!category) return;
     setPublishing(true);
     try {
-      const job = await createJob({
+      const job = await jobsService.create({
         title: title.trim(),
         description: description.trim(),
         category,
@@ -142,7 +142,7 @@ export default function YangiElonPage() {
                   className={`rounded-card border p-4 text-center text-sm transition-colors duration-150 ${
                     category === cat
                       ? "border-primary bg-primary/10 font-medium text-ink"
-                      : "border-line bg-bg text-muted hover:bg-card-hover hover:text-ink"
+                      : "border-field bg-card text-muted hover:border-primary hover:bg-card-hover hover:text-ink"
                   }`}
                 >
                   {t(`cat.${cat}`)}

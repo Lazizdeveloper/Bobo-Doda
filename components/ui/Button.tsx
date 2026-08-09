@@ -11,16 +11,17 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
-/* Sariq to'ldirilgan tugma — matn doim to'q yashil (on-primary).
-   shadow-raised: ostidagi qizil chiziq, qo'lda bo'yalgan bozor lavhasi hissi. */
+/* Yashil to'ldirilgan tugma — matn doim oq (on-primary).
+   shadow-raised: ostidagi to'q yashil chiziq, qo'lda bo'yalgan bozor lavhasi hissi. */
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-primary text-on-primary shadow-raised hover:brightness-95 disabled:bg-primary/40 disabled:text-on-primary/60 disabled:shadow-none",
+    "bg-primary text-on-primary shadow-raised hover:bg-primary-hover disabled:bg-card-hover disabled:text-faint disabled:shadow-none",
   secondary:
-    "bg-card border border-line text-ink hover:border-line-strong hover:bg-card-hover disabled:opacity-50",
-  ghost: "bg-transparent text-muted hover:text-ink hover:bg-card disabled:opacity-50",
+    "bg-card border border-field text-ink shadow-card hover:border-primary hover:bg-card-hover disabled:border-line disabled:text-faint disabled:shadow-none",
+  ghost:
+    "bg-transparent text-muted hover:text-ink hover:bg-card-hover disabled:text-faint",
   danger:
-    "bg-danger/10 border border-danger/50 text-danger hover:bg-danger/20 disabled:opacity-50",
+    "bg-danger/10 border border-danger/40 text-danger-deep hover:bg-danger/20 hover:border-danger disabled:opacity-50",
 };
 
 const sizeClasses: Record<Size, string> = {

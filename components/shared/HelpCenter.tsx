@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
-import { createSupportTicket, getSupportTickets } from "@/lib/api";
+import { supportService } from "@/lib/api";
 import type { SupportTicket, SupportTopic } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -22,10 +23,18 @@ export function HelpCenter() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getSupportTickets().then(setTickets);
+  const load = useCallback(() => {
+    setLoadError(null);
+    supportService
+      .listMine()
+      .then(setTickets)
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   async function submit() {
     if (!subject.trim() || message.trim().length < 20) {
@@ -34,7 +43,7 @@ export function HelpCenter() {
     }
     setSaving(true);
     try {
-      const ticket = await createSupportTicket({ topic, subject, message });
+      const ticket = await supportService.create({ topic, subject, message });
       setTickets((items) => [ticket, ...items]);
       setSubject("");
       setMessage("");
@@ -105,27 +114,34 @@ export function HelpCenter() {
         </div>
       </Card>
 
-      {tickets.length > 0 && (
-        <section>
-          <h2 className="mb-3 font-heading text-base font-bold text-ink">
-            {t("help.myTickets")}
-          </h2>
-          <div className="flex flex-col gap-3">
-            {tickets.map((ticket) => (
-              <Card key={ticket.id} className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-ink">{ticket.subject}</p>
-                  <p className="mt-1 text-2xs text-faint">
-                    #{ticket.id.slice(-8)} · {formatDate(ticket.createdAt, lang)}
-                  </p>
-                </div>
-                <Badge tone={ticket.status === "yopilgan" ? "neutral" : "primary"}>
-                  {t(`help.status_${ticket.status}`)}
-                </Badge>
-              </Card>
-            ))}
-          </div>
-        </section>
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : (
+        tickets.length > 0 && (
+          <section>
+            <h2 className="mb-3 font-heading text-base font-bold text-ink">
+              {t("help.myTickets")}
+            </h2>
+            <div className="flex flex-col gap-3">
+              {tickets.map((ticket) => (
+                <Card
+                  key={ticket.id}
+                  className="flex items-start justify-between gap-4"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-ink">{ticket.subject}</p>
+                    <p className="mt-1 text-2xs text-faint">
+                      #{ticket.id.slice(-8)} · {formatDate(ticket.createdAt, lang)}
+                    </p>
+                  </div>
+                  <Badge tone={ticket.status === "yopilgan" ? "neutral" : "primary"}>
+                    {t(`help.status_${ticket.status}`)}
+                  </Badge>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )
       )}
     </div>
   );

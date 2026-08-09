@@ -9,7 +9,3 @@ export * from "./contracts";
 export * from "./errors";
 export * from "./state-machines";
 export * from "./client";
-
-// Compatibility exports keep existing screens stable during the adapter migration.
-// New code should prefer the domain service objects exported from `client.ts`.
-export * from "@/lib/mock-api";

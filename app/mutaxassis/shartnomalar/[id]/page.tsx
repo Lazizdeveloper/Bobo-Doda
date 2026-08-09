@@ -20,17 +20,7 @@ import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
 import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  cancelContract,
-  getContract,
-  getMessages,
-  getMilestones,
-  getReviewByContract,
-  getSession,
-  sendMessage,
-  submitMilestone,
-  SELLER_ID,
-} from "@/lib/api";
+import { authService, contractsService, messagesService, milestonesService, reviewsService } from "@/lib/api";
 import type { Contract, Message, Milestone, Review } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -71,16 +61,16 @@ export default function ShartnomaWorkroomPage() {
     const version = ++loadVersionRef.current;
     setContract(undefined);
     try {
-      const found = await getContract(params.id);
+      const found = await contractsService.get(params.id);
       if (version !== loadVersionRef.current) return;
       if (!found) {
         setContract(null);
         return;
       }
       const [nextMilestones, nextMessages, nextReview] = await Promise.all([
-        getMilestones(found.id),
-        getMessages(found.id),
-        getReviewByContract(found.id),
+        milestonesService.list(found.id),
+        messagesService.list(found.id),
+        reviewsService.getForContract(found.id),
       ]);
       if (version !== loadVersionRef.current) return;
       setContract(found);
@@ -112,13 +102,13 @@ export default function ShartnomaWorkroomPage() {
     }
     setSubmitting(true);
     try {
-      await submitMilestone(submitTarget.id);
+      await milestonesService.submit(submitTarget.id);
       const chatText = workNote.trim()
         ? `${workNote.trim()}\n${workLink.trim()}`
         : workLink.trim();
-      const message = await sendMessage(contract.id, chatText);
+      const message = await messagesService.send(contract.id, chatText);
       setMessages((prev) => [...prev, message]);
-      setMilestones(await getMilestones(contract.id));
+      setMilestones(await milestonesService.list(contract.id));
       toast(t("sm.done"));
       setSubmitTarget(null);
     } catch {
@@ -132,7 +122,7 @@ export default function ShartnomaWorkroomPage() {
     if (!contract) return;
     setCancelling(true);
     try {
-      await cancelContract(contract.id);
+      await contractsService.cancel(contract.id);
       toast(t("contract.cancelled"));
       setCancelOpen(false);
       reload();
@@ -149,7 +139,7 @@ export default function ShartnomaWorkroomPage() {
     if (!text || !contract) return;
     setSending(true);
     try {
-      const message = await sendMessage(contract.id, text);
+      const message = await messagesService.send(contract.id, text);
       setMessages((prev) => [...prev, message]);
       setDraft("");
     } catch {
@@ -162,7 +152,7 @@ export default function ShartnomaWorkroomPage() {
   if (contract === undefined) return <SkeletonCard />;
   if (contract === null) return <EmptyState title={t("contract.notFound")} />;
 
-  const myId = getSession()?.userId ?? SELLER_ID;
+  const myId = authService.getSession()?.userId ?? null;
   /* Imzolangan yoki faol shartnomani bekor qilish mumkin; tekshiruvdagi ish
      bo'lsa bloklanadi */
   const canCancel =
@@ -390,7 +380,7 @@ export default function ShartnomaWorkroomPage() {
         <form onSubmit={handleSubmitWork} className="flex flex-col gap-4">
           <p className="text-xs text-muted">{t("sm.desc")}</p>
           {submitTarget && (
-            <p className="rounded-input border border-line bg-bg p-3 text-xs">
+            <p className="rounded-input border border-line bg-surface p-3 text-xs">
               <span className="font-medium text-ink">{submitTarget.title}</span>
               <span className="ml-2 text-muted">
                 {formatMoney(submitTarget.amount, lang)}

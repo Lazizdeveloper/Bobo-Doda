@@ -1,4 +1,5 @@
 import type {
+  AccountPreferences,
   AppNotification,
   Contract,
   Job,
@@ -14,6 +15,7 @@ import type {
   SellerProfile,
   Service,
   Session,
+  Specialist,
   SupportTicket,
   User,
   UserRole,
@@ -21,6 +23,7 @@ import type {
   Dispute,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
+export type { AccountPreferences, Specialist } from "@/lib/types";
 import {
   amount,
   cardExpiry,
@@ -121,7 +124,7 @@ function write<T>(key: string, value: T): void {
 
 /* v5: login/parol tizimi — seed hisoblarga parol va onboarding holati qo'shildi.
    Versiya oshganda eski mock ma'lumotlar qayta yoziladi. */
-const SEED_VERSION = "8";
+const SEED_VERSION = "9";
 
 function ensureSeed(): void {
   if (typeof window === "undefined") return;
@@ -1171,13 +1174,6 @@ export async function openDispute(
   return dispute;
 }
 
-export interface AccountPreferences {
-  messages: boolean;
-  contracts: boolean;
-  payments: boolean;
-  marketing: boolean;
-}
-
 export async function getAccountPreferences(): Promise<AccountPreferences> {
   ensureSeed();
   await delay(100);
@@ -1418,11 +1414,6 @@ export async function withdrawFunds(cardId: string): Promise<void> {
 }
 
 /* ================= XARIDOR (yollovchi) tomoni ================= */
-
-export interface Specialist {
-  user: User;
-  profile: SellerProfile;
-}
 
 /** Katalog: to'ldirilgan profilli mutaxassislar (chala ro'yxatdan
    o'tganlar katalogga chiqmaydi) */

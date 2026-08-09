@@ -1,25 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import {
-  getAllMessages,
-  getAllMilestones,
-  getContracts,
-  getCurrentUser,
-  getIncomingOffers,
-  getJobs,
-  getProposals,
-  getSellerProfile,
-  getServices,
-  getSession,
-  SELLER_ID,
-} from "@/lib/api";
+import { authService, contractsService, jobsService, messagesService, milestonesService, offersService, proposalsService, servicesService, usersService } from "@/lib/api";
 import type {
   Contract,
   Job,
@@ -46,26 +35,57 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [name, setName] = useState("");
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
-    getContracts().then(setContracts);
-    getProposals().then(setProposals);
-    getIncomingOffers().then(setOffers);
-    getAllMilestones().then(setMilestones);
-    getAllMessages().then((all) =>
-      setMessages(
-        [...all].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3)
+  const load = useCallback(() => {
+    setLoadError(null);
+    Promise.all([
+      contractsService.list(),
+      proposalsService.listMine(),
+      offersService.listIncoming(),
+      milestonesService.listMine(),
+      messagesService.listMine(),
+      usersService.getSellerProfile(),
+      servicesService.listMine(),
+      jobsService.list(),
+      usersService.getCurrent(),
+    ])
+      .then(
+        ([
+          contractList,
+          proposalList,
+          offerList,
+          milestoneList,
+          messageList,
+          profileData,
+          serviceList,
+          jobList,
+          user,
+        ]) => {
+          setContracts(contractList);
+          setProposals(proposalList);
+          setOffers(offerList);
+          setMilestones(milestoneList);
+          setMessages(
+            [...messageList]
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .slice(0, 3)
+          );
+          setProfile(profileData);
+          setServices(serviceList);
+          setJobs(jobList);
+          if (user) setName(user.fullName);
+        }
       )
-    );
-    getSellerProfile().then(setProfile);
-    getServices().then(setServices);
-    getJobs().then(setJobs);
-    getCurrentUser().then((user) => user && setName(user.fullName));
+      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
+      .catch(setLoadError);
   }, []);
+
+  useEffect(load, [load]);
 
   const loading = !contracts || !proposals || !milestones || !messages || !profile;
 
-  const myId = getSession()?.userId ?? SELLER_ID;
+  const myId = authService.getSession()?.userId ?? null;
 
   const activeCount = contracts?.filter((c) => c.status === "faol").length ?? 0;
   const pendingProposals =
@@ -135,6 +155,10 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {loadError ? (
+        <ErrorState error={loadError} onRetry={load} />
+      ) : (
+        <>
       {/* Statistika */}
       <div className="grid grid-cols-2 gap-4">
         {loading ? (
@@ -264,7 +288,7 @@ export default function DashboardPage() {
           {firstIncomplete && (
             <Link
               href={firstIncomplete.href}
-              className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-btn bg-primary px-4 text-sm font-medium text-on-primary shadow-raised transition-all duration-150 hover:brightness-95"
+              className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-btn bg-primary px-4 text-sm font-medium text-on-primary shadow-raised transition-all duration-150 hover:bg-primary-hover"
             >
               {t("dash.completeProfile")}
             </Link>
@@ -404,6 +428,8 @@ export default function DashboardPage() {
           )}
         </section>
       </div>
+        </>
+      )}
     </div>
   );
 }
