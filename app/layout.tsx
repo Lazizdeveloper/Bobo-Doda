@@ -15,7 +15,6 @@ export const metadata: Metadata = {
   title: "Bobo&Doda — Mutaxassislar bozori",
   description:
     "Markaziy Osiyo mutaxassislari uchun to'lov kafolati bilan ishlaydigan onlayn bozor",
-  /* Statik landing (public/landing.html) bilan bitta manba */
   icons: { icon: "/favicon.svg" },
 };
 

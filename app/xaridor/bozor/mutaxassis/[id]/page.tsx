@@ -88,15 +88,6 @@ export default function MutaxassisProfiliPage() {
                 {t("profile.memberSince")} {formatDate(profile.memberSince, lang)}
               </span>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-2xs font-medium text-success-deep">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M8 1.5 13.5 4v3.6c0 3.3-2.3 6.1-5.5 6.9-3.2-.8-5.5-3.6-5.5-6.9V4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5.8 8l1.6 1.6 2.8-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {t("profile.verifiedPhone")}
-              </span>
-            </div>
           </div>
           <div className="sm:self-start">
             <Button onClick={() => setOfferOpen(true)}>{t("offer.send")}</Button>

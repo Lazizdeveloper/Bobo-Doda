@@ -131,11 +131,11 @@ export function VerificationCenter() {
                     setCountry(event.target.value as VerificationRecord["country"])
                   }
                   options={[
-                    { value: "UZ", label: "O'zbekiston" },
-                    { value: "KZ", label: "Qozog'iston" },
-                    { value: "KG", label: "Qirg'iziston" },
-                    { value: "TJ", label: "Tojikiston" },
-                    { value: "TM", label: "Turkmaniston" },
+                    { value: "UZ", label: t("country.UZ") },
+                    { value: "KZ", label: t("country.KZ") },
+                    { value: "KG", label: t("country.KG") },
+                    { value: "TJ", label: t("country.TJ") },
+                    { value: "TM", label: t("country.TM") },
                   ]}
                 />
                 <Select

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -20,6 +20,7 @@ interface Errors {
 function KirishForm() {
   const { t } = useT();
   const router = useRouter();
+  const pathname = usePathname();
   /* Landing'dagi "Kirish" tugmasi ?tab=kirish bilan keladi — Login tabi ochiq */
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>(
@@ -36,10 +37,15 @@ function KirishForm() {
   useEffect(() => {
     const session = authService.getSession();
     if (!session || !session.verified) return;
-    if (session.role === "xaridor") router.replace("/xaridor");
-    if (session.role === "mutaxassis" && session.profileDone)
-      router.replace("/mutaxassis");
-  }, [router]);
+    
+    let dest = null;
+    if (session.role === "xaridor") dest = "/xaridor";
+    else if (session.role === "mutaxassis" && session.profileDone) dest = "/mutaxassis";
+    
+    if (dest && pathname !== dest) {
+      router.replace(dest);
+    }
+  }, [router, pathname]);
 
   function switchMode(next: Mode) {
     if (loading || next === mode) return;

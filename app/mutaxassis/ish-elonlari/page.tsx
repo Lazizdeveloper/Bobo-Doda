@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Pagination } from "@/components/ui/Pagination";
@@ -111,103 +112,131 @@ export default function IshElonlariPage() {
     currentPage * PER_PAGE
   );
 
+  const categoryOptions = [
+    { value: "all", label: t("jobs.allCategories") },
+    ...CATEGORIES.map((cat) => ({ value: cat, label: t(`cat.${cat}`) })),
+  ];
+  const budgetOptions = [
+    { value: "all", label: t("jobs.budgetAll") },
+    { value: "low", label: t("jobs.budgetLow") },
+    { value: "mid", label: t("jobs.budgetMid") },
+    { value: "high", label: t("jobs.budgetHigh") },
+  ];
+  const sortOptions = [
+    { value: "new", label: t("jobs.sortNew") },
+    { value: "budget", label: t("jobs.sortBudget") },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-heading text-2xl font-extrabold text-ink">
+        <h1 className="font-heading text-2xl font-extrabold text-ink xl:text-3xl">
           {t("jobs.title")}
         </h1>
-        <p className="mt-1 text-sm text-muted">{t("jobs.subtitle")}</p>
+        <p className="mt-1 text-sm text-muted xl:text-base">{t("jobs.subtitle")}</p>
       </div>
 
-      <Tabs
-        value={tab}
-        onChange={(value) => setTab(value as Tab)}
-        items={[
-          { value: "all", label: t("jobs.tabAll"), count: jobs?.length },
-          {
-            value: "matching",
-            label: t("jobs.tabMatching"),
-            count: jobs?.filter((j) => matchesProfile(j, profile)).length,
-          },
-          { value: "saved", label: t("jobs.tabSaved"), count: savedIds.length },
-        ]}
-      />
-
-      {/* Qidiruv va filtrlar */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t("jobs.searchPh")}
-          aria-label={t("jobs.searchPh")}
-          clearLabel={t("search.clear")}
-        />
-        <Select
-          aria-label={t("jobs.category")}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          options={[
-            { value: "all", label: t("jobs.allCategories") },
-            ...CATEGORIES.map((cat) => ({ value: cat, label: t(`cat.${cat}`) })),
-          ]}
-        />
-        <Select
-          aria-label={t("jobs.budget")}
-          value={budget}
-          onChange={(e) => setBudget(e.target.value as BudgetFilter)}
-          options={[
-            { value: "all", label: t("jobs.budgetAll") },
-            { value: "low", label: t("jobs.budgetLow") },
-            { value: "mid", label: t("jobs.budgetMid") },
-            { value: "high", label: t("jobs.budgetHigh") },
-          ]}
-        />
-        <Select
-          aria-label={t("jobs.sort")}
-          value={sort}
-          onChange={(e) => setSort(e.target.value as Sort)}
-          options={[
-            { value: "new", label: t("jobs.sortNew") },
-            { value: "budget", label: t("jobs.sortBudget") },
-          ]}
-        />
-      </div>
-
-      {loadError ? (
-        <ErrorState error={loadError} onRetry={load} />
-      ) : !jobs ? (
-        <div className="flex flex-col gap-4">
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      ) : filtered.length === 0 ? (
-        <EmptyState title={emptyTitle} />
-      ) : (
-        <div className="flex flex-col gap-4">
-          {paged.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              saved={savedIds.includes(job.id)}
-              onToggleSave={handleToggleSave}
+      <div className="xl:grid xl:grid-cols-[300px_1fr] xl:items-start xl:gap-8">
+        {/* Filtr paneli — faqat keng ekranda (xl+), yopishqoq */}
+        <aside className="hidden xl:sticky xl:top-24 xl:block">
+          <Card padding="lg" className="flex flex-col gap-5">
+            <h2 className="font-heading text-sm font-bold text-ink">
+              {t("jobs.filtersTitle")}
+            </h2>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t("jobs.searchPh")}
+              aria-label={t("jobs.searchPh")}
+              clearLabel={t("search.clear")}
             />
-          ))}
-        </div>
-      )}
+            <Select
+              label={t("jobs.category")}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              options={categoryOptions}
+            />
+            <Select
+              label={t("jobs.budget")}
+              value={budget}
+              onChange={(e) => setBudget(e.target.value as BudgetFilter)}
+              options={budgetOptions}
+            />
+            <Select
+              label={t("jobs.sort")}
+              value={sort}
+              onChange={(e) => setSort(e.target.value as Sort)}
+              options={sortOptions}
+            />
+          </Card>
+        </aside>
 
-      {jobs && filtered.length > PER_PAGE && (
-        <Pagination
-          page={currentPage}
-          totalPages={totalPages}
-          onChange={setPage}
-          labels={{
-            prev: t("pager.prev"),
-            next: t("pager.next"),
-            page: t("pager.page"),
-          }}
-        />
-      )}
+        <div className="flex flex-col gap-6">
+          <Tabs
+            size="lg"
+            value={tab}
+            onChange={(value) => setTab(value as Tab)}
+            items={[
+              { value: "all", label: t("jobs.tabAll"), count: jobs?.length },
+              {
+                value: "matching",
+                label: t("jobs.tabMatching"),
+                count: jobs?.filter((j) => matchesProfile(j, profile)).length,
+              },
+              { value: "saved", label: t("jobs.tabSaved"), count: savedIds.length },
+            ]}
+          />
+
+          {/* Qidiruv va filtrlar — mobil/planshetda; keng ekranda chapdagi panelga ko'chadi */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:hidden">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t("jobs.searchPh")}
+              aria-label={t("jobs.searchPh")}
+              clearLabel={t("search.clear")}
+            />
+            <Select aria-label={t("jobs.category")} value={category} onChange={(e) => setCategory(e.target.value)} options={categoryOptions} />
+            <Select aria-label={t("jobs.budget")} value={budget} onChange={(e) => setBudget(e.target.value as BudgetFilter)} options={budgetOptions} />
+            <Select aria-label={t("jobs.sort")} value={sort} onChange={(e) => setSort(e.target.value as Sort)} options={sortOptions} />
+          </div>
+
+          {loadError ? (
+            <ErrorState error={loadError} onRetry={load} />
+          ) : !jobs ? (
+            <div className="flex flex-col gap-4">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState title={emptyTitle} />
+          ) : (
+            <div className="flex flex-col gap-4">
+              {paged.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  saved={savedIds.includes(job.id)}
+                  onToggleSave={handleToggleSave}
+                />
+              ))}
+            </div>
+          )}
+
+          {jobs && filtered.length > PER_PAGE && (
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onChange={setPage}
+              labels={{
+                prev: t("pager.prev"),
+                next: t("pager.next"),
+                page: t("pager.page"),
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

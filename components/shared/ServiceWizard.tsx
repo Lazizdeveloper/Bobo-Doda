@@ -243,7 +243,7 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
         {isEdit ? t("wizard.editTitle") : t("wizard.newTitle")}
       </h1>
 
-      <Stepper steps={steps} current={step} />
+      <Stepper steps={steps} current={step} onStepClick={isEdit ? setStep : undefined} />
 
       <Card padding="lg">
         {/* 1-qadam: kategoriya */}

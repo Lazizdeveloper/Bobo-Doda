@@ -366,13 +366,10 @@ export async function login(data: {
   return session;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function resetPassword(_input: { phone: string; code: string; newPassword: string }): Promise<void> {
   await delay(800);
   // Mock implementation: always succeed
-}
-
-export async function reportUser(_input: { targetUserId: string; contractId?: string; offerId?: string; reason: string; description: string }): Promise<void> {
-  await delay(600);
 }
 
 /** Oxirgi bosqich: akkountni Telegram orqali tasdiqlash (istalgan 6 xonali kod) */

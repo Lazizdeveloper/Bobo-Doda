@@ -7,11 +7,7 @@ export type AdminPermission =
   | "disputes"
   | "payments"
   | "support"
-  | "content"
-  | "monitoring"
-  | "audit"
-  | "admins"
-  | "system";
+  | "admins";
 
 export interface AdminAccount {
   id: string;

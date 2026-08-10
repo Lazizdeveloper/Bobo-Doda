@@ -119,29 +119,12 @@ export default function ProfilPage() {
               <p className="mt-1 text-sm font-medium text-ink">{profile.headline}</p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted">
-              <RatingStars value={profile.rating} showValue />
-              <span>
-                {profile.completedContracts} {t("profile.completedContracts")}
-              </span>
               <span className="inline-flex items-center gap-1">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-faint">
                   <path d="M8 1.8c2.5 0 4.5 2 4.5 4.5 0 3-4.5 7.4-4.5 7.4S3.5 9.3 3.5 6.3C3.5 3.8 5.5 1.8 8 1.8Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
                   <circle cx="8" cy="6.3" r="1.6" stroke="currentColor" strokeWidth="1.3" />
                 </svg>
                 {profile.location}
-              </span>
-              <span>
-                {t("profile.memberSince")} {formatDate(profile.memberSince, lang)}
-              </span>
-            </div>
-            {/* Ishonch signali — akkount Telegram orqali tasdiqlangan */}
-            <div className="mt-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-2xs font-medium text-success-deep">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M8 1.5 13.5 4v3.6c0 3.3-2.3 6.1-5.5 6.9-3.2-.8-5.5-3.6-5.5-6.9V4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M5.8 8l1.6 1.6 2.8-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {t("profile.verifiedPhone")}
               </span>
             </div>
           </div>

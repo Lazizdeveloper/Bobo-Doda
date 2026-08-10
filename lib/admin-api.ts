@@ -8,9 +8,7 @@ import type {
   SupportTicket,
   User,
   VerificationRecord,
-  Report,
   Milestone,
-  AppNotification,
 } from "@/lib/types";
 import type {
   AdminAccount,
@@ -42,11 +40,9 @@ const ADMIN_SESSION = "sb2_admin_session";
 const ADMINS = "sb2_admin_accounts";
 const AUDIT = "sb2_admin_audit";
 const CREDENTIALS = "sb2_admin_credentials";
-const SYSTEM_SETTINGS = "sb2_system_settings";
 
 const allPermissions: AdminPermission[] = [
-  "dashboard", "users", "kyc", "disputes", "payments", "support",
-  "content", "monitoring", "audit", "admins", "system",
+  "dashboard", "users", "kyc", "disputes", "payments", "support", "admins",
 ];
 
 const seedAdmins: AdminAccount[] = [
@@ -68,8 +64,7 @@ const seedAdmins: AdminAccount[] = [
     title: "Operations administrator",
     active: true,
     permissions: [
-      "dashboard", "users", "kyc", "disputes", "payments",
-      "support", "content", "monitoring",
+      "dashboard", "users", "kyc", "disputes", "payments", "support",
     ],
     createdAt: "2026-05-12T09:00:00.000Z",
   },
@@ -183,14 +178,8 @@ export function addAdmin(input: Pick<AdminAccount, "fullName" | "email" | "title
     !/\d/.test(input.password)
   ) throw new Error("WEAK_PASSWORD");
   const allowed = (input.permissions ?? [
-    "dashboard", "users", "kyc", "disputes", "payments",
-    "support", "content", "monitoring",
-  ]).filter(
-    (permission) =>
-      permission !== "admins" &&
-      permission !== "system" &&
-      permission !== "audit"
-  );
+    "dashboard", "users", "kyc", "disputes", "payments", "support",
+  ]).filter((permission) => permission !== "admins");
   const account: AdminAccount = {
     id: `adm-${Date.now()}`,
     fullName: input.fullName.trim().slice(0, 100),
@@ -205,57 +194,6 @@ export function addAdmin(input: Pick<AdminAccount, "fullName" | "email" | "title
   write(CREDENTIALS, { ...credentials(), [email]: input.password });
   addAudit("Yangi admin yaratildi", account.email, current);
   return account;
-}
-
-export function updateAdminPermissions(id: string, permissions: AdminPermission[]) {
-  const current = requireSuperAdmin();
-  const target = accounts().find((item) => item.id === id);
-  if (!target || target.role === "super_admin") throw new Error("FORBIDDEN");
-  const safe = permissions.filter(
-    (permission) =>
-      permission !== "admins" &&
-      permission !== "system" &&
-      permission !== "audit"
-  );
-  const next = accounts().map((item) =>
-    item.id === id
-      ? { ...item, permissions: Array.from(new Set(["dashboard" as const, ...safe])) }
-      : item
-  );
-  write(ADMINS, next);
-  addAudit("Admin ruxsatlari yangilandi", id, current);
-  return next;
-}
-
-export interface SystemSettings {
-  maintenance: boolean;
-  registration: boolean;
-  paymentsPaused: boolean;
-  commission: number;
-}
-
-export function getSystemSettings(): SystemSettings {
-  return read<SystemSettings>(SYSTEM_SETTINGS, {
-    maintenance: false,
-    registration: true,
-    paymentsPaused: false,
-    commission: 10,
-  });
-}
-
-export function saveSystemSettings(input: SystemSettings) {
-  const current = requireSuperAdmin();
-  if (!Number.isFinite(input.commission) || input.commission < 0 || input.commission > 30) {
-    throw new Error("INVALID_COMMISSION");
-  }
-  write(SYSTEM_SETTINGS, { ...input, commission: Math.round(input.commission * 10) / 10 });
-  addAudit("Tizim sozlamalari yangilandi", JSON.stringify(input), current);
-}
-
-export function revokeAllUserSessions() {
-  const current = requireSuperAdmin();
-  localStorage.removeItem("sb_session");
-  addAudit("Barcha foydalanuvchi sessiyalari bekor qilindi", "global", current);
 }
 
 function requireSuperAdmin() {
@@ -287,18 +225,10 @@ function appData<T>(key: string, fallback: T): T {
 
 const seedWithdrawals: WithdrawalRequest[] = [];
 
-const seedReports: Report[] = [];
-
 const seedTransactions: TransactionRecord[] = [];
 const seedTickets: SupportTicket[] = [];
 
 export function getAdminData() {
-  let reports = read<Report[]>("sb2_reports", []);
-  if (!reports.length) {
-    write("sb2_reports", seedReports);
-    reports = seedReports;
-  }
-
   let withdrawals = read<WithdrawalRequest[]>("sb2_withdrawal_requests", []);
   if (!withdrawals.length) {
     write("sb2_withdrawal_requests", seedWithdrawals);
@@ -320,6 +250,7 @@ export function getAdminData() {
   const moderationDetails = read<Record<string, { status: string; reason?: string; suspendedUntil?: string; suspendedAt?: string; deactivatedAt?: string; deletedAt?: string }>>("sb2_user_moderation_details", {});
 
   const allUsers = appData<User[]>("sb2_users", seedUsers);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const safeUsers = allUsers.map(({ password: _password, ...safe }) => safe);
 
   return {
@@ -331,7 +262,6 @@ export function getAdminData() {
     disputes: appData<Dispute[]>("sb2_disputes", []),
     tickets,
     blockedUserIds: appData<string[]>("sb2_blocked_users", []),
-    reports,
     withdrawals,
     transactions,
     moderationDetails,
@@ -339,14 +269,14 @@ export function getAdminData() {
 }
 
 export function adminModerate(
-  kind: "users" | "kyc" | "disputes" | "support" | "content",
+  kind: "users" | "kyc" | "disputes" | "support",
   id: string,
   options: { outcome?: "approve" | "reject"; note?: string } = {}
 ) {
   const actor = getCurrentAdmin();
   if (!actor) throw new Error("FORBIDDEN");
   const permission: Record<typeof kind, AdminPermission> = {
-    users: "users", kyc: "kyc", disputes: "disputes", support: "support", content: "content",
+    users: "users", kyc: "kyc", disputes: "disputes", support: "support",
   };
   if (!actor.permissions.includes(permission[kind])) throw new Error("FORBIDDEN");
 
@@ -491,11 +421,6 @@ export function softDeleteUser(userId: string) {
   addAudit(`Foydalanuvchi hisobi o'chirildi (soft delete)`, userId, actor);
 }
 
-export function getWithdrawalRequests() {
-  const data = getAdminData();
-  return data.withdrawals;
-}
-
 export function approveWithdrawal(requestId: string) {
   const actor = getCurrentAdmin();
   if (!actor?.permissions.includes("payments")) throw new Error("FORBIDDEN");
@@ -583,27 +508,6 @@ export function reviewWithdrawal(requestId: string) {
   addAudit(`Withdrawal marked under review`, requestId, actor);
 }
 
-export function resolveReport(reportId: string, outcome: "resolved" | "dismissed", note: string) {
-  const actor = getCurrentAdmin();
-  if (!actor) throw new Error("FORBIDDEN");
-
-  const reports = read<Report[]>("sb2_reports", []);
-  const idx = reports.findIndex((r) => r.id === reportId);
-  if (idx === -1) throw new Error("NOT_FOUND");
-
-  reports[idx] = {
-    ...reports[idx],
-    status: "korib_chiqildi",
-  };
-  write("sb2_reports", reports);
-
-  const notes = read<Record<string, string>>("sb2_admin_report_notes", {});
-  notes[reportId] = `${outcome.toUpperCase()} - ${note}`;
-  write("sb2_admin_report_notes", notes);
-
-  addAudit(`Shikoyat ko'rib chiqildi: ${outcome}`, reportId, actor);
-}
-
 export function forceCloseContract(contractId: string, outcome: "refund" | "payout" | "split", notes: string, splitAmount?: number) {
   const actor = getCurrentAdmin();
   if (!actor?.permissions.includes("disputes") && !actor?.permissions.includes("payments")) {
@@ -677,33 +581,6 @@ export function forceCloseContract(contractId: string, outcome: "refund" | "payo
   const caseNotes = read<Record<string, string>>("sb2_admin_case_notes", {});
   caseNotes[contractId] = `FORCE CLOSE (${outcome.toUpperCase()}): ${notes}`;
   write("sb2_admin_case_notes", caseNotes);
-}
-
-export function broadcastNotification(input: { targetRole: "all" | "mutaxassis" | "xaridor"; messageKey: string; params?: Record<string, string>; href: string }) {
-  const actor = getCurrentAdmin();
-  if (!actor?.permissions.includes("monitoring")) throw new Error("FORBIDDEN");
-
-  const users = read<User[]>("sb2_users", seedUsers);
-  const notifications = read<AppNotification[]>("sb2_notifications", []);
-  
-  const targetUsers = users.filter((u) => {
-    if (input.targetRole === "all") return true;
-    return u.role === input.targetRole;
-  });
-
-  const newNotifications: AppNotification[] = targetUsers.map((u) => ({
-    id: `ntf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    userId: u.id,
-    kind: "tolov",
-    messageKey: input.messageKey,
-    params: input.params,
-    href: input.href,
-    read: false,
-    createdAt: new Date().toISOString(),
-  }));
-
-  write("sb2_notifications", [...newNotifications, ...notifications]);
-  addAudit(`Broadcasted notification to ${input.targetRole}`, "global", actor);
 }
 
 export function replyToTicket(ticketId: string, replyText: string) {

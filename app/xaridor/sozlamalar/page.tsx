@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -73,79 +74,99 @@ export default function XaridorSozlamalarPage() {
   if (loading) return <SkeletonCard />;
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <h1 className="font-heading text-2xl font-extrabold text-ink">
-        {t("settings.title")}
-      </h1>
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto">
+      <div>
+        <h1 className="font-heading text-3xl font-extrabold text-ink">
+          {t("settings.title")}
+        </h1>
+        <p className="text-muted mt-2">{t("bset.subtitle")}</p>
+      </div>
 
-      {/* Hisob ma'lumotlari */}
-      <Card padding="lg">
-        <h2 className="font-heading text-base font-bold text-ink">
-          {t("bset.accountSection")}
-        </h2>
-        <form onSubmit={handleSave} className="mt-4 flex flex-col gap-4" noValidate>
-          <Input
-            label={t("onboard.fullName")}
-            value={fullName}
-            onChange={(e) => {
-              setFullName(e.target.value);
-              setNameError("");
-            }}
-            error={nameError}
-          />
-          <Input label={t("auth.regPhone")} value={phone} disabled readOnly />
-          <Button type="submit" loading={saving} className="self-start">
-            {t("common.save")}
-          </Button>
-        </form>
-      </Card>
-
-      {/* Til */}
-      <Card padding="lg">
-        <h2 className="font-heading text-base font-bold text-ink">
-          {t("settings.langSection")}
-        </h2>
-        <p className="mt-1 text-xs text-muted">{t("settings.langHint")}</p>
-        <div className="mt-4">
-          <RadioGroup
-            options={[
-              { value: "uz", label: "O'zbekcha" },
-              { value: "ru", label: "Русский" },
-              { value: "en", label: "English" },
-            ]}
-            value={lang}
-            onChange={(value) => setLang(value as Lang)}
-          />
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-1">
+          <h2 className="font-heading text-lg font-bold text-ink">{t("bset.accountSection")}</h2>
+          <p className="text-sm text-muted mt-1">{t("bset.accountHint")}</p>
         </div>
-      </Card>
-
-      {/* Kartalarim (Uzcard / Humo) */}
-      <Card padding="lg">
-        <h2 className="font-heading text-base font-bold text-ink">
-          {t("card.section")}
-        </h2>
-        <p className="mt-1 text-xs text-muted">{t("card.sectionHint")}</p>
-        <div className="mt-4">
-          <CardManager cards={cards} onChange={setCards} />
+        <div className="md:col-span-2">
+          <Card padding="lg" className="border-t-4 border-t-primary">
+            <form onSubmit={handleSave} className="flex flex-col gap-5" noValidate>
+              <Input
+                label={t("onboard.fullName")}
+                value={fullName}
+                onChange={(e) => { setFullName(e.target.value); setNameError(""); }}
+                error={nameError}
+              />
+              <Input label={t("auth.regPhone")} value={phone} disabled readOnly />
+              <Button type="submit" loading={saving} className="self-end px-8">
+                {t("common.save")}
+              </Button>
+            </form>
+          </Card>
         </div>
-      </Card>
+      </div>
 
-      <AccountSecurity />
-      <AccountControls />
+      <div className="w-full h-px bg-line"></div>
 
-      {/* Hisob */}
-      <Card padding="lg">
-        <h2 className="font-heading text-base font-bold text-ink">
-          {t("settings.accountSection")}
-        </h2>
-        <Button
-          variant="danger"
-          className="mt-4"
-          onClick={() => setLogoutOpen(true)}
-        >
-          {t("common.logout")}
-        </Button>
-      </Card>
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-1">
+          <h2 className="font-heading text-lg font-bold text-ink">{t("card.section")}</h2>
+          <p className="text-sm text-muted mt-1">{t("card.sectionHint")}</p>
+        </div>
+        <div className="md:col-span-2">
+          <Card padding="lg">
+            <CardManager cards={cards} onChange={setCards} />
+          </Card>
+        </div>
+      </div>
+
+      <div className="w-full h-px bg-line"></div>
+
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-1">
+          <h2 className="font-heading text-lg font-bold text-ink">{t("bset.prefsSection")}</h2>
+          <p className="text-sm text-muted mt-1">{t("bset.prefsHint")}</p>
+        </div>
+        <div className="md:col-span-2 flex flex-col gap-6">
+          <Card padding="lg">
+            <h3 className="font-bold text-ink mb-3">{t("settings.langSection")}</h3>
+            <RadioGroup
+              options={[
+                { value: "uz", label: "O'zbekcha" },
+                { value: "ru", label: "Русский" },
+                { value: "en", label: "English" },
+              ]}
+              value={lang}
+              onChange={(value) => setLang(value as Lang)}
+            />
+          </Card>
+
+          <Card padding="lg">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-ink">{t("nav.verification")}</h3>
+                <p className="text-sm text-muted mt-1">{t("bset.verificationHint")}</p>
+              </div>
+              <Link
+                href="/xaridor/verifikatsiya"
+                className="inline-flex h-9 shrink-0 items-center rounded-btn border border-field bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors duration-150 hover:border-primary hover:bg-card-hover"
+              >
+                {t("bset.verificationOpen")}
+              </Link>
+            </div>
+          </Card>
+
+          <AccountSecurity />
+          <AccountControls />
+
+          <Card padding="lg" className="border-danger/20 bg-danger/5">
+            <h3 className="font-bold text-danger mb-2">{t("settings.accountSection")}</h3>
+            <p className="text-sm text-muted mb-4">{t("bset.dangerZoneHint")}</p>
+            <Button variant="danger" onClick={() => setLogoutOpen(true)}>
+              {t("common.logout")}
+            </Button>
+          </Card>
+        </div>
+      </div>
 
       <ConfirmDialog
         open={logoutOpen}

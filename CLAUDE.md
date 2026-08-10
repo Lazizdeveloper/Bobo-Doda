@@ -129,9 +129,8 @@ yangi rang qo'shilsa ham shu chegara saqlanishi shart.
   workroom sarlavhasi. Har kartaga qo'yilsa shovqin bo'ladi.
 - Animatsiya minimal (hover 150ms, modal/toast `sb-fade-in` 200ms, skeleton),
   `prefers-reduced-motion` hurmat qilinadi.
-- Landing (`public/landing.html`) mustaqil CSS, lekin ayni shu tokenlar bilan.
-  DIQQAT: u yerdagi o'zgaruvchi nomlari tarixiy (`--yellow` = harakat yashili,
-  `--lime` = zaytun urg'u, `--red` = yashil chok) — qiymatlar yangi palitrada.
+- Landing (`app/page.tsx`) — oddiy React sahifa, xuddi shu tokenlar bilan
+  (inline `<style>` bloki, `useT()`/`LangSwitch` orqali UZ/RU/EN).
 - Namunaviy portfolio rasmlari (`seed.ts` → `svgImg`) ham yumshoq yashil
   tonlarda; to'q/sariq blok qo'yilmasin.
 
@@ -242,12 +241,10 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
   alohida bosqichga qoldirilgan.
 
 ## Deploy (Netlify) — DIQQAT
-- **`app/page.tsx` YO'Q**. Bosh sahifa (`/`) `next.config.mjs` dagi rewrite
-  orqali `public/landing.html` ga boradi. Rewrite Next.js runtime'ini talab
-  qiladi — statik hosting'da `/` **404** beradi (aynan shu xato bo'lgan).
-- Shuning uchun `netlify.toml` + `@netlify/plugin-nextjs` SHART:
-  `publish = ".next"`, plugin e'lon qilingan, `/` uchun qo'shimcha CDN-darajali
-  redirect va xavfsizlik header'lari yozilgan.
+- Bosh sahifa (`/`) — oddiy Next.js route (`app/page.tsx`), alohida
+  rewrite/redirect shart emas.
+- `netlify.toml` + `@netlify/plugin-nextjs` SHART: `publish = ".next"`,
+  plugin e'lon qilingan, xavfsizlik header'lari yozilgan.
 - `output: 'export'` (statik eksport) MUMKIN EMAS: `[id]` marshrutlari
   UUID bo'lgani uchun `generateStaticParams` bilan oldindan sanab bo'lmaydi,
   hamda `rewrites()`/`headers()` eksportda ishlamaydi.

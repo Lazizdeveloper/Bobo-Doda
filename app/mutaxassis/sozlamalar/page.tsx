@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -181,6 +182,28 @@ export default function SozlamalarPage() {
       <h1 className="font-heading text-2xl font-extrabold text-ink">
         {t("settings.title")}
       </h1>
+
+      {/* Tezkor havolalar — Profil/Verifikatsiya/Yordam TopNav'da yo'q */}
+      <Card padding="lg">
+        <h2 className="font-heading text-base font-bold text-ink">
+          {t("settings.quickLinks")}
+        </h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            { href: "/mutaxassis/profil", label: t("nav.profile") },
+            { href: "/mutaxassis/verifikatsiya", label: t("nav.verification") },
+            { href: "/mutaxassis/yordam", label: t("nav.help") },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="inline-flex h-9 items-center gap-2 rounded-btn border border-field bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors duration-150 hover:border-primary hover:bg-card-hover"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </Card>
 
       {/* Profil ma'lumotlari */}
       <Card padding="lg">

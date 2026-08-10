@@ -119,245 +119,280 @@ export default function BozorPage() {
     pageStart + PER_PAGE
   );
 
+  const categoryOptions = [
+    { value: "all", label: t("jobs.allCategories") },
+    ...CATEGORIES.map((cat) => ({ value: cat, label: t(`cat.${cat}`) })),
+  ];
+  const sortOptions = [
+    { value: "new", label: t("jobs.sortNew") },
+    { value: "cheap", label: t("market.sortCheap") },
+    { value: "expensive", label: t("market.sortExpensive") },
+    { value: "rating", label: t("market.sortRating") },
+  ];
+
+  const savedOnlyButton = (
+    <Button
+      variant={savedOnly ? "secondary" : "ghost"}
+      size="sm"
+      aria-pressed={savedOnly}
+      onClick={() => setSavedOnly((value) => !value)}
+      className={savedOnly ? "border-primary/60 text-primary" : ""}
+    >
+      <BookmarkIcon filled={savedOnly} />
+      {t("market.savedOnly")}
+      {savedIds && savedIds.length > 0 && (
+        <span className="rounded-full bg-primary/10 px-1.5 text-2xs text-primary-deep">
+          {savedIds.length}
+        </span>
+      )}
+    </Button>
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-heading text-2xl font-extrabold text-ink">
+        <h1 className="font-heading text-2xl font-extrabold text-ink xl:text-3xl">
           {t("market.title")}
         </h1>
-        <p className="mt-1 text-sm text-muted">{t("market.subtitle")}</p>
+        <p className="mt-1 text-sm text-muted xl:text-base">{t("market.subtitle")}</p>
       </div>
 
-      <Tabs
-        value={tab}
-        onChange={(value) => setTab(value as Tab)}
-        items={[
-          {
-            value: "services",
-            label: t("market.tabServices"),
-            count: services?.length,
-          },
-          {
-            value: "specialists",
-            label: t("market.tabSpecialists"),
-            count: specialists?.length,
-          },
-        ]}
-      />
+      <div className="xl:grid xl:grid-cols-[300px_1fr] xl:items-start xl:gap-8">
+        {/* Filtr paneli — faqat keng ekranda (xl+), yopishqoq */}
+        <aside className="hidden xl:sticky xl:top-24 xl:block">
+          <Card padding="lg" className="flex flex-col gap-5">
+            <h2 className="font-heading text-sm font-bold text-ink">
+              {t("market.filtersTitle")}
+            </h2>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t("market.searchPh")}
+              aria-label={t("market.searchPh")}
+              clearLabel={t("search.clear")}
+            />
+            <Select
+              label={t("jobs.category")}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              options={categoryOptions}
+            />
+            {tab === "services" && (
+              <Select
+                label={t("jobs.sort")}
+                value={sort}
+                onChange={(e) => setSort(e.target.value as Sort)}
+                options={sortOptions}
+              />
+            )}
+            <div className="border-t border-line pt-4 [&>button]:w-full [&>button]:justify-start">
+              {savedOnlyButton}
+            </div>
+          </Card>
+        </aside>
 
-      {/* Qidiruv va filtrlar */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t("market.searchPh")}
-          aria-label={t("market.searchPh")}
-          clearLabel={t("search.clear")}
-        />
-        <Select
-          aria-label={t("jobs.category")}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          options={[
-            { value: "all", label: t("jobs.allCategories") },
-            ...CATEGORIES.map((cat) => ({ value: cat, label: t(`cat.${cat}`) })),
-          ]}
-        />
-        {tab === "services" && (
-          <Select
-            aria-label={t("jobs.sort")}
-            value={sort}
-            onChange={(e) => setSort(e.target.value as Sort)}
-            options={[
-              { value: "new", label: t("jobs.sortNew") },
-              { value: "cheap", label: t("market.sortCheap") },
-              { value: "expensive", label: t("market.sortExpensive") },
-              { value: "rating", label: t("market.sortRating") },
+        <div className="flex flex-col gap-6">
+          <Tabs
+            size="lg"
+            value={tab}
+            onChange={(value) => setTab(value as Tab)}
+            items={[
+              {
+                value: "services",
+                label: t("market.tabServices"),
+                count: services?.length,
+              },
+              {
+                value: "specialists",
+                label: t("market.tabSpecialists"),
+                count: specialists?.length,
+              },
             ]}
           />
-        )}
-      </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          variant={savedOnly ? "secondary" : "ghost"}
-          size="sm"
-          aria-pressed={savedOnly}
-          onClick={() => setSavedOnly((value) => !value)}
-          className={savedOnly ? "border-primary/60 text-primary" : ""}
-        >
-          <BookmarkIcon filled={savedOnly} />
-          {t("market.savedOnly")}
-          {savedIds && savedIds.length > 0 && (
-            <span className="rounded-full bg-primary/10 px-1.5 text-2xs text-primary-deep">
-              {savedIds.length}
+          {/* Qidiruv va filtrlar — mobil/planshetda; keng ekranda chapdagi panelga ko'chadi */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:hidden">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t("market.searchPh")}
+              aria-label={t("market.searchPh")}
+              clearLabel={t("search.clear")}
+            />
+            <Select aria-label={t("jobs.category")} value={category} onChange={(e) => setCategory(e.target.value)} options={categoryOptions} />
+            {tab === "services" && (
+              <Select aria-label={t("jobs.sort")} value={sort} onChange={(e) => setSort(e.target.value as Sort)} options={sortOptions} />
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 xl:justify-end">
+            <div className="xl:hidden">{savedOnlyButton}</div>
+            <span className="text-2xs text-faint xl:text-xs" aria-live="polite">
+              {!loading &&
+                activeCount > 0 &&
+                t("pager.showing")
+                  .replace("{from}", String(pageStart + 1))
+                  .replace("{to}", String(Math.min(pageStart + PER_PAGE, activeCount)))
+                  .replace("{total}", String(activeCount))}
             </span>
-          )}
-        </Button>
-        <span className="text-2xs text-faint" aria-live="polite">
-          {!loading &&
-            activeCount > 0 &&
-            t("pager.showing")
-              .replace("{from}", String(pageStart + 1))
-              .replace("{to}", String(Math.min(pageStart + PER_PAGE, activeCount)))
-              .replace("{total}", String(activeCount))}
-        </span>
-      </div>
+          </div>
 
-      {loadError ? (
-        <ErrorState error={loadError} onRetry={load} />
-      ) : loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      ) : tab === "services" ? (
-        filteredServices.length === 0 ? (
-          <EmptyState title={t(savedOnly ? "market.emptySaved" : "market.empty")} />
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {pagedServices.map((service) => {
-              const seller = sellerById.get(service.sellerId);
-              return (
+          {loadError ? (
+            <ErrorState error={loadError} onRetry={load} />
+          ) : loading ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          ) : tab === "services" ? (
+            filteredServices.length === 0 ? (
+              <EmptyState title={t(savedOnly ? "market.emptySaved" : "market.empty")} />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {pagedServices.map((service) => {
+                  const seller = sellerById.get(service.sellerId);
+                  return (
+                    <Card
+                      key={service.id}
+                      padding="none"
+                      hoverable
+                      className="relative flex h-full flex-col overflow-hidden"
+                    >
+                      <Link
+                        href={`/xaridor/bozor/xizmat/${service.id}`}
+                        className="absolute inset-0 z-0 rounded-card"
+                        aria-label={service.title}
+                      />
+                        {service.images[0] && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={service.images[0]}
+                            alt={service.title}
+                            className="aspect-[3/1.4] w-full border-b border-line object-cover"
+                          />
+                        )}
+                        <div className="pointer-events-none relative z-10 flex flex-1 flex-col gap-2.5 p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <Badge tone="primary">{t(`cat.${service.category}`)}</Badge>
+                            <button
+                              type="button"
+                              onClick={() => void toggleSaved(service.id)}
+                              aria-label={t(savedIds?.includes(service.id) ? "market.unsave" : "market.save")}
+                              aria-pressed={savedIds?.includes(service.id)}
+                              className="pointer-events-auto -mr-1 -mt-1 rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
+                            >
+                              <BookmarkIcon filled={savedIds?.includes(service.id)} />
+                            </button>
+                          </div>
+                          <h3 className="font-heading text-sm font-bold text-ink">
+                            {service.title}
+                          </h3>
+                          <p className="line-clamp-2 text-xs text-muted">
+                            {service.description}
+                          </p>
+                          {seller && (
+                            <div className="flex items-center gap-2 text-xs text-muted">
+                              <Avatar name={seller.user.fullName} size="sm" />
+                              <span className="truncate font-medium text-ink">
+                                {seller.user.fullName}
+                              </span>
+                              <RatingStars value={seller.profile.rating} showValue />
+                            </div>
+                          )}
+                          <div className="mt-auto flex items-center justify-between border-t border-line pt-3 text-xs">
+                            <span className="font-heading text-sm font-bold text-ink">
+                              {formatMoney(service.price, lang)}
+                            </span>
+                            <span className="text-faint">
+                              {service.deliveryDays} {t("common.days")}
+                            </span>
+                          </div>
+                        </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )
+          ) : filteredSpecialists.length === 0 ? (
+            <EmptyState title={t(savedOnly ? "market.emptySaved" : "market.empty")} />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {pagedSpecialists.map(({ user, profile }) => (
                 <Card
-                  key={service.id}
-                  padding="none"
+                  key={user.id}
                   hoverable
-                  className="relative flex h-full flex-col overflow-hidden"
+                  className="relative flex h-full flex-col gap-3"
                 >
                   <Link
-                    href={`/xaridor/bozor/xizmat/${service.id}`}
+                    href={`/xaridor/bozor/mutaxassis/${user.id}`}
                     className="absolute inset-0 z-0 rounded-card"
-                    aria-label={service.title}
+                    aria-label={user.fullName}
                   />
-                    {service.images[0] && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={service.images[0]}
-                        alt={service.title}
-                        className="aspect-[3/1.4] w-full border-b border-line object-cover"
-                      />
-                    )}
-                    <div className="pointer-events-none relative z-10 flex flex-1 flex-col gap-2.5 p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <Badge tone="primary">{t(`cat.${service.category}`)}</Badge>
+                  <div className="pointer-events-none relative z-10 flex h-full flex-col gap-3">
+                    <div className="flex items-start gap-3">
+                      <Avatar name={user.fullName} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-heading text-sm font-bold text-ink">
+                            {user.fullName}
+                          </h3>
+                          <TrustBadge badge={profile.badge} />
+                        </div>
+                        {profile.headline && (
+                          <p className="mt-0.5 truncate text-xs text-muted">
+                            {profile.headline}
+                          </p>
+                        )}
+                      </div>
+                      <div className="pointer-events-auto flex items-center gap-1">
+                        <Badge tone={profile.available ? "success" : "neutral"}>
+                          {t(profile.available ? "avail.on" : "avail.off")}
+                        </Badge>
                         <button
                           type="button"
-                          onClick={() => void toggleSaved(service.id)}
-                          aria-label={t(savedIds?.includes(service.id) ? "market.unsave" : "market.save")}
-                          aria-pressed={savedIds?.includes(service.id)}
-                          className="pointer-events-auto -mr-1 -mt-1 rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
+                          onClick={() => void toggleSaved(user.id)}
+                          aria-label={t(savedIds?.includes(user.id) ? "market.unsave" : "market.save")}
+                          aria-pressed={savedIds?.includes(user.id)}
+                          className="rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
                         >
-                          <BookmarkIcon filled={savedIds?.includes(service.id)} />
+                          <BookmarkIcon filled={savedIds?.includes(user.id)} />
                         </button>
                       </div>
-                      <h3 className="font-heading text-sm font-bold text-ink">
-                        {service.title}
-                      </h3>
-                      <p className="line-clamp-2 text-xs text-muted">
-                        {service.description}
-                      </p>
-                      {seller && (
-                        <div className="flex items-center gap-2 text-xs text-muted">
-                          <Avatar name={seller.user.fullName} size="sm" />
-                          <span className="truncate font-medium text-ink">
-                            {seller.user.fullName}
-                          </span>
-                          <RatingStars value={seller.profile.rating} showValue />
-                        </div>
-                      )}
-                      <div className="mt-auto flex items-center justify-between border-t border-line pt-3 text-xs">
-                        <span className="font-heading text-sm font-bold text-ink">
-                          {formatMoney(service.price, lang)}
-                        </span>
-                        <span className="text-faint">
-                          {service.deliveryDays} {t("common.days")}
-                        </span>
-                      </div>
                     </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+                      <RatingStars value={profile.rating} showValue />
+                      <span>
+                        {profile.completedContracts} {t("profile.completedContracts")}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.slice(0, 4).map((skill) => (
+                        <Badge key={skill}>{skill}</Badge>
+                      ))}
+                    </div>
+                    <span className="mt-auto border-t border-line pt-3 text-xs font-medium text-primary">
+                      {t("market.viewProfile")} →
+                    </span>
+                  </div>
                 </Card>
-              );
-            })}
-          </div>
-        )
-      ) : filteredSpecialists.length === 0 ? (
-        <EmptyState title={t(savedOnly ? "market.emptySaved" : "market.empty")} />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {pagedSpecialists.map(({ user, profile }) => (
-            <Card
-              key={user.id}
-              hoverable
-              className="relative flex h-full flex-col gap-3"
-            >
-              <Link
-                href={`/xaridor/bozor/mutaxassis/${user.id}`}
-                className="absolute inset-0 z-0 rounded-card"
-                aria-label={user.fullName}
-              />
-              <div className="pointer-events-none relative z-10 flex h-full flex-col gap-3">
-                <div className="flex items-start gap-3">
-                  <Avatar name={user.fullName} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-heading text-sm font-bold text-ink">
-                        {user.fullName}
-                      </h3>
-                      <TrustBadge badge={profile.badge} />
-                    </div>
-                    {profile.headline && (
-                      <p className="mt-0.5 truncate text-xs text-muted">
-                        {profile.headline}
-                      </p>
-                    )}
-                  </div>
-                  <div className="pointer-events-auto flex items-center gap-1">
-                    <Badge tone={profile.available ? "success" : "neutral"}>
-                      {t(profile.available ? "avail.on" : "avail.off")}
-                    </Badge>
-                    <button
-                      type="button"
-                      onClick={() => void toggleSaved(user.id)}
-                      aria-label={t(savedIds?.includes(user.id) ? "market.unsave" : "market.save")}
-                      aria-pressed={savedIds?.includes(user.id)}
-                      className="rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
-                    >
-                      <BookmarkIcon filled={savedIds?.includes(user.id)} />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-                  <RatingStars value={profile.rating} showValue />
-                  <span>
-                    {profile.completedContracts} {t("profile.completedContracts")}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {profile.skills.slice(0, 4).map((skill) => (
-                    <Badge key={skill}>{skill}</Badge>
-                  ))}
-                </div>
-                <span className="mt-auto border-t border-line pt-3 text-xs font-medium text-primary">
-                  {t("market.viewProfile")} →
-                </span>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
 
-      {!loading && activeCount > PER_PAGE && (
-        <Pagination
-          page={currentPage}
-          totalPages={totalPages}
-          onChange={setPage}
-          labels={{
-            prev: t("pager.prev"),
-            next: t("pager.next"),
-            page: t("pager.page"),
-          }}
-        />
-      )}
+          {!loading && activeCount > PER_PAGE && (
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onChange={setPage}
+              labels={{
+                prev: t("pager.prev"),
+                next: t("pager.next"),
+                page: t("pager.page"),
+              }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -45,7 +45,6 @@ export const usersService: UsersService = {
   changePassword: (current, next) => call(() => mock.changePassword(current, next)),
   exportData: () => call(mock.exportCurrentUserData),
   deleteAccount: () => call(mock.deleteCurrentAccount),
-  reportUser: (input) => call(() => mock.reportUser(input)),
 };
 
 export const catalogService: CatalogService = {

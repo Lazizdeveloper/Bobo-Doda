@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CountdownBadge } from "@/components/ui/CountdownBadge";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
@@ -36,21 +35,18 @@ export default function XaridorDashboardPage() {
         setMilestones(milestoneList);
         if (user) setName(user.fullName);
         setJobs(jobList);
-        /* Har bir ochiq e'lon bo'yicha yangi (yuborilgan) takliflar soni */
+        
         const counts = new Map<string, number>();
         const open = jobList.filter((j) => j.status === "ochiq");
         const results = await Promise.all(
           open.map((j) => proposalsService.listForJob(j.id))
         );
         open.forEach((job, i) => {
-          const fresh = results[i].filter(
-            (p: Proposal) => p.status === "yuborilgan"
-          ).length;
+          const fresh = results[i].filter((p: Proposal) => p.status === "yuborilgan").length;
           if (fresh > 0) counts.set(job.id, fresh);
         });
         setNewProposals(counts);
       })
-      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
       .catch(setLoadError);
   }, []);
 
@@ -60,243 +56,239 @@ export default function XaridorDashboardPage() {
 
   const loading = !contracts || !jobs || !milestones;
 
-  const activeCount = contracts?.filter((c) => c.status === "faol").length ?? 0;
-  const openJobs = jobs?.filter((j) => j.status === "ochiq").length ?? 0;
+  const activeContracts = contracts?.filter((c) => c.status === "faol") || [];
+  const openJobs = jobs?.filter((j) => j.status === "ochiq") || [];
   const contractById = new Map(contracts?.map((c) => [c.id, c]));
 
-  /* Tekshirish kutayotgan (topshirilgan) bosqichlar — eng muhim harakat */
   const toReview = (milestones ?? []).filter(
-    (m) =>
-      m.status === "topshirildi" &&
-      contractById.get(m.contractId)?.status === "faol"
+    (m) => m.status === "topshirildi" && contractById.get(m.contractId)?.status === "faol"
   );
-  const totalNewProposals = Array.from(newProposals.values()).reduce(
-    (sum, n) => sum + n,
-    0
-  );
-
-  /* To'lov kutayotgan (imzolangan) shartnomalar — xaridor to'lasa ish boshlanadi */
+  
+  const totalNewProposals = Array.from(newProposals.values()).reduce((sum, n) => sum + n, 0);
   const fundNeeded = (contracts ?? []).filter((c) => c.status === "imzolangan");
-
-  const recentContracts = contracts?.slice(0, 3) ?? [];
+  const recentContracts = contracts?.slice(0, 5) ?? [];
   const jobById = new Map(jobs?.map((j) => [j.id, j]));
 
+  // Calculate total spent (dummy logic for now, using completed contracts or all contracts)
+  const totalSpent = contracts?.reduce((sum, c) => c.status === "yakunlangan" ? sum + c.totalAmount : sum, 0) || 0;
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex flex-col gap-8">
+      {/* Workspace Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-surface to-bg rounded-2xl p-6 border border-line shadow-sm">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-ink">
+          <h1 className="font-heading text-3xl font-extrabold text-ink tracking-tight">
             {t("dash.title")}
           </h1>
           {name && (
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-muted font-medium">
               {t("dash.greeting")}, {name.split(" ")[0]}
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Link href="/xaridor/bozor">
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" className="shadow-sm">
               {t("bdash.findSpecialist")}
             </Button>
           </Link>
           <Link href="/xaridor/elonlarim/yangi">
-            <Button size="sm">{t("bdash.postJob")}</Button>
+            <Button className="shadow-sm">{t("bdash.postJob")}</Button>
           </Link>
         </div>
       </div>
 
-      {/* Statistika */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="mt-3 h-6 w-16" />
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-4 h-8 w-16" />
             </Card>
           ))
         ) : (
           <>
-            <Card>
-              <p className="text-2xs font-medium uppercase tracking-wide text-faint">
-                {t("dash.activeContracts")}
-              </p>
-              <p className="mt-2 font-heading text-xl font-bold text-ink">
-                {activeCount}
+            <Card className="flex flex-col justify-center border-l-4 border-l-primary">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.totalSpent")}</p>
+              <p className="mt-2 font-heading text-2xl font-black text-ink">
+                {formatMoney(totalSpent, lang)}
               </p>
             </Card>
-            <Card>
-              <p className="text-2xs font-medium uppercase tracking-wide text-faint">
-                {t("bdash.openJobs")}
-              </p>
-              <p className="mt-2 font-heading text-xl font-bold text-ink">
-                {openJobs}
+            <Card className="flex flex-col justify-center border-l-4 border-l-success">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.activeProjects")}</p>
+              <p className="mt-2 font-heading text-2xl font-black text-ink">
+                {activeContracts.length}
               </p>
             </Card>
-            <Card className="col-span-2 lg:col-span-1">
-              <p className="text-2xs font-medium uppercase tracking-wide text-faint">
-                {t("bdash.toReview")}
-              </p>
-              <p
-                className={`mt-2 font-heading text-xl font-bold ${
-                  toReview.length > 0 ? "text-warning" : "text-ink"
-                }`}
-              >
+            <Card className="flex flex-col justify-center border-l-4 border-l-warning">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.toReview")}</p>
+              <p className={`mt-2 font-heading text-2xl font-black ${toReview.length > 0 ? "text-warning" : "text-ink"}`}>
                 {toReview.length}
+              </p>
+            </Card>
+            <Card className="flex flex-col justify-center border-l-4 border-l-info">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.openJobs")}</p>
+              <p className="mt-2 font-heading text-2xl font-black text-ink">
+                {openJobs.length}
               </p>
             </Card>
           </>
         )}
       </div>
 
-      {/* Escrow eslatmasi */}
-      <div className="flex items-start gap-3 rounded-card border border-accent/25 bg-accent/5 p-4">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="mt-0.5 shrink-0 text-accent">
-          <path d="M8 1.5 13.5 4v3.6c0 3.3-2.3 6.1-5.5 6.9-3.2-.8-5.5-3.6-5.5-6.9V4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-          <path d="M5.8 8l1.6 1.6 2.8-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <p className="text-xs text-muted">{t("bdash.escrowNote")}</p>
-      </div>
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Left Column: Action Center */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <section>
+            <h2 className="font-heading text-xl font-bold text-ink mb-4 flex items-center gap-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 8V12L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {t("bdash.actionCenter")}
+            </h2>
 
-      {/* Harakat talab qilinadi */}
-      <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-lg font-bold text-ink">
-          {t("bdash.actionRequired")}
-        </h2>
-        {loading ? (
-          <SkeletonCard />
-        ) : toReview.length === 0 &&
-          totalNewProposals === 0 &&
-          fundNeeded.length === 0 ? (
-          <EmptyState title={t("bdash.noActions")} />
-        ) : (
-          <Card padding="none" stitch>
-            {fundNeeded.map((c, i) => (
-              <Link
-                key={c.id}
-                href={`/xaridor/shartnomalar/${c.id}`}
-                className={`flex flex-wrap items-center justify-between gap-3 p-4 transition-colors duration-150 hover:bg-card-hover ${
-                  i > 0 ? "border-t border-line" : ""
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-accent">
-                    {t("bdash.fundNeeded")}
-                  </p>
-                  <p className="mt-0.5 truncate text-sm font-medium text-ink">
-                    {c.title}
-                  </p>
-                  <p className="mt-0.5 text-2xs text-faint">
-                    {c.sellerName} · {formatMoney(c.totalAmount, lang)}
-                  </p>
+            {loading ? (
+              <SkeletonCard />
+            ) : toReview.length === 0 && totalNewProposals === 0 && fundNeeded.length === 0 ? (
+              <Card className="text-center py-12 border-dashed">
+                <div className="mx-auto w-12 h-12 bg-success/10 text-success rounded-full flex items-center justify-center mb-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </div>
-              </Link>
-            ))}
-            {toReview.map((m, i) => {
-              const contract = contractById.get(m.contractId);
-              return (
-                <Link
-                  key={m.id}
-                  href={`/xaridor/shartnomalar/${m.contractId}`}
-                  className={`flex flex-wrap items-center justify-between gap-3 p-4 transition-colors duration-150 hover:bg-card-hover ${
-                    i > 0 || fundNeeded.length > 0 ? "border-t border-line" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-warning">
-                      {t("bdash.reviewSubmitted")}
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-medium text-ink">
-                      {m.title}
-                    </p>
-                    <p className="mt-0.5 text-2xs text-faint">
-                      {contract?.title} · {formatMoney(m.amount, lang)}
-                    </p>
-                  </div>
-                  {m.reviewDeadline && (
-                    <CountdownBadge deadline={m.reviewDeadline} />
-                  )}
-                </Link>
-              );
-            })}
-            {Array.from(newProposals.entries()).map(([jobId, count], i) => {
-              const job = jobById.get(jobId);
-              return (
-                <Link
-                  key={jobId}
-                  href={`/xaridor/elonlarim/${jobId}`}
-                  className={`flex flex-wrap items-center justify-between gap-3 p-4 transition-colors duration-150 hover:bg-card-hover ${
-                    i > 0 || toReview.length > 0 || fundNeeded.length > 0
-                      ? "border-t border-line"
-                      : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-primary">
-                      {t("bdash.proposalsWaiting")}
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-medium text-ink">
-                      {job?.title}
-                    </p>
-                  </div>
-                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-bold text-primary-deep">
-                    {count}
-                  </span>
-                </Link>
-              );
-            })}
-          </Card>
-        )}
-      </section>
-
-      {/* Oxirgi shartnomalar */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold text-ink">
-            {t("nav.contracts")}
-          </h2>
-          <Link
-            href="/xaridor/shartnomalar"
-            className="text-xs font-medium text-primary transition-colors duration-150 hover:text-ink"
-          >
-            {t("dash.viewAll")}
-          </Link>
+                <h3 className="font-heading text-lg font-bold text-ink">{t("bdash.allCaughtUp")}</h3>
+                <p className="text-sm text-muted mt-1">{t("bdash.noActions")}</p>
+              </Card>
+            ) : (
+              <Card padding="none" stitch className="overflow-hidden">
+                {fundNeeded.map((c, i) => (
+                  <Link
+                    key={c.id}
+                    href={`/xaridor/shartnomalar/${c.id}`}
+                    className={`flex flex-wrap items-center justify-between gap-4 p-5 transition-colors hover:bg-card-hover ${i > 0 ? "border-t border-line" : ""}`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-danger/10 text-danger flex items-center justify-center shrink-0">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-danger">{t("bdash.fundNeeded")}</p>
+                        <p className="text-base font-medium text-ink mt-0.5">{c.title}</p>
+                        <p className="text-xs text-muted mt-1">{t("bdash.contractWith")} {c.sellerName} • {formatMoney(c.totalAmount, lang)}</p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" size="sm">{t("bdash.fundBtn")}</Button>
+                  </Link>
+                ))}
+                
+                {toReview.map((m, i) => {
+                  const contract = contractById.get(m.contractId);
+                  return (
+                    <Link
+                      key={m.id}
+                      href={`/xaridor/shartnomalar/${m.contractId}`}
+                      className={`flex flex-wrap items-center justify-between gap-4 p-5 transition-colors hover:bg-card-hover ${(i > 0 || fundNeeded.length > 0) ? "border-t border-line" : ""}`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-warning">{t("bdash.reviewSubmitted")}</p>
+                          <p className="text-base font-medium text-ink mt-0.5">{m.title}</p>
+                          <p className="text-xs text-muted mt-1">{contract?.title} • {formatMoney(m.amount, lang)}</p>
+                        </div>
+                      </div>
+                      {m.reviewDeadline && <CountdownBadge deadline={m.reviewDeadline} />}
+                    </Link>
+                  );
+                })}
+                
+                {Array.from(newProposals.entries()).map(([jobId, count], i) => {
+                  const job = jobById.get(jobId);
+                  return (
+                    <Link
+                      key={jobId}
+                      href={`/xaridor/elonlarim/${jobId}`}
+                      className={`flex flex-wrap items-center justify-between gap-4 p-5 transition-colors hover:bg-card-hover ${(i > 0 || toReview.length > 0 || fundNeeded.length > 0) ? "border-t border-line" : ""}`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-primary">{t("bdash.proposalsWaiting")}</p>
+                          <p className="text-base font-medium text-ink mt-0.5">{job?.title}</p>
+                          <p className="text-xs text-muted mt-1">{count} {t("bdash.newSpecialistsApplied")}</p>
+                        </div>
+                      </div>
+                      <Button variant="secondary" size="sm">{t("bdash.reviewProfilesBtn")}</Button>
+                    </Link>
+                  );
+                })}
+              </Card>
+            )}
+          </section>
         </div>
-        {loading ? (
-          <SkeletonCard />
-        ) : recentContracts.length === 0 ? (
-          <EmptyState
-            title={t("contracts.emptyAll")}
-            action={
-              <Link href="/xaridor/bozor">
-                <Button>{t("bdash.findSpecialist")}</Button>
+
+        {/* Right Column: Active Projects */}
+        <div className="flex flex-col gap-6">
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-heading text-xl font-bold text-ink">{t("bdash.recentContracts")}</h2>
+              <Link href="/xaridor/shartnomalar" className="text-sm font-medium text-primary hover:underline">
+                {t("dash.viewAll")}
               </Link>
-            }
-          />
-        ) : (
-          <Card padding="none">
-            {recentContracts.map((contract, i) => (
-              <Link
-                key={contract.id}
-                href={`/xaridor/shartnomalar/${contract.id}`}
-                className={`flex items-center justify-between gap-3 p-4 transition-colors duration-150 hover:bg-card-hover ${
-                  i > 0 ? "border-t border-line" : ""
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink">
-                    {contract.title}
-                  </p>
-                  <p className="mt-0.5 text-2xs text-faint">
-                    {contract.sellerName} · {formatMoney(contract.totalAmount, lang)}
-                  </p>
-                </div>
-                <ContractStatusBadge status={contract.status} />
-              </Link>
-            ))}
+            </div>
+            
+            {loading ? (
+              <SkeletonCard />
+            ) : recentContracts.length === 0 ? (
+              <Card className="text-center py-8">
+                <p className="text-sm text-muted">{t("contracts.emptyAll")}</p>
+              </Card>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {recentContracts.map((contract) => (
+                  <Link key={contract.id} href={`/xaridor/shartnomalar/${contract.id}`} className="block">
+                    <Card hoverable padding="md" className="flex flex-col gap-3">
+                      <div className="flex justify-between items-start gap-2">
+                        <h3 className="font-bold text-ink text-sm line-clamp-1">{contract.title}</h3>
+                        <ContractStatusBadge status={contract.status} />
+                      </div>
+                      <div className="flex items-center justify-between text-xs mt-1">
+                        <span className="text-muted">{contract.sellerName}</span>
+                        <span className="font-bold text-ink">{formatMoney(contract.totalAmount, lang)}</span>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Tips / Help */}
+          <Card className="bg-primary/5 border-primary/20">
+            <h3 className="font-bold text-primary mb-2">{t("bdash.helpTeaserTitle")}</h3>
+            <p className="text-sm text-muted mb-4">{t("bdash.helpTeaserBody")}</p>
+            <Link href="/xaridor/yordam">
+              <Button variant="secondary" className="w-full">{t("bdash.helpTeaserBtn")}</Button>
+            </Link>
           </Card>
-        )}
-      </section>
+        </div>
+      </div>
     </div>
   );
 }

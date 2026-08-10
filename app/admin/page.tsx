@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { AdminPageHeader, HealthRow, MetricCard } from "@/components/admin/AdminUI";
+import { AdminPageHeader, MetricCard } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { SkeletonCard } from "@/components/ui/Skeleton";
@@ -149,44 +149,6 @@ export default function AdminDashboard() {
           </div>
         </Card>
 
-        {/* System Health */}
-        <Card padding="lg">
-          <h2 className="font-heading text-base font-bold text-ink">Tizim salomatligi</h2>
-          <div className="mt-3">
-            <HealthRow name="Frontend Web Portal" value="99.98% uptime" status="healthy" />
-            <HealthRow name="API Gateway Latency" value="42 ms avg" status="healthy" />
-            <HealthRow name="Deposit Payment Hooks" value="Click/Payme Active" status="healthy" />
-            <HealthRow name="Card Operations Ledger" value="Mock Verified" status="warning" />
-          </div>
-        </Card>
-
-        {/* Recent Audit Actions */}
-        <Card padding="lg" className="lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <h2 className="font-heading text-base font-bold text-ink">Oxirgi moderatorlik harakatlari</h2>
-            <Link href="/admin/audit" className="text-xs text-primary font-semibold hover:underline">
-              Barchasi
-            </Link>
-          </div>
-          <div className="mt-3 flex flex-col gap-3">
-            {auditLog.length ? (
-              auditLog.map((event) => (
-                <div key={event.id} className="flex justify-between items-start text-xs border-b border-line/5 pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <p className="text-ink font-medium">{event.action}</p>
-                    <p className="text-3xs text-muted mt-0.5">Moderator: {event.adminName} · Obyekt ID: {event.target}</p>
-                  </div>
-                  <span className="text-3xs text-muted whitespace-nowrap ml-2">
-                    {formatDate(event.createdAt)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-muted py-4 text-center">Moderatorlik amallari qayd etilmagan.</p>
-            )}
-          </div>
-        </Card>
-
         {/* System Activity Summary */}
         <Card padding="lg">
           <h2 className="font-heading text-base font-bold text-ink border-b border-line pb-3">Platforma hajmi</h2>
@@ -208,6 +170,28 @@ export default function AdminDashboard() {
               <dd className="font-semibold text-ink">{data.services.filter((s) => s.status === "active").length} ta xizmat</dd>
             </div>
           </dl>
+        </Card>
+
+        {/* Recent Audit Actions */}
+        <Card padding="lg" className="lg:col-span-3">
+          <h2 className="font-heading text-base font-bold text-ink border-b border-line pb-3">Oxirgi moderatorlik harakatlari</h2>
+          <div className="mt-3 flex flex-col gap-3">
+            {auditLog.length ? (
+              auditLog.map((event) => (
+                <div key={event.id} className="flex justify-between items-start text-xs border-b border-line/5 pb-2 last:border-0 last:pb-0">
+                  <div>
+                    <p className="text-ink font-medium">{event.action}</p>
+                    <p className="text-3xs text-muted mt-0.5">Moderator: {event.adminName} · Obyekt ID: {event.target}</p>
+                  </div>
+                  <span className="text-3xs text-muted whitespace-nowrap ml-2">
+                    {formatDate(event.createdAt)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted py-4 text-center">Moderatorlik amallari qayd etilmagan.</p>
+            )}
+          </div>
         </Card>
       </section>
     </>

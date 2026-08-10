@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -11,19 +11,21 @@ import { useT } from "@/lib/i18n";
 export default function TasdiqlashPage() {
   const { t } = useT();
   const router = useRouter();
+  const pathname = usePathname();
   const [phase, setPhase] = useState<"connect" | "code">("connect");
 
   /* Sessiya guard'i: sessiyasiz kirish yo'q, tasdiqlangan bo'lsa kabinetga */
   useEffect(() => {
     const session = authService.getSession();
     if (!session) {
-      router.replace("/kirish");
+      if (pathname !== "/kirish") router.replace("/kirish");
       return;
     }
     if (session.verified) {
-      router.replace(session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
+      const dest = session.role === "xaridor" ? "/xaridor" : "/mutaxassis";
+      if (pathname !== dest) router.replace(dest);
     }
-  }, [router]);
+  }, [router, pathname]);
   const [redirecting, setRedirecting] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");

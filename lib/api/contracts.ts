@@ -64,7 +64,6 @@ export interface UsersService {
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   exportData(): Promise<Record<string, unknown>>;
   deleteAccount(): Promise<void>;
-  reportUser(input: { targetUserId: string; contractId?: string; offerId?: string; reason: Model.ReportReason; description: string }): Promise<void>;
 }
 
 /** Ochiq katalog: mutaxassis profillari va ular haqidagi sharhlar */

@@ -48,13 +48,6 @@ const nextConfig = {
       },
     ];
   },
-  async rewrites() {
-    return [
-      // Bosh sahifa (/) — statik landing page (public/landing.html).
-      // "Boshlash / Ro'yxatdan o'tish" tugmalari /kirish ga olib boradi.
-      { source: "/", destination: "/landing.html" },
-    ];
-  },
 };
 
 export default nextConfig;

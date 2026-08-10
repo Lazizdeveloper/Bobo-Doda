@@ -158,37 +158,6 @@ export default function DaromadPage() {
         )}
       </div>
 
-      {/* Oylik daromad tendensiyasi */}
-      {milestones && paid.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-heading text-lg font-bold text-ink">
-            {t("earn.monthlyBreakdown")}
-          </h2>
-          <Card>
-            <div className="flex items-end justify-between gap-2 sm:gap-4">
-              {monthly.map((m) => (
-                <div key={m.key} className="flex flex-1 flex-col items-center gap-2">
-                  <span className="text-2xs font-medium text-ink">
-                    {m.amount > 0 ? formatMoney(m.amount, lang) : "—"}
-                  </span>
-                  <div className="flex h-24 w-full items-end rounded-input bg-bg">
-                    <div
-                      className="w-full rounded-input bg-primary transition-[height] duration-300"
-                      style={{
-                        height: `${Math.max(4, (m.amount / monthlyMax) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-2xs text-faint">
-                    {formatMonth(m.key, lang)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
-      )}
-
       {/* So'nggi to'lovlar */}
       <section className="flex flex-col gap-3">
         <h2 className="font-heading text-lg font-bold text-ink">
@@ -259,6 +228,37 @@ export default function DaromadPage() {
           />
         )}
       </section>
+
+      {/* Oylik daromad tendensiyasi */}
+      {milestones && paid.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-lg font-bold text-ink">
+            {t("earn.monthlyBreakdown")}
+          </h2>
+          <Card>
+            <div className="flex items-end justify-between gap-2 sm:gap-4">
+              {monthly.map((m) => (
+                <div key={m.key} className="flex flex-1 flex-col items-center gap-2">
+                  <span className="text-2xs font-medium text-ink">
+                    {m.amount > 0 ? formatMoney(m.amount, lang) : "—"}
+                  </span>
+                  <div className="flex h-24 w-full items-end rounded-input bg-bg">
+                    <div
+                      className="w-full rounded-input bg-primary transition-[height] duration-300"
+                      style={{
+                        height: `${Math.max(4, (m.amount / monthlyMax) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-2xs text-faint">
+                    {formatMonth(m.key, lang)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </section>
+      )}
         </>
       )}
 

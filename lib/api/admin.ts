@@ -3,4 +3,3 @@
  * replaces this module while admin screens keep the same imports.
  */
 export * from "@/lib/admin-api";
-export * from "@/lib/admin-incidents";

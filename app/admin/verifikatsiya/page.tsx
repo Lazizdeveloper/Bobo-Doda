@@ -329,7 +329,7 @@ export default function VerificationQueuePage() {
                       <path d="M14 2v6h6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     <p className="text-3xs text-ink font-mono truncate w-full">Hujjat_{idx + 1}.pdf</p>
-                    <a href="#" onClick={(e) => e.preventDefault()} className="text-3xs text-primary font-bold hover:underline mt-1">Faylni ochish</a>
+                    <span className="text-3xs text-faint mt-1">Mock rejimida ko&apos;rib bo&apos;lmaydi</span>
                   </div>
                 ))}
               </div>

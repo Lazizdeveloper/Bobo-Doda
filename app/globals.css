@@ -98,6 +98,17 @@ body {
   }
 }
 
+/* ── Fluid ish maydoni konteyneri ──────────────────────────────────────
+   Kabinet/admin sahifalar uchun: sobit max-width breakpoint sakrashi
+   o'rniga vw bilan uzluksiz kengayadi — kichik noutbukda (~1200px) siqiq,
+   ultrawide monitorda (~2000px) keng, lekin cheksiz cho'zilmaydi (o'qish
+   qulayligi va navigatsiya muvozanati saqlanadi). */
+.workspace-container {
+  width: 100%;
+  margin-inline: auto;
+  max-width: clamp(75rem, 85vw, 125rem);
+}
+
 @keyframes sb-fade-in {
   from {
     opacity: 0;

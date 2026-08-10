@@ -57,27 +57,6 @@ export function EmptyAdmin({ children }: { children: ReactNode }) {
   );
 }
 
-export function HealthRow({
-  name,
-  value,
-  status,
-}: {
-  name: string;
-  value: string;
-  status: "healthy" | "warning" | "danger";
-}) {
-  const color = status === "healthy" ? "bg-success" : status === "warning" ? "bg-warning" : "bg-danger";
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-line py-3 last:border-0">
-      <div className="flex items-center gap-3">
-        <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-        <span className="text-sm font-medium text-ink">{name}</span>
-      </div>
-      <span className="text-xs text-muted">{value}</span>
-    </div>
-  );
-}
-
 export function Pagination({
   currentPage,
   totalPages,

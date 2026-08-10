@@ -34,23 +34,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
     if (!current) {
-      router.replace(
-        pathname.startsWith("/admin/super") || pathname.startsWith("/admin/audit")
+      const dest = pathname.startsWith("/admin/super")
           ? "/rahbariyat/kirish"
-          : "/admin/kirish"
-      );
+          : "/admin/kirish";
+      if (pathname !== dest) router.replace(dest);
       return;
     }
-    if (
-      (pathname.startsWith("/admin/super") || pathname.startsWith("/admin/audit")) &&
-      current.role !== "super_admin"
-    ) {
-      router.replace("/admin/ruxsat-yoq");
+    if (pathname.startsWith("/admin/super") && current.role !== "super_admin") {
+      if (pathname !== "/admin/ruxsat-yoq") router.replace("/admin/ruxsat-yoq");
       return;
     }
     const permission = routePermission(pathname);
     if (permission && !current.permissions.includes(permission)) {
-      router.replace("/admin/ruxsat-yoq");
+      if (pathname !== "/admin/ruxsat-yoq") router.replace("/admin/ruxsat-yoq");
       return;
     }
     setAdmin(current);
@@ -62,29 +58,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const operationalItems: SidebarItem[] = [
     ["dashboard", "/admin", "Boshqaruv", "DB", true],
-    ["monitoring", "/admin/monitoring", "Monitoring", "MN"],
-    ["monitoring", "/admin/incidentlar", "Incidentlar", "IN"],
     ["users", "/admin/foydalanuvchilar", "Foydalanuvchilar", "US"],
     ["kyc", "/admin/verifikatsiya", "KYC navbati", "ID"],
     ["disputes", "/admin/nizolar", "Nizolar", "DS"],
     ["payments", "/admin/tolovlar", "To‘lovlar", "₿"],
     ["support", "/admin/yordam", "Yordam so‘rovlari", "SP"],
-    ["content", "/admin/kontent", "Kontent nazorati", "CT"],
   ].filter(([permission]) => admin?.permissions.includes(permission as AdminPermission)).map(([, href, label, icon, exact]) => ({
     href: String(href), label: String(label), icon: <Icon>{String(icon)}</Icon>, exact: Boolean(exact),
   }));
   const items: SidebarItem[] = [
     ...operationalItems,
     ...(admin?.role === "super_admin"
-      ? [
-          { href: "/admin/super/analitika", label: "Global Analitika", icon: <Icon>GA</Icon> },
-          { href: "/admin/super/adminlar", label: "Adminlar", icon: <Icon>SA</Icon> },
-          { href: "/admin/audit", label: "Adminlar auditi", icon: <Icon>LG</Icon> },
-          { href: "/admin/super/tizim", label: "Tizim sozlamalari", icon: <Icon>SYS</Icon> },
-          { href: "/admin/super/kategoriyalar", label: "Kategoriyalar", icon: <Icon>CAT</Icon> },
-          { href: "/admin/super/tarjimalar", label: "Tarjimalar", icon: <Icon>TR</Icon> },
-          { href: "/admin/super/xavfsizlik", label: "Xavfsizlik", icon: <Icon>SEC</Icon> },
-        ]
+      ? [{ href: "/admin/super/adminlar", label: "Adminlar", icon: <Icon>SA</Icon> }]
       : []),
   ];
 
@@ -133,7 +118,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-7xl px-4 py-6 focus:outline-none sm:px-6 sm:py-8"
+          className="workspace-container px-4 py-6 focus:outline-none sm:px-6 sm:py-8 xl:px-10 2xl:px-14"
         >
           {children}
         </main>
@@ -144,20 +129,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
 function routePermission(pathname: string): AdminPermission | null {
   if (pathname === "/admin") return "dashboard";
-  if (pathname.startsWith("/admin/monitoring")) return "monitoring";
-  if (pathname.startsWith("/admin/incidentlar")) return "monitoring";
   if (pathname.startsWith("/admin/foydalanuvchilar")) return "users";
   if (pathname.startsWith("/admin/verifikatsiya")) return "kyc";
   if (pathname.startsWith("/admin/nizolar")) return "disputes";
   if (pathname.startsWith("/admin/tolovlar")) return "payments";
   if (pathname.startsWith("/admin/yordam")) return "support";
-  if (pathname.startsWith("/admin/kontent")) return "content";
-  if (pathname.startsWith("/admin/audit")) return "audit";
   if (pathname.startsWith("/admin/super/adminlar")) return "admins";
-  if (pathname.startsWith("/admin/super/tizim")) return "system";
-  if (pathname.startsWith("/admin/super/kategoriyalar")) return "system";
-  if (pathname.startsWith("/admin/super/tarjimalar")) return "system";
-  if (pathname.startsWith("/admin/super/xavfsizlik")) return "system";
-  if (pathname.startsWith("/admin/super/analitika")) return "system";
   return null;
 }

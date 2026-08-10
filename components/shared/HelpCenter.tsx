@@ -64,17 +64,6 @@ export function HelpCenter() {
         <p className="mt-1 text-sm text-muted">{t("help.subtitle")}</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {["payment", "contract", "security"].map((item) => (
-          <Card key={item}>
-            <h2 className="text-sm font-semibold text-ink">
-              {t(`help.${item}Title`)}
-            </h2>
-            <p className="mt-1 text-xs text-muted">{t(`help.${item}Desc`)}</p>
-          </Card>
-        ))}
-      </div>
-
       <Card padding="lg">
         <h2 className="font-heading text-base font-bold text-ink">
           {t("help.newTicket")}

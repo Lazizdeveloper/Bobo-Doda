@@ -18,8 +18,6 @@ const operationalPermissions: { value: AdminPermission; label: string }[] = [
   { value: "disputes", label: "Nizolar" },
   { value: "payments", label: "To‘lovlar" },
   { value: "support", label: "Yordam" },
-  { value: "content", label: "Kontent" },
-  { value: "monitoring", label: "Monitoring" },
 ];
 
 export default function AdminsPage() {

@@ -1,9 +1,8 @@
 # Netlify deploy sozlamasi
 #
-# MUHIM: bu Next.js App Router ilovasi. `app/page.tsx` yo'q — bosh sahifa (`/`)
-# `next.config.mjs` dagi rewrite orqali `public/landing.html` ga yo'naltiriladi.
-# Rewrite Next.js runtime'ini talab qiladi, shuning uchun @netlify/plugin-nextjs
-# SHART. Usiz `/` va barcha `[id]` marshrutlari 404 beradi.
+# MUHIM: bu Next.js App Router ilovasi. Bosh sahifa (`/`) oddiy Next.js route
+# (`app/page.tsx`) — alohida rewrite/redirect shart emas. `@netlify/plugin-nextjs`
+# SHART, aks holda `[id]` kabi dinamik marshrutlar ishlamaydi.
 
 [build]
   command = "npm run build"
@@ -15,18 +14,7 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Bosh sahifa — statik landing.
-# Bu next.config.mjs dagi rewrite'ning dublikati: CDN darajasida ishlaydi va
-# runtime bilan bog'liq muammo bo'lsa ham `/` ochilishini kafolatlaydi.
-[[redirects]]
-  from = "/"
-  to = "/landing.html"
-  status = 200
-
 # Xavfsizlik header'lari.
-# next.config.mjs dagi headers() Next marshrutlariga tegishli, lekin `public/`
-# ichidagi statik fayllar (landing.html) CDN'dan to'g'ridan-to'g'ri beriladi —
-# shuning uchun bu yerda ham takrorlanadi.
 [[headers]]
   for = "/*"
   [headers.values]

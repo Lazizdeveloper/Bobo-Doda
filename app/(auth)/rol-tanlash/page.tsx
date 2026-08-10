@@ -1,24 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export default function RolTanlashPage() {
   const { t } = useT();
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(false);
 
-  /* Roli tasdiqlangan foydalanuvchi bu yerga adashib kelsa — o'z kabinetiga.
-     Aks holda boshqa kabinetga kirmoqchi bo'lib rolini almashtirib yuborishi mumkin. */
+  /* Tasdiqlangan va rol tanlagan foydalanuvchilar o'z kabinetiga qaytariladi */
   useEffect(() => {
     const session = authService.getSession();
     if (!session || !session.verified) return;
-    if (session.role === "xaridor") router.replace("/xaridor");
-    if (session.role === "mutaxassis" && session.profileDone)
-      router.replace("/mutaxassis");
-  }, [router]);
+    
+    let dest = null;
+    if (session.role === "xaridor") dest = "/xaridor";
+    else if (session.role === "mutaxassis" && session.profileDone) dest = "/mutaxassis";
+    
+    if (dest && pathname !== dest) {
+      router.replace(dest);
+    }
+  }, [router, pathname]);
 
   async function handleSeller() {
     if (loading) return;
