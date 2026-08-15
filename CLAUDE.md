@@ -89,6 +89,9 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
 - TrustBadge mantiqla: `computeBadge()` lib/types.ts da (5+/4.5→ishonchli, 25+/4.8→top).
 
 ## Dizayn tili: "Suzani Light" (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
+**Bu bo'lim faqat ikkala kabinetga (`/mutaxassis`, `/xaridor`, `/admin`) va
+umumiy komponentlarga tegishli — `app/page.tsx` (landing) o'zining alohida
+uch ranglik palitrasiga ega, shu bo'lim oxirida alohida tasvirlangan.**
 Ilhom — o'zbek so'zana kashtasi, ammo **oq mato** ustida: fon oq, naqsh va chok
 **yashil ip bilan** tikilgan.
 Qoida: **oq = muhit (fon) · yashil = harakat (CTA/urg'u) · yashil chok = chiziq**.
@@ -129,8 +132,39 @@ yangi rang qo'shilsa ham shu chegara saqlanishi shart.
   workroom sarlavhasi. Har kartaga qo'yilsa shovqin bo'ladi.
 - Animatsiya minimal (hover 150ms, modal/toast `sb-fade-in` 200ms, skeleton),
   `prefers-reduced-motion` hurmat qilinadi.
-- Landing (`app/page.tsx`) — oddiy React sahifa, xuddi shu tokenlar bilan
-  (inline `<style>` bloki, `useT()`/`LangSwitch` orqali UZ/RU/EN).
+- **Landing (`app/page.tsx`) o'zining ALOHIDA palitrasiga ega — Tailwind
+  tokenlaridan foydalanmaydi, umumiy `components/shared/LangSwitch.tsx`/
+  `Logo.tsx`/`SkipLink.tsx` ham import qilinmaydi (ular yashil Suzani
+  tokenlariga bog'liq) — landing o'zining lokal lang-pill/logo/skip-link
+  JSX'ini o'z ranglari bilan qayta chizadi.** Kabinetlar (Suzani Light,
+  yashil-monoxrom) bilan ataylab farqlanadi: "startup/VC" uslubidagi
+  investitsiya taqdimotiga tayyor landing — ikki HUKMRON rang ochiq
+  ishlatiladi: ko'k `--blue` #2563EB (ishonch/CTA) va sariq `--yellow`
+  #F5C242 (issiqlik/urg'u); ikkalasi ham katta fonlarga, tugmalarga, ikonka
+  to'ldirishlariga qo'llanadi. Qizil `--red` #EF4444 faqat urg'u/status
+  elementlarida (eyebrow badge, muammo kartalari chap cheti, jadval/bo'lim
+  chiziqlari, gradient aksentlar) — katta fon sifatida emas. Matn `--ink`
+  #111827, ikkinchi darajali matn `--muted` #6B7280 (foydalanuvchi so'ragan
+  aniq ranglar). Shrift: sahifada haqiqatda yuklangan `var(--font-unbounded)`
+  (sarlavha, faqat 700/800 og'irlik) va `var(--font-onest)` (matn) — boshqa
+  shrift nomi ishlatilmaydi (avvalgi qoralamada Inter/Plus Jakarta Sans
+  yozilgan edi-yu, hech qachon yuklanmagan edi). Qorong'i bloklar
+  (testimonials, final CTA) sof qora emas, indigo-tun `--dark` #0F1A3D +
+  `--dark-2` #1B1642 + ko'k/sariq/qizil porlash gradientlari. Tuzilma 13
+  bo'lim: sticky nav (logo, qanday ishlaydi, kategoriyalar, mutaxassislar/
+  xaridorlar uchun, narxlar, savol-javob, til, kirish, boshlash + mobil
+  hamburger drawer) → hero (eskrou dashboard maketi + suzuvchi chiplar) →
+  ishonch paneli (mamlakat chiplari + statistika) → muammo/yechim → 4
+  bosqichli eskrou timeline + vizual karta → 8 kategoriya → narxlar
+  (mutaxassis 5% / xaridor bepul) → tanlangan mutaxassislar → faol
+  e'lonlar → raqobatchilardan farqi (jadval) → fikrlar → xavfsizlik → FAQ
+  (`<details>`) → yakuniy CTA → footer. Amalga oshirish: inline `<style>`
+  bloki (CSS custom property'lar, Tailwind class'lari EMAS). Scroll-reveal
+  (`IntersectionObserver`, `.reveal` klassi) `prefers-reduced-motion`ni
+  hurmat qiladi HAMDA `<noscript>` orqali JS o'chirilganda kontent
+  ko'rinmas bo'lib qolmasligi ta'minlangan (progressive enhancement — JS
+  ishlamasa ham barcha bo'lim matni ko'rinadi). Kabinet komponentlaridagi
+  umumiy dizayn qoidasi (pastda) landingga TATBIQ ETILMAYDI.
 - Namunaviy portfolio rasmlari (`seed.ts` → `svgImg`) ham yumshoq yashil
   tonlarda; to'q/sariq blok qo'yilmasin.
 
