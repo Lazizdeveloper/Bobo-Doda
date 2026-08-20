@@ -137,31 +137,41 @@ yangi rang qo'shilsa ham shu chegara saqlanishi shart.
   `Logo.tsx`/`SkipLink.tsx` ham import qilinmaydi (ular yashil Suzani
   tokenlariga bog'liq) — landing o'zining lokal lang-pill/logo/skip-link
   JSX'ini o'z ranglari bilan qayta chizadi.** Kabinetlar (Suzani Light,
-  yashil-monoxrom) bilan ataylab farqlanadi: "startup/VC" uslubidagi
-  investitsiya taqdimotiga tayyor landing — ikki HUKMRON rang ochiq
-  ishlatiladi: ko'k `--blue` #2563EB (ishonch/CTA) va sariq `--yellow`
-  #F5C242 (issiqlik/urg'u); ikkalasi ham katta fonlarga, tugmalarga, ikonka
-  to'ldirishlariga qo'llanadi. Qizil `--red` #EF4444 faqat urg'u/status
-  elementlarida (eyebrow badge, muammo kartalari chap cheti, jadval/bo'lim
-  chiziqlari, gradient aksentlar) — katta fon sifatida emas. Matn `--ink`
-  #111827, ikkinchi darajali matn `--muted` #6B7280 (foydalanuvchi so'ragan
-  aniq ranglar). Shrift: sahifada haqiqatda yuklangan `var(--font-unbounded)`
-  (sarlavha, faqat 700/800 og'irlik) va `var(--font-onest)` (matn) — boshqa
-  shrift nomi ishlatilmaydi (avvalgi qoralamada Inter/Plus Jakarta Sans
-  yozilgan edi-yu, hech qachon yuklanmagan edi). Qorong'i bloklar
-  (testimonials, final CTA) sof qora emas, indigo-tun `--dark` #0F1A3D +
-  `--dark-2` #1B1642 + ko'k/sariq/qizil porlash gradientlari. Tuzilma 13
-  bo'lim: sticky nav (logo, qanday ishlaydi, kategoriyalar, mutaxassislar/
-  xaridorlar uchun, narxlar, savol-javob, til, kirish, boshlash + mobil
-  hamburger drawer) → hero (eskrou dashboard maketi + suzuvchi chiplar) →
-  ishonch paneli (mamlakat chiplari + statistika) → muammo/yechim → 4
-  bosqichli eskrou timeline + vizual karta → 8 kategoriya → narxlar
-  (mutaxassis 5% / xaridor bepul) → tanlangan mutaxassislar → faol
-  e'lonlar → raqobatchilardan farqi (jadval) → fikrlar → xavfsizlik → FAQ
-  (`<details>`) → yakuniy CTA → footer. Amalga oshirish: inline `<style>`
-  bloki (CSS custom property'lar, Tailwind class'lari EMAS). Scroll-reveal
-  (`IntersectionObserver`, `.reveal` klassi) `prefers-reduced-motion`ni
-  hurmat qiladi HAMDA `<noscript>` orqali JS o'chirilganda kontent
+  yashil-monoxrom) bilan ataylab farqlanadi, lekin 2026-yil "premium sariq"
+  redizaynidan keyin ikkalasi ham yashilni **ishonch** rangi sifatida
+  ishlatadi — landing esa mijoz talabiga ko'ra **asosiy fon SARIQ** bo'lgan
+  o'ziga xos uch rangli tizim: sariq `--y-400` #FFCE45 (brand muhiti — fon,
+  ko'p tonli qatlam: `--y-50`..`--y-900`, flat emas — radial gradient,
+  subtle dot-grid, blur qilingan blob shakllar, `.grain` SVG turbulence
+  overlay bilan chuqurlik beriladi), yashil `--g-600` #106932 (ishonch +
+  asosiy CTA/UI — tugma, link, badge, eskrou vizual), qizil `--r-500`
+  #E5484D (faqat urg'u — "Muammo" eyebrow, statistika emas). Sirt: oq
+  kartalar (`#fff`) sariq fonda kontent joylashtirish uchun; ikkita ATAYLAB
+  qo'yilgan **to'q yashil kontrast bo'lim** (`--g-900`/`--g-800`) —
+  Xavfsizlik va Yakuniy CTA — sahifa ritmini buzadi. Matn `--ink` #1D1B12
+  (issiq to'q), `--muted` #5E5A44. Shrift: `var(--font-unbounded)` (faqat
+  700/800, hero H1 + katta raqamlar) va `var(--font-onest)` (UI/body) —
+  boshqa shrift nomi ishlatilmaydi. Tuzilma 16 bo'lim: sticky nav → hero
+  (split layout, load-in stagger animatsiya, eskrou dashboard maketi +
+  suzuvchi chiplar) → ishonch paneli (mamlakat chiplari + count-up
+  statistika) → muammo/yechim (3 ta raqamlangan editorial qator) → eskrou
+  (4 bosqich, scroll-driven `IntersectionObserver` — qaysi bosqich markazda
+  bo'lsa, pastdagi eskrou-hisob vizuali status/progress-bar/summani shunga
+  moslab yangilaydi) → 8 kategoriya (assimetrik grid — 2 ta katta `.big`
+  kartochka to'q yashil fonda span 2×2) → narxlar (mutaxassis 5% / xaridor
+  bepul / yashirin to'lov 0) → tanlangan mutaxassislar (available nuqta
+  badge) → faol e'lonlar (1 ta featured + 2 ta ro'yxat kartasi, teng emas)
+  → raqobatchilardan farqi (jadval) → fikrlar (slayd-karusel: avtomatik
+  6.5s, hover/focus'da pauza, ok/chap tugma + nuqta paginatsiya + klaviatura
+  strelkalari) → xavfsizlik (to'q yashil kontrast, 4 qatlam: Escrow/
+  Identity/Acceptance/Dispute) → FAQ (controlled accordion, grid-template-
+  rows bilan silliq balandlik animatsiyasi, `<details>` emas — aria-expanded
+  bilan) → yakuniy CTA (to'q yashil + sariq porlash) → footer (to'q yashil,
+  sariq aksent). Amalga oshirish: inline `<style>` bloki (CSS custom
+  property'lar, Tailwind class'lari EMAS). Scroll-reveal (`IntersectionObserver`,
+  `.reveal` klassi) `prefers-reduced-motion`ni hurmat qiladi (ambient blob
+  drift, count-up, karusel autoplay va hero load-in animatsiyasi ham shu
+  holatda o'chadi) HAMDA `<noscript>` orqali JS o'chirilganda kontent
   ko'rinmas bo'lib qolmasligi ta'minlangan (progressive enhancement — JS
   ishlamasa ham barcha bo'lim matni ko'rinadi). Kabinet komponentlaridagi
   umumiy dizayn qoidasi (pastda) landingga TATBIQ ETILMAYDI.
