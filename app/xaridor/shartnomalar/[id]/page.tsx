@@ -278,6 +278,90 @@ export default function XaridorWorkroomPage() {
         )}
       </Card>
 
+      {/* Contract Lifecycle Stage Pipeline */}
+      <Card padding="md" className="border-line bg-card">
+        <p className="text-2xs font-bold uppercase tracking-wider text-muted mb-3">
+          {t("pipeline.title")}
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              contract.status === "bekor_qilingan"
+                ? "border-line bg-surface text-muted"
+                : "border-primary/30 bg-primary/10 text-primary"
+            }`}
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-2xs text-on-primary">
+              1
+            </span>
+            <span className="truncate">{t("pipeline.stageFund")}</span>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              contract.status === "faol" ||
+              milestones.some((m) => m.status === "topshirildi" || m.status === "qabul_qilindi") ||
+              contract.status === "yakunlangan"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-line bg-surface text-muted"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                contract.status === "faol" ||
+                milestones.some((m) => m.status === "topshirildi" || m.status === "qabul_qilindi") ||
+                contract.status === "yakunlangan"
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface text-faint"
+              }`}
+            >
+              2
+            </span>
+            <span className="truncate">{t("pipeline.stageWork")}</span>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              milestones.some((m) => m.status === "topshirildi" || m.status === "ozgartirish_soraldi") ||
+              contract.status === "yakunlangan"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-line bg-surface text-muted"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                milestones.some((m) => m.status === "topshirildi" || m.status === "ozgartirish_soraldi") ||
+                contract.status === "yakunlangan"
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface text-faint"
+              }`}
+            >
+              3
+            </span>
+            <span className="truncate">{t("pipeline.stageReview")}</span>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              contract.status === "yakunlangan"
+                ? "border-primary/30 bg-primary/10 text-primary font-bold"
+                : "border-line bg-surface text-muted"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                contract.status === "yakunlangan"
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface text-faint"
+              }`}
+            >
+              4
+            </span>
+            <span className="truncate">{t("pipeline.stageDone")}</span>
+          </div>
+        </div>
+      </Card>
+
       {/* Imzolangan — to'lov qilib faollashtirish (asosiy escrow qadami) */}
       {contract.status === "imzolangan" && (
         <Card padding="lg" className="border-warning/30 bg-warning/5">
@@ -739,17 +823,27 @@ export default function XaridorWorkroomPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-xs text-muted">{t("bms.revisionDesc")}</p>
+          {revisionTarget && (
+            <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3 text-xs">
+              <span className="font-medium text-ink">{revisionTarget.title}</span>
+              <span className="font-bold text-primary">
+                {formatMoney(revisionTarget.amount, lang)}
+              </span>
+            </div>
+          )}
+          <div className="rounded-input border border-warning/20 bg-warning/5 p-3 text-xs text-muted">
+            <p className="font-medium text-ink">{t("bms.revisionGuidance")}</p>
+          </div>
           <Textarea
+            label={t("bms.revisionReason")}
             value={revisionComment}
             onChange={(e) => {
               setRevisionComment(e.target.value);
               setRevisionError("");
             }}
-            placeholder={t("bms.revisionPh")}
+            placeholder={t("bms.revisionReasonPh")}
             rows={4}
             error={revisionError}
-            aria-label={t("bms.requestRevision")}
           />
         </div>
       </Modal>

@@ -207,6 +207,90 @@ export default function ShartnomaWorkroomPage() {
         )}
       </Card>
 
+      {/* Contract Lifecycle Stage Pipeline */}
+      <Card padding="md" className="border-line bg-card">
+        <p className="text-2xs font-bold uppercase tracking-wider text-muted mb-3">
+          {t("pipeline.title")}
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              contract.status === "bekor_qilingan"
+                ? "border-line bg-surface text-muted"
+                : "border-primary/30 bg-primary/10 text-primary"
+            }`}
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-2xs text-on-primary">
+              1
+            </span>
+            <span className="truncate">{t("pipeline.stageFund")}</span>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              contract.status === "faol" ||
+              milestones.some((m) => m.status === "topshirildi" || m.status === "qabul_qilindi") ||
+              contract.status === "yakunlangan"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-line bg-surface text-muted"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                contract.status === "faol" ||
+                milestones.some((m) => m.status === "topshirildi" || m.status === "qabul_qilindi") ||
+                contract.status === "yakunlangan"
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface text-faint"
+              }`}
+            >
+              2
+            </span>
+            <span className="truncate">{t("pipeline.stageWork")}</span>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              milestones.some((m) => m.status === "topshirildi" || m.status === "ozgartirish_soraldi") ||
+              contract.status === "yakunlangan"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-line bg-surface text-muted"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                milestones.some((m) => m.status === "topshirildi" || m.status === "ozgartirish_soraldi") ||
+                contract.status === "yakunlangan"
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface text-faint"
+              }`}
+            >
+              3
+            </span>
+            <span className="truncate">{t("pipeline.stageReview")}</span>
+          </div>
+
+          <div
+            className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
+              contract.status === "yakunlangan"
+                ? "border-primary/30 bg-primary/10 text-primary font-bold"
+                : "border-line bg-surface text-muted"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                contract.status === "yakunlangan"
+                  ? "bg-primary text-on-primary"
+                  : "bg-surface text-faint"
+              }`}
+            >
+              4
+            </span>
+            <span className="truncate">{t("pipeline.stageDone")}</span>
+          </div>
+        </div>
+      </Card>
+
       {/* Imzolangan — buyurtmachi to'lovi kutilmoqda, ish boshlanmasin */}
       {contract.status === "imzolangan" && (
         <div className="flex items-start gap-3 rounded-card border border-warning/30 bg-warning/5 p-4">

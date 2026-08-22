@@ -12,6 +12,7 @@ export type BadgeTone =
 export interface BadgeProps {
   children: ReactNode;
   tone?: BadgeTone;
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
@@ -29,10 +30,16 @@ const toneClasses: Record<BadgeTone, string> = {
   danger: "bg-danger/10 text-danger-deep ring-1 ring-danger/30",
 };
 
-export function Badge({ children, tone = "neutral", className = "" }: BadgeProps) {
+const sizeClasses: Record<"sm" | "md" | "lg", string> = {
+  sm: "px-2 py-0.5 text-3xs",
+  md: "px-2.5 py-0.5 text-2xs",
+  lg: "px-3 py-1 text-xs",
+};
+
+export function Badge({ children, tone = "neutral", size = "md", className = "" }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-2xs font-semibold uppercase tracking-wide ${toneClasses[tone]} ${className}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full font-semibold uppercase tracking-wide ${toneClasses[tone]} ${sizeClasses[size]} ${className}`}
     >
       {children}
     </span>

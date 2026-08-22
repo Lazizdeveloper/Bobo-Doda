@@ -12,6 +12,7 @@ import { Table, type TableColumn } from "@/components/ui/Table";
 import { getAdminData, replyToTicket, adminModerate } from "@/lib/api/admin";
 import { formatDate } from "@/lib/format";
 import type { SupportTicket } from "@/lib/types";
+import { InternalNotesWidget } from "@/components/admin/InternalNotesWidget";
 
 export default function SupportTicketsPage() {
   const [data, setData] = useState<ReturnType<typeof getAdminData> | null>(null);
@@ -347,6 +348,9 @@ export default function SupportTicketsPage() {
                 </div>
               </div>
             )}
+
+            {/* Support Agent Private Yellow Notes */}
+            <InternalNotesWidget targetId={selectedTicket.id} targetType="ticket" />
 
             {/* Admin Case Notes if ticket is closed */}
             {selectedTicket.status === "yopilgan" && (

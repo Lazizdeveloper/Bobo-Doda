@@ -6,8 +6,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -25,6 +27,15 @@ import { useT } from "@/lib/i18n";
 type Tab = "services" | "specialists";
 type Sort = "new" | "cheap" | "expensive" | "rating";
 
+const POPULAR_SEARCHES = [
+  "Web sayt",
+  "Logo dizayn",
+  "Telegram bot",
+  "SMM",
+  "Kopirayting",
+  "Mobil ilova",
+];
+
 export default function BozorPage() {
   const { t, lang } = useT();
   const [services, setServices] = useState<Service[] | null>(null);
@@ -35,15 +46,34 @@ export default function BozorPage() {
   const [sort, setSort] = useState<Sort>("new");
   const [savedIds, setSavedIds] = useState<string[] | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
+
+  /* Advanced filters */
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [deliveryFilter, setDeliveryFilter] = useState("all");
+  const [ratingFilter, setRatingFilter] = useState("all");
+  const [availableOnly, setAvailableOnly] = useState(false);
+
   const [page, setPage] = useState(1);
   const [loadError, setLoadError] = useState<unknown>(null);
   const debouncedSearch = useDebouncedValue(search, 250);
   const PER_PAGE = 12;
 
-  /* Filtr/tab/qidiruv o'zgarsa — birinchi sahifaga qaytish */
+  /* Reset page on any filter change */
   useEffect(() => {
     setPage(1);
-  }, [tab, category, sort, savedOnly, debouncedSearch]);
+  }, [
+    tab,
+    category,
+    sort,
+    savedOnly,
+    debouncedSearch,
+    minPrice,
+    maxPrice,
+    deliveryFilter,
+    ratingFilter,
+    availableOnly,
+  ]);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -57,7 +87,6 @@ export default function BozorPage() {
         setSpecialists(nextSpecialists);
         setSavedIds(nextSaved);
       })
-      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
       .catch(setLoadError);
   }, []);
 
@@ -67,12 +96,42 @@ export default function BozorPage() {
     setSavedIds(await savedService.toggleMarketItem(id));
   }
 
+  function clearAllFilters() {
+    setSearch("");
+    setCategory("all");
+    setSort("new");
+    setSavedOnly(false);
+    setMinPrice("");
+    setMaxPrice("");
+    setDeliveryFilter("all");
+    setRatingFilter("all");
+    setAvailableOnly(false);
+  }
+
   const sellerById = new Map(specialists?.map((s) => [s.user.id, s]));
   const query = debouncedSearch.trim().toLowerCase();
+
+  const minP = minPrice ? Number(minPrice) : null;
+  const maxP = maxPrice ? Number(maxPrice) : null;
+  const delDays = deliveryFilter === "all" ? null : Number(deliveryFilter);
+  const minRating = ratingFilter === "all" ? null : Number(ratingFilter);
 
   const filteredServices = (services ?? [])
     .filter((s) => category === "all" || s.category === category)
     .filter((s) => !savedOnly || savedIds?.includes(s.id))
+    .filter((s) => minP === null || s.price >= minP)
+    .filter((s) => maxP === null || s.price <= maxP)
+    .filter((s) => delDays === null || s.deliveryDays <= delDays)
+    .filter((s) => {
+      if (minRating === null) return true;
+      const seller = sellerById.get(s.sellerId);
+      return (seller?.profile.rating ?? 0) >= minRating;
+    })
+    .filter((s) => {
+      if (!availableOnly) return true;
+      const seller = sellerById.get(s.sellerId);
+      return seller?.profile.available ?? false;
+    })
     .filter(
       (s) =>
         !query ||
@@ -96,6 +155,8 @@ export default function BozorPage() {
     .filter(
       (s) => category === "all" || s.profile.categories.includes(category)
     )
+    .filter((s) => minRating === null || s.profile.rating >= minRating)
+    .filter((s) => !availableOnly || s.profile.available)
     .filter(
       (s) =>
         !query ||
@@ -107,7 +168,6 @@ export default function BozorPage() {
 
   const loading = !services || !specialists || !savedIds;
 
-  /* Client-side pagination (backend-ready: keyin API offset/limit'ga o'tadi) */
   const activeCount =
     tab === "services" ? filteredServices.length : filteredSpecialists.length;
   const totalPages = Math.max(1, Math.ceil(activeCount / PER_PAGE));
@@ -129,6 +189,28 @@ export default function BozorPage() {
     { value: "expensive", label: t("market.sortExpensive") },
     { value: "rating", label: t("market.sortRating") },
   ];
+  const deliveryOptions = [
+    { value: "all", label: t("market.deliveryAny") },
+    { value: "3", label: t("market.delivery3") },
+    { value: "7", label: t("market.delivery7") },
+    { value: "14", label: t("market.delivery14") },
+  ];
+  const ratingOptions = [
+    { value: "all", label: t("market.ratingAny") },
+    { value: "4.5", label: t("market.rating45") },
+    { value: "4.0", label: t("market.rating40") },
+  ];
+
+  /* Active Filter Pills */
+  const hasActiveFilters =
+    category !== "all" ||
+    search.trim().length > 0 ||
+    savedOnly ||
+    minPrice !== "" ||
+    maxPrice !== "" ||
+    deliveryFilter !== "all" ||
+    ratingFilter !== "all" ||
+    availableOnly;
 
   const savedOnlyButton = (
     <Button
@@ -149,21 +231,55 @@ export default function BozorPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-extrabold text-ink xl:text-3xl">
-          {t("market.title")}
-        </h1>
-        <p className="mt-1 text-sm text-muted xl:text-base">{t("market.subtitle")}</p>
+    <div className="flex flex-col gap-6 pb-12">
+      {/* Page Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-2xl font-extrabold text-ink xl:text-3xl">
+            {t("market.title")}
+          </h1>
+          <p className="mt-1 text-sm text-muted xl:text-base">
+            {t("market.subtitle")}
+          </p>
+        </div>
+      </div>
+
+      {/* Popular Quick Searches */}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold text-muted">
+          {t("market.popularSearches")}:
+        </span>
+        {POPULAR_SEARCHES.map((term) => (
+          <button
+            key={term}
+            type="button"
+            onClick={() => setSearch(term)}
+            className="rounded-btn border border-line bg-card px-2.5 py-1 text-2xs font-medium text-ink transition-colors hover:border-primary hover:text-primary"
+          >
+            {term}
+          </button>
+        ))}
       </div>
 
       <div className="xl:grid xl:grid-cols-[300px_1fr] xl:items-start xl:gap-8">
-        {/* Filtr paneli — faqat keng ekranda (xl+), yopishqoq */}
+        {/* Desktop Left Filter Sidebar */}
         <aside className="hidden xl:sticky xl:top-24 xl:block">
           <Card padding="lg" className="flex flex-col gap-5">
-            <h2 className="font-heading text-sm font-bold text-ink">
-              {t("market.filtersTitle")}
-            </h2>
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h2 className="font-heading text-sm font-bold text-ink">
+                {t("market.filtersTitle")}
+              </h2>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="text-2xs font-medium text-primary hover:underline"
+                >
+                  {t("market.clearFilters")}
+                </button>
+              )}
+            </div>
+
             <SearchInput
               value={search}
               onChange={setSearch}
@@ -171,12 +287,63 @@ export default function BozorPage() {
               aria-label={t("market.searchPh")}
               clearLabel={t("search.clear")}
             />
+
             <Select
               label={t("jobs.category")}
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               options={categoryOptions}
             />
+
+            {/* Price Range Filter (Only on services tab) */}
+            {tab === "services" && (
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-ink">
+                  {t("market.filterPrice")}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder={t("market.priceMin")}
+                    type="number"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                  />
+                  <Input
+                    placeholder={t("market.priceMax")}
+                    type="number"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Delivery Duration Filter */}
+            {tab === "services" && (
+              <Select
+                label={t("market.filterDelivery")}
+                value={deliveryFilter}
+                onChange={(e) => setDeliveryFilter(e.target.value)}
+                options={deliveryOptions}
+              />
+            )}
+
+            {/* Rating Filter */}
+            <Select
+              label={t("market.filterRating")}
+              value={ratingFilter}
+              onChange={(e) => setRatingFilter(e.target.value)}
+              options={ratingOptions}
+            />
+
+            {/* Availability Filter */}
+            <Checkbox
+              label={t("market.filterAvailability")}
+              checked={availableOnly}
+              onChange={(e) => setAvailableOnly(e.target.checked)}
+            />
+
+            {/* Sorting */}
             {tab === "services" && (
               <Select
                 label={t("jobs.sort")}
@@ -185,12 +352,14 @@ export default function BozorPage() {
                 options={sortOptions}
               />
             )}
+
             <div className="border-t border-line pt-4 [&>button]:w-full [&>button]:justify-start">
               {savedOnlyButton}
             </div>
           </Card>
         </aside>
 
+        {/* Main Content Area */}
         <div className="flex flex-col gap-6">
           <Tabs
             size="lg"
@@ -210,24 +379,154 @@ export default function BozorPage() {
             ]}
           />
 
-          {/* Qidiruv va filtrlar — mobil/planshetda; keng ekranda chapdagi panelga ko'chadi */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:hidden">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t("market.searchPh")}
-              aria-label={t("market.searchPh")}
-              clearLabel={t("search.clear")}
-            />
-            <Select aria-label={t("jobs.category")} value={category} onChange={(e) => setCategory(e.target.value)} options={categoryOptions} />
-            {tab === "services" && (
-              <Select aria-label={t("jobs.sort")} value={sort} onChange={(e) => setSort(e.target.value as Sort)} options={sortOptions} />
-            )}
+          {/* Mobile/Tablet Filter Controls */}
+          <div className="flex flex-col gap-3 xl:hidden">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t("market.searchPh")}
+                aria-label={t("market.searchPh")}
+                clearLabel={t("search.clear")}
+              />
+              <Select
+                aria-label={t("jobs.category")}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                options={categoryOptions}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {tab === "services" && (
+                <Select
+                  aria-label={t("jobs.sort")}
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as Sort)}
+                  options={sortOptions}
+                  className="sm:w-44"
+                />
+              )}
+              {tab === "services" && (
+                <Select
+                  aria-label={t("market.filterDelivery")}
+                  value={deliveryFilter}
+                  onChange={(e) => setDeliveryFilter(e.target.value)}
+                  options={deliveryOptions}
+                  className="sm:w-40"
+                />
+              )}
+              <Select
+                aria-label={t("market.filterRating")}
+                value={ratingFilter}
+                onChange={(e) => setRatingFilter(e.target.value)}
+                options={ratingOptions}
+                className="sm:w-36"
+              />
+              {savedOnlyButton}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 xl:justify-end">
-            <div className="xl:hidden">{savedOnlyButton}</div>
-            <span className="text-2xs text-faint xl:text-xs" aria-live="polite">
+          {/* Active Filters Pill Bar */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 rounded-input border border-line bg-surface p-2.5 text-xs">
+              <span className="font-semibold text-muted">
+                {t("market.activeFilters")}:
+              </span>
+              {category !== "all" && (
+                <span className="inline-flex items-center gap-1.5 rounded-btn bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">
+                  {t(`cat.${category}`)}
+                  <button
+                    type="button"
+                    onClick={() => setCategory("all")}
+                    className="hover:text-danger"
+                    aria-label="Remove category"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {search.trim() && (
+                <span className="inline-flex items-center gap-1.5 rounded-btn bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">
+                  &ldquo;{search}&rdquo;
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="hover:text-danger"
+                    aria-label="Remove search"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {(minPrice || maxPrice) && (
+                <span className="inline-flex items-center gap-1.5 rounded-btn bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">
+                  {minPrice ? `${minPrice} UZS` : "0"} - {maxPrice ? `${maxPrice} UZS` : "∞"}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMinPrice("");
+                      setMaxPrice("");
+                    }}
+                    className="hover:text-danger"
+                    aria-label="Remove price range"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {deliveryFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 rounded-btn bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">
+                  ≤ {deliveryFilter} {t("common.days")}
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryFilter("all")}
+                    className="hover:text-danger"
+                    aria-label="Remove delivery filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {ratingFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 rounded-btn bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">
+                  ★ {ratingFilter}+
+                  <button
+                    type="button"
+                    onClick={() => setRatingFilter("all")}
+                    className="hover:text-danger"
+                    aria-label="Remove rating filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {availableOnly && (
+                <span className="inline-flex items-center gap-1.5 rounded-btn bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">
+                  {t("market.filterAvailability")}
+                  <button
+                    type="button"
+                    onClick={() => setAvailableOnly(false)}
+                    className="hover:text-danger"
+                    aria-label="Remove availability filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="ml-auto text-2xs font-semibold text-primary hover:underline"
+              >
+                {t("market.clearFilters")}
+              </button>
+            </div>
+          )}
+
+          {/* Results count & showing pager info */}
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-2xs text-muted xl:text-xs" aria-live="polite">
               {!loading &&
                 activeCount > 0 &&
                 t("pager.showing")
@@ -243,6 +542,7 @@ export default function BozorPage() {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               <SkeletonCard />
               <SkeletonCard />
+              <SkeletonCard />
             </div>
           ) : tab === "services" ? (
             filteredServices.length === 0 ? (
@@ -256,58 +556,64 @@ export default function BozorPage() {
                       key={service.id}
                       padding="none"
                       hoverable
-                      className="relative flex h-full flex-col overflow-hidden"
+                      className="group relative flex h-full flex-col overflow-hidden"
                     >
                       <Link
                         href={`/xaridor/bozor/xizmat/${service.id}`}
                         className="absolute inset-0 z-0 rounded-card"
                         aria-label={service.title}
                       />
-                        {service.images[0] && (
-                          // eslint-disable-next-line @next/next/no-img-element
+                      {service.images[0] && (
+                        <div className="aspect-[3/1.6] w-full overflow-hidden border-b border-line bg-surface">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={service.images[0]}
                             alt={service.title}
-                            className="aspect-[3/1.4] w-full border-b border-line object-cover"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
-                        )}
-                        <div className="pointer-events-none relative z-10 flex flex-1 flex-col gap-2.5 p-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <Badge tone="primary">{t(`cat.${service.category}`)}</Badge>
-                            <button
-                              type="button"
-                              onClick={() => void toggleSaved(service.id)}
-                              aria-label={t(savedIds?.includes(service.id) ? "market.unsave" : "market.save")}
-                              aria-pressed={savedIds?.includes(service.id)}
-                              className="pointer-events-auto -mr-1 -mt-1 rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
-                            >
-                              <BookmarkIcon filled={savedIds?.includes(service.id)} />
-                            </button>
-                          </div>
-                          <h3 className="font-heading text-sm font-bold text-ink">
-                            {service.title}
-                          </h3>
-                          <p className="line-clamp-2 text-xs text-muted">
-                            {service.description}
-                          </p>
-                          {seller && (
-                            <div className="flex items-center gap-2 text-xs text-muted">
-                              <Avatar name={seller.user.fullName} size="sm" />
-                              <span className="truncate font-medium text-ink">
-                                {seller.user.fullName}
-                              </span>
-                              <RatingStars value={seller.profile.rating} showValue />
-                            </div>
-                          )}
-                          <div className="mt-auto flex items-center justify-between border-t border-line pt-3 text-xs">
-                            <span className="font-heading text-sm font-bold text-ink">
-                              {formatMoney(service.price, lang)}
-                            </span>
-                            <span className="text-faint">
-                              {service.deliveryDays} {t("common.days")}
-                            </span>
-                          </div>
                         </div>
+                      )}
+                      <div className="pointer-events-none relative z-10 flex flex-1 flex-col gap-2.5 p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <Badge tone="primary">{t(`cat.${service.category}`)}</Badge>
+                          <button
+                            type="button"
+                            onClick={() => void toggleSaved(service.id)}
+                            aria-label={t(savedIds?.includes(service.id) ? "market.unsave" : "market.save")}
+                            aria-pressed={savedIds?.includes(service.id)}
+                            className="pointer-events-auto -mr-1 -mt-1 rounded-btn p-2 text-faint transition-colors hover:bg-card-hover hover:text-primary"
+                          >
+                            <BookmarkIcon filled={savedIds?.includes(service.id)} />
+                          </button>
+                        </div>
+                        <h3 className="font-heading text-sm font-bold text-ink group-hover:text-primary transition-colors">
+                          {service.title}
+                        </h3>
+                        <p className="line-clamp-2 text-xs text-muted">
+                          {service.description}
+                        </p>
+                        {seller && (
+                          <div className="flex items-center gap-2 text-xs text-muted">
+                            <Avatar name={seller.user.fullName} size="sm" />
+                            <span className="truncate font-medium text-ink">
+                              {seller.user.fullName}
+                            </span>
+                            <RatingStars value={seller.profile.rating} showValue />
+                          </div>
+                        )}
+                        <div className="mt-auto flex items-center justify-between border-t border-line pt-3 text-xs">
+                          <span className="font-heading text-sm font-bold text-primary">
+                            {formatMoney(service.price, lang)}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            {service.deliveryDays} {t("common.days")}
+                          </span>
+                        </div>
+                      </div>
                     </Card>
                   );
                 })}
@@ -321,7 +627,7 @@ export default function BozorPage() {
                 <Card
                   key={user.id}
                   hoverable
-                  className="relative flex h-full flex-col gap-3"
+                  className="group relative flex h-full flex-col gap-3"
                 >
                   <Link
                     href={`/xaridor/bozor/mutaxassis/${user.id}`}
@@ -333,7 +639,7 @@ export default function BozorPage() {
                       <Avatar name={user.fullName} />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-heading text-sm font-bold text-ink">
+                          <h3 className="font-heading text-sm font-bold text-ink group-hover:text-primary transition-colors">
                             {user.fullName}
                           </h3>
                           <TrustBadge badge={profile.badge} />

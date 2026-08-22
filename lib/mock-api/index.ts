@@ -122,9 +122,8 @@ function write<T>(key: string, value: T): void {
   }
 }
 
-/* v5: login/parol tizimi — seed hisoblarga parol va onboarding holati qo'shildi.
-   Versiya oshganda eski mock ma'lumotlar qayta yoziladi. */
-const SEED_VERSION = "9";
+/* v6: Rich interconnected operations seed */
+const SEED_VERSION = "10";
 
 function ensureSeed(): void {
   if (typeof window === "undefined") return;

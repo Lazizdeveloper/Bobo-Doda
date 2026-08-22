@@ -12,6 +12,7 @@ import { Table, type TableColumn } from "@/components/ui/Table";
 import { getAdminData, forceCloseContract } from "@/lib/api/admin";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Dispute, Milestone } from "@/lib/types";
+import { InternalNotesWidget } from "@/components/admin/InternalNotesWidget";
 
 export default function DisputesCenterPage() {
   const [data, setData] = useState<ReturnType<typeof getAdminData> | null>(null);
@@ -411,6 +412,9 @@ export default function DisputesCenterPage() {
                 ))}
               </div>
             </div>
+
+            {/* Private Operator Notes */}
+            <InternalNotesWidget targetId={selectedDispute.id} targetType="dispute" />
 
             {/* Arbitrage controls if open */}
             {selectedDispute.status !== "hal_qilindi" && (

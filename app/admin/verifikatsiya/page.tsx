@@ -12,6 +12,7 @@ import { Table, type TableColumn } from "@/components/ui/Table";
 import { getAdminData, adminModerate } from "@/lib/api/admin";
 import { formatDate } from "@/lib/format";
 import type { VerificationRecord } from "@/lib/types";
+import { InternalNotesWidget } from "@/components/admin/InternalNotesWidget";
 
 export default function VerificationQueuePage() {
   const [data, setData] = useState<ReturnType<typeof getAdminData> | null>(null);
@@ -318,22 +319,21 @@ export default function VerificationQueuePage() {
               </div>
             </dl>
 
-            {/* Document Placeholders / Image */}
+            {/* Document Image Previews */}
             <div>
               <p className="text-2xs text-muted font-semibold uppercase mb-1.5">Biriktirilgan hujjatlar ({selectedRecord.documents.length} ta fayl)</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {selectedRecord.documents.map((doc, idx) => (
-                  <div key={idx} className="rounded border border-line bg-card-hover p-2 text-center flex flex-col items-center justify-center h-28">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-muted mb-1.5">
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M14 2v6h6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <p className="text-3xs text-ink font-mono truncate w-full">Hujjat_{idx + 1}.pdf</p>
-                    <span className="text-3xs text-faint mt-1">Mock rejimida ko&apos;rib bo&apos;lmaydi</span>
+                  <div key={idx} className="relative h-44 rounded-xl overflow-hidden border border-line bg-surface flex flex-col items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={doc} alt={`Hujjat ${idx + 1}`} className="h-full w-full object-cover" />
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Operator Notes on this KYC verification */}
+            <InternalNotesWidget targetId={selectedRecord.userId} targetType="kyc" />
 
             {/* Rejection / Note Input */}
             <div className="flex flex-col gap-2 border-t border-line pt-3">

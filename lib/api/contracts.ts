@@ -216,6 +216,13 @@ export interface SupportService {
   create(input: Pick<Model.SupportTicket, "topic" | "subject" | "message">): Promise<Model.SupportTicket>;
 }
 
+/** In-site Support Modal — real backend (`/api/support`) orqali Telegram
+    support chatga yetkaziladi. Boshqa servicelardan farqli, mock-api emas,
+    haqiqiy `fetch` bilan ishlaydi (`client.ts`da). */
+export interface SupportRequestService {
+  submit(input: Model.SupportRequestInput & { userId?: string }): Promise<void>;
+}
+
 export interface AdminService {
   getSession(): AdminSession | null;
   getCurrent(): AdminAccount | null;

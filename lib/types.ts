@@ -301,6 +301,29 @@ export interface SupportTicket {
   createdAt: string;
 }
 
+/** In-site Support Modal — Telegram'ga sendMessage orqali yetkaziladigan
+    yengil so'rov. `SupportTicket`dan farqli: localStorage'da saqlanmaydi,
+    haqiqiy backend (`/api/support`) orqali support Telegram chatga boradi. */
+export type SupportRequestCategory =
+  | "tolov_escrow"
+  | "loyiha"
+  | "mutaxassis"
+  | "profil"
+  | "tasdiqlash"
+  | "texnik"
+  | "hisob"
+  | "boshqa";
+
+export interface SupportRequestInput {
+  category: SupportRequestCategory;
+  message: string;
+  /** Guest uchun; login qilgan userda avtomatik session'dan olinadi */
+  contactName?: string;
+  contactInfo?: string;
+  source: string;
+  route: string;
+}
+
 export interface Dispute {
   id: string;
   contractId: string;

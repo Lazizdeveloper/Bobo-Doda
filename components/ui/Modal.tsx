@@ -8,9 +8,10 @@ export interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, size = "md" }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   /* onClose'ni ref orqali ushlaymiz — identifikatori o'zgarsa ham
@@ -67,24 +68,32 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // CRITICAL: DO NOT RENDER ANYTHING WHEN MODAL IS NOT OPEN
   if (!open) return null;
+
+  const sizeClasses: Record<"sm" | "md" | "lg" | "xl", string> = {
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
+  };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className="sb-fade-in absolute inset-0 bg-ink/40"
+        className="sb-fade-in fixed inset-0 bg-ink/40 backdrop-blur-xs"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="sb-fade-in relative w-full max-w-md rounded-card border border-line bg-card p-6 shadow-overlay"
+        className={`sb-fade-in relative my-8 w-full ${sizeClasses[size || "md"]} rounded-2xl border border-line bg-card p-6 shadow-overlay max-h-[90vh] overflow-y-auto`}
       >
         <div className="mb-3 flex items-start justify-between gap-4">
           <h3 className="font-heading text-lg font-bold text-ink">{title}</h3>

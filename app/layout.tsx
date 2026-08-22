@@ -10,6 +10,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/ui/Toast";
 import { OfflineSupport } from "@/components/shared/OfflineSupport";
+import { SupportModalProvider } from "@/components/shared/SupportModalProvider";
 
 export const metadata: Metadata = {
   title: "Bobo&Doda — Mutaxassislar bozori",
@@ -32,8 +33,10 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <LanguageProvider>
           <ToastProvider>
-            <OfflineSupport />
-            {children}
+            <SupportModalProvider>
+              <OfflineSupport />
+              {children}
+            </SupportModalProvider>
           </ToastProvider>
         </LanguageProvider>
       </body>

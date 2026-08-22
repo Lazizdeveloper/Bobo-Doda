@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useT, type Lang } from "@/lib/i18n";
+import { useSupportModal } from "@/components/shared/SupportModalProvider";
 
 /* ── small utilities ─────────────────────────────────────────────── */
 
@@ -78,6 +79,7 @@ function Stat({ value, label, delay }: { value: string; label: string; delay: nu
 
 export default function LandingPage() {
   const { t, lang, setLang } = useT();
+  const { openSupportModal } = useSupportModal();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
@@ -169,14 +171,19 @@ export default function LandingPage() {
   ];
 
   const categories = [
-    { key: "des", icon: "design", big: true },
-    { key: "dev", icon: "code", big: false },
-    { key: "ai", icon: "cpu", big: false },
-    { key: "mar", icon: "megaphone", big: false },
-    { key: "tra", icon: "languages", big: false },
-    { key: "vid", icon: "video", big: true },
-    { key: "biz", icon: "briefcase", big: false },
-    { key: "edu", icon: "cap", big: false },
+    { key: "des", icon: "design" },
+    { key: "dev", icon: "code" },
+    { key: "ai", icon: "cpu" },
+    { key: "mar", icon: "megaphone" },
+    { key: "tra", icon: "languages" },
+    { key: "vid", icon: "video" },
+    { key: "biz", icon: "briefcase" },
+    { key: "edu", icon: "cap" },
+    { key: "cyb", icon: "shield" },
+    { key: "dat", icon: "chart" },
+    { key: "cld", icon: "cloud" },
+    { key: "qa", icon: "flask" },
+    { key: "sup", icon: "headset" },
   ] as const;
 
   const specialists = [
@@ -378,15 +385,22 @@ export default function LandingPage() {
   .lp * { box-sizing: border-box; }
   .lp {
     font-family: var(--font-body); color: var(--ink); line-height: 1.55;
-    -webkit-font-smoothing: antialiased; overflow-x: hidden; position: relative;
+    -webkit-font-smoothing: antialiased; position: relative;
     background: var(--y-400);
   }
   .lp a { text-decoration: none; color: inherit; }
   .lp ul { list-style: none; margin: 0; padding: 0; }
+  /* overflow clipping lives below the navbar, not on .lp itself — an overflow-x
+     ancestor breaks position:sticky, which would silently un-stick the navbar */
+  .lp-scroll { overflow-x: hidden; }
   .lp h1, .lp h2, .lp h3, .lp h4 { font-family: var(--font-heading); font-weight: 800; margin: 0; overflow-wrap: break-word; word-break: break-word; }
   .lp p { margin: 0; }
 
   .container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+  /* anchor nav offset — keeps sticky navbar from covering section targets */
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
   /* ── grain overlay (global, extremely subtle) ─────────────────── */
   .grain {
@@ -460,6 +474,8 @@ export default function LandingPage() {
   .nav-links a { font-size: 14.5px; font-weight: 600; color: var(--muted); transition: color var(--dur-micro); }
   .nav-links a:hover { color: var(--g-700); }
   .nav-actions { display: flex; align-items: center; gap: 14px; }
+  .nav-help-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(29,27,18,.16); background: transparent; color: var(--muted); cursor: pointer; transition: var(--dur-micro); flex-shrink: 0; }
+  .nav-help-btn:hover { color: var(--g-700); border-color: var(--g-600); background: var(--g-tint); }
   .lang-pill { display: flex; background: rgba(255,255,255,.6); border: 1px solid rgba(29,27,18,.14); border-radius: var(--radius-full); padding: 3px; }
   .lang-pill button { background: none; border: none; padding: 5px 10px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; transition: var(--dur-micro); text-transform: uppercase; font-family: var(--font-body); }
   .lang-pill button[aria-pressed="true"] { background: var(--g-600); color: #fff; }
@@ -571,6 +587,26 @@ export default function LandingPage() {
 
   /* ── escrow / how it works — main product story ─────────────── */
   .escrow-section { background: var(--white); }
+
+  /* ── big statement — editorial belief moment, problem → belief bridge ── */
+  .statement-section { background: var(--g-900); color: #fff; position: relative; overflow: hidden; padding: var(--s-24) 0; }
+  .statement-section::before { content: ''; position: absolute; inset: 0; pointer-events: none; background:
+      radial-gradient(circle at 92% 6%, rgba(255,206,69,.16), transparent 46%),
+      radial-gradient(circle at 6% 96%, rgba(229,72,77,.10), transparent 42%); }
+  .statement-section .container { position: relative; z-index: 1; }
+  .statement-block { max-width: 880px; }
+  .statement-line { font-family: var(--font-heading); font-weight: 800; letter-spacing: -1.4px; line-height: 1.02; margin: 0; }
+  .statement-line.dim { font-size: clamp(28px, 4.4vw, 52px); color: rgba(255,255,255,.5); }
+  .statement-arrow { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--y-400); }
+  .statement-arrow::before { content: ''; height: 1px; width: 46px; background: rgba(255,255,255,.22); }
+  .statement-line.bright { font-size: clamp(32px, 5.2vw, 60px); color: var(--y-400); }
+  .statement-caption { margin-top: 32px; display: flex; align-items: center; gap: 10px; font-size: 14.5px; font-weight: 600; color: rgba(255,255,255,.62); }
+  .statement-caption svg { color: var(--y-400); flex-shrink: 0; }
+  @media (max-width: 760px) {
+    .statement-section { padding: var(--s-16) 0; }
+    .statement-line.dim { font-size: clamp(24px, 7vw, 34px); }
+    .statement-line.bright { font-size: clamp(26px, 8vw, 40px); }
+  }
   .steps-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: var(--s-16); }
   .step-item { position: relative; text-align: left; padding: 20px; border-radius: var(--radius-md); border: 1.5px solid transparent; transition: border-color var(--dur-standard) var(--ease), background-color var(--dur-standard) var(--ease); cursor: default; }
   .step-item.active { border-color: var(--g-500); background: var(--g-tint); }
@@ -592,20 +628,13 @@ export default function LandingPage() {
   .ev-stat span { font-size: 11.5px; color: rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
 
   /* ── categories (asymmetric grid) ─────────────────────────────── */
-  .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(150px, auto); gap: 18px; }
-  .cat-card { display: flex; flex-direction: column; padding: 24px; border-radius: var(--radius-md); border: 1px solid rgba(29,27,18,.10); background: #fff; transition: transform var(--dur-standard) var(--ease), box-shadow var(--dur-standard) var(--ease), border-color var(--dur-standard) var(--ease); }
-  .cat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); border-color: var(--g-500); }
-  .cat-card.big { grid-column: span 2; grid-row: span 2; background: var(--g-800); border-color: transparent; color: #fff; justify-content: space-between; }
-  .cat-card.big:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: transparent; }
-  .cat-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; background: var(--g-tint); color: var(--g-600); transition: transform var(--dur-micro) var(--ease); }
-  .cat-card:hover .cat-icon { transform: scale(1.06) rotate(-4deg); }
-  .cat-card.big .cat-icon { background: rgba(255,255,255,.12); color: var(--y-400); width: 54px; height: 54px; }
+  .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; max-width: 1160px; margin: 0 auto; }
+  .cat-card { display: flex; flex-direction: column; min-height: 192px; padding: 26px; border-radius: var(--radius-md); border: 1px solid rgba(29,27,18,.10); background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--dur-standard) var(--ease), box-shadow var(--dur-standard) var(--ease), border-color var(--dur-standard) var(--ease); }
+  .cat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--g-500); }
+  .cat-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; background: var(--g-tint); color: var(--g-600); transition: color var(--dur-micro) var(--ease); }
   .cat-card h3 { font-size: 16.5px; margin-bottom: 6px; }
-  .cat-card.big h3 { font-size: 22px; }
   .cat-card p { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
-  .cat-card.big p { color: rgba(255,255,255,.68); font-size: 14.5px; max-width: 320px; }
   .cat-meta { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: var(--g-700); padding-top: 14px; border-top: 1px solid rgba(29,27,18,.10); margin-top: auto; }
-  .cat-card.big .cat-meta { color: var(--y-400); border-top-color: rgba(255,255,255,.14); }
   .cat-meta .go { transition: transform var(--dur-micro) var(--ease); }
   .cat-card:hover .cat-meta .go { transform: translateX(3px); }
 
@@ -685,7 +714,8 @@ export default function LandingPage() {
   .diff-check { color: var(--g-600); flex-shrink: 0; }
 
   /* ── testimonials (editorial quote carousel) ─────────────────── */
-  .test-section { background: var(--y-100); }
+  .test-section { background: var(--y-100); position: relative; overflow: hidden; }
+  .test-section .container { position: relative; z-index: 1; }
   .test-track-wrap { max-width: 760px; margin: 0 auto; overflow: hidden; }
   .test-track { display: flex; transition: transform var(--dur-feature) var(--ease); }
   .test-slide { flex: 0 0 100%; padding: 4px; }
@@ -727,6 +757,10 @@ export default function LandingPage() {
   .faq-body-inner { overflow: hidden; }
   .faq-body p { padding: 0 22px 20px; font-size: 14px; color: var(--muted); line-height: 1.6; }
   @media (prefers-reduced-motion: reduce) { .faq-body { transition: none; } }
+  .faq-footer { max-width: 760px; margin: 32px auto 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding-top: 24px; border-top: 1px solid rgba(29,27,18,.12); }
+  .faq-view-all { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--g-700); }
+  .faq-view-all:hover { color: var(--g-800); }
+  .faq-help-cta { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; color: var(--muted); }
 
   /* ── final CTA (deep green break #2) ─────────────────────────── */
   .cta-section { padding: var(--s-24) 0; background: var(--y-400); }
@@ -740,17 +774,16 @@ export default function LandingPage() {
   .cta-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
 
   /* ── footer ───────────────────────────────────────────────────── */
-  .footer { padding: 72px 0 32px; background: var(--g-900); color: rgba(255,255,255,.7); }
-  .f-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 56px; }
-  .f-brand p { color: rgba(255,255,255,.55); margin-top: 14px; max-width: 280px; font-size: 13.5px; line-height: 1.6; }
+  .footer { padding: 56px 0 28px; background: var(--g-900); color: rgba(255,255,255,.7); }
+  .f-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 44px; }
+  .f-brand p { color: rgba(255,255,255,.55); margin-top: 14px; max-width: 260px; font-size: 13.5px; line-height: 1.6; }
   .f-brand .nav-logo { color: #fff; }
-  .f-social { display: flex; gap: 10px; margin-top: 20px; }
-  .f-social a { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.6); transition: var(--dur-micro); }
-  .f-social a:hover { color: var(--y-400); border-color: var(--y-400); }
   .f-col h4 { font-size: 12.5px; font-weight: 800; color: #fff; margin-bottom: 18px; text-transform: uppercase; letter-spacing: .5px; }
   .f-col ul { display: flex; flex-direction: column; gap: 11px; }
   .f-col a { color: rgba(255,255,255,.55); font-size: 13.5px; transition: var(--dur-micro); }
   .f-col a:hover { color: var(--y-400); }
+  .f-link-btn { all: unset; color: rgba(255,255,255,.55); font-size: 13.5px; font-family: var(--font-body); cursor: pointer; transition: var(--dur-micro); }
+  .f-link-btn:hover { color: var(--y-400); }
   .f-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.10); font-size: 13px; flex-wrap: wrap; gap: 16px; }
   .footer .lang-pill { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); }
   .footer .lang-pill button { color: rgba(255,255,255,.6); }
@@ -762,7 +795,6 @@ export default function LandingPage() {
     .hero-actions, .hero-trust-row { justify-content: center; }
     .hero-visual { max-width: 460px; margin: 0 auto; padding-top: 30px; }
     .cat-grid { grid-template-columns: repeat(2, 1fr); }
-    .cat-card.big { grid-column: span 2; grid-row: span 1; }
     .spec-grid { grid-template-columns: repeat(2, 1fr); }
     .proj-layout { grid-template-columns: 1fr; }
     .sec-grid { grid-template-columns: repeat(2, 1fr); }
@@ -772,22 +804,28 @@ export default function LandingPage() {
     .prob-row { grid-template-columns: 60px 1fr; row-gap: 12px; }
     .prob-arrow { display: none; }
   }
-  @media (max-width: 760px) {
+  /* nav content needs ~975px minimum to fit without wrapping — switch to the
+     hamburger menu earlier than the rest of the mobile layout kicks in, or
+     tablet widths (761–1023px) overflow the desktop nav row */
+  @media (max-width: 1023px) {
     .nav-links, .nav-actions .btn, .nav-actions .lang-pill { display: none; }
     .hamburger { display: flex; }
+    .mobile-panel.open { display: block; border-top: 1px solid rgba(29,27,18,.1); background: rgba(255,249,224,.98); padding: 16px 0 22px; }
+    .mobile-panel a.mp-link { display: block; padding: 14px 0; font-size: 15px; font-weight: 600; color: var(--ink); border-bottom: 1px solid rgba(29,27,18,.1); }
+    .mp-link-btn { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 14px 0; font-size: 15px; font-weight: 600; font-family: var(--font-body); color: var(--ink); border-bottom: 1px solid rgba(29,27,18,.1); cursor: pointer; }
+    .mobile-panel .mp-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  }
+  @media (max-width: 760px) {
     .brand-lockup .nav-logo-mark { width: 34px; height: 34px; }
     .brand-lockup-word { font-size: 24px; }
     .brand-lockup-tagline { font-size: 9.5px; letter-spacing: 1px; }
-    .mobile-panel.open { display: block; border-top: 1px solid rgba(29,27,18,.1); background: rgba(255,249,224,.98); padding: 16px 0 22px; }
-    .mobile-panel a.mp-link { display: block; padding: 14px 0; font-size: 15px; font-weight: 600; color: var(--ink); border-bottom: 1px solid rgba(29,27,18,.1); }
-    .mobile-panel .mp-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
     .hero { padding: 40px 0 56px; }
     .price-grid { grid-template-columns: 1fr; }
     .price-card.hi { transform: none; }
     .cat-grid, .spec-grid { grid-template-columns: 1fr; }
-    .cat-card.big { grid-column: span 1; }
     .steps-row { grid-template-columns: 1fr; }
-    .f-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+    .f-grid { grid-template-columns: 1fr; gap: 32px; }
+    .f-brand p { max-width: none; }
     .cta-box { padding: 52px 22px; }
     .cta-actions { flex-direction: column; }
     .cta-actions .btn { width: 100%; }
@@ -827,6 +865,15 @@ export default function LandingPage() {
               ))}
             </nav>
             <div className="nav-actions">
+              <button
+                type="button"
+                className="nav-help-btn"
+                aria-label={t("nav_help")}
+                title={t("nav_help")}
+                onClick={() => openSupportModal({ source: "navbar" })}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 1.8-2 3.5" /><path d="M12 17h.01" /></svg>
+              </button>
               <div className="lang-pill" role="group" aria-label="UZ/RU/EN">
                 {langOptions.map((opt) => (
                   <button key={opt} type="button" onClick={() => setLang(opt)} aria-pressed={lang === opt}>
@@ -855,6 +902,16 @@ export default function LandingPage() {
               {navLinks.map((l) => (
                 <a key={l.href} href={l.href} className="mp-link" onClick={() => setMenuOpen(false)}>{l.label}</a>
               ))}
+              <button
+                type="button"
+                className="mp-link mp-link-btn"
+                onClick={() => {
+                  setMenuOpen(false);
+                  openSupportModal({ source: "navbar" });
+                }}
+              >
+                {t("nav_help")}
+              </button>
               <div className="mp-actions">
                 <div className="lang-pill" role="group" aria-label="UZ/RU/EN">
                   {langOptions.map((opt) => (
@@ -868,6 +925,7 @@ export default function LandingPage() {
           </div>
         </header>
 
+        <div className="lp-scroll">
         <main id="main-content">
           {/* HERO */}
           <section className="hero">
@@ -1049,6 +1107,25 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* BIG STATEMENT — problem-to-belief editorial bridge */}
+          <section className="statement-section">
+            <div className="container">
+              <div className="statement-block reveal">
+                <p className="statement-line dim">{t("stmt_a1")}</p>
+                <p className="statement-line dim">{t("stmt_a2")}</p>
+                <div className="statement-arrow" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12l7 7 7-7" /></svg>
+                </div>
+                <p className="statement-line bright">{t("stmt_b1")}</p>
+                <p className="statement-line bright">{t("stmt_b2")}</p>
+                <div className="statement-caption">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  {t("stmt_caption")}
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* ESCROW — main product story, scroll-driven */}
           <section className="section-pad escrow-section" id="how-it-works">
             <div className="container">
@@ -1111,7 +1188,7 @@ export default function LandingPage() {
               </div>
               <div className="cat-grid">
                 {categories.map((c, i) => (
-                  <div className={`cat-card ${c.big ? "big" : ""} reveal rd${(i % 4) + 1}`} key={c.key}>
+                  <Link href="/kirish" className={`cat-card reveal rd${(i % 4) + 1}`} key={c.key}>
                     <div>
                       <div className="cat-icon">
                         <CategoryIcon name={c.icon} />
@@ -1123,7 +1200,7 @@ export default function LandingPage() {
                       {t(`c_${c.key}_price`)}
                       <span className="go" aria-hidden="true">→</span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -1298,6 +1375,10 @@ export default function LandingPage() {
 
           {/* TESTIMONIALS — editorial carousel */}
           <section className="section-pad test-section">
+            <div className="canvas-decor" aria-hidden="true">
+              <div className="blob" style={{ width: 460, height: 460, top: "-14%", left: "-10%", background: "radial-gradient(circle, rgba(16,105,50,.07), transparent 70%)", animation: reduced ? "none" : "driftB 18s ease-in-out infinite" }} />
+              <div className="blob" style={{ width: 340, height: 340, bottom: "-18%", right: "-8%", background: "radial-gradient(circle, rgba(255,255,255,.4), transparent 70%)", animation: reduced ? "none" : "driftA 22s ease-in-out infinite" }} />
+            </div>
             <div className="container">
               <div className="sec-head reveal">
                 <span className="eyebrow"><span className="dot" />{t("test_tag")}</span>
@@ -1434,6 +1515,17 @@ export default function LandingPage() {
                   );
                 })}
               </div>
+              <div className="faq-footer reveal">
+                <Link href="/savol-javob" className="faq-view-all">
+                  {t("faq_view_all")} <span aria-hidden="true">→</span>
+                </Link>
+                <div className="faq-help-cta">
+                  <span>{t("faq_still_need_help")}</span>
+                  <button type="button" className="btn btn-outline-dark btn-sm" onClick={() => openSupportModal({ source: "faq" })}>
+                    {t("faq_ask_support")}
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -1465,11 +1557,6 @@ export default function LandingPage() {
                   Bobo<span>&amp;Doda</span>
                 </Link>
                 <p>{t("foot_desc")}</p>
-                <div className="f-social">
-                  <a href="#" aria-label="Telegram"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m22 2-7 20-4-9-9-4Z" /></svg></a>
-                  <a href="#" aria-label="LinkedIn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="9" width="4" height="12" /><circle cx="4" cy="4" r="2" /><path d="M10 9h4v2a4 4 0 0 1 4-2 4 4 0 0 1 4 4v7h-4v-6a2 2 0 0 0-4 0v6h-4Z" /></svg></a>
-                  <a href="#" aria-label="Instagram"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><line x1="17.5" y1="6.5" x2="17.5" y2="6.5" /></svg></a>
-                </div>
               </div>
               <div className="f-col">
                 <h4>{t("f_product")}</h4>
@@ -1481,27 +1568,23 @@ export default function LandingPage() {
                 </ul>
               </div>
               <div className="f-col">
-                <h4>{t("f_company")}</h4>
-                <ul>
-                  <li><a href="#">{t("f_about")}</a></li>
-                  <li><a href="#">{t("f_careers")}</a></li>
-                  <li><a href="#">{t("f_blog")}</a></li>
-                </ul>
-              </div>
-              <div className="f-col">
                 <h4>{t("f_legal")}</h4>
                 <ul>
                   <li><Link href="/shartlar">{t("f_terms")}</Link></li>
                   <li><Link href="/maxfiylik">{t("f_privacy")}</Link></li>
-                  <li><Link href="/oferta">{t("f_aml")}</Link></li>
+                  <li><Link href="/oferta">{t("f_offer")}</Link></li>
                 </ul>
               </div>
               <div className="f-col">
                 <h4>{t("f_support")}</h4>
                 <ul>
-                  <li><a href="#faq">{t("f_faq")}</a></li>
-                  <li><a href="#">{t("f_help")}</a></li>
-                  <li><a href="mailto:info@bobododa.uz">{t("f_contact_us")}</a></li>
+                  <li><Link href="/savol-javob">{t("f_faq")}</Link></li>
+                  <li><Link href="/yordam-markazi">{t("f_help")}</Link></li>
+                  <li>
+                    <button type="button" className="f-link-btn" onClick={() => openSupportModal({ source: "footer" })}>
+                      {t("f_contact_us")}
+                    </button>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -1515,6 +1598,7 @@ export default function LandingPage() {
             </div>
           </div>
         </footer>
+        </div>
       </div>
     </div>
   );
@@ -1539,6 +1623,16 @@ function CategoryIcon({ name }: { name: string }) {
       return <svg {...props}><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>;
     case "cap":
       return <svg {...props}><path d="M2 9.5 12 5l10 4.5-10 4.5-10-4.5Z" /><path d="M6 11.5V16c0 1.5 2.5 3 6 3s6-1.5 6-3v-4.5" /></svg>;
+    case "shield":
+      return <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="M9 12l2 2 4-4" /></svg>;
+    case "chart":
+      return <svg {...props}><rect x="3" y="12" width="4" height="8" /><rect x="10" y="7" width="4" height="13" /><rect x="17" y="3" width="4" height="17" /></svg>;
+    case "cloud":
+      return <svg {...props}><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4 2A4 4 0 0 0 6.5 19h11Z" /></svg>;
+    case "flask":
+      return <svg {...props}><path d="M9 2v6.5L4.3 17a2 2 0 0 0 1.75 3h11.9a2 2 0 0 0 1.75-3L15 8.5V2" /><path d="M8.5 2h7" /><path d="M8 14h8" /></svg>;
+    case "headset":
+      return <svg {...props}><path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z" /><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3Z" /></svg>;
     default:
       return null;
   }

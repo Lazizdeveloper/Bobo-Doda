@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Modal } from "@/components/ui/Modal";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { contractsService, reviewsService, servicesService, usersService } from "@/lib/api";
-import type { Contract, Review, SellerProfile, Service, User } from "@/lib/types";
+import type { Contract, PortfolioItem, Review, SellerProfile, Service, User } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -21,6 +23,7 @@ export default function ProfilPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [viewingPortfolio, setViewingPortfolio] = useState<PortfolioItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -237,25 +240,37 @@ export default function ProfilPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {profile.portfolio.map((item) => (
-              <Card key={item.id} padding="none" className="flex flex-col overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="aspect-[3/2] w-full border-b border-line object-cover"
-                />
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setViewingPortfolio(item)}
+                className="group flex flex-col overflow-hidden rounded-card border border-line bg-card text-left shadow-xs transition-all hover:border-primary hover:shadow-card"
+              >
+                <div className="relative aspect-[3/2] w-full overflow-hidden border-b border-line bg-surface">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="rounded-btn bg-white/90 px-3 py-1 text-xs font-semibold text-ink shadow-sm">
+                      {t("profile.viewWork")} →
+                    </span>
+                  </div>
+                </div>
                 <div className="flex flex-1 flex-col gap-2 p-4">
                   {item.category && (
                     <Badge tone="primary" className="self-start">
                       {t(`cat.${item.category}`)}
                     </Badge>
                   )}
-                  <h3 className="font-heading text-sm font-bold text-ink">
+                  <h3 className="font-heading text-sm font-bold text-ink group-hover:text-primary transition-colors">
                     {item.title}
                   </h3>
-                  <p className="text-xs text-muted">{item.description}</p>
+                  <p className="line-clamp-2 text-xs text-muted">{item.description}</p>
                 </div>
-              </Card>
+              </button>
             ))}
           </div>
         )}
@@ -333,6 +348,42 @@ export default function ProfilPage() {
           </>
         )}
       </section>
+
+      {/* Portfolio Item Lightbox Modal */}
+      {viewingPortfolio && (
+        <Modal
+          open={true}
+          onClose={() => setViewingPortfolio(null)}
+          title={viewingPortfolio.title}
+          footer={
+            <Button
+              variant="secondary"
+              onClick={() => setViewingPortfolio(null)}
+            >
+              {t("common.close")}
+            </Button>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={viewingPortfolio.image}
+              alt={viewingPortfolio.title}
+              className="max-h-96 w-full rounded-card border border-line object-cover"
+            />
+            {viewingPortfolio.category && (
+              <Badge tone="primary" className="self-start">
+                {t(`cat.${viewingPortfolio.category}`)}
+              </Badge>
+            )}
+            {viewingPortfolio.description && (
+              <p className="text-sm text-muted leading-relaxed">
+                {viewingPortfolio.description}
+              </p>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

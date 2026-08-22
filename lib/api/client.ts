@@ -15,6 +15,7 @@ import type {
   ReviewsService,
   SavedService,
   ServicesService,
+  SupportRequestService,
   SupportService,
   UsersService,
   VerificationService,
@@ -153,6 +154,26 @@ export const verificationService: VerificationService = {
 export const supportService: SupportService = {
   listMine: () => call(mock.getSupportTickets),
   create: (input) => call(() => mock.createSupportTicket(input)),
+};
+
+/* Yagona haqiqiy backend-integratsiyalangan service — boshqalaridan farqli,
+   mock-api'ga emas, /api/support route handler'ga (u yerdan Telegram Bot
+   API'ga) haqiqiy fetch qiladi. Token bu faylga ham, brauzerga ham chiqmaydi —
+   faqat server-side route handler process.env'dan o'qiydi. */
+export const supportRequestService: SupportRequestService = {
+  submit: (input) =>
+    call(async () => {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (res.ok) return;
+      const body = await res.json().catch(() => null);
+      if (body?.error === "VALIDATION") throw new Error("VALIDATION");
+      if (body?.error === "RATE_LIMITED") throw new Error("RATE_LIMITED");
+      throw new Error("SUPPORT_SEND_FAILED");
+    }),
 };
 
 export const adminService = {
