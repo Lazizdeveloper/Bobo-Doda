@@ -27,6 +27,7 @@ export default function TaklifYuborishPage() {
   const [serviceImages, setServiceImages] = useState<string[]>([]);
 
   const [bid, setBid] = useState("");
+  const [deliveryDays, setDeliveryDays] = useState("");
   const [cover, setCover] = useState("");
   const [answers, setAnswers] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -77,6 +78,7 @@ export default function TaklifYuborishPage() {
     if (!job) return;
     const next: Record<string, string> = {};
     if (!bid || Number(bid) <= 0) next.bid = t("prop.errBid");
+    if (!deliveryDays || Number(deliveryDays) < 1) next.deliveryDays = t("prop.errDelivery");
     if (cover.trim().length < 50) next.cover = t("prop.errCover");
     job.screeningQuestions.forEach((_, i) => {
       if (!answers[i]?.trim()) next[`answer${i}`] = t("prop.errAnswer");
@@ -95,6 +97,7 @@ export default function TaklifYuborishPage() {
           answer: answers[i].trim(),
         })),
         attachedImages: [...selectedImages, ...uploadedImages],
+        estimatedDeliveryDays: Number(deliveryDays),
       });
       toast(t("prop.sent"));
       router.push("/mutaxassis/takliflarim");
@@ -128,6 +131,16 @@ export default function TaklifYuborishPage() {
             onChange={(e) => setBid(e.target.value)}
             error={errors.bid}
             hint={`${t("prop.bidHint")}: ${formatMoney(job.budgetMin, lang)} – ${formatMoney(job.budgetMax, lang)}`}
+          />
+          <Input
+            type="number"
+            min={1}
+            label={t("prop.deliveryDays")}
+            value={deliveryDays}
+            onChange={(e) => setDeliveryDays(e.target.value)}
+            placeholder="7"
+            hint={t("prop.deliveryDaysHint")}
+            error={errors.deliveryDays}
           />
           <Textarea
             label={t("prop.cover")}

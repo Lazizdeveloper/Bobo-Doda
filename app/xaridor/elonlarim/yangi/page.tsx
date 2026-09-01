@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { FileUpload } from "@/components/ui/FileUpload";
 import { Input } from "@/components/ui/Input";
 import { Stepper } from "@/components/ui/Stepper";
 import { TagInput } from "@/components/ui/TagInput";
@@ -12,7 +13,7 @@ import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
 import { jobsService } from "@/lib/api";
 import type { ServiceCategory } from "@/lib/types";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useFormDraft } from "@/lib/hooks/useFormDraft";
 
@@ -31,11 +32,24 @@ export default function YangiElonPage() {
   const [questions, setQuestions] = useState<string[]>([]);
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [publishing, setPublishing] = useState(false);
   const draftValue = useMemo(
-    () => ({ step, category, title, description, skills, questions, budgetMin, budgetMax }),
-    [step, category, title, description, skills, questions, budgetMin, budgetMax]
+    () => ({
+      step,
+      category,
+      title,
+      description,
+      skills,
+      questions,
+      budgetMin,
+      budgetMax,
+      deadline,
+      attachedImages,
+    }),
+    [step, category, title, description, skills, questions, budgetMin, budgetMax, deadline, attachedImages]
   );
   const clearDraft = useFormDraft(
     "draft:buyer:new-job",
@@ -49,6 +63,8 @@ export default function YangiElonPage() {
       setQuestions(draft.questions);
       setBudgetMin(draft.budgetMin);
       setBudgetMax(draft.budgetMax);
+      setDeadline(draft.deadline ?? "");
+      setAttachedImages(draft.attachedImages ?? []);
     },
     Boolean(category || title || description || skills.length || questions.length || budgetMin || budgetMax)
   );
@@ -75,6 +91,12 @@ export default function YangiElonPage() {
       const max = Number(budgetMax);
       if (!min || !max || min <= 0 || max < min) {
         next.budget = t("jwiz.errBudget");
+      }
+      if (deadline) {
+        const d = new Date(deadline);
+        if (Number.isNaN(d.getTime()) || d.getTime() < Date.now()) {
+          next.deadline = t("jwiz.errDeadline");
+        }
       }
     }
     setErrors(next);
@@ -106,6 +128,8 @@ export default function YangiElonPage() {
         budgetMax: Number(budgetMax),
         skillsRequired: skills,
         screeningQuestions: questions.map((q) => q.trim()).filter(Boolean),
+        deadline: deadline || undefined,
+        attachedImages,
       });
       clearDraft();
       toast(t("jwiz.published"));
@@ -175,6 +199,13 @@ export default function YangiElonPage() {
               rows={7}
               error={errors.description}
             />
+            <FileUpload
+              label={t("jwiz.attachmentsLabel")}
+              value={attachedImages}
+              onChange={setAttachedImages}
+              max={5}
+            />
+            <p className="-mt-3 text-2xs text-faint">{t("jwiz.attachmentsHint")}</p>
           </div>
         )}
 
@@ -265,6 +296,14 @@ export default function YangiElonPage() {
               </p>
             )}
             <p className="text-2xs text-faint">{t("jwiz.budgetHint")}</p>
+            <Input
+              type="date"
+              label={t("jwiz.deadlineLabel")}
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              hint={t("jwiz.deadlineHint")}
+              error={errors.deadline}
+            />
             <p className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
               {t("jwiz.escrowHint")}
             </p>
@@ -290,7 +329,26 @@ export default function YangiElonPage() {
                 label={t("job.budget")}
                 value={`${formatMoney(Number(budgetMin) || 0, lang)} – ${formatMoney(Number(budgetMax) || 0, lang)}`}
               />
+              {deadline && (
+                <ReviewRow
+                  label={t("jwiz.deadlineLabel")}
+                  value={formatDate(new Date(deadline).toISOString(), lang)}
+                />
+              )}
             </dl>
+            {attachedImages.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {attachedImages.map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`${i + 1}-rasm`}
+                    className="h-16 w-16 rounded-input border border-line object-cover"
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </Card>

@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ChatImageAttach } from "@/components/ui/ChatImageAttach";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
@@ -32,6 +33,7 @@ export default function KelganTaklifPage() {
   const [declineOpen, setDeclineOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState("");
+  const [draftImage, setDraftImage] = useState<string | undefined>(undefined);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -49,6 +51,7 @@ export default function KelganTaklifPage() {
           ]).then(([msgs, svc]) => {
             setMessages(msgs);
             setService(svc);
+            void messagesService.markRead(found.id);
           });
         }
       })
@@ -92,12 +95,13 @@ export default function KelganTaklifPage() {
   async function handleSend(e: FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || !offer) return;
+    if ((!text && !draftImage) || !offer) return;
     setSending(true);
     try {
-      const message = await messagesService.send(offer.id, text);
+      const message = await messagesService.send(offer.id, text, draftImage);
       setMessages((prev) => [...prev, message]);
       setDraft("");
+      setDraftImage(undefined);
     } catch {
       toast(t("common.error"), "error");
     } finally {
@@ -216,13 +220,23 @@ export default function KelganTaklifPage() {
                     }`}
                   >
                     <div
-                      className={`whitespace-pre-line break-words rounded-card px-3 py-2 text-sm ${
+                      className={`flex flex-col gap-1.5 rounded-card px-3 py-2 text-sm ${
                         mine
                           ? "rounded-br-[4px] bg-primary text-on-primary"
                           : "rounded-bl-[4px] bg-card-hover text-ink"
                       }`}
                     >
-                      {msg.text}
+                      {msg.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={msg.image}
+                          alt={t("chat.attachedImage")}
+                          className="max-h-48 rounded-input object-cover"
+                        />
+                      )}
+                      {msg.text && (
+                        <span className="whitespace-pre-line break-words">{msg.text}</span>
+                      )}
                     </div>
                     <span className="text-2xs text-faint">
                       {mine ? t("chat.you") : offer.buyerName.split(" ")[0]} ·{" "}
@@ -234,7 +248,8 @@ export default function KelganTaklifPage() {
             )}
             <div ref={chatEndRef} />
           </div>
-          <form onSubmit={handleSend} className="flex gap-2 border-t border-line p-3">
+          <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-line p-3">
+            <ChatImageAttach value={draftImage} onChange={setDraftImage} />
             <div className="flex-1">
               <Input
                 value={draft}
@@ -244,7 +259,7 @@ export default function KelganTaklifPage() {
                 maxLength={5000}
               />
             </div>
-            <Button type="submit" loading={sending} disabled={!draft.trim()}>
+            <Button type="submit" loading={sending} disabled={!draft.trim() && !draftImage}>
               {t("chat.send")}
             </Button>
           </form>

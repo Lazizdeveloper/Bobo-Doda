@@ -58,6 +58,14 @@ export interface SellerProfile {
   available: boolean;
   /** band bo'lsa, qachon avtomatik "tayyor"ga qaytishi (ISO sana, ixtiyoriy) */
   availableUntil?: string;
+  /** Shaxsi tasdiqlangan (KYC) — VerificationRecord.status'dan hisoblanadi,
+      saqlanmaydi. Telegram `User.verified`dan farqli, real hujjat tekshiruvi. */
+  identityVerified?: boolean;
+  /** Yakunlangan / (yakunlangan + bekor qilingan) shartnomalar nisbati (0-100).
+      Hisoblanadi, saqlanmaydi. Kamida 1 ta yakunlangan yoki bekor qilingan
+      shartnoma bo'lmasa aniqlanmagan (undefined) — yangi hisob uchun 0%
+      ko'rsatish chalg'ituvchi bo'lardi. */
+  completionRate?: number;
 }
 
 export type ServiceCategory =
@@ -86,6 +94,19 @@ export interface Service {
   images: string[];
   status: ServiceStatus;
   createdAt: string;
+  /** Narxga kiritilgan bepul tuzatishlar soni. Belgilanmasa (eski xizmatlar)
+      cheklov qo'llanilmaydi — faqat shu maydon orqali va'da qilingan
+      xizmatlarda tekshiriladi. */
+  revisionsIncluded?: number;
+  /** Narxga aynan nima kiritilgani — har bir xizmat uchun alohida, umumiy
+      matn emas (masalan "Manba fayllar", "3 ta konseptsiya"). */
+  included?: string[];
+  /** Ishni boshlash uchun xaridordan nima talab qilinishi — har bir xizmat
+      uchun alohida (masalan "Brendbuk", "Texnik topshiriq"). */
+  requirements?: string[];
+  /** Ixtiyoriy qo'shimcha xizmatlar (masalan "Tezkor topshirish" +qo'shimcha
+      narx) — xaridor tanlab, asosiy narxga qo'shib taklif yuboradi. */
+  extras?: { label: string; price: number }[];
 }
 
 /* B) Faol yo'l — xaridor e'lon qilgan ish (mock, faqat o'qish uchun) */
@@ -107,6 +128,10 @@ export interface Job {
   proposalsCount: number;
   postedAt: string;
   status: JobStatus;
+  /** Xaridor kutayotgan yakuniy muddat (ixtiyoriy) */
+  deadline?: string;
+  /** Loyiha uchun namuna/texnik topshiriq rasmlari (ixtiyoriy) */
+  attachedImages?: string[];
 }
 
 export type ProposalStatus =
@@ -127,6 +152,8 @@ export interface Proposal {
   attachedImages: string[];
   status: ProposalStatus;
   createdAt: string;
+  /** Mutaxassis taxmin qilgan yetkazib berish muddati (kun) */
+  estimatedDeliveryDays?: number;
 }
 
 /* To'g'ridan-to'g'ri taklif (xaridor → mutaxassis, to'lovsiz).
@@ -202,6 +229,8 @@ export interface Milestone {
   approvedAt?: string;
   /** buyurtmachi o'zgartirish so'raganda qoldirgan izohi */
   revisionComment?: string;
+  /** Ushbu bosqichda nechta marta o'zgartirish so'ralgani */
+  revisionCount?: number;
 }
 
 export interface Message {
@@ -333,6 +362,8 @@ export interface Dispute {
   evidence: string[];
   status: "ochiq" | "korib_chiqilmoqda" | "hal_qilindi";
   createdAt: string;
+  resolvedAt?: string;
+  resolution?: string;
 }
 
 export function computeBadge(

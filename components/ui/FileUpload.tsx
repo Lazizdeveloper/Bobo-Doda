@@ -4,8 +4,9 @@ import { useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 
 /** Xavfsizlik: faqat rasm turlari va 2MB gacha (localStorage DoS himoyasi) */
-const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+export const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
+export const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const ALLOWED_TYPES = ALLOWED_IMAGE_TYPES;
 
 export interface FileUploadProps {
   label?: string;

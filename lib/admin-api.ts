@@ -2,6 +2,7 @@
 
 import type {
   Contract,
+  ContractStatus,
   Dispute,
   Job,
   Service,
@@ -11,6 +12,12 @@ import type {
   Milestone,
   Review,
 } from "@/lib/types";
+import {
+  assertTransition,
+  contractMachine,
+  disputeMachine,
+} from "@/lib/api/state-machines";
+import { pushNotification } from "@/lib/mock-api";
 import type {
   AdminAccount,
   AdminPermission,
@@ -595,45 +602,62 @@ export function forceCloseContract(
   const contracts = read<Contract[]>("sb2_contracts", seedContracts);
   const contractIdx = contracts.findIndex((c) => c.id === contractId);
   if (contractIdx === -1) throw new Error("NOT_FOUND");
-
   const contract = contracts[contractIdx];
-  contracts[contractIdx].status =
+
+  // A contract can only be force-closed out of an actual, still-open dispute —
+  // otherwise this silently no-ops (nothing to resolve) or resolves a
+  // contract that was never in arbitration.
+  const disputes = read<Dispute[]>("sb2_disputes", seedDisputes);
+  const disputeIdx = disputes.findIndex(
+    (d) => d.contractId === contractId && d.status !== "hal_qilindi"
+  );
+  if (disputeIdx === -1) throw new Error("DISPUTE_NOT_FOUND");
+  const dispute = disputes[disputeIdx];
+  assertTransition(disputeMachine, dispute.status, "hal_qilindi", "admin");
+
+  const nextContractStatus: ContractStatus =
     outcome === "refund" ? "bekor_qilingan" : "yakunlangan";
+  assertTransition(contractMachine, contract.status, nextContractStatus, "admin");
+
+  contracts[contractIdx] = { ...contract, status: nextContractStatus };
   write("sb2_contracts", contracts);
 
-  const disputes = read<Dispute[]>("sb2_disputes", seedDisputes);
-  write(
-    "sb2_disputes",
-    disputes.map((d) =>
-      d.contractId === contractId
-        ? {
-            ...d,
-            status: "hal_qilindi" as const,
-            resolvedAt: new Date().toISOString(),
-            resolution: `Arbitraj qarori (${outcome.toUpperCase()}): ${notes}`,
-          }
-        : d
-    )
-  );
+  disputes[disputeIdx] = {
+    ...dispute,
+    status: "hal_qilindi",
+    resolvedAt: new Date().toISOString(),
+    resolution: `Arbitraj qarori (${outcome.toUpperCase()}): ${notes}`,
+  };
+  write("sb2_disputes", disputes);
+
+  const refundAmount =
+    outcome === "refund"
+      ? contract.totalAmount
+      : outcome === "split"
+        ? Math.max(0, Math.min(splitAmount ?? 0, contract.totalAmount))
+        : 0;
 
   const milestones = read<Milestone[]>("sb2_milestones", seedMilestones);
+  // On a split, the buyer's share (refundAmount) is credited to their balance
+  // below — it must come out of what the seller is paid, not be created on
+  // top of it, or the payout exceeds what was ever escrowed.
+  let sellerDeduction = outcome === "split" ? refundAmount : 0;
   const updatedMilestones = milestones.map((m) => {
-    if (m.contractId === contractId) {
-      return {
-        ...m,
-        status:
-          outcome === "refund"
-            ? ("kutilmoqda" as const)
-            : ("qabul_qilindi" as const),
-      };
+    if (m.contractId !== contractId) return m;
+    if (outcome === "refund") {
+      return { ...m, status: "kutilmoqda" as const };
     }
-    return m;
+    let amount = m.amount;
+    if (sellerDeduction > 0) {
+      const deduction = Math.min(amount, sellerDeduction);
+      amount -= deduction;
+      sellerDeduction -= deduction;
+    }
+    return { ...m, amount, status: "qabul_qilindi" as const };
   });
   write("sb2_milestones", updatedMilestones);
 
   if (outcome === "refund" || outcome === "split") {
-    const refundAmount =
-      outcome === "split" ? splitAmount ?? 0 : contract.totalAmount;
     const refunds = read<RefundRecord[]>("sb2_refunds", []);
     const newRefund: RefundRecord = {
       id: `ref-${Date.now()}`,
@@ -651,6 +675,12 @@ export function forceCloseContract(
       createdAt: new Date().toISOString(),
     };
     write("sb2_refunds", [newRefund, ...refunds]);
+
+    if (refundAmount > 0) {
+      const balances = read<Record<string, number>>("sb2_balances", {});
+      balances[contract.buyerId] = (balances[contract.buyerId] ?? 0) + refundAmount;
+      write("sb2_balances", balances);
+    }
   }
 
   addAudit(
@@ -696,6 +726,19 @@ export function replyToTicket(
     isAdmin: true,
   });
   write(chatKey, conversation);
+
+  const ticketOwner = appData<User[]>("sb2_users", seedUsers).find(
+    (u) => u.id === tickets[idx].userId
+  );
+  if (ticketOwner) {
+    pushNotification(
+      ticketOwner.id,
+      "xabar",
+      "ntf.supportReplied",
+      ticketOwner.role === "mutaxassis" ? "/mutaxassis/yordam" : "/xaridor/yordam",
+      { subject: tickets[idx].subject }
+    );
+  }
 
   addAudit("Yordam chiptasiga javob berildi", ticketId, replyText.slice(0, 100));
 }

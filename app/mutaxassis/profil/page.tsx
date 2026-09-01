@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
+import { IdentityVerifiedBadge } from "@/components/ui/IdentityVerifiedBadge";
 import { contractsService, reviewsService, servicesService, usersService } from "@/lib/api";
 import type { Contract, PortfolioItem, Review, SellerProfile, Service, User } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -82,6 +83,9 @@ export default function ProfilPage() {
       value: `${profile.responseTimeHours} ${t("common.hours")}`,
     },
     { label: t("profile.statMember"), value: memberDuration },
+    ...(profile.completionRate !== undefined
+      ? [{ label: t("profile.statCompletionRate"), value: `${profile.completionRate}%` }]
+      : []),
   ];
 
   return (
@@ -114,6 +118,7 @@ export default function ProfilPage() {
                 {user?.fullName}
               </h2>
               <TrustBadge badge={profile.badge} />
+              {profile.identityVerified && <IdentityVerifiedBadge />}
               <Badge tone={profile.available ? "success" : "neutral"}>
                 {t(profile.available ? "avail.on" : "avail.off")}
               </Badge>

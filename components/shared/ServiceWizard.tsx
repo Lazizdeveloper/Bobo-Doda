@@ -41,11 +41,34 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
   const [images, setImages] = useState<string[]>(initial?.images ?? []);
   const [price, setPrice] = useState(initial ? String(initial.price) : "");
   const [days, setDays] = useState(initial ? String(initial.deliveryDays) : "");
+  const [revisions, setRevisions] = useState(
+    initial ? String(initial.revisionsIncluded ?? 2) : "2"
+  );
+  const [included, setIncluded] = useState<string[]>(initial?.included ?? []);
+  const [requirements, setRequirements] = useState<string[]>(
+    initial?.requirements ?? []
+  );
+  const [extras, setExtras] = useState<{ label: string; price: string }[]>(
+    (initial?.extras ?? []).map((e) => ({ label: e.label, price: String(e.price) }))
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<"publish" | "draft" | null>(null);
   const draftValue = useMemo(
-    () => ({ step, category, title, description, fields, images, price, days }),
-    [step, category, title, description, fields, images, price, days]
+    () => ({
+      step,
+      category,
+      title,
+      description,
+      fields,
+      images,
+      price,
+      days,
+      revisions,
+      included,
+      requirements,
+      extras,
+    }),
+    [step, category, title, description, fields, images, price, days, revisions, included, requirements, extras]
   );
   const clearDraft = useFormDraft(
     `draft:seller:service:${initial?.id ?? "new"}`,
@@ -59,6 +82,10 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
       setImages(draft.images);
       setPrice(draft.price);
       setDays(draft.days);
+      setExtras(draft.extras ?? []);
+      setRevisions(draft.revisions ?? "2");
+      setIncluded(draft.included ?? []);
+      setRequirements(draft.requirements ?? []);
     },
     Boolean(category || title || description || Object.keys(fields).length || images.length || price || days)
   );
@@ -108,6 +135,11 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
     if (current === 3) {
       if (!price || Number(price) <= 0) next.price = t("wizard.errPrice");
       if (!days || Number(days) < 1) next.days = t("wizard.errDays");
+      if (revisions === "" || Number(revisions) < 0) next.revisions = t("common.required");
+      extras.forEach((extra, i) => {
+        if (!extra.label.trim()) next[`extraLabel${i}`] = t("common.required");
+        if (!extra.price || Number(extra.price) <= 0) next[`extraPrice${i}`] = t("wizard.errPrice");
+      });
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -134,6 +166,12 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
         images,
         price: Number(price),
         deliveryDays: Number(days),
+        revisionsIncluded: Number(revisions),
+        included,
+        requirements,
+        extras: extras
+          .filter((e) => e.label.trim())
+          .map((e) => ({ label: e.label.trim(), price: Number(e.price) })),
         status,
       };
       if (isEdit) {
@@ -297,6 +335,20 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
               rows={6}
               error={errors.description}
             />
+            <TagInput
+              label={t("wizard.includedLabel")}
+              value={included}
+              onChange={setIncluded}
+              placeholder={t("wizard.includedPh")}
+            />
+            <p className="-mt-3 text-2xs text-faint">{t("wizard.includedHint")}</p>
+            <TagInput
+              label={t("wizard.requirementsLabel")}
+              value={requirements}
+              onChange={setRequirements}
+              placeholder={t("wizard.requirementsPh")}
+            />
+            <p className="-mt-3 text-2xs text-faint">{t("wizard.requirementsHint")}</p>
           </div>
         )}
 
@@ -326,6 +378,75 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
               placeholder="3"
               error={errors.days}
             />
+            <Input
+              type="number"
+              min={0}
+              label={t("wizard.revisionsLabel")}
+              value={revisions}
+              onChange={(e) => setRevisions(e.target.value)}
+              placeholder="2"
+              hint={t("wizard.revisionsHint")}
+              error={errors.revisions}
+            />
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="text-xs font-medium text-muted">{t("wizard.extrasLabel")}</p>
+                <p className="mt-1 text-2xs text-faint">{t("wizard.extrasHint")}</p>
+              </div>
+              {extras.map((extra, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <Input
+                      value={extra.label}
+                      onChange={(e) =>
+                        setExtras((prev) =>
+                          prev.map((ex, idx) => (idx === i ? { ...ex, label: e.target.value } : ex))
+                        )
+                      }
+                      placeholder={t("wizard.extraLabelPh")}
+                      aria-label={`${i + 1}. ${t("wizard.extrasLabel")}`}
+                      error={errors[`extraLabel${i}`]}
+                    />
+                  </div>
+                  <div className="w-36">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={extra.price}
+                      onChange={(e) =>
+                        setExtras((prev) =>
+                          prev.map((ex, idx) => (idx === i ? { ...ex, price: e.target.value } : ex))
+                        )
+                      }
+                      placeholder="100000"
+                      aria-label={t("wizard.extraPricePh")}
+                      error={errors[`extraPrice${i}`]}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExtras((prev) => prev.filter((_, idx) => idx !== i))}
+                    aria-label={t("common.delete")}
+                    className="mt-2.5 text-faint transition-colors duration-150 hover:text-danger"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+              {extras.length < 10 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="self-start"
+                  onClick={() => setExtras((prev) => [...prev, { label: "", price: "" }])}
+                >
+                  + {t("wizard.addExtra")}
+                </Button>
+              )}
+            </div>
             <p className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
               {t("wizard.escrowHint")}
             </p>
@@ -340,6 +461,15 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
               <ReviewRow label={t("wizard.step1")} value={t(`cat.${category}`)} />
               <ReviewRow label={t("wizard.titleLabel")} value={title} />
               <ReviewRow label={t("wizard.descLabel")} value={description} />
+              {included.length > 0 && (
+                <ReviewRow label={t("wizard.includedLabel")} value={included.join(", ")} />
+              )}
+              {requirements.length > 0 && (
+                <ReviewRow
+                  label={t("wizard.requirementsLabel")}
+                  value={requirements.join(", ")}
+                />
+              )}
               {activeFields
                 .filter((f) => f.type !== "images")
                 .map((field) => {
@@ -359,6 +489,19 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
                 label={t("wizard.daysLabel")}
                 value={`${days} ${t("common.days")}`}
               />
+              <ReviewRow
+                label={t("wizard.revisionsLabel")}
+                value={String(revisions)}
+              />
+              {extras.filter((e) => e.label.trim()).length > 0 && (
+                <ReviewRow
+                  label={t("wizard.extrasLabel")}
+                  value={extras
+                    .filter((e) => e.label.trim())
+                    .map((e) => `${e.label} (+${formatMoney(Number(e.price) || 0, lang)})`)
+                    .join(", ")}
+                />
+              )}
             </dl>
             {images.length > 0 && (
               <div className="flex flex-wrap gap-2">

@@ -29,6 +29,7 @@ export default function XizmatTafsilotiPage() {
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [offerOpen, setOfferOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [selectedExtras, setSelectedExtras] = useState<Set<number>>(new Set());
   const [loadError, setLoadError] = useState<unknown>(null);
 
   const load = useCallback(() => {
@@ -82,6 +83,21 @@ export default function XizmatTafsilotiPage() {
       a: t("svc.faq2_a"),
     },
   ];
+
+  function toggleExtra(i: number) {
+    setSelectedExtras((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  const extras = service.extras ?? [];
+  const extrasTotal = extras
+    .filter((_, i) => selectedExtras.has(i))
+    .reduce((sum, e) => sum + e.price, 0);
+  const orderTotal = service.price + extrasTotal;
 
   return (
     <div className="flex flex-col gap-6 pb-12">
@@ -196,31 +212,30 @@ export default function XizmatTafsilotiPage() {
               <div className="flex items-start gap-2">
                 <span className="text-success font-bold">✓</span>
                 <div>
-                  <p className="font-medium text-ink">{t("svc.scopeGuarantee")}</p>
-                  <p className="text-2xs text-muted">Barcha e&apos;lon qilingan talablar to&apos;liq bajariladi</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-success font-bold">✓</span>
-                <div>
                   <p className="font-medium text-ink">{t("svc.revisionsIncluded")}</p>
-                  <p className="text-2xs text-muted">{t("svc.revisionsCount")}</p>
+                  <p className="text-2xs text-muted">
+                    {service?.revisionsIncluded !== undefined
+                      ? t("svc.revisionsCount").replace(
+                          "{count}",
+                          String(service.revisionsIncluded)
+                        )
+                      : t("svc.revisionsByAgreement")}
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-success font-bold">✓</span>
                 <div>
-                  <p className="font-medium text-ink">Asl ishchi fayllar (Source files)</p>
-                  <p className="text-2xs text-muted">Barcha manba materiallari to&apos;liq topshiriladi</p>
+                  <p className="font-medium text-ink">{t("svc.deliveryGuarantee")}</p>
+                  <p className="text-2xs text-muted">{service.deliveryDays} {t("common.days")}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-2">
-                <span className="text-success font-bold">✓</span>
-                <div>
-                  <p className="font-medium text-ink">Kafolatlangan muddat</p>
-                  <p className="text-2xs text-muted">{service.deliveryDays} kun ichida tayyor bo&apos;ladi</p>
+              {(service.included ?? []).map((item, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-success font-bold">✓</span>
+                  <p className="font-medium text-ink">{item}</p>
                 </div>
-              </div>
+              ))}
             </div>
           </Card>
 
@@ -232,20 +247,20 @@ export default function XizmatTafsilotiPage() {
             <p className="text-xs text-muted leading-relaxed">
               {t("svc.requirementsDesc")}
             </p>
-            <ul className="flex flex-col gap-2 rounded-input border border-line bg-surface p-3.5 text-xs text-muted">
-              <li className="flex items-center gap-2">
-                <span className="text-primary font-bold">1.</span>
-                <span>Loyihaning aniq maqsadi yoki texnik topshiriq (TT).</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-primary font-bold">2.</span>
-                <span>Logotip, matnlar, brendbuk yoki kerakli fayllar.</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-primary font-bold">3.</span>
-                <span>Yoqqan misollar yoki namuna havolalar.</span>
-              </li>
-            </ul>
+            {service.requirements && service.requirements.length > 0 ? (
+              <ul className="flex flex-col gap-2 rounded-input border border-line bg-surface p-3.5 text-xs text-muted">
+                {service.requirements.map((req, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className="text-primary font-bold">{i + 1}.</span>
+                    <span>{req}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-input border border-line bg-surface p-3.5 text-xs text-faint">
+                {t("svc.requirementsEmpty")}
+              </p>
+            )}
           </Card>
 
           {/* Service FAQs */}
@@ -339,10 +354,49 @@ export default function XizmatTafsilotiPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted">Tuzatishlar</span>
-                <span className="font-bold text-success">3 ta bepul</span>
+                <span className="text-muted">{t("svc.revisionsIncluded")}</span>
+                <span className="font-bold text-success">
+                  {service.revisionsIncluded !== undefined
+                    ? t("svc.revisionsCount").replace("{count}", String(service.revisionsIncluded))
+                    : t("svc.revisionsByAgreement")}
+                </span>
               </div>
             </div>
+
+            {extras.length > 0 && (
+              <div className="flex flex-col gap-2 border-t border-line pt-3">
+                <p className="text-2xs font-bold uppercase tracking-wider text-muted">
+                  {t("svc.extrasTitle")}
+                </p>
+                {extras.map((extra, i) => (
+                  <label
+                    key={i}
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-input border border-line p-2.5 text-xs transition-colors duration-150 hover:border-primary"
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedExtras.has(i)}
+                        onChange={() => toggleExtra(i)}
+                        className="h-4 w-4 rounded border-field text-primary focus:ring-primary"
+                      />
+                      <span className="text-ink">{extra.label}</span>
+                    </span>
+                    <span className="shrink-0 font-bold text-ink">
+                      +{formatMoney(extra.price, lang)}
+                    </span>
+                  </label>
+                ))}
+                {selectedExtras.size > 0 && (
+                  <div className="flex items-center justify-between border-t border-line pt-2 text-sm">
+                    <span className="font-medium text-ink">{t("svc.orderTotal")}</span>
+                    <span className="font-heading font-black text-primary">
+                      {formatMoney(orderTotal, lang)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <Button
               size="lg"
@@ -428,6 +482,7 @@ export default function XizmatTafsilotiPage() {
         onClose={() => setOfferOpen(false)}
         sellerId={service.sellerId}
         service={service}
+        initialBudget={orderTotal}
       />
     </div>
   );

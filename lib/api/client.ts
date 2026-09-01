@@ -126,7 +126,9 @@ export const paymentsService: PaymentsService = {
 export const messagesService: MessagesService = {
   list: (id) => call(() => mock.getMessages(id)),
   listMine: () => call(mock.getAllMessages),
-  send: (id, body) => call(() => mock.sendMessage(id, body)),
+  send: (id, body, image) => call(() => mock.sendMessage(id, body, image)),
+  getReadStatus: () => call(mock.getThreadReads),
+  markRead: (id) => call(() => mock.markThreadRead(id)),
 };
 
 export const notificationsService: NotificationsService = {

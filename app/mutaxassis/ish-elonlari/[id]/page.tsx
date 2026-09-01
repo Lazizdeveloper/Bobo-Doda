@@ -106,6 +106,20 @@ export default function IshEloniPage() {
               {job.description}
             </p>
 
+            {job.attachedImages && job.attachedImages.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {job.attachedImages.map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`${i + 1}-rasm`}
+                    className="h-20 w-20 rounded-input border border-line object-cover"
+                  />
+                ))}
+              </div>
+            )}
+
             <div className="mt-6 border-t border-line pt-4">
               <h3 className="text-xs font-medium uppercase tracking-wide text-faint">
                 {t("job.skills")}
@@ -146,6 +160,16 @@ export default function IshEloniPage() {
                 {formatMoney(job.budgetMax, lang)}
               </p>
             </div>
+            {job.deadline && (
+              <div>
+                <p className="text-2xs font-medium uppercase tracking-wide text-faint">
+                  {t("job.deadline")}
+                </p>
+                <p className="mt-1 text-sm font-medium text-ink">
+                  {formatDate(new Date(job.deadline).toISOString(), lang)}
+                </p>
+              </div>
+            )}
             <p className="text-xs text-muted">
               {job.proposalsCount} {t("jobs.proposalsCount")}
             </p>

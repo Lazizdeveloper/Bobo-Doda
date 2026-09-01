@@ -263,7 +263,7 @@ export default function MutaxassisDashboardPage() {
                       </div>
                       <div className="overflow-hidden">
                         <p className="text-sm font-semibold text-ink">{msg.senderId === myId ? t("dash.you") : t("dash.client")}</p>
-                        <p className="text-xs text-muted truncate mt-0.5">{msg.text}</p>
+                        <p className="text-xs text-muted truncate mt-0.5">{msg.text || (msg.image ? t("chat.imagePreview") : "")}</p>
                       </div>
                     </div>
                   </Link>

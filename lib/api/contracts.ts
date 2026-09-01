@@ -102,6 +102,8 @@ export interface JobsService {
     budgetMax: number;
     skillsRequired: string[];
     screeningQuestions: string[];
+    deadline?: string;
+    attachedImages?: string[];
   }): Promise<Model.Job>;
   close(id: string): Promise<Model.Job>;
 }
@@ -116,6 +118,7 @@ export interface ProposalsService {
     coverLetter: string;
     screeningAnswers: { question: string; answer: string }[];
     attachedImages: string[];
+    estimatedDeliveryDays?: number;
   }): Promise<Model.Proposal>;
   setStatus(
     id: string,
@@ -183,7 +186,11 @@ export interface PaymentsService {
 export interface MessagesService {
   list(threadId: string): Promise<Model.Message[]>;
   listMine(): Promise<Model.Message[]>;
-  send(threadId: string, body: string): Promise<Model.Message>;
+  send(threadId: string, body: string, image?: string): Promise<Model.Message>;
+  /** threadId -> joriy foydalanuvchi shu suhbatni oxirgi marta o'qigan vaqt */
+  getReadStatus(): Promise<Record<string, string>>;
+  /** Suhbat sahifasi ochilganda chaqiriladi, uni "o'qilgan" deb belgilaydi */
+  markRead(threadId: string): Promise<void>;
 }
 
 export interface NotificationsService {

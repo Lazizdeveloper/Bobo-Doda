@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
+import { IdentityVerifiedBadge } from "@/components/ui/IdentityVerifiedBadge";
 import { OfferModal } from "@/components/shared/OfferModal";
 import { catalogService, servicesService } from "@/lib/api";
 import type { PortfolioItem, Review, Service, Specialist } from "@/lib/types";
@@ -99,6 +100,7 @@ export default function MutaxassisProfiliPage() {
                     {user.fullName}
                   </h1>
                   <TrustBadge badge={profile.badge} />
+                  {profile.identityVerified && <IdentityVerifiedBadge />}
                   <Badge tone={profile.available ? "success" : "neutral"}>
                     {t(profile.available ? "avail.on" : "avail.off")}
                   </Badge>
@@ -388,7 +390,7 @@ export default function MutaxassisProfiliPage() {
             <div className="flex flex-col divide-y divide-line rounded-input border border-line bg-surface text-xs">
               <div className="flex items-center justify-between p-3">
                 <span className="text-muted">{t("settings.responseSpeed")}</span>
-                <span className="font-bold text-ink">~ 1-2 {t("common.hours")}</span>
+                <span className="font-bold text-ink">{profile.responseTimeHours} {t("common.hours")}</span>
               </div>
               <div className="flex items-center justify-between p-3">
                 <span className="text-muted">Bajarilgan shartnomalar</span>
@@ -398,6 +400,12 @@ export default function MutaxassisProfiliPage() {
                 <span className="text-muted">O&apos;rtacha reyting</span>
                 <span className="font-bold text-primary">★ {profile.rating.toFixed(1)}</span>
               </div>
+              {profile.completionRate !== undefined && (
+                <div className="flex items-center justify-between p-3">
+                  <span className="text-muted">{t("profile.statCompletionRate")}</span>
+                  <span className="font-bold text-ink">{profile.completionRate}%</span>
+                </div>
+              )}
             </div>
           </Card>
 

@@ -23,6 +23,7 @@ export const LIMITS = {
   question: 300,
   langName: 50,
   fieldValue: 500,
+  listItem: 150,
 } as const;
 
 /** Chekli, musbat, chegaralangan butun songa keltiradi; aks holda xato */

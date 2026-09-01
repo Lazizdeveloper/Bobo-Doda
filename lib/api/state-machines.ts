@@ -166,6 +166,10 @@ export const disputeMachine: StateMachine<DisputeStatus> = {
   transitions: [
     { from: "ochiq", to: "korib_chiqilmoqda", actors: ["admin"] },
     { from: "korib_chiqilmoqda", to: "hal_qilindi", actors: ["admin"] },
+    // Admin can resolve directly without a separate "under review" step —
+    // there is no UI action that sets korib_chiqilmoqda today, so requiring
+    // it first would make every open dispute unresolvable.
+    { from: "ochiq", to: "hal_qilindi", actors: ["admin"] },
   ],
 };
 

@@ -537,8 +537,33 @@ export const dictionary: Record<string, Entry> = {
     uz: "Nima qilasiz, qanday topshirasiz va nima kiradi — aniq yozing",
     ru: "Что вы делаете, как сдаёте и что входит — опишите конкретно",
   },
+  "wizard.includedLabel": { uz: "Narxga nima kiradi", ru: "Что входит в цену" },
+  "wizard.includedPh": { uz: "Masalan: Manba fayllar, 3 ta konseptsiya", ru: "Например: Исходники, 3 концепции" },
+  "wizard.includedHint": {
+    uz: "Xaridorga sizning kafolatingiz sifatida ko'rsatiladi — har bir band uchun Enter bosing",
+    ru: "Показывается покупателю как гарантия объёма — нажимайте Enter после каждого пункта",
+  },
+  "wizard.requirementsLabel": { uz: "Xaridordan nima kerak", ru: "Что нужно от покупателя" },
+  "wizard.requirementsPh": { uz: "Masalan: Brendbuk, namuna havolalar", ru: "Например: Брендбук, ссылки на примеры" },
+  "wizard.requirementsHint": {
+    uz: "Buyurtma berishdan oldin xaridorga ko'rsatiladi — ish boshlanganda hech narsa yetishmasligi uchun",
+    ru: "Показывается покупателю перед заказом, чтобы ничего не упустить перед началом работы",
+  },
+  "wizard.extrasLabel": { uz: "Ixtiyoriy qo'shimcha xizmatlar", ru: "Дополнительные платные опции" },
+  "wizard.extrasHint": {
+    uz: "Xaridor asosiy narxga qo'shib tanlashi mumkin bo'lgan pullik qo'shimchalar (masalan tezkor topshirish, qo'shimcha tuzatish)",
+    ru: "Платные опции, которые покупатель может добавить к базовой цене (например срочная сдача, доп. правка)",
+  },
+  "wizard.extraLabelPh": { uz: "Masalan: 24 soatda tezkor topshirish", ru: "Например: срочная сдача за 24 часа" },
+  "wizard.extraPricePh": { uz: "Narx", ru: "Цена" },
+  "wizard.addExtra": { uz: "Qo'shimcha qo'shish", ru: "Добавить опцию" },
   "wizard.priceLabel": { uz: "Narx", ru: "Цена" },
   "wizard.daysLabel": { uz: "Bajarish muddati (kun)", ru: "Срок выполнения (дней)" },
+  "wizard.revisionsLabel": { uz: "Narxga kiritilgan bepul tuzatishlar", ru: "Бесплатные правки в цене" },
+  "wizard.revisionsHint": {
+    uz: "Tugagach, xaridor cheksiz bepul ishlash o'rniga yangi bosqichga yo'naltiriladi",
+    ru: "После лимита покупателю предложат новый этап вместо бесконечных бесплатных правок",
+  },
   "wizard.escrowHint": {
     uz: "Xizmat orqali kelgan buyurtma — bitta bosqichli shartnoma: to'lov escrow'da saqlanadi, ish qabul qilingach sizga o'tadi",
     ru: "Заказ через услугу — контракт с одним этапом: оплата хранится в эскроу и переводится после приёмки",
@@ -593,6 +618,7 @@ export const dictionary: Record<string, Entry> = {
 
   /* E'lon tafsiloti */
   "job.budget": { uz: "Byudjet", ru: "Бюджет" },
+  "job.deadline": { uz: "Muddat", ru: "Срок" },
   "job.skills": { uz: "Kerakli ko'nikmalar", ru: "Требуемые навыки" },
   "job.screening": { uz: "Skrining savollari", ru: "Отборочные вопросы" },
   "job.aboutBuyer": { uz: "Buyurtmachi haqida", ru: "О заказчике" },
@@ -612,6 +638,11 @@ export const dictionary: Record<string, Entry> = {
   "prop.formTitle": { uz: "Taklif yuborish", ru: "Отправить предложение" },
   "prop.bid": { uz: "Narx taklifi", ru: "Ваша цена" },
   "prop.bidHint": { uz: "Buyurtmachi byudjeti", ru: "Бюджет заказчика" },
+  "prop.deliveryDays": { uz: "Taxminiy bajarish muddati (kun)", ru: "Ориентировочный срок (дней)" },
+  "prop.deliveryDaysHint": {
+    uz: "Xaridorga takliflarni faqat narx emas, tezlik bo'yicha ham solishtirishga yordam beradi",
+    ru: "Помогает заказчику сравнивать предложения не только по цене, но и по скорости",
+  },
   "prop.cover": { uz: "Qoplama xat", ru: "Сопроводительное письмо" },
   "prop.coverHint": {
     uz: "Nega aynan siz mos ekaningizni tushuntiring: tajribangizdan aniq misol keltiring, loyiha bo'yicha savol bering",
@@ -631,6 +662,10 @@ export const dictionary: Record<string, Entry> = {
   "prop.submit": { uz: "Taklif yuborish", ru: "Отправить предложение" },
   "prop.sent": { uz: "Taklif yuborildi", ru: "Предложение отправлено" },
   "prop.errBid": { uz: "Narx 0 dan katta bo'lishi kerak", ru: "Цена должна быть больше 0" },
+  "prop.errDelivery": {
+    uz: "Kamida 1 kunlik bajarish muddatini kiriting",
+    ru: "Укажите срок выполнения не менее 1 дня",
+  },
   "prop.errCover": {
     uz: "Qoplama xat kamida 50 ta belgidan iborat bo'lishi kerak",
     ru: "Письмо должно содержать минимум 50 символов",
@@ -771,6 +806,9 @@ export const dictionary: Record<string, Entry> = {
   "chat.title": { uz: "Muloqot", ru: "Переписка" },
   "chat.placeholder": { uz: "Xabar yozing...", ru: "Напишите сообщение..." },
   "chat.send": { uz: "Yuborish", ru: "Отправить" },
+  "chat.attachImage": { uz: "Rasm biriktirish", ru: "Прикрепить изображение" },
+  "chat.attachedImage": { uz: "Biriktirilgan rasm", ru: "Прикреплённое изображение" },
+  "chat.imagePreview": { uz: "📷 Rasm", ru: "📷 Изображение" },
   "chat.empty": {
     uz: "Hozircha xabar yo'q — birinchi bo'lib yozing",
     ru: "Пока нет сообщений — напишите первым",
@@ -839,6 +877,11 @@ export const dictionary: Record<string, Entry> = {
     uz: "Top mutaxassis — 25+ ish, 4.8+ reyting",
     ru: "Топ-специалист — 25+ работ, рейтинг 4.8+",
   },
+  "badge.identityVerified": { uz: "Shaxsi tasdiqlangan", ru: "Личность подтверждена" },
+  "badge.identityVerifiedHint": {
+    uz: "Hujjat Bobo&Doda tomonidan ko'rib chiqilgan va tasdiqlangan",
+    ru: "Документ проверен и подтверждён Bobo&Doda",
+  },
 
   /* Profil */
   "profile.title": { uz: "Profil", ru: "Профиль" },
@@ -865,6 +908,7 @@ export const dictionary: Record<string, Entry> = {
   "profile.statRating": { uz: "O'rtacha reyting", ru: "Средний рейтинг" },
   "profile.statResponse": { uz: "O'rtacha javob", ru: "Среднее время ответа" },
   "profile.statMember": { uz: "Platformada", ru: "На платформе" },
+  "profile.statCompletionRate": { uz: "Yakunlash darajasi", ru: "Доля завершённых заказов" },
   "profile.reviewsAvg": { uz: "o'rtacha baho", ru: "средняя оценка" },
   "lang.native": { uz: "Ona tili", ru: "Родной" },
   "lang.fluent": { uz: "Erkin", ru: "Свободно" },
@@ -1074,6 +1118,7 @@ export const dictionary: Record<string, Entry> = {
   "dash.busy": { uz: "Band", ru: "Занят" },
   "dash.you": { uz: "Siz", ru: "Вы" },
   "dash.client": { uz: "Mijoz", ru: "Клиент" },
+  "dash.specialist": { uz: "Mutaxassis", ru: "Специалист" },
 
   /* Holat (available) */
   "avail.on": { uz: "Ishga tayyor", ru: "Открыт к работе" },
@@ -1212,6 +1257,8 @@ export const dictionary: Record<string, Entry> = {
   "svc.details": { uz: "Tafsilotlar", ru: "Детали" },
   "svc.price": { uz: "Narx", ru: "Цена" },
   "svc.delivery": { uz: "Bajarish muddati", ru: "Срок выполнения" },
+  "svc.extrasTitle": { uz: "Ixtiyoriy qo'shimchalar", ru: "Дополнительные опции" },
+  "svc.orderTotal": { uz: "Buyurtma summasi", ru: "Итого по заказу" },
   "svc.aboutSeller": { uz: "Mutaxassis haqida", ru: "О специалисте" },
   "svc.notFound": { uz: "Xizmat topilmadi", ru: "Услуга не найдена" },
   "order.payMethod": { uz: "To'lov usuli", ru: "Способ оплаты" },
@@ -1399,6 +1446,20 @@ export const dictionary: Record<string, Entry> = {
     uz: "To'g'ri byudjet oralig'ini kiriting",
     ru: "Укажите корректный диапазон бюджета",
   },
+  "jwiz.deadlineLabel": { uz: "Muddat (ixtiyoriy)", ru: "Срок (по желанию)" },
+  "jwiz.deadlineHint": {
+    uz: "Mutaxassislarga real taklif berishga yordam beradi — bo'sh qoldirsangiz muddat moslashuvchan bo'ladi",
+    ru: "Помогает специалистам дать реалистичное предложение — оставьте пустым, если срок гибкий",
+  },
+  "jwiz.errDeadline": {
+    uz: "Muddat o'tgan sana bo'lishi mumkin emas",
+    ru: "Срок не может быть в прошлом",
+  },
+  "jwiz.attachmentsLabel": { uz: "Namuna rasmlari (ixtiyoriy)", ru: "Изображения-примеры (по желанию)" },
+  "jwiz.attachmentsHint": {
+    uz: "Texnik topshiriq, maket yoki namuna mutaxassisga aniqroq taklif yuborishga yordam beradi",
+    ru: "ТЗ, макет или пример помогает специалистам сделать более точное предложение",
+  },
 
   /* E'lon tafsiloti — kelgan takliflar */
   "bjob.proposalsTitle": { uz: "Kelgan takliflar", ru: "Полученные предложения" },
@@ -1516,6 +1577,14 @@ export const dictionary: Record<string, Entry> = {
   "bms.revisionWaiting": {
     uz: "O'zgartirish so'raldi — mutaxassis qayta topshirishini kuting",
     ru: "Правки запрошены — ожидайте повторной сдачи",
+  },
+  "bms.revisionsUsed": {
+    uz: "{used}/{limit} bepul tuzatish ishlatildi",
+    ru: "Использовано {used} из {limit} бесплатных правок",
+  },
+  "bms.revisionLimitReached": {
+    uz: "Ushbu xizmat uchun bepul tuzatishlar tugadi — keyingi o'zgartirishlar uchun mutaxassis bilan yangi bosqich kelishing",
+    ru: "Бесплатные правки по этой услуге закончились — для дальнейших изменений согласуйте с специалистом новый этап",
   },
 
   /* Sharh qoldirish */
@@ -1635,6 +1704,22 @@ export const dictionary: Record<string, Entry> = {
   "ntf.contractFunded": {
     uz: "To'lov escrow'ga tushdi — ishni boshlashingiz mumkin: {title}",
     ru: "Оплата поступила в эскроу — можно начинать работу: {title}",
+  },
+  "ntf.refundIssued": {
+    uz: "{amount} so'm Bobo&Doda hisobingizga qaytarildi: {title}",
+    ru: "{amount} сум возвращено на ваш баланс Bobo&Doda: {title}",
+  },
+  "ntf.newReview": {
+    uz: "Sizga yangi sharh qoldirildi: {rating}★",
+    ru: "Вам оставили новый отзыв: {rating}★",
+  },
+  "ntf.contractCompleted": {
+    uz: "Shartnoma yakunlandi: {title}",
+    ru: "Контракт завершён: {title}",
+  },
+  "ntf.supportReplied": {
+    uz: "Yordam xizmati chiptangizga javob berdi: {subject}",
+    ru: "Служба поддержки ответила на ваш тикет: {subject}",
   },
   /* Landing Page */
   "nav_how": { uz: "Qanday ishlaydi", ru: "Как это работает" },
@@ -1952,17 +2037,27 @@ export const dictionary: Record<string, Entry> = {
   "market.rating45": { uz: "4.5 va undan yuqori", ru: "4.5 и выше" },
   "market.rating40": { uz: "4.0 va undan yuqori", ru: "4.0 и выше" },
   "market.filterAvailability": { uz: "Faqat bo'sh mutaxassislar", ru: "Только свободные" },
+  "market.filterLocation": { uz: "Hudud", ru: "Регион" },
+  "market.locationAny": { uz: "Barcha hududlar", ru: "Все регионы" },
   "market.clearFilters": { uz: "Filtrlarni tozalash", ru: "Сбросить фильтры" },
   "market.activeFilters": { uz: "Faol filtrlar", ru: "Активные фильтры" },
   "market.popularSearches": { uz: "Ommabop qidiruvlar", ru: "Популярные запросы" },
 
   /* Service detail enhancements */
   "svc.includedTitle": { uz: "Xizmat tarkibida nimalar bor?", ru: "Что входит в услугу?" },
-  "svc.scopeGuarantee": { uz: "Kafolatlangan hajm", ru: "Гарантированный объём" },
+  "svc.deliveryGuarantee": { uz: "Kafolatlangan muddat", ru: "Гарантированный срок" },
   "svc.revisionsIncluded": { uz: "O'zgartirishlar soni", ru: "Количество правок" },
-  "svc.revisionsCount": { uz: "3 ta bepul tuzatish", ru: "3 бесплатные правки" },
+  "svc.revisionsCount": { uz: "{count} ta bepul tuzatish", ru: "{count} бесплатные правки" },
+  "svc.revisionsByAgreement": {
+    uz: "Tuzatishlar hajmi mutaxassis bilan to'g'ridan-to'g'ri kelishiladi",
+    ru: "Объём правок согласовывается напрямую со специалистом",
+  },
   "svc.requirementsTitle": { uz: "Ishni boshlash uchun nima kerak?", ru: "Что требуется для старта?" },
   "svc.requirementsDesc": { uz: "Buyurtma berilgandan so'ng mutaxassisga loyiha talablari, manba fayllari yoki texnik topshiriq taqdim etiladi.", ru: "После оформления заказа специалисту предоставляются требования, исходные файлы или ТЗ." },
+  "svc.requirementsEmpty": {
+    uz: "Aniq talablar ko'rsatilmagan — mutaxassis buyurtmadan so'ng chatda kerakli narsalarni so'raydi",
+    ru: "Особые требования не указаны — специалист запросит нужное в чате после заказа",
+  },
   "svc.faqTitle": { uz: "Ko'p beriladigan savollar", ru: "Частые вопросы по услуге" },
   "svc.faq1_q": { uz: "Ish sifati qoniqtirmasa nima bo'ladi?", ru: "Что если результат не устроит?" },
   "svc.faq1_a": { uz: "Siz bepul o'zgartirish so'rashingiz mumkin. Pul mablag'i ish to'liq qabul qilinmaguncha xavfsiz escrow hisobida saqlanadi.", ru: "Вы можете запросить бесплатные правки. Средства хранятся в безопасности на эскроу до полного утверждения." },

@@ -18,6 +18,7 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
+import { searchMatches } from "@/lib/search";
 import { CATEGORIES } from "@/lib/category-fields";
 import { catalogService, savedService, servicesService } from "@/lib/api";
 import type { Service, Specialist } from "@/lib/types";
@@ -53,6 +54,7 @@ export default function BozorPage() {
   const [deliveryFilter, setDeliveryFilter] = useState("all");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [locationFilter, setLocationFilter] = useState("all");
 
   const [page, setPage] = useState(1);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -73,6 +75,7 @@ export default function BozorPage() {
     deliveryFilter,
     ratingFilter,
     availableOnly,
+    locationFilter,
   ]);
 
   const load = useCallback(() => {
@@ -106,10 +109,11 @@ export default function BozorPage() {
     setDeliveryFilter("all");
     setRatingFilter("all");
     setAvailableOnly(false);
+    setLocationFilter("all");
   }
 
   const sellerById = new Map(specialists?.map((s) => [s.user.id, s]));
-  const query = debouncedSearch.trim().toLowerCase();
+  const query = debouncedSearch.trim();
 
   const minP = minPrice ? Number(minPrice) : null;
   const maxP = maxPrice ? Number(maxPrice) : null;
@@ -132,12 +136,16 @@ export default function BozorPage() {
       const seller = sellerById.get(s.sellerId);
       return seller?.profile.available ?? false;
     })
+    .filter((s) => {
+      if (locationFilter === "all") return true;
+      return sellerById.get(s.sellerId)?.profile.location === locationFilter;
+    })
     .filter(
       (s) =>
         !query ||
-        s.title.toLowerCase().includes(query) ||
-        s.description.toLowerCase().includes(query) ||
-        sellerById.get(s.sellerId)?.user.fullName.toLowerCase().includes(query)
+        searchMatches(s.title, query) ||
+        searchMatches(s.description, query) ||
+        searchMatches(sellerById.get(s.sellerId)?.user.fullName ?? "", query)
     )
     .sort((a, b) => {
       if (sort === "cheap") return a.price - b.price;
@@ -157,12 +165,13 @@ export default function BozorPage() {
     )
     .filter((s) => minRating === null || s.profile.rating >= minRating)
     .filter((s) => !availableOnly || s.profile.available)
+    .filter((s) => locationFilter === "all" || s.profile.location === locationFilter)
     .filter(
       (s) =>
         !query ||
-        s.user.fullName.toLowerCase().includes(query) ||
-        s.profile.headline.toLowerCase().includes(query) ||
-        s.profile.skills.some((skill) => skill.toLowerCase().includes(query))
+        searchMatches(s.user.fullName, query) ||
+        searchMatches(s.profile.headline, query) ||
+        s.profile.skills.some((skill) => searchMatches(skill, query))
     )
     .sort((a, b) => b.profile.rating - a.profile.rating);
 
@@ -200,6 +209,14 @@ export default function BozorPage() {
     { value: "4.5", label: t("market.rating45") },
     { value: "4.0", label: t("market.rating40") },
   ];
+  const locationOptions = [
+    { value: "all", label: t("market.locationAny") },
+    ...Array.from(
+      new Set((specialists ?? []).map((s) => s.profile.location).filter(Boolean))
+    )
+      .sort((a, b) => a.localeCompare(b))
+      .map((loc) => ({ value: loc, label: loc })),
+  ];
 
   /* Active Filter Pills */
   const hasActiveFilters =
@@ -210,7 +227,8 @@ export default function BozorPage() {
     maxPrice !== "" ||
     deliveryFilter !== "all" ||
     ratingFilter !== "all" ||
-    availableOnly;
+    availableOnly ||
+    locationFilter !== "all";
 
   const savedOnlyButton = (
     <Button
@@ -336,6 +354,14 @@ export default function BozorPage() {
               options={ratingOptions}
             />
 
+            {/* Location Filter */}
+            <Select
+              label={t("market.filterLocation")}
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              options={locationOptions}
+            />
+
             {/* Availability Filter */}
             <Checkbox
               label={t("market.filterAvailability")}
@@ -422,6 +448,13 @@ export default function BozorPage() {
                 onChange={(e) => setRatingFilter(e.target.value)}
                 options={ratingOptions}
                 className="sm:w-36"
+              />
+              <Select
+                aria-label={t("market.filterLocation")}
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                options={locationOptions}
+                className="sm:w-40"
               />
               {savedOnlyButton}
             </div>
@@ -514,6 +547,19 @@ export default function BozorPage() {
                   </button>
                 </span>
               )}
+              {locationFilter !== "all" && (
+                <span className="inline-flex items-center gap-1.5 rounded-btn bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">
+                  {locationFilter}
+                  <button
+                    type="button"
+                    onClick={() => setLocationFilter("all")}
+                    className="hover:text-danger"
+                    aria-label="Remove location filter"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
               <button
                 type="button"
                 onClick={clearAllFilters}
@@ -599,6 +645,9 @@ export default function BozorPage() {
                               {seller.user.fullName}
                             </span>
                             <RatingStars value={seller.profile.rating} showValue />
+                            {seller.profile.location && (
+                              <span className="truncate">· {seller.profile.location}</span>
+                            )}
                           </div>
                         )}
                         <div className="mt-auto flex items-center justify-between border-t border-line pt-3 text-xs">
@@ -670,6 +719,12 @@ export default function BozorPage() {
                       <span>
                         {profile.completedContracts} {t("profile.completedContracts")}
                       </span>
+                      {profile.location && (
+                        <span className="inline-flex items-center gap-1">
+                          <LocationIcon />
+                          {profile.location}
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {profile.skills.slice(0, 4).map((skill) => (
@@ -700,6 +755,15 @@ export default function BozorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LocationIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
   );
 }
 

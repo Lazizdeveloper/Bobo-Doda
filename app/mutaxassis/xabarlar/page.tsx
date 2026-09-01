@@ -24,6 +24,7 @@ interface Thread {
   title: string;
   last: Message;
   badge: ReactNode;
+  unread: boolean;
 }
 
 export default function XabarlarPage() {
@@ -35,9 +36,17 @@ export default function XabarlarPage() {
 
   const load = useCallback(() => {
     setLoadError(null);
-    Promise.all([messagesService.listMine(), contractsService.list(), offersService.listIncoming()])
-      .then(async ([messages, contracts, offers]) => {
+    Promise.all([
+      messagesService.listMine(),
+      contractsService.list(),
+      offersService.listIncoming(),
+      messagesService.getReadStatus(),
+    ])
+      .then(async ([messages, contracts, offers, reads]) => {
         const list: Thread[] = [];
+        const isUnread = (threadId: string, last: Message) =>
+          last.senderId !== myId &&
+          (!reads[threadId] || last.createdAt > reads[threadId]);
 
         /* Shartnoma suhbatlari */
         const byContract = new Map<string, Message>();
@@ -57,6 +66,7 @@ export default function XabarlarPage() {
               title: contract.title,
               last,
               badge: <ContractStatusBadge status={contract.status} />,
+              unread: isUnread(contract.id, last),
             });
           }
         });
@@ -69,13 +79,15 @@ export default function XabarlarPage() {
         openOffers.forEach((offer, i) => {
           const msgs = offerThreads[i];
           if (msgs.length === 0) return;
+          const last = msgs[msgs.length - 1];
           list.push({
             id: offer.id,
             href: `/mutaxassis/takliflarim/kelgan/${offer.id}`,
             name: offer.buyerName,
             title: offer.title,
-            last: msgs[msgs.length - 1],
+            last,
             badge: <OfferStatusBadge status={offer.status} />,
+            unread: isUnread(offer.id, last),
           });
         });
 
@@ -84,7 +96,7 @@ export default function XabarlarPage() {
       })
       /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
       .catch(setLoadError);
-  }, []);
+  }, [myId]);
 
   useEffect(load, [load]);
 
@@ -110,12 +122,22 @@ export default function XabarlarPage() {
                 href={thread.href}
                 className={`flex items-center gap-3 p-4 transition-colors duration-150 hover:bg-card-hover ${
                   i > 0 ? "border-t border-line" : ""
-                }`}
+                } ${thread.unread ? "bg-primary/5" : ""}`}
               >
-                <Avatar name={thread.name} />
+                <span className="relative shrink-0">
+                  <Avatar name={thread.name} />
+                  {thread.unread && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-bg"
+                    />
+                  )}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-sm font-medium text-ink">
+                    <p
+                      className={`truncate text-sm ${thread.unread ? "font-bold text-ink" : "font-medium text-ink"}`}
+                    >
                       {thread.name}
                       <span className="ml-2 hidden text-2xs font-normal text-faint sm:inline">
                         {thread.title}
@@ -125,9 +147,11 @@ export default function XabarlarPage() {
                       {formatDate(thread.last.createdAt, lang)}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-muted">
+                  <p
+                    className={`mt-0.5 truncate text-xs ${thread.unread ? "font-medium text-ink" : "text-muted"}`}
+                  >
                     {mine && <span className="text-faint">{t("chat.you")}: </span>}
-                    {thread.last.text}
+                    {thread.last.text || (thread.last.image ? t("chat.imagePreview") : "")}
                   </p>
                 </div>
                 {thread.badge}

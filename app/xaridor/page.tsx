@@ -8,8 +8,8 @@ import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import { contractsService, jobsService, milestonesService, proposalsService, usersService } from "@/lib/api";
-import type { Contract, Job, Milestone, Proposal } from "@/lib/types";
+import { authService, contractsService, jobsService, messagesService, milestonesService, proposalsService, usersService } from "@/lib/api";
+import type { Contract, Job, Message, Milestone, Proposal } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -18,6 +18,7 @@ export default function XaridorDashboardPage() {
   const [contracts, setContracts] = useState<Contract[] | null>(null);
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
+  const [messages, setMessages] = useState<Message[] | null>(null);
   const [newProposals, setNewProposals] = useState<Map<string, number>>(new Map());
   const [name, setName] = useState("");
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -29,12 +30,16 @@ export default function XaridorDashboardPage() {
       milestonesService.listMine(),
       usersService.getCurrent(),
       jobsService.listMine(),
+      messagesService.listMine(),
     ])
-      .then(async ([contractList, milestoneList, user, jobList]) => {
+      .then(async ([contractList, milestoneList, user, jobList, messageList]) => {
         setContracts(contractList);
         setMilestones(milestoneList);
         if (user) setName(user.fullName);
         setJobs(jobList);
+        setMessages(
+          [...messageList].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4)
+        );
         
         const counts = new Map<string, number>();
         const open = jobList.filter((j) => j.status === "ochiq");
@@ -55,6 +60,7 @@ export default function XaridorDashboardPage() {
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
 
   const loading = !contracts || !jobs || !milestones;
+  const myId = authService.getSession()?.userId ?? null;
 
   const activeContracts = contracts?.filter((c) => c.status === "faol") || [];
   const openJobs = jobs?.filter((j) => j.status === "ochiq") || [];
@@ -278,6 +284,45 @@ export default function XaridorDashboardPage() {
               </div>
             )}
           </section>
+
+          {/* Recent Messages */}
+          <Card padding="none" className="overflow-hidden">
+            <div className="p-4 border-b border-line bg-surface flex justify-between items-center">
+              <h3 className="font-bold text-ink">{t("dash.recentMessages")}</h3>
+              <Link href="/xaridor/xabarlar" className="text-xs text-primary hover:underline">
+                {t("dash.viewAll")}
+              </Link>
+            </div>
+            {loading ? (
+              <div className="p-4">
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : !messages || messages.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted">{t("dash.noMessages")}</div>
+            ) : (
+              <div className="divide-y divide-line">
+                {messages.map((msg) => (
+                  <Link
+                    key={msg.id}
+                    href={`/xaridor/shartnomalar/${msg.contractId}`}
+                    className="block p-4 hover:bg-card-hover"
+                  >
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 text-primary-deep flex items-center justify-center font-bold text-xs shrink-0">
+                        {msg.senderId === myId ? "Me" : "SP"}
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-semibold text-ink">
+                          {msg.senderId === myId ? t("dash.you") : t("dash.specialist")}
+                        </p>
+                        <p className="text-xs text-muted truncate mt-0.5">{msg.text || (msg.image ? t("chat.imagePreview") : "")}</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
 
           {/* Tips / Help */}
           <Card className="bg-primary/5 border-primary/20">

@@ -152,12 +152,33 @@ export default function ElonTafsilotiPage() {
             {formatMoney(job.budgetMin, lang)} – {formatMoney(job.budgetMax, lang)}
           </span>
         </p>
+        {job.deadline && (
+          <p className="text-sm text-muted">
+            {t("job.deadline")}:{" "}
+            <span className="font-medium text-ink">
+              {formatDate(new Date(job.deadline).toISOString(), lang)}
+            </span>
+          </p>
+        )}
       </div>
 
       <Card padding="lg">
         <p className="whitespace-pre-line text-sm leading-relaxed text-muted">
           {job.description}
         </p>
+        {job.attachedImages && job.attachedImages.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+            {job.attachedImages.map((src, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={src}
+                alt={`${i + 1}-rasm`}
+                className="h-20 w-20 rounded-input border border-line object-cover"
+              />
+            ))}
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
           {job.skillsRequired.map((skill) => (
             <Badge key={skill} tone="primary">
@@ -217,12 +238,22 @@ export default function ElonTafsilotiPage() {
                     </div>
                   </div>
 
-                  {/* Narx */}
-                  <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
-                    <span className="text-xs text-muted">{t("props.bid")}</span>
-                    <span className="font-heading text-base font-bold text-ink">
-                      {formatMoney(proposal.bidAmount, lang)}
-                    </span>
+                  {/* Narx va muddat */}
+                  <div className="flex items-center justify-between gap-3 rounded-input border border-line bg-surface p-3">
+                    <div>
+                      <span className="text-xs text-muted">{t("props.bid")}</span>
+                      <p className="font-heading text-base font-bold text-ink">
+                        {formatMoney(proposal.bidAmount, lang)}
+                      </p>
+                    </div>
+                    {proposal.estimatedDeliveryDays !== undefined && (
+                      <div className="text-right">
+                        <span className="text-xs text-muted">{t("prop.deliveryDays")}</span>
+                        <p className="font-heading text-base font-bold text-ink">
+                          {proposal.estimatedDeliveryDays} {t("common.days")}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Qoplama xat */}

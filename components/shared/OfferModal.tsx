@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -17,19 +17,33 @@ export interface OfferModalProps {
   sellerId: string;
   /** xizmat sahifasidan ochilsa — mavzu va byudjet oldindan to'ladi */
   service?: Service;
+  /** Tanlangan ixtiyoriy qo'shimchalar bilan hisoblangan boshlang'ich byudjet
+      (service.price o'rniga) — masalan bazaviy narx + tanlangan extras */
+  initialBudget?: number;
 }
 
 /** To'lovsiz taklif yuborish modali (xizmat yoki mutaxassis profili sahifasidan) */
-export function OfferModal({ open, onClose, sellerId, service }: OfferModalProps) {
+export function OfferModal({ open, onClose, sellerId, service, initialBudget }: OfferModalProps) {
   const { t } = useT();
   const router = useRouter();
   const { toast } = useToast();
 
   const [subject, setSubject] = useState(service?.title ?? "");
   const [message, setMessage] = useState("");
-  const [budget, setBudget] = useState(service ? String(service.price) : "");
+  const [budget, setBudget] = useState(
+    initialBudget !== undefined ? String(initialBudget) : service ? String(service.price) : ""
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
+
+  /* Modal har safar ochilganda joriy narxni (masalan tanlangan extras bilan)
+     qayta o'qiydi — komponent doim mount holida turgani uchun oddiy useState
+     boshlang'ich qiymati faqat birinchi ochilishda ishlaydi. */
+  useEffect(() => {
+    if (!open) return;
+    setBudget(initialBudget !== undefined ? String(initialBudget) : service ? String(service.price) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   async function handleSend() {
     const next: Record<string, string> = {};

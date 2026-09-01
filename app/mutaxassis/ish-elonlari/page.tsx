@@ -11,6 +11,7 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { JobCard } from "@/components/shared/JobCard";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
+import { searchMatches } from "@/lib/search";
 import { CATEGORIES } from "@/lib/category-fields";
 import { jobsService, savedService, usersService } from "@/lib/api";
 import type { Job, SellerProfile } from "@/lib/types";
@@ -76,7 +77,7 @@ export default function IshElonlariPage() {
     setSavedIds(await savedService.toggleJob(jobId));
   }
 
-  const query = debouncedSearch.trim().toLowerCase();
+  const query = debouncedSearch.trim();
   const filtered = (jobs ?? [])
     .filter((j) => {
       if (tab === "saved") return savedIds.includes(j.id);
@@ -88,9 +89,9 @@ export default function IshElonlariPage() {
     .filter(
       (j) =>
         !query ||
-        j.title.toLowerCase().includes(query) ||
-        j.description.toLowerCase().includes(query) ||
-        j.skillsRequired.some((s) => s.toLowerCase().includes(query))
+        searchMatches(j.title, query) ||
+        searchMatches(j.description, query) ||
+        j.skillsRequired.some((s) => searchMatches(s, query))
     )
     .sort((a, b) =>
       sort === "new"

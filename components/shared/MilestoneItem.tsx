@@ -12,6 +12,8 @@ export interface MilestoneItemProps {
   index: number;
   contractStatus: Contract["status"];
   onSubmit: (milestone: Milestone) => void;
+  /** Ushbu bosqich bog'langan xizmatga narxga kiritilgan tuzatishlar soni */
+  revisionsIncluded?: number;
 }
 
 export function MilestoneItem({
@@ -19,6 +21,7 @@ export function MilestoneItem({
   index,
   contractStatus,
   onSubmit,
+  revisionsIncluded,
 }: MilestoneItemProps) {
   const { t, lang } = useT();
   const actionable = contractStatus === "faol";
@@ -110,6 +113,13 @@ export function MilestoneItem({
               </p>
               <p className="mt-1 text-xs text-muted">{milestone.revisionComment}</p>
             </div>
+          )}
+          {revisionsIncluded !== undefined && (
+            <span className="text-2xs text-faint">
+              {t("bms.revisionsUsed")
+                .replace("{used}", String(milestone.revisionCount ?? 0))
+                .replace("{limit}", String(revisionsIncluded))}
+            </span>
           )}
           {actionable && (
             <Button size="sm" onClick={() => onSubmit(milestone)} className="self-start">

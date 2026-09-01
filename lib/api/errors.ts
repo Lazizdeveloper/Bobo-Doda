@@ -30,6 +30,7 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   DUPLICATE: { code: "CONFLICT", status: 409, retryable: false },
   DUPLICATE_OFFER: { code: "CONFLICT", status: 409, retryable: false },
   ALREADY_REVIEWED: { code: "CONFLICT", status: 409, retryable: false },
+  REVISION_LIMIT_REACHED: { code: "CONFLICT", status: 409, retryable: false },
   PAYMENTS_PAUSED: { code: "PAYMENTS_PAUSED", status: 503, retryable: true },
   STORAGE_FULL: { code: "STORAGE_FULL", status: 507, retryable: false },
 };

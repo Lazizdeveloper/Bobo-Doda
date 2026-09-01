@@ -41,6 +41,7 @@ import {
   offerMachine,
   proposalMachine,
 } from "@/lib/api/state-machines";
+import { seedVerifications } from "@/lib/admin-mock-data";
 import {
   BUYER_ID,
   SELLER_ID,
@@ -69,6 +70,7 @@ const KEYS = {
   contracts: "sb2_contracts",
   milestones: "sb2_milestones",
   messages: "sb2_messages",
+  threadReads: "sb2_thread_reads",
   reviews: "sb2_reviews",
   notifications: "sb2_notifications",
   savedJobs: "sb2_saved_jobs",
@@ -123,7 +125,7 @@ function write<T>(key: string, value: T): void {
 }
 
 /* v6: Rich interconnected operations seed */
-const SEED_VERSION = "10";
+const SEED_VERSION = "11";
 
 function ensureSeed(): void {
   if (typeof window === "undefined") return;
@@ -179,6 +181,8 @@ function applyEscrowRules(): void {
     if (own.length > 0 && own.every((m) => m.status === "qabul_qilindi")) {
       contracts[i] = { ...c, status: "yakunlangan" };
       cChanged = true;
+      pushNotification(c.sellerId, "tolov", "ntf.contractCompleted", `/mutaxassis/shartnomalar/${c.id}`, { title: c.title });
+      pushNotification(c.buyerId, "tolov", "ntf.contractCompleted", `/xaridor/shartnomalar/${c.id}`, { title: c.title });
     }
   }
 
@@ -186,7 +190,7 @@ function applyEscrowRules(): void {
   if (cChanged) write(KEYS.contracts, contracts);
 }
 
-function pushNotification(
+export function pushNotification(
   userId: string,
   kind: NotificationKind,
   messageKey: string,
@@ -465,7 +469,12 @@ export async function getSellerProfile(): Promise<SellerProfile> {
   await delay(200);
   const userId = currentUserId();
   const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
-  return profiles[userId] ?? emptyProfile(userId);
+  const profile = profiles[userId] ?? emptyProfile(userId);
+  return {
+    ...profile,
+    identityVerified: verifiedIdentitySet().has(userId),
+    completionRate: completionRateOf(userId),
+  };
 }
 
 export async function setAvailability(available: boolean): Promise<void> {
@@ -557,6 +566,15 @@ export async function createService(
     price: amount(data.price),
     deliveryDays: amount(data.deliveryDays, { min: 1, max: 365 }),
     images: (data.images ?? []).slice(0, 10),
+    revisionsIncluded:
+      data.revisionsIncluded === undefined
+        ? undefined
+        : amount(data.revisionsIncluded, { min: 0, max: 20 }),
+    included: data.included ? textList(data.included, 10, LIMITS.listItem) : undefined,
+    requirements: data.requirements
+      ? textList(data.requirements, 10, LIMITS.listItem)
+      : undefined,
+    extras: data.extras ? sanitizeExtras(data.extras) : undefined,
     id: uid("s"),
     sellerId: session.userId,
     currency: "UZS",
@@ -566,6 +584,16 @@ export async function createService(
   services.push(service);
   write(KEYS.services, services);
   return service;
+}
+
+/** Ixtiyoriy qo'shimcha xizmatlar ro'yxati — nom+narx, ishonchsiz kirish */
+function sanitizeExtras(
+  extras: { label: string; price: number }[]
+): { label: string; price: number }[] {
+  return extras
+    .slice(0, 10)
+    .map((e) => ({ label: text(e.label, LIMITS.listItem), price: amount(e.price, { min: 0 }) }))
+    .filter((e) => e.label.length > 0);
 }
 
 /** Xizmat maydonlari (kategoriyaga xos) — kalit va qiymatlarni cheklaydi */
@@ -605,6 +633,13 @@ export async function updateService(
   if (data.deliveryDays !== undefined)
     clean.deliveryDays = amount(data.deliveryDays, { min: 1, max: 365 });
   if (data.images !== undefined) clean.images = data.images.slice(0, 10);
+  if (data.revisionsIncluded !== undefined)
+    clean.revisionsIncluded = amount(data.revisionsIncluded, { min: 0, max: 20 });
+  if (data.included !== undefined)
+    clean.included = textList(data.included, 10, LIMITS.listItem);
+  if (data.requirements !== undefined)
+    clean.requirements = textList(data.requirements, 10, LIMITS.listItem);
+  if (data.extras !== undefined) clean.extras = sanitizeExtras(data.extras);
   if (data.category !== undefined) clean.category = data.category;
   if (data.status !== undefined) clean.status = data.status;
   services[idx] = { ...services[idx], ...clean };
@@ -655,6 +690,7 @@ export async function createProposal(data: {
   coverLetter: string;
   screeningAnswers: { question: string; answer: string }[];
   attachedImages: string[];
+  estimatedDeliveryDays?: number;
 }): Promise<Proposal> {
   await delay(500);
   const session = getSession();
@@ -686,6 +722,10 @@ export async function createProposal(data: {
         answer: text(qa.answer, LIMITS.answer),
       })),
     attachedImages: (data.attachedImages ?? []).slice(0, 10),
+    estimatedDeliveryDays:
+      data.estimatedDeliveryDays === undefined
+        ? undefined
+        : amount(data.estimatedDeliveryDays, { min: 1, max: 365 }),
     id: uid("p"),
     sellerId,
     status: "yuborilgan",
@@ -798,6 +838,15 @@ export async function cancelContract(id: string): Promise<Contract> {
     `${byBuyer ? "/mutaxassis" : "/xaridor"}/shartnomalar/${id}`,
     { title: contract.title }
   );
+  if (refund > 0) {
+    pushNotification(
+      contract.buyerId,
+      "tolov",
+      "ntf.refundIssued",
+      "/xaridor/xarajatlar",
+      { amount: refund.toLocaleString("uz-UZ"), title: contract.title }
+    );
+  }
   return contracts[idx];
 }
 
@@ -886,13 +935,45 @@ export async function getAllMessages(): Promise<Message[]> {
   );
 }
 
+/** Suhbat sahifasi ochilganda chaqiriladi — inbox ro'yxati oxirgi xabarni
+    ko'rish uchun getMessages'ni chaqirsa ham buni AVTOMATIK belgilamaydi,
+    faqat haqiqiy workroom/taklif sahifalari chaqirganda "o'qilgan" bo'ladi. */
+export async function markThreadRead(threadId: string): Promise<void> {
+  const userId = currentUserId();
+  if (!isThreadParticipant(threadId, userId)) return;
+  const reads = read<Record<string, Record<string, string>>>(
+    KEYS.threadReads,
+    {}
+  );
+  reads[threadId] = { ...reads[threadId], [userId]: new Date().toISOString() };
+  write(KEYS.threadReads, reads);
+}
+
+/** Joriy foydalanuvchi uchun threadId -> oxirgi o'qilgan vaqt. Faqat o'z
+    xabarlarini oxirgi marta qachon o'qigani — boshqa hech kimga chiqmaydi. */
+export async function getThreadReads(): Promise<Record<string, string>> {
+  ensureSeed();
+  await delay(80);
+  const userId = currentUserId();
+  const reads = read<Record<string, Record<string, string>>>(
+    KEYS.threadReads,
+    {}
+  );
+  const mine: Record<string, string> = {};
+  for (const [threadId, byUser] of Object.entries(reads)) {
+    if (byUser[userId]) mine[threadId] = byUser[userId];
+  }
+  return mine;
+}
+
 export async function sendMessage(
   contractId: string,
-  body: string
+  body: string,
+  image?: string
 ): Promise<Message> {
   await delay(300);
   const clean = text(body, LIMITS.message);
-  if (!clean) throw new Error("EMPTY_MESSAGE");
+  if (!clean && !image) throw new Error("EMPTY_MESSAGE");
   const senderId = currentUserId();
   if (!isThreadParticipant(contractId, senderId)) throw new Error("NOT_FOUND");
   const message: Message = {
@@ -900,6 +981,7 @@ export async function sendMessage(
     contractId,
     senderId,
     text: clean,
+    image,
     createdAt: new Date().toISOString(),
   };
   const messages = read<Message[]>(KEYS.messages, []);
@@ -1422,11 +1504,44 @@ export async function withdrawFunds(cardId: string): Promise<void> {
 
 /** Katalog: to'ldirilgan profilli mutaxassislar (chala ro'yxatdan
    o'tganlar katalogga chiqmaydi) */
+/** userId -> shaxsi tasdiqlangan (KYC) statusi. Faqat status qaytariladi —
+    hujjatlar/tug'ilgan sana kabi maxfiy maydonlar hech qachon oshkor
+    profilga chiqmaydi. */
+function verifiedIdentitySet(): Set<string> {
+  /* sb2_verifications ba'zan avval admin panelida seed qilinadi (bir xil
+     kalit, sb2_verifications) — shu yerda ham bo'sh bo'lsa seed'dan
+     to'ldiramiz, aks holda admin hali ochilmagan holatda hech kim
+     tasdiqlangan ko'rinmaydi. */
+  let records = read<VerificationRecord[]>(KEYS.verifications, []);
+  if (!records.length) {
+    write(KEYS.verifications, seedVerifications);
+    records = seedVerifications;
+  }
+  return new Set(
+    records.filter((v) => v.status === "tasdiqlangan").map((v) => v.userId)
+  );
+}
+
+/** Yakunlangan / (yakunlangan + bekor qilingan) shartnomalar nisbati (0-100).
+    Ikkalasi ham bo'lmasa (yangi mutaxassis) undefined — 0% chalg'ituvchi
+    bo'lardi. */
+function completionRateOf(sellerId: string): number | undefined {
+  const contracts = read<Contract[]>(KEYS.contracts, []).filter(
+    (c) => c.sellerId === sellerId
+  );
+  const completed = contracts.filter((c) => c.status === "yakunlangan").length;
+  const cancelled = contracts.filter((c) => c.status === "bekor_qilingan").length;
+  const total = completed + cancelled;
+  if (total === 0) return undefined;
+  return Math.round((completed / total) * 100);
+}
+
 export async function getSpecialists(): Promise<Specialist[]> {
   ensureSeed();
   await delay();
   const users = read<User[]>(KEYS.users, []);
   const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
+  const verified = verifiedIdentitySet();
   return users
     .filter(
       (u) =>
@@ -1434,7 +1549,14 @@ export async function getSpecialists(): Promise<Specialist[]> {
         profiles[u.id] &&
         profiles[u.id].bio.trim().length > 0
     )
-    .map((u) => ({ user: u, profile: profiles[u.id] }));
+    .map((u) => ({
+      user: u,
+      profile: {
+        ...profiles[u.id],
+        identityVerified: verified.has(u.id),
+        completionRate: completionRateOf(u.id),
+      },
+    }));
 }
 
 export async function getSpecialist(userId: string): Promise<Specialist | null> {
@@ -1442,7 +1564,15 @@ export async function getSpecialist(userId: string): Promise<Specialist | null> 
   await delay(200);
   const user = read<User[]>(KEYS.users, []).find((u) => u.id === userId);
   const profile = read<Record<string, SellerProfile>>(KEYS.profiles, {})[userId];
-  return user && profile ? { user, profile } : null;
+  if (!user || !profile) return null;
+  return {
+    user,
+    profile: {
+      ...profile,
+      identityVerified: verifiedIdentitySet().has(userId),
+      completionRate: completionRateOf(userId),
+    },
+  };
 }
 
 /** Katalog: barcha faol xizmatlar (egasidan qat'i nazar) */
@@ -1480,6 +1610,8 @@ export async function createJob(data: {
   budgetMax: number;
   skillsRequired: string[];
   screeningQuestions: string[];
+  deadline?: string;
+  attachedImages?: string[];
 }): Promise<Job> {
   await delay(500);
   const session = getSession();
@@ -1501,6 +1633,8 @@ export async function createJob(data: {
     budgetMax,
     skillsRequired: textList(data.skillsRequired, 20, LIMITS.skill),
     screeningQuestions: textList(data.screeningQuestions, 3, LIMITS.question),
+    deadline: data.deadline ? text(data.deadline, 40) : undefined,
+    attachedImages: (data.attachedImages ?? []).slice(0, 10),
     id: uid("j"),
     buyerId: session.userId,
     buyerName: user?.fullName ?? "",
@@ -2101,7 +2235,8 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
   write(KEYS.milestones, milestones);
 
   const own = milestones.filter((m) => m.contractId === contract.id);
-  if (own.every((m) => m.status === "qabul_qilindi")) {
+  const contractCompleted = own.every((m) => m.status === "qabul_qilindi");
+  if (contractCompleted) {
     const cIdx = contracts.findIndex((c) => c.id === contract.id);
     contracts[cIdx] = { ...contract, status: "yakunlangan" };
     write(KEYS.contracts, contracts);
@@ -2114,6 +2249,10 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     `/mutaxassis/shartnomalar/${contract.id}`,
     { title: milestones[idx].title }
   );
+  if (contractCompleted) {
+    pushNotification(contract.sellerId, "tolov", "ntf.contractCompleted", `/mutaxassis/shartnomalar/${contract.id}`, { title: contract.title });
+    pushNotification(contract.buyerId, "tolov", "ntf.contractCompleted", `/xaridor/shartnomalar/${contract.id}`, { title: contract.title });
+  }
   return milestones[idx];
 }
 
@@ -2134,10 +2273,23 @@ export async function requestRevision(
     "ozgartirish_soraldi",
     "buyer"
   );
+  const usedRevisions = milestones[idx].revisionCount ?? 0;
+  if (contract.serviceId) {
+    const service = read<Service[]>(KEYS.services, []).find(
+      (s) => s.id === contract.serviceId
+    );
+    if (
+      service?.revisionsIncluded !== undefined &&
+      usedRevisions >= service.revisionsIncluded
+    ) {
+      throw new Error("REVISION_LIMIT_REACHED");
+    }
+  }
   milestones[idx] = {
     ...milestones[idx],
     status: "ozgartirish_soraldi",
     revisionComment: comment.trim(),
+    revisionCount: usedRevisions + 1,
   };
   write(KEYS.milestones, milestones);
   pushNotification(
@@ -2181,6 +2333,13 @@ export async function createReview(
   };
   reviews.push(review);
   write(KEYS.reviews, reviews);
+  pushNotification(
+    contract.sellerId,
+    "tolov",
+    "ntf.newReview",
+    `/mutaxassis/shartnomalar/${contractId}`,
+    { rating: String(safeRating) }
+  );
   return review;
 }
 

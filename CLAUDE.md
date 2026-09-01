@@ -183,9 +183,12 @@ yangi rang qo'shilsa ham shu chegara saqlanishi shart.
 `register()` — telefon unikal, `PHONE_EXISTS`) va **Kirish** (telefon + parol,
 `login()` — `INVALID_CREDENTIALS`, onboarding qayerda to'xtagan bo'lsa sessiya
 o'sha holatdan tiklanadi: User'da `roleChosen`/`profileDone`/`verified`
-saqlanadi). Parol mock — localStorage'da ochiq (`User.password`, min 6 belgi).
-Seed hisoblar paroli: `DEMO_PASSWORD` = "demo123" (masalan +998901234567 —
-Aziz Karimov/mutaxassis, +998977770202 — Jasur Toshpo'latov/xaridor).
+saqlanadi). Parol mock — localStorage'da ochiq (`User.password`; yangi
+ro'yxatdan o'tishda `register()` kamida 8 belgi + harf + raqam talab qiladi,
+seed hisoblarga bu tekshiruv qo'llanilmaydi). Barcha seed hisoblar paroli:
+`DEMO_PASSWORD` = "demo123" (masalan +998901234567 — Rustam Qosimov/
+mutaxassis — `SELLER_ID`, +998918765432 — ArtSoft Studios/xaridor —
+`BUYER_ID`; `lib/mock-api/seed.ts`).
 Ro'yxatdan o'tish avval, Telegram tasdiqlash **eng oxirida**: `/kirish` →
 `/rol-tanlash` (mutaxassis → `/mutaxassis/royxat` profil; xaridor → to'g'ridan-
 to'g'ri tasdiqlashga, profil bosqichi yo'q) → `/kirish/tasdiqlash` (istalgan
@@ -302,13 +305,19 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
   nusxada yiqilgan). Qo'lda yuklashda faqat toza jild yuborilsin.
 
 ## Tekshirish
-`npm run dev` → demo xaridor bilan kiring (+998977770202 / demo123): c-7 (imzolangan — to'lab
-faollashtirish oqimini sinash), c-2 (4 bosqichli faol, ms-2b topshirilgan —
-qabul/o'zgartirish), j-6 da 2 ta taklif (yollash), o-2 yuborilgan Offer (chat).
-Demo mutaxassis (+998901234567 / demo123): o-1 kelgan Offer (qabul/rad), c-2 seller tomoni, c-3 da
-o'zgartirish so'ralgan. `npm run verify` (lint + typecheck + build) toza
-bo'lishi shart. Responsive: 360–430 / 768–1024 / 1280px+ (360px da gorizontal
-skroll BO'LMASIN — header o'ng bloki shu sababli ixchamlashtirilgan).
+`npm run dev` → demo xaridor bilan kiring (+998918765432 / demo123, ArtSoft
+Studios, `BUYER_ID`): `job-2`da 1 ta taklif bor (ko'rib chiqish/yollash),
+`cnt-2` yakunlangan shartnoma (allaqachon sharh qoldirilgan). Demo mutaxassis
+(+998901234567 / demo123, Rustam Qosimov, `SELLER_ID`): `cnt-1` 2 bosqichli
+faol shartnoma (`ms-1-1` qabul qilingan, `ms-1-2` mablag'langan — topshirish
+uchun tayyor). Nizoli shartnomalar (`cnt-3`, `cnt-4`) admin panelida
+(`/admin/nizolar`) sinaladi. **Joriy seed'da bo'sh joylar**: `seedOffers`
+bo'sh massiv — hech bir hisobda tayyor Offer (taklifnoma) yo'q, va hech bir
+shartnoma `imzolangan` holatida emas — to'lov/faollashtirish oqimini sinash
+uchun avval yangi Offer yuboring yoki job-2 taklifini yollang. `npm run verify`
+(lint + typecheck + build) toza bo'lishi shart. Responsive: 360–430 / 768–1024
+/ 1280px+ (360px da gorizontal skroll BO'LMASIN — header o'ng bloki shu
+sababli ixchamlashtirilgan).
 
 **E2E/a11y suitlarini ishga tushirish** (`npm run test:e2e`, `npm run test:a11y`):
 ular ishlab turgan serverga ulanadi va standart manzil `127.0.0.1:3001`

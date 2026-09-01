@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { ChatImageAttach } from "@/components/ui/ChatImageAttach";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
@@ -20,8 +21,8 @@ import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
 import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import { authService, contractsService, messagesService, milestonesService, reviewsService } from "@/lib/api";
-import type { Contract, Message, Milestone, Review } from "@/lib/types";
+import { authService, contractsService, messagesService, milestonesService, reviewsService, servicesService } from "@/lib/api";
+import type { Contract, Message, Milestone, Review, Service } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -34,6 +35,7 @@ export default function ShartnomaWorkroomPage() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [review, setReview] = useState<Review | null>(null);
+  const [service, setService] = useState<Service | null>(null);
 
   /* Topshirish modali */
   const [submitTarget, setSubmitTarget] = useState<Milestone | null>(null);
@@ -48,6 +50,7 @@ export default function ShartnomaWorkroomPage() {
 
   /* Chat */
   const [draft, setDraft] = useState("");
+  const [draftImage, setDraftImage] = useState<string | undefined>(undefined);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const loadVersionRef = useRef(0);
@@ -67,16 +70,19 @@ export default function ShartnomaWorkroomPage() {
         setContract(null);
         return;
       }
-      const [nextMilestones, nextMessages, nextReview] = await Promise.all([
+      const [nextMilestones, nextMessages, nextReview, nextService] = await Promise.all([
         milestonesService.list(found.id),
         messagesService.list(found.id),
         reviewsService.getForContract(found.id),
+        found.serviceId ? servicesService.get(found.serviceId) : Promise.resolve(null),
       ]);
       if (version !== loadVersionRef.current) return;
       setContract(found);
       setMilestones(nextMilestones);
       setMessages(nextMessages);
       setReview(nextReview);
+      setService(nextService);
+      void messagesService.markRead(found.id);
     } catch {
       if (version === loadVersionRef.current) setContract(null);
     }
@@ -136,12 +142,13 @@ export default function ShartnomaWorkroomPage() {
   async function handleSendMessage(e: FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || !contract) return;
+    if ((!text && !draftImage) || !contract) return;
     setSending(true);
     try {
-      const message = await messagesService.send(contract.id, text);
+      const message = await messagesService.send(contract.id, text, draftImage);
       setMessages((prev) => [...prev, message]);
       setDraft("");
+      setDraftImage(undefined);
     } catch {
       toast(t("common.error"), "error");
     } finally {
@@ -323,6 +330,7 @@ export default function ShartnomaWorkroomPage() {
               index={i}
               contractStatus={contract.status}
               onSubmit={openSubmitModal}
+              revisionsIncluded={service?.revisionsIncluded}
             />
           ))}
         </div>
@@ -368,13 +376,23 @@ export default function ShartnomaWorkroomPage() {
                   }`}
                 >
                   <div
-                    className={`whitespace-pre-line break-words rounded-card px-3 py-2 text-sm ${
+                    className={`flex flex-col gap-1.5 rounded-card px-3 py-2 text-sm ${
                       mine
                         ? "rounded-br-[4px] bg-primary text-on-primary"
                         : "rounded-bl-[4px] bg-card-hover text-ink"
                     }`}
                   >
-                    {msg.text}
+                    {msg.image && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={msg.image}
+                        alt={t("chat.attachedImage")}
+                        className="max-h-48 rounded-input object-cover"
+                      />
+                    )}
+                    {msg.text && (
+                      <span className="whitespace-pre-line break-words">{msg.text}</span>
+                    )}
                   </div>
                   <span className="text-2xs text-faint">
                     {mine ? t("chat.you") : contract.buyerName.split(" ")[0]} ·{" "}
@@ -389,8 +407,9 @@ export default function ShartnomaWorkroomPage() {
 
         <form
           onSubmit={handleSendMessage}
-          className="flex gap-2 border-t border-line p-3"
+          className="flex items-end gap-2 border-t border-line p-3"
         >
+          <ChatImageAttach value={draftImage} onChange={setDraftImage} />
           <div className="flex-1">
             <Input
               value={draft}
@@ -400,7 +419,7 @@ export default function ShartnomaWorkroomPage() {
                 maxLength={5000}
             />
           </div>
-          <Button type="submit" loading={sending} disabled={!draft.trim()}>
+          <Button type="submit" loading={sending} disabled={!draft.trim() && !draftImage}>
             {t("chat.send")}
           </Button>
         </form>
