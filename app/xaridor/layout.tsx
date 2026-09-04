@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { TopNav } from "@/components/xaridor/TopNav";
+import { CabinetFooter } from "@/components/shared/CabinetFooter";
 import { SkipLink } from "@/components/shared/SkipLink";
 import { authService } from "@/lib/api";
 
@@ -42,6 +43,7 @@ export default function XaridorLayout({ children }: { children: ReactNode }) {
       >
         {children}
       </main>
+      <CabinetFooter />
     </div>
   );
 }

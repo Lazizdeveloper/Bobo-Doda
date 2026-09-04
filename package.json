@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "node scripts/lifecycle-test.cjs && node scripts/stress-test.cjs && node scripts/admin-logic-test.cjs && node scripts/admin-stress-test.cjs",
+    "test:e2e": "node scripts/lifecycle-test.cjs && node scripts/stress-test.cjs",
     "test:a11y": "node scripts/accessibility-test.cjs",
     "verify": "npm run lint && npm run typecheck && npm run build"
   },

@@ -23,6 +23,7 @@ import type {
   Dispute,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
+import { sellerNet } from "@/lib/fees";
 export type { AccountPreferences, Specialist } from "@/lib/types";
 import {
   amount,
@@ -41,7 +42,6 @@ import {
   offerMachine,
   proposalMachine,
 } from "@/lib/api/state-machines";
-import { seedVerifications } from "@/lib/admin-mock-data";
 import {
   BUYER_ID,
   SELLER_ID,
@@ -57,6 +57,7 @@ import {
   seedReviews,
   seedServices,
   seedUsers,
+  seedVerifications,
 } from "./seed";
 
 /* v2: milestone-escrow arxitekturasi — eski sb_* kalitlardan ajratilgan */
@@ -125,22 +126,96 @@ function write<T>(key: string, value: T): void {
 }
 
 /* v6: Rich interconnected operations seed */
-const SEED_VERSION = "11";
+const SEED_VERSION = "14";
+
+/** To'liq ISO sana-vaqt satri ("2026-03-05T16:00:00.000Z").
+    Faqat shu shakl siljitiladi — "1994-05-12" kabi tug'ilgan sanalar tegilmaydi. */
+const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+
+/* Anchor faqat SODIR BO'LGAN hodisaga qo'yiladi. `dueDate`/`reviewDeadline`
+   — kelajakka qaraydigan maydonlar; agar ular ham hisobga olinsa, siljitgandan
+   keyin barcha muddat o'tmishda qolib ketadi va faol shartnoma "muddati
+   o'tgan" bo'lib ko'rinadi. */
+const FUTURE_DATE_KEYS = new Set(["dueDate", "reviewDeadline", "availableUntil"]);
+
+/** Seed'dagi eng yangi HODISA sanasi. Barcha sanalar shunga nisbatan siljitiladi. */
+function newestSeedDate(value: unknown, best = 0, key?: string): number {
+  if (key && FUTURE_DATE_KEYS.has(key)) return best;
+  if (typeof value === "string") {
+    if (!ISO_DATETIME.test(value)) return best;
+    const t = Date.parse(value);
+    return Number.isNaN(t) ? best : Math.max(best, t);
+  }
+  if (Array.isArray(value)) {
+    return value.reduce<number>((acc, item) => newestSeedDate(item, acc), best);
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value).reduce<number>(
+      (acc, [k, item]) => newestSeedDate(item, acc, k),
+      best
+    );
+  }
+  return best;
+}
+
+/** Har bir ISO sanani bir xil offset'ga siljitadi — o'zaro nisbatlar
+    (topshirildi → qabul qilindi oralig'i, muddatlar ketma-ketligi) saqlanadi. */
+function shiftDates<T>(value: T, offsetMs: number): T {
+  if (typeof value === "string") {
+    if (!ISO_DATETIME.test(value)) return value;
+    return new Date(Date.parse(value) + offsetMs).toISOString() as unknown as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => shiftDates(item, offsetMs)) as unknown as T;
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = shiftDates(v, offsetMs);
+    return out as T;
+  }
+  return value;
+}
+
+/* Seed sanalari faylda qat'iy yozilgan. Vaqt o'tishi bilan ular bugundan
+   uzoqlashadi va demo "eskirgan" ko'rinadi: daromad grafigi bo'sh chiqadi
+   ("oxirgi 6 oy" oynasiga hech narsa tushmaydi), e'lonlar "5 oy oldin
+   joylangan" bo'ladi, muddatlar allaqachon o'tib ketgan bo'ladi.
+   Yechim: seed yozilayotganda hamma sanani bitta offset bilan siljitamiz —
+   eng yangi yozuv taxminan 2 kun oldin bo'ladi, qolganlari esa o'z
+   nisbatlarini saqlaydi. */
+const SEED_FRESHNESS_LAG_MS = 2 * 24 * 60 * 60 * 1000;
 
 function ensureSeed(): void {
   if (typeof window === "undefined") return;
   if (window.localStorage.getItem(KEYS.seeded) !== SEED_VERSION) {
-    write(KEYS.users, seedUsers);
-    write(KEYS.profiles, seedProfiles);
-    write(KEYS.services, seedServices);
-    write(KEYS.jobs, seedJobs);
-    write(KEYS.proposals, seedProposals);
-    write(KEYS.offers, seedOffers);
-    write(KEYS.contracts, seedContracts);
-    write(KEYS.milestones, seedMilestones);
-    write(KEYS.messages, [...seedMessages, ...seedOfferMessages]);
-    write(KEYS.reviews, seedReviews);
-    write(KEYS.notifications, seedNotifications);
+    const payload = {
+      users: seedUsers,
+      profiles: seedProfiles,
+      services: seedServices,
+      jobs: seedJobs,
+      proposals: seedProposals,
+      offers: seedOffers,
+      contracts: seedContracts,
+      milestones: seedMilestones,
+      messages: [...seedMessages, ...seedOfferMessages],
+      reviews: seedReviews,
+      notifications: seedNotifications,
+    };
+    const newest = newestSeedDate(payload);
+    const offset = newest ? Date.now() - SEED_FRESHNESS_LAG_MS - newest : 0;
+    const fresh = shiftDates(payload, offset);
+
+    write(KEYS.users, fresh.users);
+    write(KEYS.profiles, fresh.profiles);
+    write(KEYS.services, fresh.services);
+    write(KEYS.jobs, fresh.jobs);
+    write(KEYS.proposals, fresh.proposals);
+    write(KEYS.offers, fresh.offers);
+    write(KEYS.contracts, fresh.contracts);
+    write(KEYS.milestones, fresh.milestones);
+    write(KEYS.messages, fresh.messages);
+    write(KEYS.reviews, fresh.reviews);
+    write(KEYS.notifications, fresh.notifications);
     /* Eski versiya sessiyasi endi mavjud bo'lmagan hisobga ishora qilishi mumkin */
     window.localStorage.removeItem(KEYS.session);
     window.localStorage.setItem(KEYS.seeded, SEED_VERSION);
@@ -215,6 +290,15 @@ function delay(ms = 250): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** ISO sana satrini tekshiradi; noto'g'ri bo'lsa xato beradi.
+   Buzilgan sana bazaga tushsa, uni ko'rsatuvchi sahifa yiqiladi. */
+function isoDate(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim() : "";
+  const time = Date.parse(raw);
+  if (!raw || Number.isNaN(time)) throw new Error("INVALID_DATE");
+  return new Date(time).toISOString();
+}
+
 function uid(prefix: string): string {
   /* Taxmin qilinmaydigan id — crypto.randomUUID (mavjud bo'lmasa zaxira) */
   const rand =
@@ -265,7 +349,14 @@ function isThreadParticipant(threadId: string, userId: string): boolean {
   const contract = read<Contract[]>(KEYS.contracts, []).find((item) => item.id === threadId);
   if (contract) return contract.buyerId === userId || contract.sellerId === userId;
   const offer = read<Offer[]>(KEYS.offers, []).find((item) => item.id === threadId);
-  return !!offer && (offer.buyerId === userId || offer.sellerId === userId);
+  if (offer) return offer.buyerId === userId || offer.sellerId === userId;
+  /* Taklif (Proposal) suhbati: mutaxassis — taklif egasi, xaridor — e'lon egasi.
+     Busiz "Suhbatga taklif qilish" hech qanday muloqot kanalini ochmasdi. */
+  const proposal = read<Proposal[]>(KEYS.proposals, []).find((item) => item.id === threadId);
+  if (!proposal) return false;
+  if (proposal.sellerId === userId) return true;
+  const job = read<Job[]>(KEYS.jobs, []).find((item) => item.id === proposal.jobId);
+  return !!job && job.buyerId === userId;
 }
 
 /** Yangi ro'yxatdan o'tgan mutaxassis uchun bo'sh profil */
@@ -369,10 +460,30 @@ export async function login(data: {
   return session;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function resetPassword(_input: { phone: string; code: string; newPassword: string }): Promise<void> {
+/** Parolni tiklash: telefon bo'yicha hisob topiladi va parol HAQIQATAN
+   almashtiriladi. Ilgari bu funksiya bo'sh edi — foydalanuvchi "muvaffaqiyat"
+   xabarini olardi, lekin yangi parol ishlamas, eskisi ishlayverardi.
+   Kod mock (istalgan 6 raqam), lekin qolgan hamma narsa haqiqiy. */
+export async function resetPassword(input: {
+  phone: string;
+  code: string;
+  newPassword: string;
+}): Promise<void> {
+  ensureSeed();
   await delay(800);
-  // Mock implementation: always succeed
+  if (!/^\d{6}$/.test(input.code)) throw new Error("INVALID_CODE");
+  const password = text(input.newPassword, LIMITS.password);
+  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    throw new Error("WEAK_PASSWORD");
+  }
+  const phone = normalizePhone(input.phone);
+  const users = read<User[]>(KEYS.users, []);
+  const idx = users.findIndex((u) => normalizePhone(u.phone) === phone);
+  /* Bu yerda raqam mavjudligi ataylab oshkor qilinadi: aks holda foydalanuvchi
+     "bo'ldi" xabarini olib, keyin kira olmay qolardi — aynan tuzatilayotgan xato. */
+  if (idx < 0) throw new Error("USER_NOT_FOUND");
+  users[idx] = { ...users[idx], password };
+  write(KEYS.users, users);
 }
 
 /** Oxirgi bosqich: akkountni Telegram orqali tasdiqlash (istalgan 6 xonali kod) */
@@ -490,6 +601,10 @@ export async function updateSellerProfile(data: {
   bio: string;
   headline?: string;
   skills?: string[];
+  /* Kategoriyalar ro'yxatdan o'tishda so'raladi, lekin ilgari bu yerda qabul
+     qilinmasdi — mutaxassis ularni keyin O'ZGARTIRA olmasdi. Holbuki ular
+     "Sizga mos ishlar" tanlovini va bozor filtrini boshqaradi. */
+  categories?: string[];
   location?: string;
   languages?: ProfileLanguage[];
   portfolio?: PortfolioItem[];
@@ -526,6 +641,9 @@ export async function updateSellerProfile(data: {
     headline: text(data.headline ?? profile.headline, LIMITS.headline),
     bio: text(data.bio, LIMITS.bio),
     skills: data.skills ? textList(data.skills, 30, LIMITS.skill) : profile.skills,
+    categories: data.categories
+      ? textList(data.categories, 8, LIMITS.skill)
+      : profile.categories,
     location: text(data.location ?? profile.location, LIMITS.location),
     languages,
     portfolio,
@@ -804,18 +922,20 @@ export async function cancelContract(id: string): Promise<Contract> {
     throw new Error("HAS_SUBMITTED_WORK");
   }
 
-  /* Mablag'langan (escrow'dagi, hali qabul qilinmagan) summa qaytariladi */
-  const refund = own
-    .filter((m) => m.status === "mablaglangan")
-    .reduce((sum, m) => sum + m.amount, 0);
-  if (refund > 0) creditBalance(contract.buyerId, refund);
-
+  /* Holat o'tishi AVVAL tekshiriladi: aks holda o'tish rad etilsa ham
+     balans allaqachon to'ldirilgan bo'lar va pul ikkilanardi. */
   assertTransition(
     contractMachine,
     contract.status,
     "bekor_qilingan",
     uid2 === contract.buyerId ? "buyer" : "seller"
   );
+
+  /* Mablag'langan (escrow'dagi, hali qabul qilinmagan) summa qaytariladi */
+  const refund = own
+    .filter((m) => m.status === "mablaglangan")
+    .reduce((sum, m) => sum + m.amount, 0);
+  if (refund > 0) creditBalance(contract.buyerId, refund);
   /* Escrow qaytarilgach child holati funded bo'lib qolmasligi kerak. */
   if (refund > 0) {
     write(
@@ -1016,6 +1136,26 @@ export async function sendMessage(
           : `/mutaxassis/takliflarim/kelgan/${offer.id}`,
         { name: senderName }
       );
+    } else {
+      /* Taklif (Proposal) suhbati — e'lon egasi bilan mutaxassis o'rtasida */
+      const proposal = read<Proposal[]>(KEYS.proposals, []).find(
+        (p) => p.id === contractId
+      );
+      const job = proposal
+        ? read<Job[]>(KEYS.jobs, []).find((j) => j.id === proposal.jobId)
+        : undefined;
+      if (proposal && job) {
+        const toBuyer = senderId === proposal.sellerId;
+        pushNotification(
+          toBuyer ? job.buyerId : proposal.sellerId,
+          "xabar",
+          "ntf.newMessage",
+          toBuyer
+            ? `/xaridor/elonlarim/${job.id}/suhbat/${proposal.id}`
+            : `/mutaxassis/takliflarim/${proposal.id}`,
+          { name: senderName }
+        );
+      }
     }
   }
   return message;
@@ -1035,6 +1175,9 @@ export async function getReviewByContract(
 ): Promise<Review | null> {
   ensureSeed();
   await delay(150);
+  /* Egalik tekshiruvi — sharhni faqat shartnoma tomonlari o'qiy oladi.
+     Ilgari istalgan shartnoma id'si bo'yicha sharh olish mumkin edi. */
+  if (!myContractIds().has(contractId)) return null;
   const reviews = read<Review[]>(KEYS.reviews, []);
   return reviews.find((r) => r.contractId === contractId) ?? null;
 }
@@ -1261,6 +1404,52 @@ export async function openDispute(
   return dispute;
 }
 
+/** Nizoni qaytarib olish — faqat uni OCHGAN tomon va faqat `ochiq` holatda.
+   Shartnoma `faol` ga qaytadi, escrow'dagi pul yana harakatga keladi.
+   Busiz `nizo` holatidan chiqish faqat admin panelida mumkin edi (u esa
+   `main` branch'ida yo'q) — ya'ni shartnoma abadiy muzlab qolardi. */
+export async function withdrawDispute(contractId: string): Promise<void> {
+  await delay(400);
+  const userId = currentUserId();
+  const disputes = read<Dispute[]>(KEYS.disputes, []);
+  const dIdx = disputes.findIndex(
+    (dispute) => dispute.contractId === contractId && dispute.status === "ochiq"
+  );
+  if (dIdx < 0) throw new Error("NOT_FOUND");
+  if (disputes[dIdx].openedBy !== userId) throw new Error("FORBIDDEN");
+
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const cIdx = contracts.findIndex(
+    (contract) => contract.id === contractId && contract.status === "nizo"
+  );
+  if (cIdx < 0) throw new Error("BAD_STATE");
+  assertTransition(
+    contractMachine,
+    contracts[cIdx].status,
+    "faol",
+    userId === contracts[cIdx].buyerId ? "buyer" : "seller"
+  );
+
+  contracts[cIdx] = { ...contracts[cIdx], status: "faol" };
+  write(KEYS.contracts, contracts);
+  write(
+    KEYS.disputes,
+    disputes.filter((dispute) => dispute.id !== disputes[dIdx].id)
+  );
+
+  const other =
+    contracts[cIdx].buyerId === userId
+      ? contracts[cIdx].sellerId
+      : contracts[cIdx].buyerId;
+  pushNotification(
+    other,
+    "bosqich",
+    "ntf.disputeWithdrawn",
+    `${contracts[cIdx].buyerId === other ? "/xaridor" : "/mutaxassis"}/shartnomalar/${contractId}`,
+    { title: contracts[cIdx].title }
+  );
+}
+
 export async function getAccountPreferences(): Promise<AccountPreferences> {
   ensureSeed();
   await delay(100);
@@ -1293,9 +1482,18 @@ export async function exportCurrentUserData(): Promise<Record<string, unknown>> 
     (item) => item.buyerId === userId || item.sellerId === userId
   );
   const contractIds = new Set(contracts.map((item) => item.id));
+  /* Parol eksportga TUSHMASLIGI shart — yuklab olingan fayl odatda saqlanadi
+     va ulashiladi. `password` ni yozuvdan ajratib tashlaymiz. */
+  const account = read<User[]>(KEYS.users, []).find((item) => item.id === userId);
+  let exportedUser: Omit<User, "password"> | undefined;
+  if (account) {
+    const copy = { ...account };
+    delete copy.password;
+    exportedUser = copy;
+  }
   return {
     exportedAt: new Date().toISOString(),
-    user: read<User[]>(KEYS.users, []).find((item) => item.id === userId),
+    user: exportedUser,
     profile: read<Record<string, SellerProfile>>(KEYS.profiles, {})[userId],
     services: read<Service[]>(KEYS.services, []).filter(
       (item) => item.sellerId === userId
@@ -1491,9 +1689,11 @@ export async function withdrawFunds(cardId: string): Promise<void> {
       .filter((c) => c.sellerId === uid2)
       .map((c) => c.id)
   );
+  /* Xizmat haqi HAR BOSQICHDAN alohida ushlanadi, jamidan emas — yaxlitlash
+     farqi to'planib ketmasin va Daromad ekranidagi qatorlar bilan mos tushsin. */
   const earned = read<Milestone[]>(KEYS.milestones, [])
     .filter((m) => myContracts.has(m.contractId) && m.status === "qabul_qilindi")
-    .reduce((sum, m) => sum + m.amount, 0);
+    .reduce((sum, m) => sum + sellerNet(m.amount), 0);
   const withdrawn = read<Record<string, number>>(KEYS.withdrawn, {});
   if ((withdrawn[uid2] ?? 0) >= earned) throw new Error("NO_BALANCE");
   withdrawn[uid2] = earned;
@@ -1633,7 +1833,9 @@ export async function createJob(data: {
     budgetMax,
     skillsRequired: textList(data.skillsRequired, 20, LIMITS.skill),
     screeningQuestions: textList(data.screeningQuestions, 3, LIMITS.question),
-    deadline: data.deadline ? text(data.deadline, 40) : undefined,
+    /* Muddat ham ISO'ga keltiriladi — e'lon sahifasi uni `new Date(...)` bilan
+       o'qiydi va buzilgan qiymat sahifani yiqitardi. */
+    deadline: data.deadline ? isoDate(data.deadline) : undefined,
     attachedImages: (data.attachedImages ?? []).slice(0, 10),
     id: uid("j"),
     buyerId: session.userId,
@@ -1772,7 +1974,10 @@ export async function hireProposal(
     title: text(m.title, LIMITS.title),
     description: text(m.description, LIMITS.description),
     amount: amount(m.amount),
-    dueDate: m.dueDate,
+    /* Sana ham validatsiyadan o'tadi — ilgari xom holda saqlanardi va
+       buzilgan qiymat keyin UI'da `new Date(...).toISOString()` da
+       RangeError berib, butun sahifani yiqitardi. */
+    dueDate: isoDate(m.dueDate),
   }));
 
   const contract: Contract = {
@@ -2000,6 +2205,14 @@ export async function acceptOffer(id: string): Promise<Contract> {
       m.contractId === offer.id ? { ...m, contractId: contract.id } : m
     )
   );
+  /* "O'qilgan" belgilari ham ko'chadi — aks holda ikkala tomon uchun butun
+     suhbat birdan "o'qilmagan" bo'lib ko'rinardi. */
+  const reads = read<Record<string, Record<string, string>>>(KEYS.threadReads, {});
+  if (reads[offer.id]) {
+    reads[contract.id] = { ...reads[contract.id], ...reads[offer.id] };
+    delete reads[offer.id];
+    write(KEYS.threadReads, reads);
+  }
 
   offers[idx] = { ...offer, status: "qabul_qilindi", contractId: contract.id };
   write(KEYS.offers, offers);

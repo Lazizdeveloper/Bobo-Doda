@@ -14,6 +14,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 ) {
   const autoId = useId();
   const inputId = id ?? autoId;
+  /* Xato/izoh matni maydon bilan BOG'LANADI — aks holda skrinrider
+     maydonga fokuslanganda xatoni umuman o'qimaydi (WCAG 3.3.1). */
+  const messageId = `${inputId}-msg`;
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
@@ -25,17 +28,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         id={inputId}
         aria-invalid={!!error}
+        aria-describedby={error || hint ? messageId : undefined}
         className={`h-10 w-full rounded-input border bg-card px-3 text-sm text-ink placeholder:text-faint transition-colors duration-150 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
           error ? "border-danger" : "border-field"
         } ${className}`}
         {...rest}
       />
       {error ? (
-        <p className="text-2xs text-danger" role="alert">
+        <p id={messageId} className="text-2xs text-danger" role="alert">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-2xs text-faint">{hint}</p>
+        <p id={messageId} className="text-2xs text-faint">
+          {hint}
+        </p>
       ) : null}
     </div>
   );

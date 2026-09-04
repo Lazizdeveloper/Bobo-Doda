@@ -101,6 +101,18 @@ function KirishForm() {
         setErrors({ phone: t("auth.errPhoneExists") });
       } else if (code === "INVALID_CREDENTIALS") {
         setErrors({ form: t("auth.errCredentials") });
+      } else if (code === "WEAK_PASSWORD") {
+        setErrors({ password: t("security.passwordRules") });
+      } else if (code === "REGISTRATION_PAUSED") {
+        setErrors({ form: t("auth.errRegistrationPaused") });
+      } else if (code === "ACCOUNT_BLOCKED") {
+        setErrors({ form: t("auth.errAccountBlocked") });
+      } else if (code === "STORAGE_FULL") {
+        setErrors({ form: t("err.storageFull") });
+      } else {
+        /* Har qanday boshqa xato ham KO'RSATILISHI shart — aks holda tugma
+           aylanishni to'xtatadi va ekranda hech narsa o'zgarmaydi. */
+        setErrors({ form: t("common.error") });
       }
       setLoading(false);
     }

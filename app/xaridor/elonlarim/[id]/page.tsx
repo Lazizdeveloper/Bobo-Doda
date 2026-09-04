@@ -152,11 +152,13 @@ export default function ElonTafsilotiPage() {
             {formatMoney(job.budgetMin, lang)} – {formatMoney(job.budgetMax, lang)}
           </span>
         </p>
-        {job.deadline && (
+        {/* `formatDate` noto'g'ri sanada bo'sh satr qaytaradi — `new Date(...)
+            .toISOString()` esa RangeError tashlab, butun sahifani yiqitardi. */}
+        {job.deadline && formatDate(job.deadline, lang) && (
           <p className="text-sm text-muted">
             {t("job.deadline")}:{" "}
             <span className="font-medium text-ink">
-              {formatDate(new Date(job.deadline).toISOString(), lang)}
+              {formatDate(job.deadline, lang)}
             </span>
           </p>
         )}
@@ -173,7 +175,7 @@ export default function ElonTafsilotiPage() {
               <img
                 key={i}
                 src={src}
-                alt={`${i + 1}-rasm`}
+                alt={t("a11y.image").replace("{n}", String(i + 1))}
                 className="h-20 w-20 rounded-input border border-line object-cover"
               />
             ))}
@@ -288,7 +290,7 @@ export default function ElonTafsilotiPage() {
                         <img
                           key={i}
                           src={src}
-                          alt={`Portfolio ${i + 1}`}
+                          alt={t("a11y.portfolioImage").replace("{n}", String(i + 1))}
                           className="h-16 w-24 rounded-input border border-line object-cover"
                         />
                       ))}
@@ -327,6 +329,15 @@ export default function ElonTafsilotiPage() {
                             {t("bprop.interview")}
                           </Button>
                         )}
+                        {/* Suhbat kanali — "Suhbatga taklif" endi haqiqiy
+                            muloqotga olib boradi (ilgari hech qayerga emas). */}
+                        <Link
+                          href={`/xaridor/elonlarim/${job.id}/suhbat/${proposal.id}`}
+                        >
+                          <Button variant="secondary" size="sm" className="w-full">
+                            {t("pchat.open")}
+                          </Button>
+                        </Link>
                         <Link
                           href={`/xaridor/elonlarim/${job.id}/yollash/${proposal.id}`}
                         >

@@ -1,3 +1,5 @@
+import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
+
 export type Lang = "uz" | "ru" | "en";
 
 type Entry = { uz: string; ru: string };
@@ -28,6 +30,46 @@ export const dictionary: Record<string, Entry> = {
   "a11y.skipToContent": {
     uz: "Asosiy qismga o'tish",
     ru: "Перейти к содержимому",
+  },
+  /* Faqat skrinrider uchun nomlar (4-to'lqin: qattiq yozilganlari almashtirildi) */
+  "a11y.openMenu": { uz: "Menyuni ochish", ru: "Открыть меню" },
+  "a11y.closeMenu": { uz: "Menyuni yopish", ru: "Закрыть меню" },
+  "a11y.steps": { uz: "Bosqichlar", ru: "Шаги" },
+  "a11y.breadcrumb": { uz: "Sahifa yo'li", ru: "Навигационная цепочка" },
+  "a11y.pagination": { uz: "Sahifalash", ru: "Постраничная навигация" },
+  "a11y.language": { uz: "Interfeys tili", ru: "Язык интерфейса" },
+  "a11y.mainNav": { uz: "Asosiy navigatsiya", ru: "Основная навигация" },
+  "a11y.image": { uz: "{n}-rasm", ru: "Изображение {n}" },
+  "a11y.portfolioImage": { uz: "Portfolio rasmi {n}", ru: "Изображение портфолио {n}" },
+  "a11y.notifications": {
+    uz: "Bildirishnomalar, {n} ta o'qilmagan",
+    ru: "Уведомления, непрочитанных: {n}",
+  },
+  "a11y.notificationsEmpty": { uz: "Bildirishnomalar", ru: "Уведомления" },
+  "a11y.dismissToast": { uz: "Xabarnomani yopish", ru: "Закрыть уведомление" },
+  "market.removeFilter": { uz: "Filtrni olib tashlash: {name}", ru: "Убрать фильтр: {name}" },
+  "market.filterSearch": { uz: "Qidiruv", ru: "Поиск" },
+  "market.filterPriceRange": { uz: "Narx oralig'i", ru: "Диапазон цены" },
+  "market.filterSaved": { uz: "Saqlanganlar", ru: "Сохранённые" },
+  "market.priceMinLabel": { uz: "Eng kam narx", ru: "Минимальная цена" },
+  "market.priceMaxLabel": { uz: "Eng yuqori narx", ru: "Максимальная цена" },
+  "market.pop1": { uz: "Web sayt", ru: "Веб-сайт" },
+  "market.pop2": { uz: "Logo dizayn", ru: "Дизайн логотипа" },
+  "market.pop3": { uz: "Telegram bot", ru: "Telegram-бот" },
+  "market.pop4": { uz: "SMM", ru: "SMM" },
+  "market.pop5": { uz: "Kopirayting", ru: "Копирайтинг" },
+  "market.pop6": { uz: "Mobil ilova", ru: "Мобильное приложение" },
+  "privacy.deleteConfirmLabel": {
+    uz: "Tasdiqlash uchun «{word}» so'zini yozing",
+    ru: "Для подтверждения введите слово «{word}»",
+  },
+  "settings.skillsIntro": {
+    uz: "Ko'nikmalaringiz va muloqot tillaringiz xaridorlarga sizni tez topishga yordam beradi.",
+    ru: "Ваши навыки и языки общения помогают заказчикам быстрее вас найти.",
+  },
+  "settings.skillsHint": {
+    uz: "Kamida 3 ta asosiy ko'nikma qo'shing. Enter tugmasi bilan ajratiladi.",
+    ru: "Добавьте минимум 3 ключевых навыка. Разделяются клавишей Enter.",
   },
 
   /* Pagination va natijalar */
@@ -67,6 +109,10 @@ export const dictionary: Record<string, Entry> = {
     ru: "Слишком много запросов — попробуйте позже",
   },
   "err.retry": { uz: "Qayta urinish", ru: "Повторить" },
+  "err.storageFull": {
+    uz: "Brauzer xotirasi to'lgan — bir nechta rasmni o'chirib qayta urinib ko'ring",
+    ru: "Память браузера заполнена — удалите несколько изображений и повторите",
+  },
   "err.notFoundTitle": { uz: "Sahifa topilmadi", ru: "Страница не найдена" },
   "err.notFoundDesc": {
     uz: "Bu manzil mavjud emas yoki o'chirilgan. Havolani tekshirib ko'ring.",
@@ -282,6 +328,90 @@ export const dictionary: Record<string, Entry> = {
   "dispute.submit": { uz: "Nizoni ochish", ru: "Открыть спор" },
   "dispute.opened": { uz: "Nizo ochildi, shartnoma vaqtincha to'xtatildi", ru: "Спор открыт, контракт временно приостановлен" },
   "dispute.caseTitle": { uz: "Nizo tafsilotlari", ru: "Детали спора" },
+  /* Nizo — keyingi qadam va qaytarib olish */
+  "dispute.nextSteps": {
+    uz: "Bobo&Doda jamoasi dalillarni ko'rib chiqadi va odatda 3–5 ish kunida qaror qabul qiladi. Shu vaqt ichida shartnoma va escrow'dagi mablag' muzlatiladi.",
+    ru: "Команда Bobo&Doda изучит доказательства и обычно выносит решение за 3–5 рабочих дней. На это время контракт и средства в эскроу заморожены.",
+  },
+  "dispute.withdraw": { uz: "Nizoni qaytarib olish", ru: "Отозвать спор" },
+  "sm.chatFailed": {
+    uz: "Ish topshirildi, lekin havolani chatga yuborib bo'lmadi — uni qo'lda yuboring",
+    ru: "Работа сдана, но ссылку не удалось отправить в чат — отправьте её вручную",
+  },
+  "dispute.withdrawTitle": {
+    uz: "Nizoni qaytarib olasizmi?",
+    ru: "Отозвать спор?",
+  },
+  "dispute.withdrawDesc": {
+    uz: "Nizo yopiladi va shartnoma yana faol holatga qaytadi — ish davom etadi.",
+    ru: "Спор будет закрыт, контракт снова станет активным — работа продолжится.",
+  },
+  "dispute.withdrawn": {
+    uz: "Nizo qaytarib olindi — shartnoma yana faol",
+    ru: "Спор отозван — контракт снова активен",
+  },
+  "dispute.withdrawOnlyOpener": {
+    uz: "Nizoni faqat uni ochgan tomon qaytarib olishi mumkin",
+    ru: "Отозвать спор может только сторона, которая его открыла",
+  },
+  "ntf.disputeWithdrawn": {
+    uz: "«{title}» bo'yicha nizo qaytarib olindi — shartnoma yana faol",
+    ru: "Спор по «{title}» отозван — контракт снова активен",
+  },
+  /* Taklif suhbati (e'lon orqali) */
+  "pchat.title": { uz: "Suhbat", ru: "Переписка" },
+  "pchat.open": { uz: "Suhbatni ochish", ru: "Открыть переписку" },
+  "pchat.hint": {
+    uz: "Yollashdan oldin tafsilotlarni aniqlashtiring. Bu suhbat shu taklifga bog'langan.",
+    ru: "Уточните детали до найма. Переписка привязана к этому отклику.",
+  },
+  "pchat.closed": {
+    uz: "Bu taklif yopilgan — yangi xabar yuborib bo'lmaydi",
+    ru: "Отклик закрыт — новые сообщения отправить нельзя",
+  },
+  /* Yollashda summa mos kelmasligi ogohlantirishi */
+  "hire.totalMismatch": {
+    uz: "Bosqichlar jami ({total}) mutaxassis taklifidan ({bid}) farq qiladi — davom etishdan oldin tekshiring.",
+    ru: "Сумма этапов ({total}) отличается от предложения специалиста ({bid}) — проверьте перед продолжением.",
+  },
+  /* Mutaxassisga kelgan taklif holatlari */
+  "soffer.declinedNote": {
+    uz: "Siz bu taklifni rad etgansiz. Yozishmalar tarixi quyida saqlanadi.",
+    ru: "Вы отклонили это предложение. История переписки сохранена ниже.",
+  },
+  "soffer.withdrawnNote": {
+    uz: "Buyurtmachi bu taklifni qaytarib oldi. Yozishmalar tarixi quyida saqlanadi.",
+    ru: "Заказчик отозвал это предложение. История переписки сохранена ниже.",
+  },
+  "soffer.chatClosed": {
+    uz: "Bu taklif yopilgan — yangi xabar yuborib bo'lmaydi",
+    ru: "Предложение закрыто — новые сообщения отправить нельзя",
+  },
+  /* Kabinet pastki qismi — huquqiy havolalar */
+  "foot.terms": { uz: "Foydalanish shartlari", ru: "Условия использования" },
+  "foot.privacy": { uz: "Maxfiylik siyosati", ru: "Политика конфиденциальности" },
+  "foot.offer": { uz: "Ommaviy oferta", ru: "Публичная оферта" },
+  "foot.help": { uz: "Yordam markazi", ru: "Центр помощи" },
+  "foot.faq": { uz: "Savol-javob", ru: "Вопросы и ответы" },
+  /* Mutaxassis kategoriyalari (sozlamalarda tahrirlanadi) */
+  "settings.categories": { uz: "Ish yo'nalishlari", ru: "Направления работы" },
+  "settings.completenessDone": {
+    uz: "Barcha asosiy maydonlar to'ldirilgan!",
+    ru: "Все основные поля заполнены!",
+  },
+  "settings.categoriesHint": {
+    uz: "Sizga mos ish e'lonlari va bozordagi filtrlar shu yo'nalishlarga qarab ishlaydi",
+    ru: "Подбор заказов и фильтры на бирже работают по этим направлениям",
+  },
+  "settings.categoriesRequired": {
+    uz: "Kamida bitta yo'nalish tanlang",
+    ru: "Выберите хотя бы одно направление",
+  },
+  /* Support sozlanmagan bo'lsa zaxira aloqa */
+  "support.error_fallback": {
+    uz: "Xabar yuborilmadi. Iltimos, keyinroq urinib ko'ring yoki Telegram orqali murojaat qiling.",
+    ru: "Сообщение не отправлено. Попробуйте позже или напишите нам в Telegram.",
+  },
   "dispute.status_ochiq": { uz: "Ochiq", ru: "Открыт" },
   "dispute.status_korib_chiqilmoqda": { uz: "Ko'rib chiqilmoqda", ru: "На рассмотрении" },
   "dispute.status_hal_qilindi": { uz: "Hal qilindi", ru: "Решён" },
@@ -373,6 +503,14 @@ export const dictionary: Record<string, Entry> = {
   "auth.errPhoneExists": {
     uz: "Bu raqam allaqachon ro'yxatdan o'tgan — tizimga kiring",
     ru: "Этот номер уже зарегистрирован — войдите в систему",
+  },
+  "auth.errRegistrationPaused": {
+    uz: "Ro'yxatdan o'tish vaqtincha to'xtatilgan — keyinroq urinib ko'ring",
+    ru: "Регистрация временно приостановлена — попробуйте позже",
+  },
+  "auth.errAccountBlocked": {
+    uz: "Bu hisob bloklangan — yordam xizmatiga murojaat qiling",
+    ru: "Этот аккаунт заблокирован — обратитесь в поддержку",
   },
   "auth.forgotPassword": { uz: "Parolni unutdingizmi?", ru: "Забыли пароль?" },
   "auth.resetTitle": { uz: "Parolni tiklash", ru: "Восстановление пароля" },
@@ -830,6 +968,7 @@ export const dictionary: Record<string, Entry> = {
     ru: "Последние 6 месяцев",
   },
   "earn.paid": { uz: "Jami to'langan", ru: "Всего выплачено" },
+  "earn.feeLabel": { uz: "xizmat haqi", ru: "сервисный сбор" },
   "earn.pending": { uz: "Kutilayotgan", ru: "Ожидается" },
   "earn.pendingHint": {
     uz: "Escrow'dagi va tekshiruvdagi bosqichlar",
@@ -1157,6 +1296,7 @@ export const dictionary: Record<string, Entry> = {
 
   /* Profil — portfolio */
   "profile.portfolio": { uz: "Portfolio", ru: "Портфолио" },
+  "profile.portfolioCount": { uz: "ta ish", ru: "работ" },
 
   /* Fayl yuklash */
   "upload.cta": { uz: "Rasm yuklash", ru: "Загрузить изображение" },
@@ -1530,6 +1670,12 @@ export const dictionary: Record<string, Entry> = {
   "cfund.awaitingSeller": {
     uz: "Buyurtmachi to'lovni amalga oshirishi kutilmoqda — to'lov tushgach ishni boshlaysiz",
     ru: "Ожидается оплата от заказчика — начнёте работу после поступления средств",
+  },
+  /* Xaridor tomoni uchun alohida matn: to'lashi kerak bo'lgan odam
+     "buyurtmachi to'lashini kutmoqdamiz" degan matnni ko'rmasligi kerak. */
+  "cfund.awaitingYourPayment": {
+    uz: "To'lovingiz kutilmoqda — escrow'ga to'lasangiz mutaxassis ishni boshlaydi",
+    ru: "Ожидается ваша оплата — как только средства поступят в эскроу, специалист приступит к работе",
   },
 
   /* Xaridor workroom — bosqich amallari */
@@ -1970,7 +2116,10 @@ export const dictionary: Record<string, Entry> = {
   "q4": { uz: "Ro'yxatdan o'tish uchun qancha vaqt kerak?", ru: "Сколько времени занимает регистрация?" },
   "a4": { uz: "Bir necha daqiqa: ro'yxatdan o'ting, rolni tanlang va Telegram orqali shaxsingizni tasdiqlang.", ru: "Всего пара минут: регистрация, выбор роли и подтверждение личности через Telegram." },
   "q5": { uz: "Xizmat haqi qancha?", ru: "Какая комиссия?" },
-  "a5": { uz: "Mutaxassislar uchun qabul qilingan bosqichdan 5%. Xaridorlar uchun e'lon joylashtirish va taklif yuborish bepul.", ru: "5% с каждого принятого этапа для специалистов. Для клиентов размещение заказов и отклики бесплатны." },
+  "a5": {
+    uz: `Mutaxassislar uchun qabul qilingan bosqichdan ${PLATFORM_FEE_PERCENT}%. Xaridorlar uchun e'lon joylashtirish va taklif yuborish bepul.`,
+    ru: `${PLATFORM_FEE_PERCENT}% с каждого принятого этапа для специалистов. Для клиентов размещение заказов и отклики бесплатны.`,
+  },
   "cta_ready": { uz: "Keyingi loyihangizni bugun boshlang.", ru: "Начните свой следующий проект сегодня." },
   "cta_desc": { uz: "Bosqichli to'lov kafolati bilan — ishonch bilan boshlang.", ru: "С поэтапной гарантией оплаты — начните с уверенностью." },
   "cta_btn1": { uz: "Loyiha joylashtirish", ru: "Разместить проект" },
@@ -2012,6 +2161,7 @@ export const dictionary: Record<string, Entry> = {
   "settings.ckLanguages": { uz: "Tillar (kamida 1 ta)", ru: "Языки (минимум 1)" },
   "settings.ckPortfolio": { uz: "Portfolio ishlari (kamida 1 ta)", ru: "Работы в портфолио (минимум 1)" },
   "settings.ckLocation": { uz: "Joylashuv", ru: "Местоположение" },
+  "settings.ckService": { uz: "Kamida 1 ta faol xizmat", ru: "Минимум 1 активная услуга" },
 
   "settings.portfolioCount": { uz: "{n} ta ish joylangan", ru: "Добавлено работ: {n}" },
   "settings.portfolioEmptyTitle": { uz: "Hali portfolio ishi qo'shilmagan", ru: "Работы в портфолио ещё не добавлены" },

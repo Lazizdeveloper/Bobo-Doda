@@ -73,7 +73,7 @@ export function FileUpload({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
-              alt={`${i + 1}-rasm`}
+              alt={t("a11y.image").replace("{n}", String(i + 1))}
               className="h-20 w-20 rounded-input border border-line object-cover"
             />
             <button

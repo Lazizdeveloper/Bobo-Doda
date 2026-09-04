@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { SkipLink } from "@/components/shared/SkipLink";
 import { Logo } from "@/components/shared/Logo";
 import { TopNav } from "@/components/mutaxassis/TopNav";
+import { CabinetFooter } from "@/components/shared/CabinetFooter";
 import { authService } from "@/lib/api";
 
 export default function MutaxassisLayout({ children }: { children: ReactNode }) {
@@ -62,6 +63,7 @@ export default function MutaxassisLayout({ children }: { children: ReactNode }) 
       >
         {children}
       </main>
+      <CabinetFooter />
     </div>
   );
 }

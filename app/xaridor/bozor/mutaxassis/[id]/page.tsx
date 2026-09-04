@@ -74,7 +74,7 @@ export default function MutaxassisProfiliPage() {
   return (
     <div className="flex flex-col gap-8 pb-12">
       {/* Top Breadcrumb Navigation */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-muted">
+      <nav aria-label={t("a11y.breadcrumb")} className="flex items-center gap-2 text-xs text-muted">
         <Link href="/xaridor/bozor" className="hover:text-primary transition-colors">
           {t("nav.market")}
         </Link>
@@ -91,7 +91,7 @@ export default function MutaxassisProfiliPage() {
         {/* Left Column */}
         <div className="flex flex-col gap-6">
           {/* Header Card */}
-          <Card padding="lg" className="border-t-4 border-t-primary">
+          <Card padding="lg" stitch>
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
               <Avatar name={user.fullName} size="lg" />
               <div className="flex-1">
@@ -193,7 +193,7 @@ export default function MutaxassisProfiliPage() {
                   {t("profile.portfolio")}
                 </h2>
                 <span className="text-xs text-muted">
-                  {profile.portfolio.length} {t("nav.portfolio").toLowerCase()}
+                  {profile.portfolio.length} {t("profile.portfolioCount")}
                 </span>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -212,7 +212,7 @@ export default function MutaxassisProfiliPage() {
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="rounded-btn bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink shadow-sm backdrop-blur-xs">
+                        <span className="rounded-btn bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink shadow-card backdrop-blur-xs">
                           {t("profile.viewWork")} →
                         </span>
                       </div>

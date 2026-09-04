@@ -1,5 +1,4 @@
 import * as mock from "@/lib/mock-api";
-import * as adminMock from "@/lib/admin-api";
 import type {
   AuthService,
   CatalogService,
@@ -146,6 +145,7 @@ export const reviewsService: ReviewsService = {
 export const disputesService: DisputesService = {
   getForContract: (id) => call(() => mock.getDisputeByContract(id)),
   open: (contractId, input) => call(() => mock.openDispute(contractId, input)),
+  withdraw: (contractId) => call(() => mock.withdrawDispute(contractId)),
 };
 
 export const verificationService: VerificationService = {
@@ -176,13 +176,6 @@ export const supportRequestService: SupportRequestService = {
       if (body?.error === "RATE_LIMITED") throw new Error("RATE_LIMITED");
       throw new Error("SUPPORT_SEND_FAILED");
     }),
-};
-
-export const adminService = {
-  getSession: adminMock.getAdminSession,
-  getCurrent: adminMock.getCurrentAdmin,
-  hasPermission: adminMock.hasPermission,
-  getAuditEvents: adminMock.getAuditEvents,
 };
 
 /**

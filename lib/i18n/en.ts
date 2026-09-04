@@ -1,6 +1,8 @@
 /* Ingliz tili — dictionary.ts (uz/ru) tuzilishiga tegmasdan alohida qatlam.
    Kalitlar dictionary.ts bilan bir xil. Yetishmagan kalit uz'ga tushadi
    (index.tsx). Placeholder'lar: {n} {title} {name} {app}. */
+import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
+
 export const en: Record<string, string> = {
   /* Common */
   "common.save": "Save",
@@ -25,6 +27,33 @@ export const en: Record<string, string> = {
   "common.clear": "Clear",
   "common.loading": "Loading…",
   "a11y.skipToContent": "Skip to content",
+  "a11y.openMenu": "Open menu",
+  "a11y.closeMenu": "Close menu",
+  "a11y.steps": "Steps",
+  "a11y.breadcrumb": "Breadcrumb",
+  "a11y.pagination": "Pagination",
+  "a11y.language": "Interface language",
+  "a11y.mainNav": "Main navigation",
+  "a11y.image": "Image {n}",
+  "a11y.portfolioImage": "Portfolio image {n}",
+  "a11y.notifications": "Notifications, {n} unread",
+  "a11y.notificationsEmpty": "Notifications",
+  "a11y.dismissToast": "Dismiss notification",
+  "market.removeFilter": "Remove filter: {name}",
+  "market.filterSearch": "Search",
+  "market.filterPriceRange": "Price range",
+  "market.filterSaved": "Saved",
+  "market.priceMinLabel": "Minimum price",
+  "market.priceMaxLabel": "Maximum price",
+  "market.pop1": "Website",
+  "market.pop2": "Logo design",
+  "market.pop3": "Telegram bot",
+  "market.pop4": "SMM",
+  "market.pop5": "Copywriting",
+  "market.pop6": "Mobile app",
+  "privacy.deleteConfirmLabel": "Type “{word}” to confirm",
+  "settings.skillsIntro": "Your skills and spoken languages help clients find you faster.",
+  "settings.skillsHint": "Add at least 3 key skills. Separate them with Enter.",
 
   /* Pagination & results */
   "pager.prev": "Previous",
@@ -42,6 +71,7 @@ export const en: Record<string, string> = {
   "err.notFound": "Data not found",
   "err.rateLimited": "Too many requests — please try again shortly",
   "err.retry": "Retry",
+  "err.storageFull": "Browser storage is full — remove a few images and try again",
   "err.notFoundTitle": "Page not found",
   "err.notFoundDesc": "This address doesn't exist or was removed. Check the link.",
   "err.crashTitle": "Something went wrong",
@@ -187,6 +217,32 @@ export const en: Record<string, string> = {
   "dispute.submit": "Open dispute",
   "dispute.opened": "Dispute opened and the contract is temporarily paused",
   "dispute.caseTitle": "Dispute details",
+  "dispute.nextSteps": "The Bobo&Doda team reviews the evidence and usually decides within 3–5 business days. The contract and the escrowed funds stay frozen until then.",
+  "dispute.withdraw": "Withdraw dispute",
+  "sm.chatFailed": "Work submitted, but the link could not be posted to the chat — please send it manually",
+  "dispute.withdrawTitle": "Withdraw the dispute?",
+  "dispute.withdrawDesc": "The dispute will be closed and the contract becomes active again — work continues.",
+  "dispute.withdrawn": "Dispute withdrawn — the contract is active again",
+  "dispute.withdrawOnlyOpener": "Only the side that opened the dispute can withdraw it",
+  "ntf.disputeWithdrawn": "The dispute on “{title}” was withdrawn — the contract is active again",
+  "pchat.title": "Conversation",
+  "pchat.open": "Open conversation",
+  "pchat.hint": "Clarify the details before hiring. This conversation is tied to this proposal.",
+  "pchat.closed": "This proposal is closed — new messages can't be sent",
+  "hire.totalMismatch": "The milestone total ({total}) differs from the specialist's bid ({bid}) — please check before continuing.",
+  "soffer.declinedNote": "You declined this offer. The message history is kept below.",
+  "soffer.withdrawnNote": "The client withdrew this offer. The message history is kept below.",
+  "soffer.chatClosed": "This offer is closed — new messages can't be sent",
+  "foot.terms": "Terms of use",
+  "foot.privacy": "Privacy policy",
+  "foot.offer": "Public offer",
+  "foot.help": "Help center",
+  "foot.faq": "FAQ",
+  "settings.categories": "Work categories",
+  "settings.completenessDone": "All the key fields are filled in!",
+  "settings.categoriesHint": "Job matching and marketplace filters are driven by these categories",
+  "settings.categoriesRequired": "Pick at least one category",
+  "support.error_fallback": "The message was not sent. Please try again later or reach us on Telegram.",
   "dispute.status_ochiq": "Open",
   "dispute.status_korib_chiqilmoqda": "Under review",
   "dispute.status_hal_qilindi": "Resolved",
@@ -249,6 +305,8 @@ export const en: Record<string, string> = {
   "auth.passwordPh": "At least 6 characters",
   "auth.errPassword": "Password must be at least 6 characters",
   "auth.errCredentials": "Wrong phone number or password",
+  "auth.errRegistrationPaused": "Registration is temporarily paused — please try again later",
+  "auth.errAccountBlocked": "This account is blocked — please contact support",
   "auth.errPhoneExists": "This number is already registered — log in instead",
   "auth.forgotPassword": "Forgot password?",
   "auth.resetTitle": "Reset password",
@@ -526,6 +584,7 @@ export const en: Record<string, string> = {
   "earn.title": "Earnings",
   "earn.monthlyBreakdown": "Last 6 months",
   "earn.paid": "Total paid",
+  "earn.feeLabel": "service fee",
   "earn.pending": "Pending",
   "earn.pendingHint": "Milestones in escrow and under review",
   "earn.withdrawable": "Available to withdraw",
@@ -739,6 +798,7 @@ export const en: Record<string, string> = {
 
   /* Profile — portfolio */
   "profile.portfolio": "Portfolio",
+  "profile.portfolioCount": "items",
 
   /* File upload */
   "upload.cta": "Upload image",
@@ -933,6 +993,7 @@ export const en: Record<string, string> = {
   "cfund.done": "Contract activated — the specialist starts the work",
   "cfund.total": "Escrow payment",
   "cfund.awaitingSeller": "Awaiting payment from the client — you'll start the work once it arrives",
+  "cfund.awaitingYourPayment": "Awaiting your payment — once the funds reach escrow, the specialist starts work",
 
   /* Client workroom — milestone actions */
   "bms.escrowHeld": "Held in escrow",
@@ -1252,7 +1313,7 @@ export const en: Record<string, string> = {
   "q4": "How long does signup take?",
   "a4": "Just a few minutes: sign up, choose your role, and verify your identity via Telegram.",
   "q5": "What are the fees?",
-  "a5": "5% on each accepted milestone for specialists. Posting projects and sending offers is free for clients.",
+  "a5": `${PLATFORM_FEE_PERCENT}% on each accepted milestone for specialists. Posting projects and sending offers is free for clients.`,
   "cta_ready": "Start your next project today.",
   "cta_desc": "With milestone escrow protection — start with confidence.",
   "cta_btn1": "Post a project",
@@ -1271,7 +1332,6 @@ export const en: Record<string, string> = {
   "f_help": "Help center",
   "f_faq": "FAQ",
   "f_contact_us": "Contact us",
-  "foot_contact_us": "Contact us",
   "foot_rights": "All rights reserved.",
 
   /* Settings & Profile Completeness */
@@ -1294,6 +1354,7 @@ export const en: Record<string, string> = {
   "settings.ckSkills": "Skills (at least 3)",
   "settings.ckLanguages": "Languages (at least 1)",
   "settings.ckPortfolio": "Portfolio items (at least 1)",
+  "settings.ckService": "At least 1 active service",
   "settings.ckLocation": "Location",
 
   "settings.portfolioCount": "{n} projects published",

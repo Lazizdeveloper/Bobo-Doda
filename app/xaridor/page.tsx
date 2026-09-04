@@ -10,7 +10,7 @@ import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
 import { authService, contractsService, jobsService, messagesService, milestonesService, proposalsService, usersService } from "@/lib/api";
 import type { Contract, Job, Message, Milestone, Proposal } from "@/lib/types";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, initials } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 export default function XaridorDashboardPage() {
@@ -75,13 +75,19 @@ export default function XaridorDashboardPage() {
   const recentContracts = contracts?.slice(0, 5) ?? [];
   const jobById = new Map(jobs?.map((j) => [j.id, j]));
 
-  // Calculate total spent (dummy logic for now, using completed contracts or all contracts)
-  const totalSpent = contracts?.reduce((sum, c) => c.status === "yakunlangan" ? sum + c.totalAmount : sum, 0) || 0;
+  /* Jami sarflangan — Xarajatlar sahifasi bilan AYNAN bir xil formula:
+     qabul qilingan bosqichlar yig'indisi. Ilgari bu yerda "yakunlangan
+     shartnomalar summasi" edi va natijada bitta hisobda ikki ekran ikki xil
+     raqam ko'rsatardi (faol shartnomadagi qabul qilingan bosqich, shuningdek
+     bekor qilingan shartnomada to'langan bosqich bu yerda ko'rinmasdi). */
+  const totalSpent = (milestones ?? [])
+    .filter((m) => m.status === "qabul_qilindi")
+    .reduce((sum, m) => sum + m.amount, 0);
 
   return (
     <div className="flex flex-col gap-8">
       {/* Workspace Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-surface to-bg rounded-2xl p-6 border border-line shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-card border border-line bg-surface p-6 shadow-card">
         <div>
           <h1 className="font-heading text-3xl font-extrabold text-ink tracking-tight">
             {t("dash.title")}
@@ -94,12 +100,12 @@ export default function XaridorDashboardPage() {
         </div>
         <div className="flex gap-3">
           <Link href="/xaridor/bozor">
-            <Button variant="secondary" className="shadow-sm">
+            <Button variant="secondary">
               {t("bdash.findSpecialist")}
             </Button>
           </Link>
           <Link href="/xaridor/elonlarim/yangi">
-            <Button className="shadow-sm">{t("bdash.postJob")}</Button>
+            <Button>{t("bdash.postJob")}</Button>
           </Link>
         </div>
       </div>
@@ -301,15 +307,20 @@ export default function XaridorDashboardPage() {
               <div className="p-6 text-center text-sm text-muted">{t("dash.noMessages")}</div>
             ) : (
               <div className="divide-y divide-line">
-                {messages.map((msg) => (
+                {messages.map((msg) => {
+                  /* Qattiq yozilgan "Me" / "SP" o'rniga haqiqiy ism bosh harflari */
+                  const counterpart =
+                    contracts?.find((c) => c.id === msg.contractId)?.sellerName ?? "";
+                  const who = msg.senderId === myId ? name : counterpart;
+                  return (
                   <Link
                     key={msg.id}
                     href={`/xaridor/shartnomalar/${msg.contractId}`}
                     className="block p-4 hover:bg-card-hover"
                   >
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 text-primary-deep flex items-center justify-center font-bold text-xs shrink-0">
-                        {msg.senderId === myId ? "Me" : "SP"}
+                      <div aria-hidden="true" className="w-8 h-8 rounded-full bg-primary/20 text-primary-deep flex items-center justify-center font-bold text-xs shrink-0">
+                        {who ? initials(who) : "—"}
                       </div>
                       <div className="overflow-hidden">
                         <p className="text-sm font-semibold text-ink">
@@ -319,7 +330,8 @@ export default function XaridorDashboardPage() {
                       </div>
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>

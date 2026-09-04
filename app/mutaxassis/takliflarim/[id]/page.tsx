@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { ProposalStatusBadge } from "@/components/shared/StatusBadge";
+import { ProposalChat } from "@/components/shared/ProposalChat";
 import { contractsService, jobsService, proposalsService } from "@/lib/api";
 import type { Contract, Job, Proposal } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -140,7 +141,7 @@ export default function TaklifTafsilotiPage() {
                 <img
                   key={i}
                   src={src}
-                  alt={`Portfolio ${i + 1}`}
+                  alt={t("a11y.portfolioImage").replace("{n}", String(i + 1))}
                   className="h-16 w-24 rounded-input border border-line object-cover"
                 />
               ))}
@@ -148,6 +149,14 @@ export default function TaklifTafsilotiPage() {
           </div>
         )}
       </Card>
+
+      {/* Xaridor bilan suhbat — "Suhbatga taklif" endi haqiqiy kanalga olib
+          keladi. Yopilgan taklifda tarix faqat o'qish uchun qoladi. */}
+      <ProposalChat
+        proposalId={proposal.id}
+        counterpartName={job?.buyerName ?? ""}
+        open={WITHDRAWABLE.includes(proposal.status)}
+      />
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         {WITHDRAWABLE.includes(proposal.status) ? (

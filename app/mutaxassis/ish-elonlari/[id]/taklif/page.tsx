@@ -148,7 +148,6 @@ export default function TaklifYuborishPage() {
             onChange={(e) => setCover(e.target.value)}
             rows={7}
             placeholder={t("prop.coverHint")}
-            hint={t("prop.coverHint")}
             error={errors.cover}
           />
         </Card>
@@ -207,7 +206,7 @@ export default function TaklifYuborishPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={src}
-                        alt={`Portfolio ${i + 1}`}
+                        alt={t("a11y.portfolioImage").replace("{n}", String(i + 1))}
                         className="h-20 w-28 object-cover"
                       />
                       {selected && (

@@ -1,4 +1,5 @@
 import type { Lang } from "@/lib/i18n";
+import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
 
 export type FaqCategory =
   | "umumiy"
@@ -144,11 +145,11 @@ export const FAQ_ITEMS: FaqItem[] = [
       en: "What are the fees?",
     },
     a: {
-      uz: "Mutaxassislar uchun har bir qabul qilingan bosqichdan 5% xizmat haqi olinadi. Xaridorlar uchun e'lon joylashtirish va taklif yuborish — hech qanday to'lovsiz, butunlay bepul.",
-      ru: "Для специалистов комиссия — 5% с каждого принятого этапа. Для клиентов размещение заказов и отклики полностью бесплатны.",
-      en: "For specialists, the fee is 5% of each accepted milestone. For clients, posting projects and sending offers is completely free.",
+      uz: `Mutaxassislar uchun har bir qabul qilingan bosqichdan ${PLATFORM_FEE_PERCENT}% xizmat haqi olinadi. Xaridorlar uchun e'lon joylashtirish va taklif yuborish — hech qanday to'lovsiz, butunlay bepul.`,
+      ru: `Для специалистов комиссия — ${PLATFORM_FEE_PERCENT}% с каждого принятого этапа. Для клиентов размещение заказов и отклики полностью бесплатны.`,
+      en: `For specialists, the fee is ${PLATFORM_FEE_PERCENT}% of each accepted milestone. For clients, posting projects and sending offers is completely free.`,
     },
-    keywords: ["fee", "komissiya", "5%", "bepul"],
+    keywords: ["fee", "komissiya", `${PLATFORM_FEE_PERCENT}%`, "bepul"],
   },
   {
     slug: "bekor-qilingan-shartnoma",

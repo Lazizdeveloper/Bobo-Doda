@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -54,6 +55,7 @@ export default function ShartnomaWorkroomPage() {
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const loadVersionRef = useRef(0);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
   useEffect(() => {
     reload();
@@ -63,6 +65,7 @@ export default function ShartnomaWorkroomPage() {
   async function reload() {
     const version = ++loadVersionRef.current;
     setContract(undefined);
+    setLoadError(null);
     try {
       const found = await contractsService.get(params.id);
       if (version !== loadVersionRef.current) return;
@@ -83,8 +86,11 @@ export default function ShartnomaWorkroomPage() {
       setReview(nextReview);
       setService(nextService);
       void messagesService.markRead(found.id);
-    } catch {
-      if (version === loadVersionRef.current) setContract(null);
+    } catch (error) {
+      /* Yuklash xatosi "topilmadi" EMAS — aks holda tarmoq uzilishi yoki
+         sessiya tugashi ham "Shartnoma topilmadi" bo'lib ko'rinardi va
+         foydalanuvchi ma'lumot o'chgan deb o'ylardi. */
+      if (version === loadVersionRef.current) setLoadError(error);
     }
   }
 
@@ -108,19 +114,31 @@ export default function ShartnomaWorkroomPage() {
     }
     setSubmitting(true);
     try {
+      /* Topshirish — asosiy amal. U muvaffaqiyatli bo'lsa, modal yopiladi va
+         holat yangilanadi. Ilgari chat xabari shu bloknig ichida edi: xabar
+         yiqilsa umumiy xato chiqar, modal ochiq qolar va bosqich ALLAQACHON
+         topshirilgan bo'lardi — qayta bosilsa BAD_STATE. */
       await milestonesService.submit(submitTarget.id);
-      const chatText = workNote.trim()
-        ? `${workNote.trim()}\n${workLink.trim()}`
-        : workLink.trim();
-      const message = await messagesService.send(contract.id, chatText);
-      setMessages((prev) => [...prev, message]);
       setMilestones(await milestonesService.list(contract.id));
       toast(t("sm.done"));
       setSubmitTarget(null);
     } catch {
       toast(t("common.error"), "error");
-    } finally {
       setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
+
+    /* Havola/izoh chatga yozilishi — ikkilamchi, yiqilsa topshirish bekor
+       qilinmaydi, faqat ogohlantiriladi. */
+    try {
+      const chatText = workNote.trim()
+        ? `${workNote.trim()}\n${workLink.trim()}`
+        : workLink.trim();
+      const message = await messagesService.send(contract.id, chatText);
+      setMessages((prev) => [...prev, message]);
+    } catch {
+      toast(t("sm.chatFailed"), "error");
     }
   }
 
@@ -156,6 +174,7 @@ export default function ShartnomaWorkroomPage() {
     }
   }
 
+  if (loadError) return <ErrorState error={loadError} onRetry={reload} />;
   if (contract === undefined) return <SkeletonCard />;
   if (contract === null) return <EmptyState title={t("contract.notFound")} />;
 
@@ -220,14 +239,25 @@ export default function ShartnomaWorkroomPage() {
           {t("pipeline.title")}
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {/* To'lov qadami FAQAT haqiqatan to'langanda faol ko'rinadi —
+              `imzolangan` (hali to'lanmagan) shartnomada ham yashil chizilsa,
+              xaridor "to'lov bajarilgan" deb tushunardi. */}
           <div
             className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
-              contract.status === "bekor_qilingan"
+              contract.status === "bekor_qilingan" ||
+              contract.status === "imzolangan"
                 ? "border-line bg-surface text-muted"
-                : "border-primary/30 bg-primary/10 text-primary"
+                : "border-primary/30 bg-primary/10 text-primary-deep"
             }`}
           >
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-2xs text-on-primary">
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                contract.status === "bekor_qilingan" ||
+                contract.status === "imzolangan"
+                  ? "bg-surface text-faint"
+                  : "bg-primary text-on-primary"
+              }`}
+            >
               1
             </span>
             <span className="truncate">{t("pipeline.stageFund")}</span>
@@ -238,7 +268,7 @@ export default function ShartnomaWorkroomPage() {
               contract.status === "faol" ||
               milestones.some((m) => m.status === "topshirildi" || m.status === "qabul_qilindi") ||
               contract.status === "yakunlangan"
-                ? "border-primary/30 bg-primary/10 text-primary"
+                ? "border-primary/30 bg-primary/10 text-primary-deep"
                 : "border-line bg-surface text-muted"
             }`}
           >
@@ -260,7 +290,7 @@ export default function ShartnomaWorkroomPage() {
             className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
               milestones.some((m) => m.status === "topshirildi" || m.status === "ozgartirish_soraldi") ||
               contract.status === "yakunlangan"
-                ? "border-primary/30 bg-primary/10 text-primary"
+                ? "border-primary/30 bg-primary/10 text-primary-deep"
                 : "border-line bg-surface text-muted"
             }`}
           >
@@ -280,7 +310,7 @@ export default function ShartnomaWorkroomPage() {
           <div
             className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
               contract.status === "yakunlangan"
-                ? "border-primary/30 bg-primary/10 text-primary font-bold"
+                ? "border-primary/30 bg-primary/10 text-primary-deep font-bold"
                 : "border-line bg-surface text-muted"
             }`}
           >
@@ -309,7 +339,7 @@ export default function ShartnomaWorkroomPage() {
         </div>
       )}
       {contract.status === "nizo" && (
-        <DisputeSummary contractId={contract.id} />
+        <DisputeSummary contractId={contract.id} onWithdrawn={reload} />
       )}
       {contract.status === "bekor_qilingan" && (
         <p className="rounded-card border border-line bg-card p-4 text-xs text-muted">
@@ -396,7 +426,7 @@ export default function ShartnomaWorkroomPage() {
                   </div>
                   <span className="text-2xs text-faint">
                     {mine ? t("chat.you") : contract.buyerName.split(" ")[0]} ·{" "}
-                    {formatTime(msg.createdAt)}
+                    {formatTime(msg.createdAt, lang)}
                   </span>
                 </div>
               );

@@ -10,17 +10,10 @@ import {
 } from "react";
 import { dictionary, type Lang } from "./dictionary";
 import { en } from "./en";
-import {
-  isCurrency,
-  setCurrencyStore,
-  type Currency,
-} from "@/lib/currency";
 
 interface LanguageContextValue {
   lang: Lang;
   setLang: (lang: Lang) => void;
-  currency: Currency;
-  setCurrency: (currency: Currency) => void;
   t: (key: string) => string;
 }
 
@@ -34,24 +27,16 @@ function translate(lang: Lang, key: string): string {
 const LanguageContext = createContext<LanguageContextValue>({
   lang: "uz",
   setLang: () => {},
-  currency: "UZS",
-  setCurrency: () => {},
   t: (key) => dictionary[key]?.uz ?? key,
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("uz");
-  const [currency, setCurrencyState] = useState<Currency>("UZS");
 
   useEffect(() => {
     const storedLang = window.localStorage.getItem("sb_lang");
     if (storedLang === "uz" || storedLang === "ru" || storedLang === "en") {
       setLangState(storedLang);
-    }
-    const storedCur = window.localStorage.getItem("sb_currency");
-    if (isCurrency(storedCur)) {
-      setCurrencyState(storedCur);
-      setCurrencyStore(storedCur);
     }
   }, []);
 
@@ -64,18 +49,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem("sb_lang", next);
   }, []);
 
-  const setCurrency = useCallback((next: Currency) => {
-    setCurrencyState(next);
-    setCurrencyStore(next);
-    window.localStorage.setItem("sb_currency", next);
-  }, []);
-
   const t = useCallback((key: string) => translate(lang, key), [lang]);
 
   return (
-    <LanguageContext.Provider
-      value={{ lang, setLang, currency, setCurrency, t }}
-    >
+    <LanguageContext.Provider value={{ lang, setLang, t }}>
       {children}
     </LanguageContext.Provider>
   );

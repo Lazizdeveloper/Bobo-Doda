@@ -1,4 +1,5 @@
 import type { Lang } from "@/lib/i18n";
+import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
 
 export type HelpCategory =
   | "tolov"
@@ -119,19 +120,19 @@ export const HELP_ARTICLES: HelpArticle[] = [
       uz: [
         "Escrou'ni mablag'lashda bank kartasi (Uzcard, Humo, Visa, Mastercard) yoki mahalliy hamyon (Payme, Click) tanlashingiz mumkin. To'lov SMS-kod bilan tasdiqlanadi.",
         "Xaridorlar uchun platforma bepul: loyiha joylashtirish, taklif yuborish va yollash uchun hech qanday to'lov olinmaydi.",
-        "Mutaxassislar uchun xizmat haqi — har bir qabul qilingan bosqichdan 5%. Boshqa yashirin to'lov, obuna yoki qo'shimcha komissiya yo'q.",
+        `Mutaxassislar uchun xizmat haqi — har bir qabul qilingan bosqichdan ${PLATFORM_FEE_PERCENT}%. Boshqa yashirin to'lov, obuna yoki qo'shimcha komissiya yo'q.`,
         "Bank kartasi ma'lumotlari to'liq saqlanmaydi — faqat oxirgi 4 raqam, tur va muddat ko'rinadi. Kartalarni Sozlamalar bo'limida boshqarishingiz mumkin.",
       ],
       ru: [
         "При финансировании эскроу можно выбрать банковскую карту (Uzcard, Humo, Visa, Mastercard) или локальный кошелёк (Payme, Click). Платёж подтверждается SMS-кодом.",
         "Для клиентов платформа бесплатна: размещение проекта, отправка предложений и найм не облагаются никакой платой.",
-        "Для специалистов комиссия — 5% с каждого принятого этапа. Никаких скрытых платежей, подписок или дополнительных комиссий нет.",
+        `Для специалистов комиссия — ${PLATFORM_FEE_PERCENT}% с каждого принятого этапа. Никаких скрытых платежей, подписок или дополнительных комиссий нет.`,
         "Данные банковской карты не сохраняются полностью — видны только последние 4 цифры, тип и срок действия. Управлять картами можно в разделе «Настройки».",
       ],
       en: [
         "When funding escrow, you can choose a bank card (Uzcard, Humo, Visa, Mastercard) or a local wallet (Payme, Click). Payment is confirmed with an SMS code.",
         "The platform is free for clients: posting projects, sending offers, and hiring carry no charge at all.",
-        "For specialists, the fee is 5% of each accepted milestone. There are no hidden fees, subscriptions, or extra charges.",
+        `For specialists, the fee is ${PLATFORM_FEE_PERCENT}% of each accepted milestone. There are no hidden fees, subscriptions, or extra charges.`,
         "Card details are never stored in full — only the last 4 digits, type, and expiry are kept. You can manage your cards in Settings.",
       ],
     },

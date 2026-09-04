@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { notificationsService, DATA_CHANGED_EVENT } from "@/lib/api";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { formatDate } from "@/lib/format";
@@ -19,7 +19,6 @@ export function NotificationBell() {
   const { t, lang } = useT();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [panelOpen, setPanelOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     /* Backend'da sessiya tugasa (401) yoki tarmoq uzilsa, har bir hodisa
@@ -80,11 +79,15 @@ export function NotificationBell() {
   }
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       <button
         type="button"
         onClick={() => setPanelOpen((open) => !open)}
-        aria-label={t("ntf.open")}
+        aria-label={
+          unread > 0
+            ? t("a11y.notifications").replace("{n}", String(unread))
+            : t("a11y.notificationsEmpty")
+        }
         aria-expanded={panelOpen}
         className="relative rounded-btn p-2 text-muted transition-colors duration-150 hover:bg-card-hover hover:text-ink"
       >
@@ -99,8 +102,10 @@ export function NotificationBell() {
         </svg>
         {unread > 0 && (
           <span
+            /* Son tugmaning aria-label'ida aytiladi — bu yerda faqat vizual.
+               (Rolsiz span'dagi aria-label skrinriderlarda e'tiborsiz qolardi.) */
+            aria-hidden="true"
             className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-on-primary"
-            aria-label={`${unread}`}
           >
             {unread}
           </span>

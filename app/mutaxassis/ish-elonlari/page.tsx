@@ -233,6 +233,7 @@ export default function IshElonlariPage() {
                 prev: t("pager.prev"),
                 next: t("pager.next"),
                 page: t("pager.page"),
+                nav: t("a11y.pagination"),
               }}
             />
           )}

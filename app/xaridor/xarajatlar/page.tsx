@@ -69,12 +69,17 @@ export default function XarajatlarPage() {
 
   const paid = (milestones ?? []).filter((m) => m.status === "qabul_qilindi");
   const totalPaid = paid.reduce((sum, m) => sum + m.amount, 0);
+  /* `nizo` ham hisobga olinadi: nizo ochilganda pul escrow'da turaveradi.
+     Faqat "faol" bilan filtrlansa, aynan pul haqida xavotir eng yuqori paytda
+     summa ekrandan yo'qolib qolardi. */
   const totalEscrow = (milestones ?? [])
-    .filter(
-      (m) =>
+    .filter((m) => {
+      const status = contractById.get(m.contractId)?.status;
+      return (
         ESCROW_STATUSES.includes(m.status) &&
-        contractById.get(m.contractId)?.status === "faol"
-    )
+        (status === "faol" || status === "nizo")
+      );
+    })
     .reduce((sum, m) => sum + m.amount, 0);
 
   const payments = [...paid].sort((a, b) =>

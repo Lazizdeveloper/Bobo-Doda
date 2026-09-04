@@ -47,6 +47,10 @@ export function AccountControls() {
     try {
       await usersService.savePreferences(preferences);
       toast(t("settings.saved"));
+    } catch {
+      /* `catch` bo'lmasa xato jim yutilardi: foydalanuvchi na muvaffaqiyat,
+         na xato ko'rardi va sozlama saqlandi deb o'ylardi. */
+      toast(t("common.error"), "error");
     } finally {
       setSaving(false);
     }
@@ -166,6 +170,10 @@ export function AccountControls() {
       >
         <p className="mb-4">{t("privacy.deleteDesc")}</p>
         <Input
+          label={t("privacy.deleteConfirmLabel").replace(
+            "{word}",
+            t("privacy.deleteWord")
+          )}
           value={deleteText}
           onChange={(event) => setDeleteText(event.target.value)}
           placeholder={t("privacy.deleteWord")}

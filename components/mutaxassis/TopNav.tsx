@@ -7,7 +7,7 @@ import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { usersService } from "@/lib/api";
+import { usersService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export interface TopNavProps {
@@ -27,7 +27,18 @@ export function TopNav({ base }: TopNavProps) {
       }).catch(() => {});
     }
     refresh();
+    /* Sozlamalarda ism o'zgarsa avatar harflari ham darhol yangilansin —
+       ilgari `refresh` faqat bir marta chaqirilar va sahifa qayta
+       yuklanmaguncha eski ism qolardi. */
+    window.addEventListener(DATA_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, refresh);
   }, []);
+
+  /* TopNav layout ichida bo'lgani uchun sahifalar orasida qayta mount bo'lmaydi —
+     menyu o'zi yopilmasa, yangi sahifa ustida ochiq qolib ketadi. */
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const items = [
     { href: "/mutaxassis", label: t("nav.dashboard"), exact: true },
@@ -71,8 +82,12 @@ export function TopNav({ base }: TopNavProps) {
 
           {/* Mobile menu button */}
           <button
+            type="button"
             className="md:hidden p-2 text-muted"
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? t("a11y.closeMenu") : t("a11y.openMenu")}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
           >
              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -83,7 +98,18 @@ export function TopNav({ base }: TopNavProps) {
             <Link href="/mutaxassis/daromad" className="text-xs font-medium text-muted hover:text-ink">
               {t("nav.earnings")}
             </Link>
-            <Link href="/mutaxassis/sozlamalar" className="rounded-full">
+            {/* Yordam sahifasi mavjud edi, lekin unga hech qaysi ekrandan
+                havola yo'q edi — mutaxassis yordamga umuman kira olmasdi. */}
+            <Link href="/mutaxassis/yordam" className="text-xs font-medium text-muted hover:text-ink">
+              {t("nav.help")}
+            </Link>
+            {/* Avatar `aria-hidden` — havola nomsiz qolmasligi uchun
+                aria-label SHART (axe: link-name). */}
+            <Link
+              href="/mutaxassis/sozlamalar"
+              aria-label={t("nav.settings")}
+              className="rounded-full"
+            >
               <Avatar name={name || "?"} size="sm" />
             </Link>
           </div>
@@ -92,7 +118,7 @@ export function TopNav({ base }: TopNavProps) {
 
       {/* Mobile Nav */}
       {menuOpen && (
-        <div className="border-t border-line bg-surface px-4 py-3 md:hidden">
+        <div id="mobile-nav" className="border-t border-line bg-surface px-4 py-3 md:hidden">
           <nav className="flex flex-col gap-2">
             {items.map((item) => (
               <Link key={item.href} href={item.href} className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
@@ -101,6 +127,9 @@ export function TopNav({ base }: TopNavProps) {
             ))}
             <Link href="/mutaxassis/daromad" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
                {t("nav.earnings")}
+            </Link>
+            <Link href="/mutaxassis/yordam" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
+               {t("nav.help")}
             </Link>
             <Link href="/mutaxassis/sozlamalar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
                {t("nav.settings")}

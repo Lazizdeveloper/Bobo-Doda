@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 export interface StepperProps {
   steps: string[];
   current: number; // 0-indeksli
@@ -8,8 +10,9 @@ export interface StepperProps {
 }
 
 export function Stepper({ steps, current, onStepClick }: StepperProps) {
+  const { t } = useT();
   return (
-    <ol className="flex items-center gap-2" aria-label="Bosqichlar">
+    <ol className="flex items-center gap-2" aria-label={t("a11y.steps")}>
       {steps.map((step, i) => {
         const done = i < current;
         const active = i === current;

@@ -10,7 +10,9 @@ import type {
   SellerProfile,
   Service,
   User,
+  VerificationRecord,
 } from "@/lib/types";
+import { svgGallery, svgImg } from "@/lib/mock-api/placeholder";
 
 export const BUYER_ID = "u-b2";
 export const SELLER_ID = "u-1";
@@ -23,7 +25,6 @@ export const seedUsers: User[] = [
     phone: "+998901234567",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-01-10T10:00:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -35,7 +36,6 @@ export const seedUsers: User[] = [
     phone: "+998912345678",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-01-15T11:30:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -47,7 +47,6 @@ export const seedUsers: User[] = [
     phone: "+998933456789",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-02-01T09:15:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -59,7 +58,6 @@ export const seedUsers: User[] = [
     phone: "+998944567890",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-02-12T14:20:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -71,7 +69,6 @@ export const seedUsers: User[] = [
     phone: "+998975678901",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-03-01T16:45:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -83,7 +80,6 @@ export const seedUsers: User[] = [
     phone: "+998996789012",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-03-10T12:00:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -95,7 +91,6 @@ export const seedUsers: User[] = [
     phone: "+998907890123",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-03-18T08:30:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -107,7 +102,6 @@ export const seedUsers: User[] = [
     phone: "+998918901234",
     password: DEMO_PASSWORD,
     role: "mutaxassis",
-    avatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-04-01T10:00:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -119,7 +113,6 @@ export const seedUsers: User[] = [
     phone: "+998909876543",
     password: DEMO_PASSWORD,
     role: "xaridor",
-    avatarUrl: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-01-05T09:00:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -131,7 +124,6 @@ export const seedUsers: User[] = [
     phone: "+998918765432",
     password: DEMO_PASSWORD,
     role: "xaridor",
-    avatarUrl: "https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-01-12T14:10:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -143,7 +135,6 @@ export const seedUsers: User[] = [
     phone: "+998937654321",
     password: DEMO_PASSWORD,
     role: "xaridor",
-    avatarUrl: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-02-20T11:00:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -155,7 +146,6 @@ export const seedUsers: User[] = [
     phone: "+998946543210",
     password: DEMO_PASSWORD,
     role: "xaridor",
-    avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-03-05T15:30:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -167,7 +157,6 @@ export const seedUsers: User[] = [
     phone: "+998975432109",
     password: DEMO_PASSWORD,
     role: "xaridor",
-    avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
     createdAt: "2026-03-25T10:45:00.000Z",
     roleChosen: true,
     profileDone: true,
@@ -210,14 +199,14 @@ export const seedProfiles: Record<string, SellerProfile> = {
         id: "port-1",
         title: "Fintech E-Wallet Web Platformasi",
         description: "To'lovlar va transaksiyalar uchun yuqori yuklamali veb ilova.",
-        image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80",
+        image: svgImg("port-1", "dasturlash"),
         category: "dasturlash",
       },
       {
         id: "port-2",
         title: "B2B E-Commerce Marketplace",
         description: "Ulgurji savdo uchun avtomatlashtirilgan katalog va ombor boshqaruvi.",
-        image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80",
+        image: svgImg("port-2", "dasturlash"),
         category: "dasturlash",
       },
     ],
@@ -245,7 +234,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
         id: "port-3",
         title: "Bank Mobil Ilovasi UI/UX",
         description: "Minimalist va qulay foydalanuvchi interfeysi.",
-        image: "https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=800&auto=format&fit=crop&q=80",
+        image: svgImg("port-3", "dizayn"),
         category: "dizayn",
       },
     ],
@@ -273,7 +262,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
         id: "port-4",
         title: "Yetkazib berish xizmati uchun Telegram Bot",
         description: "Geolokatsiya va onlayn to'lovli avtomatlashtirilgan buyurtma boti.",
-        image: "https://images.unsplash.com/photo-1618401471353-b98aedd04e11?w=800&auto=format&fit=crop&q=80",
+        image: svgImg("port-4", "dasturlash"),
         category: "dasturlash",
       },
     ],
@@ -384,10 +373,7 @@ export const seedServices: Service[] = [
     currency: "UZS",
     deliveryDays: 5,
     category: "dasturlash",
-    images: [
-      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80",
-    ],
+    images: svgGallery("svc-1", "dasturlash", 2),
     fields: {
       type: "Landing page",
       tech: "Next.js 15, Tailwind, TS",
@@ -411,10 +397,7 @@ export const seedServices: Service[] = [
     currency: "UZS",
     deliveryDays: 4,
     category: "dizayn",
-    images: [
-      "https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=800&auto=format&fit=crop&q=80",
-    ],
+    images: svgGallery("svc-2", "dizayn", 2),
     fields: {
       variants: "3 ta konseptsiya",
       format: "Vector (AI, SVG, PNG)",
@@ -435,9 +418,7 @@ export const seedServices: Service[] = [
     currency: "UZS",
     deliveryDays: 3,
     category: "dasturlash",
-    images: [
-      "https://images.unsplash.com/photo-1618401471353-b98aedd04e11?w=800&auto=format&fit=crop&q=80",
-    ],
+    images: svgGallery("svc-3", "dasturlash", 1),
     fields: {
       lang: "Python / Aiogram",
       database: "PostgreSQL",
@@ -457,9 +438,7 @@ export const seedServices: Service[] = [
     currency: "UZS",
     deliveryDays: 30,
     category: "marketing",
-    images: [
-      "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop&q=80",
-    ],
+    images: svgGallery("svc-4", "marketing", 1),
     fields: {
       coverage: "1 oylik to'liq yuritish",
     },
@@ -478,9 +457,7 @@ export const seedServices: Service[] = [
     currency: "UZS",
     deliveryDays: 14,
     category: "dasturlash",
-    images: [
-      "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&auto=format&fit=crop&q=80",
-    ],
+    images: svgGallery("svc-5", "dasturlash", 1),
     fields: {
       framework: "Flutter 3",
       platforms: "iOS & Android",
@@ -500,9 +477,7 @@ export const seedServices: Service[] = [
     currency: "UZS",
     deliveryDays: 2,
     category: "kontent",
-    images: [
-      "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80",
-    ],
+    images: svgGallery("svc-6", "kontent", 1),
     fields: {
       words: "2000 so'z",
       seo: "Kalit so'zlar bilan",
@@ -566,6 +541,61 @@ export const seedJobs: Job[] = [
     proposalsCount: 3,
     postedAt: "2026-03-10T15:00:00.000Z",
     status: "yopilgan",
+  },
+  /* Ochiq e'lonlar — demo mutaxassis (u-1, "dasturlash") hali taklif
+     yubormagan. Ularsiz boshqaruvdagi "Sizga mos e'lonlar" bloki va ish
+     e'lonlari sahifasi bo'sh chiqardi: job-1 ga u allaqachon taklif
+     yuborgan, job-3 esa yopilgan. */
+  {
+    id: "job-4",
+    buyerId: "u-b4",
+    buyerName: "Farrux Zokirov",
+    buyerRating: 4.7,
+    title: "SaaS mahsulot uchun analitika paneli (dashboard)",
+    description: "Mavjud API'ga ulanadigan, grafik va filtrlarga ega admin dashboard kerak. Dizayn maketi tayyor, faqat frontend dasturlash.",
+    category: "dasturlash",
+    budgetMin: 4000000,
+    budgetMax: 5500000,
+    currency: "UZS",
+    skillsRequired: ["React", "TypeScript", "Tailwind CSS"],
+    screeningQuestions: ["Grafik kutubxonalaridan qaysilari bilan ishlagansiz?"],
+    proposalsCount: 2,
+    postedAt: "2026-04-13T09:00:00.000Z",
+    status: "ochiq",
+  },
+  {
+    id: "job-5",
+    buyerId: "u-b5",
+    buyerName: "Apex Retail Group",
+    buyerRating: 4.6,
+    title: "Ichki hisobot tizimi uchun Next.js frontend",
+    description: "PostgreSQL bazadagi savdo ma'lumotlarini ko'rsatuvchi ichki panel. Autentifikatsiya va rollar tizimi ham kerak.",
+    category: "dasturlash",
+    budgetMin: 6000000,
+    budgetMax: 9000000,
+    currency: "UZS",
+    skillsRequired: ["Next.js", "Node.js", "PostgreSQL"],
+    screeningQuestions: [],
+    proposalsCount: 1,
+    postedAt: "2026-04-14T11:30:00.000Z",
+    status: "ochiq",
+  },
+  {
+    id: "job-6",
+    buyerId: "u-b2",
+    buyerName: "ArtSoft Studios (Mijoz)",
+    buyerRating: 5.0,
+    title: "Mobil ilova uchun ikonkalar to'plami va illustratsiyalar",
+    description: "30 ta ikonka (outline + filled) va 4 ta onboarding illustratsiyasi. Uslub qo'llanmasi beriladi.",
+    category: "dizayn",
+    budgetMin: 1500000,
+    budgetMax: 2200000,
+    currency: "UZS",
+    skillsRequired: ["Figma", "Illustrator", "Icon Design"],
+    screeningQuestions: [],
+    proposalsCount: 0,
+    postedAt: "2026-04-14T16:00:00.000Z",
+    status: "ochiq",
   },
 ];
 
@@ -647,6 +677,24 @@ export const seedContracts: Contract[] = [
     status: "nizo",
     createdAt: "2026-03-12T16:00:00.000Z",
   },
+  /* MAHSULOTNING ASOSIY G'OYASINI demo qilish uchun: `imzolangan` — taraflar
+     kelishgan, lekin xaridor hali escrow'ga to'lamagan, ish BOSHLANMAGAN.
+     Barcha bosqich `kutilmoqda`. Xaridor (u-b2) `fundContract` bilan butun
+     summani bitta to'lovda tashlaydi → shartnoma `faol` bo'ladi.
+     Ilgari seed'da bunday shartnoma yo'q edi va escrow to'lovini ko'rsatish
+     uchun avval qo'lda taklif yuborib, uni qabul qilish kerak bo'lardi. */
+  {
+    id: "cnt-5",
+    title: "Ichki CRM uchun hisobot moduli",
+    buyerId: "u-b2",
+    buyerName: "ArtSoft Studios (Mijoz)",
+    sellerId: "u-1",
+    sellerName: "Rustam Qosimov",
+    sourceType: "taklifnoma",
+    totalAmount: 5000000,
+    status: "imzolangan",
+    createdAt: "2026-03-16T12:30:00.000Z",
+  },
 ];
 
 export const seedMilestones: Milestone[] = [
@@ -668,7 +716,7 @@ export const seedMilestones: Milestone[] = [
     description: "Responsive veb-ilova va API integratsiyasi",
     amount: 4000000,
     status: "mablaglangan",
-    dueDate: "2026-03-20T00:00:00.000Z",
+    dueDate: "2026-04-28T00:00:00.000Z",
   },
   {
     id: "ms-2-1",
@@ -701,6 +749,26 @@ export const seedMilestones: Milestone[] = [
     dueDate: "2026-04-10T00:00:00.000Z",
     submittedAt: "2026-04-10T15:00:00.000Z",
   },
+  /* cnt-5 bosqichlari — hammasi `kutilmoqda`: to'lov kutilmoqda, ish
+     boshlanmagan. `fundContract` ikkalasini birdan `mablaglangan` qiladi. */
+  {
+    id: "ms-5-1",
+    contractId: "cnt-5",
+    title: "1-Bosqich: Ma'lumot qatlami va API",
+    description: "Hisobot uchun ma'lumotlar bazasi so'rovlari va API endpointlari",
+    amount: 2000000,
+    status: "kutilmoqda",
+    dueDate: "2026-05-05T00:00:00.000Z",
+  },
+  {
+    id: "ms-5-2",
+    contractId: "cnt-5",
+    title: "2-Bosqich: Hisobot ekranlari va eksport",
+    description: "Grafiklar, filtrlar va Excel eksporti",
+    amount: 3000000,
+    status: "kutilmoqda",
+    dueDate: "2026-05-20T00:00:00.000Z",
+  },
 ];
 
 export const seedMessages: Message[] = [
@@ -720,8 +788,79 @@ export const seedMessages: Message[] = [
   },
 ];
 
-export const seedOfferMessages: Message[] = [];
-export const seedOffers: Offer[] = [];
+/* To'g'ridan-to'g'ri takliflar (A yo'l).
+   Ataylab DEMO hisoblar orasida: xaridor u-b2 (ArtSoft) → mutaxassis u-1
+   (Rustam). Shunda bitta brauzerda hisob almashtirib, taklifni ikkala
+   tomondan ham ko'rish mumkin. Ilgari bu massiv bo'sh edi — natijada A yo'l
+   oqimini (taklif → chat → qabul) demo qilish uchun avval qo'lda taklif
+   yuborish kerak bo'lardi. */
+export const seedOffers: Offer[] = [
+  {
+    id: "off-1",
+    buyerId: "u-b2",
+    buyerName: "ArtSoft Studios (Mijoz)",
+    sellerId: "u-1",
+    sellerName: "Rustam Qosimov",
+    serviceId: "svc-1",
+    title: "Korporativ sayt: 5 sahifa + admin panel",
+    message:
+      "Assalomu alaykum Rustam. Kompaniyamiz uchun 5 sahifali korporativ sayt va oddiy admin panel kerak. Xizmatingizni ko'rdim, muddat va narx bo'yicha kelisha olamizmi?",
+    budget: 6500000,
+    status: "yuborilgan",
+    createdAt: "2026-03-14T09:20:00.000Z",
+  },
+  {
+    id: "off-2",
+    buyerId: "u-b2",
+    buyerName: "ArtSoft Studios (Mijoz)",
+    sellerId: "u-1",
+    sellerName: "Rustam Qosimov",
+    title: "Ichki CRM uchun hisobot moduli",
+    message:
+      "CRM tizimimizga sotuv hisobotlari moduli kerak. Bosqichma-bosqich ishlasak bo'ladi.",
+    budget: 5000000,
+    status: "qabul_qilindi",
+    contractId: "cnt-5",
+    createdAt: "2026-03-16T11:00:00.000Z",
+  },
+  {
+    id: "off-3",
+    buyerId: "u-b2",
+    buyerName: "ArtSoft Studios (Mijoz)",
+    sellerId: "u-4",
+    sellerName: "Zarina Saidova",
+    title: "Instagram uchun 10 ta reels montaji",
+    message: "Oyiga 10 ta qisqa reels montaj qilib bera olasizmi?",
+    budget: 1200000,
+    status: "rad_etildi",
+    createdAt: "2026-03-11T15:40:00.000Z",
+  },
+];
+
+/* Taklif chatidagi xabarlar — contractId maydoni taklif id'siga bog'lanadi. */
+export const seedOfferMessages: Message[] = [
+  {
+    id: "omsg-1",
+    contractId: "off-1",
+    senderId: "u-b2",
+    text: "Assalomu alaykum Rustam. Kompaniyamiz uchun 5 sahifali korporativ sayt va oddiy admin panel kerak. Xizmatingizni ko'rdim, muddat va narx bo'yicha kelisha olamizmi?",
+    createdAt: "2026-03-14T09:20:00.000Z",
+  },
+  {
+    id: "omsg-2",
+    contractId: "off-2",
+    senderId: "u-b2",
+    text: "CRM tizimimizga sotuv hisobotlari moduli kerak. Bosqichma-bosqich ishlasak bo'ladi.",
+    createdAt: "2026-03-16T11:00:00.000Z",
+  },
+  {
+    id: "omsg-3",
+    contractId: "off-2",
+    senderId: "u-1",
+    text: "Salom! Vazifa tushunarli. Ikki bosqichga bo'lamiz: ma'lumot qatlami va hisobot ekranlari. Shartnomani ochdim.",
+    createdAt: "2026-03-16T12:30:00.000Z",
+  },
+];
 
 export const seedReviews: Review[] = [
   {
@@ -733,7 +872,188 @@ export const seedReviews: Review[] = [
     comment: "Ajoyib ish! Nigora juda kreativ va belgilangan muddatdan oldin logotipni taqdim etdi. Tavsiya qilaman!",
     createdAt: "2026-02-15T10:00:00.000Z",
   },
+  /* Demo mutaxassis (u-1) profilida ham sharh bo'lsin — ochiq profil va
+     bozor kartasi reyting bilan birga sharhlarni ham ko'rsatadi. */
+  {
+    id: "rev-2",
+    contractId: "cnt-1",
+    buyerName: "TechCorp Tashkent MChJ",
+    sellerId: "u-1",
+    rating: 5,
+    comment:
+      "Figma maketlari bir kunda tayyor bo'ldi, kod sifati yuqori. Bosqichli to'lov ikkala tomon uchun ham qulay chiqdi.",
+    createdAt: "2026-03-06T09:00:00.000Z",
+  },
+  {
+    id: "rev-3",
+    contractId: "cnt-2",
+    buyerName: "Farrux Zokirov",
+    sellerId: "u-1",
+    rating: 4,
+    comment:
+      "Ish sifatli bajarildi. Bir bosqichda kichik kechikish bo'ldi, lekin oldindan ogohlantirdi.",
+    createdAt: "2026-02-20T13:30:00.000Z",
+  },
 ];
 
-export const seedNotifications: AppNotification[] = [];
+/* Bildirishnomalar — Header qo'ng'irog'i `userId` bo'yicha filtrlaydi.
+   Ilgari bo'sh edi: qo'ng'iroq har doim "Hozircha bildirishnoma yo'q" derdi
+   va uni demo qilib bo'lmasdi. Har ikkala demo hisobda ham o'qilmagan
+   bildirishnoma bo'lishi uchun ataylab ikkala tomonga yozilgan. */
+export const seedNotifications: AppNotification[] = [
+  {
+    id: "ntf-1",
+    userId: "u-1",
+    kind: "taklif",
+    messageKey: "ntf.newOffer",
+    params: { title: "Korporativ sayt: 5 sahifa + admin panel" },
+    href: "/mutaxassis/takliflarim/kelgan/off-1",
+    read: false,
+    createdAt: "2026-03-14T09:20:00.000Z",
+  },
+  {
+    id: "ntf-2",
+    userId: "u-1",
+    kind: "xabar",
+    messageKey: "ntf.newMessage",
+    params: { title: "Ichki CRM uchun hisobot moduli" },
+    href: "/mutaxassis/shartnomalar/cnt-5",
+    read: false,
+    createdAt: "2026-03-16T11:05:00.000Z",
+  },
+  {
+    id: "ntf-3",
+    userId: "u-1",
+    kind: "bosqich",
+    messageKey: "ntf.milestoneAccepted",
+    params: { title: "1-Bosqich: Figma Dizayn va Prototip" },
+    href: "/mutaxassis/shartnomalar/cnt-1",
+    read: true,
+    createdAt: "2026-03-05T17:00:00.000Z",
+  },
+  {
+    id: "ntf-4",
+    userId: "u-b2",
+    kind: "taklif",
+    messageKey: "ntf.offerAccepted",
+    params: { title: "Ichki CRM uchun hisobot moduli" },
+    href: "/xaridor/shartnomalar/cnt-5",
+    read: false,
+    createdAt: "2026-03-16T12:30:00.000Z",
+  },
+  {
+    id: "ntf-5",
+    userId: "u-b2",
+    kind: "taklif",
+    messageKey: "ntf.offerDeclined",
+    params: { title: "Instagram uchun 10 ta reels montaji" },
+    href: "/xaridor/takliflarim/off-3",
+    read: true,
+    createdAt: "2026-03-12T08:15:00.000Z",
+  },
+];
 
+/* KYC yozuvlari — ochiq profildagi "Shaxsi tasdiqlangan" belgisi shu
+   ro'yxatdan hisoblanadi (`verifiedIdentitySet`). Ilgari bu ma'lumot
+   admin panelining mock faylida turardi va asosiy ilova unga bog'liq edi;
+   admin alohida branch'ga chiqarilgach, u shu yerga ko'chirildi. */
+export const seedVerifications: VerificationRecord[] = [
+  {
+    userId: "u-1",
+    status: "tasdiqlangan",
+    country: "UZ",
+    documentType: "passport",
+    legalName: "Rustam Qosimov",
+    birthDate: "1994-05-12",
+    documents: [
+      svgImg("kyc-u-1")
+    ],
+    submittedAt: "2026-01-12T10:00:00.000Z",
+  },
+  {
+    userId: "u-2",
+    status: "tasdiqlangan",
+    country: "UZ",
+    documentType: "id_card",
+    legalName: "Nigora Karimova",
+    birthDate: "1997-08-23",
+    documents: [
+      svgImg("kyc-u-2")
+    ],
+    submittedAt: "2026-01-16T12:00:00.000Z",
+  },
+  {
+    userId: "u-3",
+    status: "tasdiqlangan",
+    country: "UZ",
+    documentType: "passport",
+    legalName: "Jasur Bekchanov",
+    birthDate: "1996-11-04",
+    documents: [
+      svgImg("kyc-u-3")
+    ],
+    submittedAt: "2026-02-02T09:00:00.000Z",
+  },
+  {
+    userId: "u-4",
+    status: "korib_chiqilmoqda",
+    country: "UZ",
+    documentType: "id_card",
+    legalName: "Zarina Saidova",
+    birthDate: "1999-03-15",
+    documents: [
+      svgImg("kyc-u-4")
+    ],
+    submittedAt: "2026-04-18T10:30:00.000Z",
+  },
+  {
+    userId: "u-5",
+    status: "korib_chiqilmoqda",
+    country: "UZ",
+    documentType: "passport",
+    legalName: "Umid Aliyev",
+    birthDate: "1995-09-30",
+    documents: [
+      svgImg("kyc-u-5")
+    ],
+    submittedAt: "2026-04-19T14:15:00.000Z",
+  },
+  {
+    userId: "u-6",
+    status: "korib_chiqilmoqda",
+    country: "UZ",
+    documentType: "id_card",
+    legalName: "Shahzod Mirzayev",
+    birthDate: "1998-01-18",
+    documents: [
+      svgImg("kyc-u-6")
+    ],
+    submittedAt: "2026-04-20T08:45:00.000Z",
+  },
+  {
+    userId: "u-7",
+    status: "rad_etilgan",
+    country: "UZ",
+    documentType: "passport",
+    legalName: "Aziza Toshmatova",
+    birthDate: "2000-07-09",
+    documents: [
+      svgImg("kyc-u-7")
+    ],
+    submittedAt: "2026-03-20T16:00:00.000Z",
+    rejectionReason: "Hujjat surati xira va chetlari kesilgan. Iltimos, sifatliroq formatda qayta yuklang.",
+  },
+  {
+    userId: "u-sus1",
+    status: "rad_etilgan",
+    country: "UZ",
+    documentType: "passport",
+    legalName: "Botir Qobilov",
+    birthDate: "1993-12-05",
+    documents: [
+      svgImg("kyc-u-sus1")
+    ],
+    submittedAt: "2026-04-10T12:30:00.000Z",
+    rejectionReason: "Taqdim etilgan passport boshqa foydalanuvchi hisobiga tegishli.",
+  },
+];

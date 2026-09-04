@@ -69,12 +69,15 @@ export default function ParolniTiklashPage() {
       router.push("/kirish?tab=kirish");
     } catch (err) {
       const errCode = err instanceof Error ? err.message : "";
-      setErrors({
-        form:
-          errCode === "INVALID_CREDENTIALS"
-            ? t("auth.errUserNotFound")
-            : t("common.error"),
-      });
+      if (errCode === "USER_NOT_FOUND" || errCode === "INVALID_CREDENTIALS") {
+        setErrors({ form: t("auth.errUserNotFound") });
+      } else if (errCode === "WEAK_PASSWORD") {
+        setErrors({ password: t("security.passwordRules") });
+      } else if (errCode === "INVALID_CODE") {
+        setErrors({ code: t("auth.codeError") });
+      } else {
+        setErrors({ form: t("common.error") });
+      }
       setSaving(false);
     }
   }

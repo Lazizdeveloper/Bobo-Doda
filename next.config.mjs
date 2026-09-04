@@ -31,10 +31,10 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  /* Build papkasi. Odatda ".next". Dev'da ikki server bir vaqtda ishlaganda
-     (asosiy + admin) har biriga alohida papka beriladi (NEXT_DIST_DIR) — aks
-     holda ular bitta ".next" ni buzadi. Production build env qo'ymaydi →
-     doim ".next" ishlatiladi, ya'ni ishlab chiqarishga ta'sir yo'q. */
+  /* Build papkasi. Odatda ".next". NEXT_DIST_DIR faqat ishlab turgan dev
+     serverga tegmasdan alohida build qilish kerak bo'lganda ishlatiladi
+     (masalan `NEXT_DIST_DIR=.next-check npm run build`) — aks holda build
+     dev serverning ".next" papkasini ustiga yozib, uni buzadi. */
   distDir: process.env.NEXT_DIST_DIR || ".next",
   async headers() {
     return [

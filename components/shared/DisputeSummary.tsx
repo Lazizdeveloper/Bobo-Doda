@@ -2,18 +2,31 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { disputesService } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { authService, disputesService } from "@/lib/api";
 import type { Dispute } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
-export function DisputeSummary({ contractId }: { contractId: string }) {
+export function DisputeSummary({
+  contractId,
+  onWithdrawn,
+}: {
+  contractId: string;
+  /** Nizo qaytarib olingach shartnomani qayta yuklash uchun */
+  onWithdrawn?: () => void;
+}) {
   const { t, lang } = useT();
+  const { toast } = useToast();
   const [dispute, setDispute] = useState<Dispute | null | undefined>();
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -26,6 +39,26 @@ export function DisputeSummary({ contractId }: { contractId: string }) {
 
   useEffect(load, [load]);
 
+  async function handleWithdraw() {
+    setWithdrawing(true);
+    try {
+      await disputesService.withdraw(contractId);
+      toast(t("dispute.withdrawn"));
+      setWithdrawOpen(false);
+      onWithdrawn?.();
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      toast(
+        code === "FORBIDDEN"
+          ? t("dispute.withdrawOnlyOpener")
+          : t("common.error"),
+        "error"
+      );
+    } finally {
+      setWithdrawing(false);
+    }
+  }
+
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (dispute === undefined) return <Skeleton className="h-28 w-full" />;
   if (!dispute) {
@@ -35,6 +68,8 @@ export function DisputeSummary({ contractId }: { contractId: string }) {
       </p>
     );
   }
+
+  const isOpener = dispute.openedBy === authService.getSession()?.userId;
 
   return (
     <Card className="border-danger/30 bg-danger/5">
@@ -66,6 +101,34 @@ export function DisputeSummary({ contractId }: { contractId: string }) {
           ))}
         </div>
       )}
+
+      {/* Keyingi qadam va chiqish yo'li — ilgari nizo ochilgach shartnoma
+          hech qanday izohsiz abadiy muzlab qolardi. */}
+      <p className="mt-4 border-t border-danger/20 pt-3 text-xs text-muted">
+        {t("dispute.nextSteps")}
+      </p>
+      {isOpener && dispute.status === "ochiq" && (
+        <div className="mt-3 flex justify-end">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setWithdrawOpen(true)}
+          >
+            {t("dispute.withdraw")}
+          </Button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={withdrawOpen}
+        title={t("dispute.withdrawTitle")}
+        description={t("dispute.withdrawDesc")}
+        confirmLabel={t("dispute.withdraw")}
+        cancelLabel={t("common.cancel")}
+        loading={withdrawing}
+        onConfirm={handleWithdraw}
+        onCancel={() => setWithdrawOpen(false)}
+      />
     </Card>
   );
 }

@@ -14,11 +14,15 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Xavfsizlik header'lari.
+# Xavfsizlik header'lari. `next.config.mjs` dagi CSP bilan BIR XIL bo'lishi
+# shart — ikki fayl har xil bo'lsa, brauzer ikkala CSP'ning kesishmasini
+# qo'llaydi va nosozlikni tushunish qiyinlashadi.
+# Shriftlar `@fontsource` orqali LOKAL (self) — Google Fonts hostiga ruxsat
+# kerak emas.
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"

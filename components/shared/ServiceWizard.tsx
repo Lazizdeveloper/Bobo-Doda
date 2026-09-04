@@ -510,7 +510,7 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
                   <img
                     key={i}
                     src={src}
-                    alt={`${i + 1}-rasm`}
+                    alt={t("a11y.image").replace("{n}", String(i + 1))}
                     className="h-16 w-16 rounded-input border border-line object-cover"
                   />
                 ))}
@@ -533,12 +533,35 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
           {step < steps.length - 1 ? (
             <Button onClick={goNext}>{t("common.next")}</Button>
           ) : isEdit ? (
-            <Button
-              onClick={() => save(initial.status, "publish")}
-              loading={saving === "publish"}
-            >
-              {t("wizard.saveChanges")}
-            </Button>
+            /* Qoralamani tahrirlashda chop etish tanlovi berilishi SHART —
+               aks holda `initial.status` saqlanib, xizmat abadiy qoralama
+               bo'lib qoladi va bozorga hech qachon chiqmaydi. */
+            initial.status === "draft" ? (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => save("draft", "draft")}
+                  loading={saving === "draft"}
+                  disabled={saving === "publish"}
+                >
+                  {t("wizard.saveDraft")}
+                </Button>
+                <Button
+                  onClick={() => save("active", "publish")}
+                  loading={saving === "publish"}
+                  disabled={saving === "draft"}
+                >
+                  {t("wizard.publish")}
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => save(initial.status, "publish")}
+                loading={saving === "publish"}
+              >
+                {t("wizard.saveChanges")}
+              </Button>
+            )
           ) : (
             <>
               <Button

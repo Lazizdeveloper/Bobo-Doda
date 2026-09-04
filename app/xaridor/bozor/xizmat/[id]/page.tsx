@@ -160,7 +160,7 @@ export default function XizmatTafsilotiPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={src}
-                        alt={`Thumbnail ${i + 1}`}
+                        alt={t("a11y.image").replace("{n}", String(i + 1))}
                         className="h-full w-full object-cover"
                       />
                     </button>

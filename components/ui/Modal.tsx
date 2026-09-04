@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 
 export interface ModalProps {
   open: boolean;
@@ -12,6 +13,7 @@ export interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, footer, size = "md" }: ModalProps) {
+  const { t } = useT();
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   /* onClose'ni ref orqali ushlaymiz — identifikatori o'zgarsa ham
@@ -93,14 +95,14 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
       <div
         ref={panelRef}
         tabIndex={-1}
-        className={`sb-fade-in relative my-8 w-full ${sizeClasses[size || "md"]} rounded-2xl border border-line bg-card p-6 shadow-overlay max-h-[90vh] overflow-y-auto`}
+        className={`sb-fade-in relative my-8 w-full ${sizeClasses[size || "md"]} rounded-card border border-line bg-card p-6 shadow-overlay max-h-[90vh] overflow-y-auto`}
       >
         <div className="mb-3 flex items-start justify-between gap-4">
           <h3 className="font-heading text-lg font-bold text-ink">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Yopish"
+            aria-label={t("common.close")}
             className="-mr-1 -mt-1 rounded p-1 text-muted transition-colors duration-150 hover:text-ink"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

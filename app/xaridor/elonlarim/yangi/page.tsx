@@ -343,7 +343,7 @@ export default function YangiElonPage() {
                   <img
                     key={i}
                     src={src}
-                    alt={`${i + 1}-rasm`}
+                    alt={t("a11y.image").replace("{n}", String(i + 1))}
                     className="h-16 w-16 rounded-input border border-line object-cover"
                   />
                 ))}

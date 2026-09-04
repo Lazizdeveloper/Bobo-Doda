@@ -1,5 +1,4 @@
 import type * as Model from "@/lib/types";
-import type { AdminAccount, AdminPermission, AdminSession, AuditEvent } from "@/lib/admin-types";
 import type { PaymentStatus } from "./state-machines";
 
 export interface ApiPage<T> {
@@ -54,6 +53,7 @@ export interface UsersService {
     bio: string;
     headline?: string;
     skills?: string[];
+    categories?: string[];
     location?: string;
     languages?: Model.ProfileLanguage[];
     portfolio?: Model.PortfolioItem[];
@@ -211,6 +211,8 @@ export interface DisputesService {
     contractId: string,
     input: Pick<Model.Dispute, "reason" | "description" | "evidence">
   ): Promise<Model.Dispute>;
+  /** Nizoni ochgan tomon uni qaytarib oladi — shartnoma `faol` ga qaytadi */
+  withdraw(contractId: string): Promise<void>;
 }
 
 export interface VerificationService {
@@ -228,11 +230,4 @@ export interface SupportService {
     haqiqiy `fetch` bilan ishlaydi (`client.ts`da). */
 export interface SupportRequestService {
   submit(input: Model.SupportRequestInput & { userId?: string }): Promise<void>;
-}
-
-export interface AdminService {
-  getSession(): AdminSession | null;
-  getCurrent(): AdminAccount | null;
-  hasPermission(permission: AdminPermission): boolean;
-  getAuditEvents(): AuditEvent[];
 }

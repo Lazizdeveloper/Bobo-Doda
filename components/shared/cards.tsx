@@ -116,6 +116,10 @@ export function AddCardModal({
       else if (msg === "CARD_EXISTS") toast(t("card.exists"), "error");
       else if (msg === "CARD_LIMIT") toast(t("card.limit"), "error");
       else toast(t("common.error"), "error");
+    } finally {
+      /* Modal yopilganda ham komponent mount holida qoladi — `saving` bu yerda
+         tozalanmasa, keyingi ochilishda tugma abadiy "loading" bo'lib turadi
+         va ikkinchi kartani qo'shib bo'lmaydi. */
       setSaving(false);
     }
   }

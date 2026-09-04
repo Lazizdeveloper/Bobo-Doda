@@ -42,10 +42,12 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   Mastercard (51–55/2221–2720). Validatsiya `lib/validate.ts`: `cardNumber` +
   `detectCardType` (16 raqam+prefiks), `cardExpiry` (MM/YY, o'tmagan).
   Kartalar Sozlamalarda (`CardManager`), to'lov/yechishда tanlanadi (`CardPicker`).
-- **Pul KIRISHI (deposit)**: xaridor `fundContract`da usul (Bank kartasi /
-  Mahalliy hamyon — Payme/Click/Kaspi) tanlaydi → **SMS-kod (3DS mock, istalgan
-  6 raqam)** bilan tasdiqlaydi. Real hayotda: karta/mahalliy hamyon
-  (Payme/Click/Kaspi) gateway, hisob raqam berilmaydi.
+- **Pul KIRISHI (deposit)**: xaridor `fundContract`da UCHTA usuldan birini
+  tanlaydi — **Bank kartasi** (3DS: istalgan 6 raqamli SMS-kod, sahifada
+  qoladi), **Click** yoki **Payme** (qayta yo'naltirishga asoslangan: to'lov
+  muvaffaqiyatli bo'lgach `/tolov/natija?status=success&reference=<id>` ga
+  o'tadi — bu sahifa aynan shu callback uchun yozilgan). Real hayotda:
+  karta/mahalliy hamyon gateway, hisob raqam berilmaydi.
 - **Pul CHIQISHI (payout)**: mutaxassis `withdrawFunds(cardId)`, xaridor
   `withdrawBalance(cardId)` — bog'langan kartaga. Egalik tekshiriladi
   (`assertOwnCard`). Mutaxassis daromadi: "Yechish mumkin" = qabul qilingan −
@@ -56,8 +58,15 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
 ## Qamrov
 - Ikkala tomon (mutaxassis + xaridor kabinetlari) bitta umumiy localStorage
   bazada — akkaunt almashtirib ikki tomonlama oqimni sinash mumkin.
-- Backend, real Telegram/to'lov, admin, soatlik shartnoma va Connects — YO'Q.
+- Backend, real Telegram/to'lov, soatlik shartnoma va Connects — YO'Q.
   Nizo ochish, sabab/dalil yuborish va shartnomani muzlatish frontend oqimi bor.
+- **Admin panel `main`da YO'Q** — u `admin-panel` branch'iga chiqarilgan
+  (18 sahifa, ~5 500 qator: `app/admin`, `app/rahbariyat`, `components/admin`,
+  `lib/admin-*.ts`, `lib/api/admin.ts`). Kerak bo'lsa: `git checkout admin-panel`.
+  Shu sababli `npm run dev` endi BITTA server ko'taradi (:3000) — ilgari admin
+  uchun ikkinchi server va alohida `.next-admin` papkasi bor edi.
+  KYC yozuvlari (`seedVerifications`) asosiy `lib/mock-api/seed.ts` ga ko'chirilgan —
+  ochiq profildagi "Shaxsi tasdiqlangan" belgisi shundan hisoblanadi.
 - Komponent kutubxonalari ishlatilmaydi — hammasi `/components/ui` da noldan.
 
 ## Stack
@@ -82,14 +91,33 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   alohida qatlam — yetishmasa uz'ga tushadi), Context + `useT()` hook. Til
   `sb_lang` da. Yangi UI matni qo'shsangiz **uch tilга ham** yozing (en.ts ga
   ham). `LangSwitch` — UZ/RU/EN.
-- **Valyuta**: joriy ma'lumot modeli summalarni UZS'da saqlaydi va `formatMoney`
-  doim UZS ko'rsatadi. Avvalgi faqat belgini almashtiradigan global switch
-  moliyaviy jihatdan noto'g'ri bo'lgani uchun header'dan olib tashlangan.
-  KZT/KGS/TJS/TMT faqat backend real FX kursi va asl valyutani qaytarganda yoqiladi.
+- **Valyuta**: hamma summa UZS'da. `lib/currency.ts` qatlami (KZT/KGS/TJS/TMT)
+  BUTUNLAY olib tashlandi — u faqat BELGINI almashtirar, summani konvertatsiya
+  qilmasdi, ya'ni bir xil raqamni "tenge" deb ko'rsatardi. Belgi endi
+  `lib/format.ts` ichida (`UZS_LABEL`). Ko'p valyuta faqat backend real FX kursi
+  va asl valyutani qaytarganda qaytadi.
+- **Sana formati**: `formatDate`/`formatMonth` o'zbek oy nomlarini QO'LDA yozadi
+  (`UZ_MONTHS_SHORT`), brauzer Intl'iga tashlab qo'yilmaydi — ko'p brauzerda
+  `uz-UZ` CLDR to'liq emas va `month:"short"` "2026 M03 5" kabi o'qib
+  bo'lmaydigan natija berardi. ru/en asosiy lokallar, ular Intl'da qoladi.
+- **Xizmat haqi**: `lib/fees.ts` — YAGONA MANBA (`PLATFORM_FEE_PERCENT = 5`,
+  `sellerNet`, `platformFee`). Landing (`app/page.tsx`), `lib/faq-content.ts`,
+  `lib/help-articles.ts` va i18n `a5` kaliti foizni **shu konstantadan
+  import qiladi** (qattiq yozilmaydi) — foizni o'zgartirsangiz va'da va
+  hisob-kitob birga o'zgaradi. Mutaxassis daromadi hamma ekranda SOF
+  ko'rsatiladi (boshqaruv va Daromad sahifasi bir xil formuladan foydalanadi).
+- **Namunaviy rasmlar**: `lib/mock-api/placeholder.ts` — `svgImg`/`svgGallery`
+  lokal SVG data-URI chizadi. Tashqi rasm hosti (unsplash va h.k.) QO'YILMASIN:
+  CSP `img-src 'self' data: blob:` uni bloklaydi va bozorda har kartada
+  singan rasm chiqadi. Foydalanuvchi avatarlari — `Avatar` komponentining
+  bosh harfli fallback'i (rasm URL'i saqlanmaydi).
+- **Profil to'liqligi**: `lib/profile-completeness.ts` — YAGONA MANBA
+  (8 mezon). Boshqaruv ham, Sozlamalar ham shu ro'yxatdan o'qiydi; ilgari
+  ikkalasi alohida hisoblab, bitta profil uchun ikki xil foiz ko'rsatardi.
 - TrustBadge mantiqla: `computeBadge()` lib/types.ts da (5+/4.5→ishonchli, 25+/4.8→top).
 
 ## Dizayn tili: "Suzani Light" (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
-**Bu bo'lim faqat ikkala kabinetga (`/mutaxassis`, `/xaridor`, `/admin`) va
+**Bu bo'lim faqat ikkala kabinetga (`/mutaxassis`, `/xaridor`) va
 umumiy komponentlarga tegishli — `app/page.tsx` (landing) o'zining alohida
 uch ranglik palitrasiga ega, shu bo'lim oxirida alohida tasvirlangan.**
 Ilhom — o'zbek so'zana kashtasi, ammo **oq mato** ustida: fon oq, naqsh va chok
@@ -151,23 +179,26 @@ yangi rang qo'shilsa ham shu chegara saqlanishi shart.
   Xavfsizlik va Yakuniy CTA — sahifa ritmini buzadi. Matn `--ink` #1D1B12
   (issiq to'q), `--muted` #5E5A44. Shrift: `var(--font-unbounded)` (faqat
   700/800, hero H1 + katta raqamlar) va `var(--font-onest)` (UI/body) —
-  boshqa shrift nomi ishlatilmaydi. Tuzilma 16 bo'lim: sticky nav → hero
-  (split layout, load-in stagger animatsiya, eskrou dashboard maketi +
-  suzuvchi chiplar) → ishonch paneli (mamlakat chiplari + count-up
-  statistika) → muammo/yechim (3 ta raqamlangan editorial qator) → eskrou
-  (4 bosqich, scroll-driven `IntersectionObserver` — qaysi bosqich markazda
-  bo'lsa, pastdagi eskrou-hisob vizuali status/progress-bar/summani shunga
-  moslab yangilaydi) → 8 kategoriya (assimetrik grid — 2 ta katta `.big`
-  kartochka to'q yashil fonda span 2×2) → narxlar (mutaxassis 5% / xaridor
-  bepul / yashirin to'lov 0) → tanlangan mutaxassislar (available nuqta
-  badge) → faol e'lonlar (1 ta featured + 2 ta ro'yxat kartasi, teng emas)
-  → raqobatchilardan farqi (jadval) → fikrlar (slayd-karusel: avtomatik
-  6.5s, hover/focus'da pauza, ok/chap tugma + nuqta paginatsiya + klaviatura
-  strelkalari) → xavfsizlik (to'q yashil kontrast, 4 qatlam: Escrow/
-  Identity/Acceptance/Dispute) → FAQ (controlled accordion, grid-template-
-  rows bilan silliq balandlik animatsiyasi, `<details>` emas — aria-expanded
-  bilan) → yakuniy CTA (to'q yashil + sariq porlash) → footer (to'q yashil,
-  sariq aksent). Amalga oshirish: inline `<style>` bloki (CSS custom
+  boshqa shrift nomi ishlatilmaydi. Tuzilma **8 bo'lim** (ilgari 16 edi,
+~12 500px — ~14 ekran skroll; konversiyaga hissa qo'shmaydigan bo'limlar
+olib tashlandi): sticky nav → hero (split layout, load-in stagger, eskrou
+dashboard maketi + suzuvchi chiplar) → ishonch paneli (faqat mamlakat va
+badge chiplari — count-up statistika olib tashlangan, chunki raqamlar
+o'ylab topilgan edi) → eskrou (4 bosqich, scroll-driven
+`IntersectionObserver` — qaysi bosqich markazda bo'lsa, pastdagi
+eskrou-hisob vizuali status/progress-bar/summani shunga moslab yangilaydi)
+→ 8 kategoriya (assimetrik grid — 2 ta katta `.big` kartochka to'q yashil
+fonda span 2×2) → narxlar (mutaxassis 5% / xaridor bepul / yashirin to'lov 0)
+→ xavfsizlik (to'q yashil kontrast, 4 qatlam: Escrow/Identity/Acceptance/
+Dispute) → FAQ (controlled accordion, grid-template-rows bilan silliq
+balandlik animatsiyasi, `<details>` emas — aria-expanded bilan) → yakuniy
+CTA (to'q yashil + sariq porlash) → footer (to'q yashil, sariq aksent).
+**Olib tashlangan bo'limlar** (qaytarilmasin — ular landing'ni ikki barobar
+uzaytirgan, o'ylab topilgan ma'lumot ko'rsatgan va JS yuklamasini oshirgan):
+muammo/yechim (3 editorial qator), katta bayonot bloki, tanlangan
+mutaxassislar, faol e'lonlar, raqobatchilar jadvali, fikrlar karuseli
+(autoplay + klaviatura bilan). Ularning CSS bloklari va ma'lumot massivlari
+ham tozalangan. Amalga oshirish: inline `<style>` bloki (CSS custom
   property'lar, Tailwind class'lari EMAS). Scroll-reveal (`IntersectionObserver`,
   `.reveal` klassi) `prefers-reduced-motion`ni hurmat qiladi (ambient blob
   drift, count-up, karusel autoplay va hero load-in animatsiyasi ham shu
@@ -295,8 +326,15 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
 - `output: 'export'` (statik eksport) MUMKIN EMAS: `[id]` marshrutlari
   UUID bo'lgani uchun `generateStaticParams` bilan oldindan sanab bo'lmaydi,
   hamda `rewrites()`/`headers()` eksportda ishlamaydi.
-- Ilova 100% client-side (server kodi, API route, `process.env` yo'q) —
-  barcha sahifa `"use client"`, ma'lumot localStorage'da.
+- Ilova deyarli to'liq client-side: barcha sahifa `"use client"`, ma'lumot
+  localStorage'da. **YAGONA istisno — `app/api/support/route.ts`** (Node.js
+  runtime): sayt ichidagi Yordam modali shu route orqali Telegram Bot API'ga
+  yozadi. Shuning uchun `output: 'export'` bundan ham mumkin emas va deploy'da
+  ikkita muhit o'zgaruvchisi SHART (`.env.example` ga qarang):
+  `TELEGRAM_BOT_TOKEN` va `TELEGRAM_SUPPORT_CHAT_ID`. Ular qo'yilmasa route
+  500 (`SERVER_MISCONFIGURED`) qaytaradi va **har bir support so'rovi
+  yiqiladi** — foydalanuvchiga xato ekrani chiqadi. Token faqat server
+  tomonda o'qiladi, brauzer bundle'iga tushmaydi.
 - **Loyiha ichiga eski nusxa/zaxira jild tashlanmasin.** `tsconfig.json`
   `include` ataylab aniq papkalar bilan cheklangan (`app/`, `components/`,
   `lib/`, ildizdagi `*.ts`) — ilgari `"**/*.tsx"` edi va papka ichiga tushib
@@ -310,26 +348,42 @@ Studios, `BUYER_ID`): `job-2`da 1 ta taklif bor (ko'rib chiqish/yollash),
 `cnt-2` yakunlangan shartnoma (allaqachon sharh qoldirilgan). Demo mutaxassis
 (+998901234567 / demo123, Rustam Qosimov, `SELLER_ID`): `cnt-1` 2 bosqichli
 faol shartnoma (`ms-1-1` qabul qilingan, `ms-1-2` mablag'langan — topshirish
-uchun tayyor). Nizoli shartnomalar (`cnt-3`, `cnt-4`) admin panelida
-(`/admin/nizolar`) sinaladi. **Joriy seed'da bo'sh joylar**: `seedOffers`
-bo'sh massiv — hech bir hisobda tayyor Offer (taklifnoma) yo'q, va hech bir
-shartnoma `imzolangan` holatida emas — to'lov/faollashtirish oqimini sinash
-uchun avval yangi Offer yuboring yoki job-2 taklifini yollang. `npm run verify`
-(lint + typecheck + build) toza bo'lishi shart. Responsive: 360–430 / 768–1024
+uchun tayyor).
+
+**Seed'da tayyor turgan demo holatlar** (`SEED_VERSION` = 14):
+- `off-1` — u-b2 → u-1 kutilayotgan **taklifnoma** (A yo'l: chat, qabul/rad).
+- `off-2` — qabul qilingan taklif, `cnt-5` shartnomasini ochgan.
+- `off-3` — rad etilgan taklif (xaridor ro'yxatida holat xilma-xilligi uchun).
+- `cnt-5` — **`imzolangan`** shartnoma (u-b2 xaridor, u-1 mutaxassis, 2 bosqich
+  `kutilmoqda`): mahsulotning asosiy g'oyasi — escrow to'lovi (`fundContract`)
+  shu yerda sinaladi.
+- 5 ta bildirishnoma (ikkala demo hisobda ham o'qilmagani bor).
+- Nizoli `cnt-3`/`cnt-4` — nizo oqimi uchun (admin panel `admin-panel`
+  branch'ida).
+
+**Seed sanalari avtomatik yangilanadi**: `ensureSeed()` barcha ISO sanani
+bitta offset bilan siljitadi — eng yangi HODISA taxminan 2 kun oldin bo'ladi,
+o'zaro nisbatlar saqlanadi. Aks holda qat'iy yozilgan sanalar vaqt o'tishi
+bilan eskirardi (daromad grafigi bo'sh chiqardi, muddatlar o'tib ketardi).
+`dueDate`/`reviewDeadline` anchor'ga kirmaydi — shuning uchun ish jarayonidagi
+bosqich muddatlari KELAJAKDA qoladi. Yangi seed yozuvi qo'shsangiz, davom
+etayotgan bosqich muddati eng yangi hodisa sanasidan keyin bo'lsin.
+
+`npm run verify` (lint + typecheck + build) toza bo'lishi shart. Responsive: 360–430 / 768–1024
 / 1280px+ (360px da gorizontal skroll BO'LMASIN — header o'ng bloki shu
 sababli ixchamlashtirilgan).
 
 **E2E/a11y suitlarini ishga tushirish** (`npm run test:e2e`, `npm run test:a11y`):
-ular ishlab turgan serverga ulanadi va standart manzil `127.0.0.1:3001`
-(admin testlari uchun `:3100`). Dev serverda kompilyatsiya 30s timeout'ga
-tiqilib qolishi mumkin, shuning uchun **production build'ga qarshi** yuriting:
+ular ishlab turgan serverga ulanadi. Dev serverda kompilyatsiya 30s timeout'ga
+tiqilib qolishi mumkin, shuning uchun **production build'ga qarshi** yuriting.
+DIQQAT: `npm run build` dev serverning `.next` papkasini ustiga yozadi —
+dev ishlab turgan bo'lsa `NEXT_DIST_DIR` bilan alohida papkaga build qiling:
 
 ```bash
-npm run build && npx next start -p 3001
+NEXT_DIST_DIR=.next-check npm run build
+NEXT_DIST_DIR=.next-check npx next start -p 3001
 TEST_BASE_URL=http://127.0.0.1:3001 node scripts/lifecycle-test.cjs
 TEST_BASE_URL=http://127.0.0.1:3001 node scripts/stress-test.cjs
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/admin-logic-test.cjs
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/admin-stress-test.cjs
 TEST_BASE_URL=http://127.0.0.1:3001 node scripts/accessibility-test.cjs
 ```
 

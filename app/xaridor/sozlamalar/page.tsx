@@ -88,7 +88,7 @@ export default function XaridorSozlamalarPage() {
           <p className="text-sm text-muted mt-1">{t("bset.accountHint")}</p>
         </div>
         <div className="md:col-span-2">
-          <Card padding="lg" className="border-t-4 border-t-primary">
+          <Card padding="lg" stitch>
             <form onSubmit={handleSave} className="flex flex-col gap-5" noValidate>
               <Input
                 label={t("onboard.fullName")}
@@ -159,7 +159,7 @@ export default function XaridorSozlamalarPage() {
           <AccountControls />
 
           <Card padding="lg" className="border-danger/20 bg-danger/5">
-            <h3 className="font-bold text-danger mb-2">{t("settings.accountSection")}</h3>
+            <h3 className="font-bold text-danger-deep mb-2">{t("settings.accountSection")}</h3>
             <p className="text-sm text-muted mb-4">{t("bset.dangerZoneHint")}</p>
             <Button variant="danger" onClick={() => setLogoutOpen(true)}>
               {t("common.logout")}

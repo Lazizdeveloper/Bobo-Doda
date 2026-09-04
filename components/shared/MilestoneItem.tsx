@@ -26,6 +26,9 @@ export function MilestoneItem({
   const { t, lang } = useT();
   const actionable = contractStatus === "faol";
   const awaitingPayment = contractStatus === "imzolangan";
+  /* Ilgari "kutilmoqda" bosqich `opacity-70` bilan xiralashtirilardi —
+     text-faint bilan birga kontrast ~2.9:1 ga tushib, AA (4.5:1) dan
+     o'tmasdi. Endi shaffoflik o'rniga yumshoq fon ishlatiladi. */
   const dimmed = milestone.status === "kutilmoqda";
 
   return (
@@ -36,7 +39,7 @@ export function MilestoneItem({
           : milestone.status === "qabul_qilindi"
             ? "border-success/25 bg-success/5"
             : "border-line bg-card"
-      } ${dimmed ? "opacity-70" : ""}`}
+      } ${dimmed ? "bg-surface" : ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-start gap-3">

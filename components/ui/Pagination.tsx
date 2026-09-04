@@ -5,7 +5,7 @@ export interface PaginationProps {
   totalPages: number;
   onChange: (page: number) => void;
   /** i18n yorliqlari; berilmasa inglizcha standart */
-  labels?: { prev?: string; next?: string; page?: string };
+  labels?: { prev?: string; next?: string; page?: string; nav?: string };
   className?: string;
 }
 
@@ -40,7 +40,7 @@ export function Pagination({
     "inline-flex h-9 min-w-9 items-center justify-center rounded-btn border border-line px-2.5 text-sm transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40";
 
   return (
-    <nav aria-label="Pagination" className={`flex items-center justify-center gap-1.5 ${className}`}>
+    <nav aria-label={labels?.nav ?? "Pagination"} className={`flex items-center justify-center gap-1.5 ${className}`}>
       <button
         type="button"
         className={`${btn} text-muted hover:text-ink`}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
@@ -9,13 +10,20 @@ export default function RolTanlashPage() {
   const { t } = useT();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
   /* Tasdiqlangan va rol tanlagan foydalanuvchilar o'z kabinetiga qaytariladi */
   useEffect(() => {
     const session = authService.getSession();
-    if (!session || !session.verified) return;
-    
+    /* Sessiyasiz bu sahifada turib bo'lmaydi: `chooseRole` NO_SESSION bilan
+       yiqilar va sahifa qotib qolardi. Kirishga qaytaramiz. */
+    if (!session) {
+      if (pathname !== "/kirish") router.replace("/kirish");
+      return;
+    }
+    if (!session.verified) return;
+
     let dest = null;
     if (session.role === "xaridor") dest = "/xaridor";
     else if (session.role === "mutaxassis" && session.profileDone) dest = "/mutaxassis";
@@ -25,22 +33,33 @@ export default function RolTanlashPage() {
     }
   }, [router, pathname]);
 
-  async function handleSeller() {
+  /* Xato bo'lsa tugmalar qayta ochilishi SHART — aks holda foydalanuvchi
+     hech qanday izohsiz, bloklangan sahifada qolib ketadi. */
+  async function chooseRole(role: "mutaxassis" | "xaridor") {
     if (loading) return;
     setLoading(true);
-    await authService.chooseRole("mutaxassis");
-    const session = authService.getSession();
-    router.push(session?.profileDone ? "/mutaxassis" : "/mutaxassis/royxat");
+    try {
+      await authService.chooseRole(role);
+      const session = authService.getSession();
+      if (role === "mutaxassis") {
+        router.push(session?.profileDone ? "/mutaxassis" : "/mutaxassis/royxat");
+      } else {
+        /* Xaridor uchun alohida profil bosqichi yo'q — to'g'ridan-to'g'ri tasdiqlashga */
+        router.push(session?.verified ? "/xaridor" : "/kirish/tasdiqlash");
+      }
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      if (code === "NO_SESSION" || code === "UNAUTHENTICATED") {
+        router.replace("/kirish");
+        return;
+      }
+      toast(t("common.error"), "error");
+      setLoading(false);
+    }
   }
 
-  /* Xaridor uchun alohida profil bosqichi yo'q — to'g'ridan-to'g'ri tasdiqlashga */
-  async function handleBuyer() {
-    if (loading) return;
-    setLoading(true);
-    await authService.chooseRole("xaridor");
-    const session = authService.getSession();
-    router.push(session?.verified ? "/xaridor" : "/kirish/tasdiqlash");
-  }
+  const handleSeller = () => chooseRole("mutaxassis");
+  const handleBuyer = () => chooseRole("xaridor");
 
   return (
     <div>

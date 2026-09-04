@@ -57,6 +57,11 @@ const config: Config = {
         mono: ["var(--font-mono)", "monospace"],
       },
       fontSize: {
+        /* Eng kichik o'lcham — kichik Badge va ixcham belgilar uchun.
+           Ilgari `text-3xs` kodda ishlatilar, lekin bu yerda YO'Q edi:
+           Tailwind class'ni umuman generatsiya qilmas va matn meros
+           qilib olingan o'lchamda chiqardi. */
+        "3xs": ["11px", "14px"],
         "2xs": ["12px", "16px"],
         xs: ["13px", "18px"],
         sm: ["14px", "20px"],

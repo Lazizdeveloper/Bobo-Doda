@@ -118,6 +118,15 @@ export const contractMachine: StateMachine<ContractStatus> = {
     { from: "faol", to: "bekor_qilingan", actors: ["buyer", "seller", "admin"] },
     { from: "faol", to: "nizo", actors: ["buyer", "seller", "admin"] },
     { from: "nizo", to: "faol", actors: ["admin"], postconditions: ["dispute resolved without termination"] },
+    /* Nizoni OCHGAN tomon uni qaytarib ola oladi. Bu bo'lmasa `nizo` holatidan
+       chiqish faqat adminga bog'liq bo'lib qolardi — admin paneli esa `main`da
+       yo'q, ya'ni shartnoma va escrow'dagi pul abadiy muzlab qolardi. */
+    {
+      from: "nizo",
+      to: "faol",
+      actors: ["buyer", "seller"],
+      preconditions: ["dispute is open", "actor opened the dispute"],
+    },
     { from: "nizo", to: "yakunlangan", actors: ["admin"], postconditions: ["resolution applied"] },
     { from: "nizo", to: "bekor_qilingan", actors: ["admin"], postconditions: ["refund/release applied"] },
   ],

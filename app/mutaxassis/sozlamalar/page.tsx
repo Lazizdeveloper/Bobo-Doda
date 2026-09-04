@@ -35,6 +35,10 @@ import type {
 } from "@/lib/types";
 import { useT, type Lang } from "@/lib/i18n";
 import { LIMITS } from "@/lib/validate";
+import {
+  completenessItems,
+  completenessPercent,
+} from "@/lib/profile-completeness";
 
 const LEVELS: LanguageLevel[] = ["native", "fluent", "intermediate", "basic"];
 
@@ -60,6 +64,16 @@ export default function SozlamalarPage() {
   const [headline, setHeadline] = useState("");
   const [bio, setBio] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  /* Oxirgi SAQLANGAN profil qiymatlari. Til/portfolio avtosaqlanganda
+     tahrirlangan, lekin hali tasdiqlanmagan (va "Saqlash" bosilmagan)
+     profil maydonlari yon ta'sir sifatida yozilib ketmasligi uchun. */
+  const [persisted, setPersisted] = useState({
+    fullName: "",
+    headline: "",
+    bio: "",
+    location: "",
+  });
   const [location, setLocation] = useState("");
   const [languages, setLanguages] = useState<ProfileLanguage[]>([]);
   const [newLangName, setNewLangName] = useState("");
@@ -105,12 +119,19 @@ export default function SozlamalarPage() {
         setHeadline(profile.headline || "");
         setBio(profile.bio || "");
         setSkills(profile.skills || []);
+        setCategories(profile.categories || []);
         setLocation(profile.location || "");
         setLanguages(profile.languages || []);
         setPortfolio(profile.portfolio || []);
         setAvailable(profile.available ?? true);
         setCards(cardList || []);
         setActiveServices((services || []).filter((s) => s.status === "active"));
+        setPersisted({
+          fullName: user?.fullName ?? "",
+          headline: profile.headline || "",
+          bio: profile.bio || "",
+          location: profile.location || "",
+        });
         setLoading(false);
       })
       .catch(setLoadError);
@@ -118,30 +139,44 @@ export default function SozlamalarPage() {
 
   useEffect(load, [load]);
 
-  /* Profile Completeness Checklist Calculation */
-  const completenessItems = [
-    { key: "settings.ckName", done: fullName.trim().length > 0, tab: "profile" as SettingsTab },
-    { key: "settings.ckHeadline", done: headline.trim().length > 0, tab: "profile" as SettingsTab },
-    { key: "settings.ckBio", done: bio.trim().length >= 50, tab: "profile" as SettingsTab },
-    { key: "settings.ckSkills", done: skills.length >= 3, tab: "languages" as SettingsTab },
-    { key: "settings.ckLanguages", done: languages.length >= 1, tab: "languages" as SettingsTab },
-    { key: "settings.ckLocation", done: location.trim().length > 0, tab: "profile" as SettingsTab },
-    { key: "settings.ckPortfolio", done: portfolio.length >= 1, tab: "portfolio" as SettingsTab },
-    {
-      key: "settings.ckService",
-      done: activeServices.length >= 1,
-      tab: "profile" as SettingsTab,
-      href: "/mutaxassis/xizmatlarim/yangi",
-    },
-  ];
+  /* Boshqaruvdagi "Profilni to'ldirish" havolasi ?tab=... bilan keladi —
+     foydalanuvchi kerakli bo'limni qo'lda qidirmasin. (useSearchParams
+     o'rniga window: sahifa statik prerender bo'lib qolsin.) */
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    const valid: SettingsTab[] = [
+      "profile", "languages", "portfolio", "availability",
+      "payments", "security", "notifications", "privacy", "account",
+    ];
+    if (tab && valid.includes(tab as SettingsTab)) {
+      setActiveTab(tab as SettingsTab);
+    }
+  }, []);
 
-  const completedCount = completenessItems.filter((i) => i.done).length;
-  const completenessPercent = Math.round((completedCount / completenessItems.length) * 100);
+  /* Profil to'liqligi — Boshqaruv bilan bitta manbadan (lib/profile-completeness.ts) */
+  const completenessList = completenessItems({
+    fullName,
+    headline,
+    bio,
+    skills,
+    languagesCount: languages.length,
+    location,
+    portfolioCount: portfolio.length,
+    activeServicesCount: activeServices.length,
+  });
+  const percent = completenessPercent(completenessList);
 
   async function handleAvailability(next: boolean) {
+    const previous = available;
     setAvailable(next);
-    await usersService.setAvailability(next);
-    toast(t("settings.saved"));
+    try {
+      await usersService.setAvailability(next);
+      toast(t("settings.saved"));
+    } catch {
+      /* Saqlanmagan holat UI'da "saqlangan" bo'lib ko'rinmasin — orqaga qaytaramiz */
+      setAvailable(previous);
+      toast(t("common.error"), "error");
+    }
   }
 
   function addLanguage() {
@@ -176,7 +211,13 @@ export default function SozlamalarPage() {
       return;
     }
     const newItem: PortfolioItem = {
-      id: `pf-${Date.now()}`,
+      /* Loyihaning qolgan qismi kabi taxmin qilinmaydigan id — `Date.now()`
+         bir millisekundda ikki element qo'shilsa to'qnashardi. */
+      id: `pf-${
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID().slice(0, 12)
+          : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+      }`,
       title: pfTitle.trim(),
       description: pfDesc.trim(),
       image: pfImage[0],
@@ -199,19 +240,31 @@ export default function SozlamalarPage() {
     headline: string;
     bio: string;
     skills: string[];
+    categories: string[];
     location: string;
     languages: ProfileLanguage[];
     portfolio: PortfolioItem[];
   }>) {
     try {
-      await usersService.updateSellerProfile({
-        fullName: overrides.fullName ?? fullName.trim(),
-        headline: overrides.headline ?? headline.trim(),
-        bio: overrides.bio ?? bio.trim(),
+      /* Profil maydonlari uchun zaxira qiymat — joriy INPUT emas, oxirgi
+         SAQLANGAN qiymat. Aks holda ism/bio maydonini tahrirlab, "Saqlash"
+         bosmasdan til qo'shsangiz, tasdiqlanmagan matn jimgina saqlanardi. */
+      const payload = {
+        fullName: overrides.fullName ?? persisted.fullName,
+        headline: overrides.headline ?? persisted.headline,
+        bio: overrides.bio ?? persisted.bio,
         skills: overrides.skills ?? skills,
-        location: overrides.location ?? location.trim(),
+        categories: overrides.categories ?? categories,
+        location: overrides.location ?? persisted.location,
         languages: overrides.languages ?? languages,
         portfolio: overrides.portfolio ?? portfolio,
+      };
+      await usersService.updateSellerProfile(payload);
+      setPersisted({
+        fullName: payload.fullName,
+        headline: payload.headline,
+        bio: payload.bio,
+        location: payload.location,
       });
       toast(t("settings.saved"));
     } catch {
@@ -317,7 +370,7 @@ export default function SozlamalarPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/mutaxassis/profil"
-            className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-sm transition-colors hover:border-primary hover:bg-card-hover"
+            className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors hover:border-primary hover:bg-card-hover"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
@@ -327,7 +380,7 @@ export default function SozlamalarPage() {
           </Link>
           <Link
             href="/mutaxassis/verifikatsiya"
-            className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-sm transition-colors hover:border-primary hover:bg-card-hover"
+            className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors hover:border-primary hover:bg-card-hover"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M8 1.5 13.5 4v3.6c0 3.3-2.3 6.1-5.5 6.9-3.2-.8-5.5-3.6-5.5-6.9V4L8 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
@@ -349,7 +402,7 @@ export default function SozlamalarPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex shrink-0 items-center gap-2 rounded-btn px-3.5 py-2 text-xs font-medium transition-colors ${
                 active
-                  ? "bg-primary text-on-primary shadow-sm"
+                  ? "bg-primary text-on-primary shadow-card"
                   : "border border-line bg-card text-muted hover:text-ink"
               }`}
             >
@@ -379,23 +432,23 @@ export default function SozlamalarPage() {
                 {t("settings.completenessTitle")}
               </span>
               <span className="font-heading text-lg font-black text-primary">
-                {completenessPercent}%
+                {percent}%
               </span>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-primary/15">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-300"
-                style={{ width: `${completenessPercent}%` }}
+                style={{ width: `${percent}%` }}
               />
             </div>
             <p className="mt-2 text-2xs text-muted">
-              {completenessPercent === 100
-                ? "Barcha asosiy maydonlar to'ldirilgan!"
+              {percent === 100
+                ? t("settings.completenessDone")
                 : t("settings.completenessHint")}
             </p>
 
             <ul className="mt-3 flex flex-col gap-1.5 border-t border-primary/15 pt-3">
-              {completenessItems.map((item) => (
+              {completenessList.map((item) => (
                 <li key={item.key}>
                   {item.href ? (
                     <Link
@@ -417,7 +470,7 @@ export default function SozlamalarPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setActiveTab(item.tab)}
+                      onClick={() => setActiveTab(item.tab as SettingsTab)}
                       className="group flex w-full items-center justify-between gap-2 text-left text-xs transition-colors hover:text-primary"
                     >
                       <span className="flex items-center gap-1.5">
@@ -581,7 +634,7 @@ export default function SozlamalarPage() {
                   {t("settings.tabLanguages")}
                 </h2>
                 <p className="mt-1 text-xs text-muted">
-                  Ko&apos;nikmalaringiz va muloqot tillaringiz xaridorlarga sizni tez topishga yordam beradi.
+                  {t("settings.skillsIntro")}
                 </p>
               </div>
 
@@ -597,7 +650,49 @@ export default function SozlamalarPage() {
                   placeholder={t("onboard.skillsPh")}
                 />
                 <p className="mt-1.5 text-2xs text-faint">
-                  Kamida 3 ta asosiy ko&apos;nikma qo&apos;shing. Enter tugmasi bilan ajratiladi.
+                  {t("settings.skillsHint")}
+                </p>
+              </div>
+
+              {/* Ish yo'nalishlari — ro'yxatdan o'tishda so'raladi, lekin ilgari
+                  keyin O'ZGARTIRIB bo'lmasdi. Ular "Sizga mos ishlar" tanlovini
+                  va bozor filtrini boshqaradi. */}
+              <div className="border-t border-line pt-5">
+                <span className="text-xs font-medium text-muted">
+                  {t("settings.categories")}
+                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {CATEGORIES.map((cat) => {
+                    const selected = categories.includes(cat);
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => {
+                          const next = selected
+                            ? categories.filter((c) => c !== cat)
+                            : [...categories, cat];
+                          if (next.length === 0) {
+                            toast(t("settings.categoriesRequired"), "error");
+                            return;
+                          }
+                          setCategories(next);
+                          saveSellerData({ categories: next });
+                        }}
+                        className={`rounded-full border px-3 py-1.5 text-xs transition-colors duration-150 ${
+                          selected
+                            ? "border-primary bg-primary/15 font-medium text-ink"
+                            : "border-line bg-card text-muted hover:text-ink"
+                        }`}
+                      >
+                        {t(`cat.${cat}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-2xs text-faint">
+                  {t("settings.categoriesHint")}
                 </p>
               </div>
 

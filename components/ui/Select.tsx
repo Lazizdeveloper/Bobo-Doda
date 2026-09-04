@@ -21,6 +21,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ) {
     const autoId = useId();
     const inputId = id ?? autoId;
+    const messageId = `${inputId}-msg`;
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -28,11 +29,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {label}
           </label>
         )}
+        {/* `appearance-none` tizim strelkasini olib tashlaydi — o'rniga o'z
+            chevron'imizni chizamiz, aks holda tanlash maydoni oddiy matn
+            maydonidan farq qilmaydi va bosish mumkinligi bilinmaydi. */}
+        <div className="relative">
         <select
           ref={ref}
           id={inputId}
           aria-invalid={!!error}
-          className={`h-10 w-full appearance-none rounded-input border bg-card px-3 text-sm text-ink transition-colors duration-150 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
+          aria-describedby={error ? messageId : undefined}
+          className={`h-10 w-full appearance-none rounded-input border bg-card pl-3 pr-9 text-sm text-ink transition-colors duration-150 focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
             error ? "border-danger" : "border-field"
           } ${className}`}
           {...rest}
@@ -48,8 +54,25 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+          >
+            <path
+              d="M4 6l4 4 4-4"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
         {error && (
-          <p className="text-2xs text-danger" role="alert">
+          <p id={messageId} className="text-2xs text-danger" role="alert">
             {error}
           </p>
         )}

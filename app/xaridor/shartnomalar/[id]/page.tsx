@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -35,6 +35,7 @@ import { useT } from "@/lib/i18n";
 export default function XaridorWorkroomPage() {
   const { t, lang } = useT();
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const { toast } = useToast();
 
   const [contract, setContract] = useState<Contract | null | undefined>(undefined);
@@ -132,8 +133,18 @@ export default function XaridorWorkroomPage() {
     setBusy(true);
     try {
       await paymentsService.fundContract(contract.id);
-      toast(t("cfund.done"));
       setFundOpen(false);
+      /* Click/Payme — qayta yo'naltirishga asoslangan usullar: to'lov tizimi
+         qaytganda tushadigan natija sahifasiga o'tamiz (aynan shu sahifa shu
+         maqsad uchun yozilgan, lekin unga hech qayerdan havola yo'q edi).
+         Karta (3DS) esa sahifada qoladi — u yerda qayta yo'naltirish yo'q. */
+      if (payMethod === "click" || payMethod === "payme") {
+        router.push(
+          `/tolov/natija?status=success&reference=${encodeURIComponent(contract.id)}`
+        );
+        return;
+      }
+      toast(t("cfund.done"));
       reload();
     } catch {
       toast(t("common.error"), "error");
@@ -298,14 +309,25 @@ export default function XaridorWorkroomPage() {
           {t("pipeline.title")}
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {/* To'lov qadami FAQAT haqiqatan to'langanda faol ko'rinadi —
+              `imzolangan` (hali to'lanmagan) shartnomada ham yashil chizilsa,
+              xaridor "to'lov bajarilgan" deb tushunardi. */}
           <div
             className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
-              contract.status === "bekor_qilingan"
+              contract.status === "bekor_qilingan" ||
+              contract.status === "imzolangan"
                 ? "border-line bg-surface text-muted"
-                : "border-primary/30 bg-primary/10 text-primary"
+                : "border-primary/30 bg-primary/10 text-primary-deep"
             }`}
           >
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-2xs text-on-primary">
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs ${
+                contract.status === "bekor_qilingan" ||
+                contract.status === "imzolangan"
+                  ? "bg-surface text-faint"
+                  : "bg-primary text-on-primary"
+              }`}
+            >
               1
             </span>
             <span className="truncate">{t("pipeline.stageFund")}</span>
@@ -316,7 +338,7 @@ export default function XaridorWorkroomPage() {
               contract.status === "faol" ||
               milestones.some((m) => m.status === "topshirildi" || m.status === "qabul_qilindi") ||
               contract.status === "yakunlangan"
-                ? "border-primary/30 bg-primary/10 text-primary"
+                ? "border-primary/30 bg-primary/10 text-primary-deep"
                 : "border-line bg-surface text-muted"
             }`}
           >
@@ -338,7 +360,7 @@ export default function XaridorWorkroomPage() {
             className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
               milestones.some((m) => m.status === "topshirildi" || m.status === "ozgartirish_soraldi") ||
               contract.status === "yakunlangan"
-                ? "border-primary/30 bg-primary/10 text-primary"
+                ? "border-primary/30 bg-primary/10 text-primary-deep"
                 : "border-line bg-surface text-muted"
             }`}
           >
@@ -358,7 +380,7 @@ export default function XaridorWorkroomPage() {
           <div
             className={`flex items-center gap-2 rounded-input border p-2.5 text-xs font-semibold ${
               contract.status === "yakunlangan"
-                ? "border-primary/30 bg-primary/10 text-primary font-bold"
+                ? "border-primary/30 bg-primary/10 text-primary-deep font-bold"
                 : "border-line bg-surface text-muted"
             }`}
           >
@@ -421,7 +443,7 @@ export default function XaridorWorkroomPage() {
       )}
 
       {contract.status === "nizo" && (
-        <DisputeSummary contractId={contract.id} />
+        <DisputeSummary contractId={contract.id} onWithdrawn={reload} />
       )}
       {contract.status === "bekor_qilingan" && (
         <p className="rounded-card border border-line bg-card p-4 text-xs text-muted">
@@ -490,7 +512,9 @@ export default function XaridorWorkroomPage() {
 
               {/* Holatga mos amallar */}
               {milestone.status === "kutilmoqda" && (
-                <p className="pl-9 text-2xs text-faint">{t("cfund.awaitingSeller")}</p>
+                <p className="pl-9 text-2xs text-faint">
+                  {t("cfund.awaitingYourPayment")}
+                </p>
               )}
 
               {milestone.status === "mablaglangan" && (
@@ -661,7 +685,7 @@ export default function XaridorWorkroomPage() {
                   </div>
                   <span className="text-2xs text-faint">
                     {mine ? t("chat.you") : contract.sellerName.split(" ")[0]} ·{" "}
-                    {formatTime(msg.createdAt)}
+                    {formatTime(msg.createdAt, lang)}
                   </span>
                 </div>
               );
@@ -801,8 +825,14 @@ export default function XaridorWorkroomPage() {
                 />
               ) : (
                 <div className="flex items-center gap-3 rounded-input border border-primary/25 bg-primary/5 p-4">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-btn bg-primary/10 font-heading text-xs font-bold text-primary-deep">
-                    {payMethod === "click" ? "CL" : "PM"}
+                  {/* Brend nomi yonida turibdi — bu belgi faqat bezak,
+                      shuning uchun skrinriderdan yashiriladi (ilgari mazmunsiz
+                      "CL"/"PM" tokeni o'qilardi). */}
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 items-center justify-center rounded-btn bg-primary/10 font-heading text-sm font-bold text-primary-deep"
+                  >
+                    {(payMethod === "click" ? "Click" : "Payme").charAt(0)}
                   </span>
                   <div>
                     <p className="text-sm font-medium text-ink">

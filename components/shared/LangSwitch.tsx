@@ -3,13 +3,13 @@
 import { useT, type Lang } from "@/lib/i18n";
 
 export function LangSwitch() {
-  const { lang, setLang } = useT();
+  const { lang, setLang, t } = useT();
   const options: Lang[] = ["uz", "ru", "en"];
   return (
     <div
       className="flex rounded-btn border border-line bg-card p-0.5"
       role="group"
-      aria-label="Til / Язык"
+      aria-label={t("a11y.language")}
     >
       {options.map((option) => (
         <button

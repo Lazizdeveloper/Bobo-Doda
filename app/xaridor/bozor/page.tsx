@@ -28,13 +28,15 @@ import { useT } from "@/lib/i18n";
 type Tab = "services" | "specialists";
 type Sort = "new" | "cheap" | "expensive" | "rating";
 
-const POPULAR_SEARCHES = [
-  "Web sayt",
-  "Logo dizayn",
-  "Telegram bot",
-  "SMM",
-  "Kopirayting",
-  "Mobil ilova",
+/* Ommabop qidiruvlar — i18n kalitlari orqali (ilgari faqat o'zbekcha
+   qattiq yozilgan massiv edi va ru/en'da ham shunday chiqardi). */
+const POPULAR_SEARCH_KEYS = [
+  "market.pop1",
+  "market.pop2",
+  "market.pop3",
+  "market.pop4",
+  "market.pop5",
+  "market.pop6",
 ];
 
 export default function BozorPage() {
@@ -267,16 +269,19 @@ export default function BozorPage() {
         <span className="font-semibold text-muted">
           {t("market.popularSearches")}:
         </span>
-        {POPULAR_SEARCHES.map((term) => (
+        {POPULAR_SEARCH_KEYS.map((key) => {
+          const term = t(key);
+          return (
           <button
-            key={term}
+            key={key}
             type="button"
             onClick={() => setSearch(term)}
             className="rounded-btn border border-line bg-card px-2.5 py-1 text-2xs font-medium text-ink transition-colors hover:border-primary hover:text-primary"
           >
             {term}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       <div className="xl:grid xl:grid-cols-[300px_1fr] xl:items-start xl:gap-8">
@@ -322,12 +327,14 @@ export default function BozorPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <Input
                     placeholder={t("market.priceMin")}
+                    aria-label={t("market.priceMinLabel")}
                     type="number"
                     value={minPrice}
                     onChange={(e) => setMinPrice(e.target.value)}
                   />
                   <Input
                     placeholder={t("market.priceMax")}
+                    aria-label={t("market.priceMaxLabel")}
                     type="number"
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value)}
@@ -473,7 +480,7 @@ export default function BozorPage() {
                     type="button"
                     onClick={() => setCategory("all")}
                     className="hover:text-danger"
-                    aria-label="Remove category"
+                    aria-label={t("market.removeFilter").replace("{name}", t("jobs.category"))}
                   >
                     ×
                   </button>
@@ -486,7 +493,7 @@ export default function BozorPage() {
                     type="button"
                     onClick={() => setSearch("")}
                     className="hover:text-danger"
-                    aria-label="Remove search"
+                    aria-label={t("market.removeFilter").replace("{name}", t("market.filterSearch"))}
                   >
                     ×
                   </button>
@@ -502,7 +509,7 @@ export default function BozorPage() {
                       setMaxPrice("");
                     }}
                     className="hover:text-danger"
-                    aria-label="Remove price range"
+                    aria-label={t("market.removeFilter").replace("{name}", t("market.filterPriceRange"))}
                   >
                     ×
                   </button>
@@ -515,7 +522,7 @@ export default function BozorPage() {
                     type="button"
                     onClick={() => setDeliveryFilter("all")}
                     className="hover:text-danger"
-                    aria-label="Remove delivery filter"
+                    aria-label={t("market.removeFilter").replace("{name}", t("market.filterDelivery"))}
                   >
                     ×
                   </button>
@@ -528,7 +535,7 @@ export default function BozorPage() {
                     type="button"
                     onClick={() => setRatingFilter("all")}
                     className="hover:text-danger"
-                    aria-label="Remove rating filter"
+                    aria-label={t("market.removeFilter").replace("{name}", t("market.filterRating"))}
                   >
                     ×
                   </button>
@@ -541,7 +548,7 @@ export default function BozorPage() {
                     type="button"
                     onClick={() => setAvailableOnly(false)}
                     className="hover:text-danger"
-                    aria-label="Remove availability filter"
+                    aria-label={t("market.removeFilter").replace("{name}", t("market.filterAvailability"))}
                   >
                     ×
                   </button>
@@ -554,7 +561,7 @@ export default function BozorPage() {
                     type="button"
                     onClick={() => setLocationFilter("all")}
                     className="hover:text-danger"
-                    aria-label="Remove location filter"
+                    aria-label={t("market.removeFilter").replace("{name}", t("market.filterLocation"))}
                   >
                     ×
                   </button>
@@ -749,6 +756,7 @@ export default function BozorPage() {
                 prev: t("pager.prev"),
                 next: t("pager.next"),
                 page: t("pager.page"),
+                nav: t("a11y.pagination"),
               }}
             />
           )}

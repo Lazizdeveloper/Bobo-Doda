@@ -7,16 +7,22 @@ import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
-import { authService, contractsService, jobsService, messagesService, offersService, proposalsService, servicesService, usersService } from "@/lib/api";
-import type { Contract, Job, Message, Offer, Proposal, SellerProfile, Service } from "@/lib/types";
-import { formatMoney } from "@/lib/format";
+import { authService, contractsService, jobsService, messagesService, milestonesService, offersService, proposalsService, servicesService, usersService } from "@/lib/api";
+import type { Contract, Job, Message, Milestone, Offer, Proposal, SellerProfile, Service } from "@/lib/types";
+import { formatMoney, initials } from "@/lib/format";
+import { sellerNet } from "@/lib/fees";
 import { useT } from "@/lib/i18n";
+import {
+  completenessFromProfile,
+  completenessPercent,
+} from "@/lib/profile-completeness";
 
 const PENDING_PROPOSAL_STATUSES = ["yuborilgan", "korib_chiqilmoqda", "suhbat"];
 
 export default function MutaxassisDashboardPage() {
   const { t, lang } = useT();
   const [contracts, setContracts] = useState<Contract[] | null>(null);
+  const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [proposals, setProposals] = useState<Proposal[] | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [messages, setMessages] = useState<Message[] | null>(null);
@@ -30,6 +36,7 @@ export default function MutaxassisDashboardPage() {
     setLoadError(null);
     Promise.all([
       contractsService.list(),
+      milestonesService.listMine(),
       proposalsService.listMine(),
       offersService.listIncoming(),
       messagesService.listMine(),
@@ -38,8 +45,9 @@ export default function MutaxassisDashboardPage() {
       jobsService.list(),
       usersService.getCurrent(),
     ])
-      .then(([contractList, proposalList, offerList, messageList, profileData, serviceList, jobList, user]) => {
+      .then(([contractList, milestoneList, proposalList, offerList, messageList, profileData, serviceList, jobList, user]) => {
         setContracts(contractList);
+        setMilestones(milestoneList);
         setProposals(proposalList);
         setOffers(offerList);
         setMessages([...messageList].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4));
@@ -53,25 +61,28 @@ export default function MutaxassisDashboardPage() {
 
   useEffect(load, [load]);
 
-  const loading = !contracts || !proposals || !messages || !profile;
+  const loading = !contracts || !milestones || !proposals || !messages || !profile;
   const myId = authService.getSession()?.userId ?? null;
 
   const activeContracts = contracts?.filter((c) => c.status === "faol") || [];
   const pendingProposals = proposals?.filter((p) => PENDING_PROPOSAL_STATUSES.includes(p.status)).length ?? 0;
   const pendingOffers = offers.filter((o) => o.status === "yuborilgan");
-  const completedContracts = contracts?.filter((c) => c.status === "yakunlangan") || [];
+  /* Sof daromad — Daromad sahifasi bilan AYNAN bir xil hisoblanadi:
+     qabul qilingan bosqichlar, xizmat haqi ushlangan holda. Ilgari bu yerda
+     "yakunlangan shartnomalar summasi" edi — natijada bitta hisobda ikki ekran
+     ikki xil raqam ko'rsatardi (faol shartnomadagi qabul qilingan bosqich
+     boshqaruvda umuman ko'rinmasdi). */
+  const totalEarnings = (milestones ?? [])
+    .filter((m) => m.status === "qabul_qilindi")
+    .reduce((sum, m) => sum + sellerNet(m.amount), 0);
   
-  // Calculate total earnings
-  const totalEarnings = completedContracts.reduce((sum, c) => sum + c.totalAmount, 0);
-  
-  // Profile completeness checks
-  const checks = profile ? [
-    { key: "dash.ckBio", done: profile.bio.trim().length >= 50, href: "/mutaxassis/sozlamalar" },
-    { key: "dash.ckSkills", done: profile.skills.length >= 3, href: "/mutaxassis/sozlamalar" },
-    { key: "dash.ckService", done: services.some((s) => s.status === "active"), href: "/mutaxassis/xizmatlarim/yangi" },
-    { key: "dash.ckPortfolio", done: profile.portfolio.length > 0, href: "/mutaxassis/sozlamalar" },
-  ] : [];
-  const completeness = checks.length ? Math.round((checks.filter((c) => c.done).length / checks.length) * 100) : 0;
+  /* Profil to'liqligi — Sozlamalar sahifasi bilan AYNAN bir xil ro'yxatdan
+     (lib/profile-completeness.ts). Ilgari bu yerda 4 ta mezon, Sozlamalarda
+     8 ta mezon bor edi va ikki ekran ikki xil foiz ko'rsatardi. */
+  const checks = profile
+    ? completenessFromProfile(profile, name, services)
+    : [];
+  const completeness = completenessPercent(checks);
   const firstIncomplete = checks.find((c) => !c.done);
 
   // Matching jobs
@@ -98,7 +109,7 @@ export default function MutaxassisDashboardPage() {
           )}
         </div>
         {!loading && profile && (
-          <div className="flex items-center gap-3 bg-surface px-4 py-2 rounded-full border border-line shadow-sm">
+          <div className="flex items-center gap-3 rounded-full border border-line bg-surface px-4 py-2 shadow-card">
             <span className={`w-3 h-3 rounded-full ${profile.available ? "bg-success" : "bg-faint"}`}></span>
             <span className="text-sm font-medium">{profile.available ? t("dash.availableForWork") : t("dash.busy")}</span>
           </div>
@@ -115,7 +126,7 @@ export default function MutaxassisDashboardPage() {
           ))
         ) : (
           <>
-            <Card className="bg-gradient-to-br from-primary/10 to-transparent border-primary/20">
+            <Card className="border-primary/20 bg-primary/5">
               <p className="text-xs font-bold uppercase text-primary-deep tracking-wider">{t("dash.netIncome")}</p>
               <p className="mt-2 font-heading text-2xl font-black text-ink">{formatMoney(totalEarnings, lang)}</p>
             </Card>
@@ -236,7 +247,12 @@ export default function MutaxassisDashboardPage() {
                 ))}
               </ul>
               {firstIncomplete && (
-                <Link href={firstIncomplete.href}>
+                <Link
+                  href={
+                    firstIncomplete.href ??
+                    `/mutaxassis/sozlamalar?tab=${firstIncomplete.tab}`
+                  }
+                >
                   <Button className="w-full">{t("dash.completeProfile")}</Button>
                 </Link>
               )}
@@ -255,11 +271,18 @@ export default function MutaxassisDashboardPage() {
               <div className="p-6 text-center text-sm text-muted">{t("dash.noMessages")}</div>
             ) : (
               <div className="divide-y divide-line">
-                {messages.map((msg) => (
+                {messages.map((msg) => {
+                  /* Ilgari bu yerda qattiq yozilgan 'Me' / 'CL' turardi — o'zbek
+                     interfeysida tushunarsiz va tarjima qilinmaydigan token.
+                     Endi haqiqiy ism bosh harflari ko'rsatiladi. */
+                  const counterpart =
+                    contracts?.find((c) => c.id === msg.contractId)?.buyerName ?? "";
+                  const who = msg.senderId === myId ? name : counterpart;
+                  return (
                   <Link key={msg.id} href={`/mutaxassis/shartnomalar/${msg.contractId}`} className="block p-4 hover:bg-card-hover">
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 text-primary-deep flex items-center justify-center font-bold text-xs shrink-0">
-                        {msg.senderId === myId ? 'Me' : 'CL'}
+                      <div aria-hidden="true" className="w-8 h-8 rounded-full bg-primary/20 text-primary-deep flex items-center justify-center font-bold text-xs shrink-0">
+                        {who ? initials(who) : "—"}
                       </div>
                       <div className="overflow-hidden">
                         <p className="text-sm font-semibold text-ink">{msg.senderId === myId ? t("dash.you") : t("dash.client")}</p>
@@ -267,7 +290,8 @@ export default function MutaxassisDashboardPage() {
                       </div>
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>

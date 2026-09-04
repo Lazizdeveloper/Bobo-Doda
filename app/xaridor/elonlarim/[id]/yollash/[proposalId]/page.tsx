@@ -242,6 +242,20 @@ export default function YollashPage() {
           </span>
         </div>
 
+        {/* Bosqichlar jami kelishilgan taklif summasidan farq qilsa
+            ogohlantiramiz — ilgari xaridor buni sezmay yollashi mumkin edi,
+            mutaxassis esa faqat shartnoma ochilgach ko'rardi. */}
+        {total > 0 && total !== proposal.bidAmount && (
+          <p
+            role="alert"
+            className="rounded-input border border-warning/30 bg-warning/5 p-3 text-2xs text-warning-deep"
+          >
+            {t("hire.totalMismatch")
+              .replace("{total}", formatMoney(total, lang))
+              .replace("{bid}", formatMoney(proposal.bidAmount, lang))}
+          </p>
+        )}
+
         <p className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
           {t("hire.fundNote")}
         </p>

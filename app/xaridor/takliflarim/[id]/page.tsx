@@ -178,8 +178,10 @@ export default function TaklifTafsilotiXaridorPage() {
         </div>
       </Card>
 
-      {/* Muloqot — taklif qabul qilingach shartnoma chatiga ko'chadi */}
-      {pending && (
+      {/* Muloqot — taklif qabul qilingach shartnoma chatiga ko'chadi.
+          Rad etilgan/qaytarib olingan taklifda yozishmalar tarixi faqat
+          o'qish uchun ko'rinadi (aks holda suhbat butunlay yo'qolardi). */}
+      {(pending || messages.length > 0) && (
         <Card padding="none" className="flex flex-col">
           <h2 className="border-b border-line px-4 py-3 font-heading text-sm font-bold text-ink">
             {t("chat.title")}
@@ -220,7 +222,7 @@ export default function TaklifTafsilotiXaridorPage() {
                     </div>
                     <span className="text-2xs text-faint">
                       {mine ? t("chat.you") : offer.sellerName.split(" ")[0]} ·{" "}
-                      {formatTime(msg.createdAt)}
+                      {formatTime(msg.createdAt, lang)}
                     </span>
                   </div>
                 );
@@ -228,21 +230,27 @@ export default function TaklifTafsilotiXaridorPage() {
             )}
             <div ref={chatEndRef} />
           </div>
-          <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-line p-3">
-            <ChatImageAttach value={draftImage} onChange={setDraftImage} />
-            <div className="flex-1">
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={t("chat.placeholder")}
-                aria-label={t("chat.placeholder")}
-                maxLength={5000}
-              />
-            </div>
-            <Button type="submit" loading={sending} disabled={!draft.trim() && !draftImage}>
-              {t("chat.send")}
-            </Button>
-          </form>
+          {pending ? (
+            <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-line p-3">
+              <ChatImageAttach value={draftImage} onChange={setDraftImage} />
+              <div className="flex-1">
+                <Input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={t("chat.placeholder")}
+                  aria-label={t("chat.placeholder")}
+                  maxLength={5000}
+                />
+              </div>
+              <Button type="submit" loading={sending} disabled={!draft.trim() && !draftImage}>
+                {t("chat.send")}
+              </Button>
+            </form>
+          ) : (
+            <p className="border-t border-line p-3 text-center text-2xs text-faint">
+              {t("soffer.chatClosed")}
+            </p>
+          )}
         </Card>
       )}
 

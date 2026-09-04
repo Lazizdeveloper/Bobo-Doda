@@ -53,16 +53,16 @@ export function ServiceCard({
             {t("common.edit")}
           </Button>
         </Link>
-        {service.status !== "draft" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            onClick={() => onToggleStatus(service)}
-          >
-            {service.status === "active" ? t("services.pause") : t("services.activate")}
-          </Button>
-        )}
+        {/* Qoralama uchun ham ko'rsatiladi — aks holda qoralamani chop etishning
+            yagona yo'li qolmaydi (tahrirlash sehrgari ham holatni saqlab qolardi). */}
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={busy}
+          onClick={() => onToggleStatus(service)}
+        >
+          {service.status === "active" ? t("services.pause") : t("services.activate")}
+        </Button>
         <Button
           variant="ghost"
           size="sm"

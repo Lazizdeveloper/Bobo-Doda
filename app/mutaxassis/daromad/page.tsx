@@ -14,6 +14,7 @@ import { contractsService, milestonesService, paymentsService } from "@/lib/api"
 import type { PaymentCard } from "@/lib/types";
 import type { Contract, Milestone } from "@/lib/types";
 import { formatDate, formatMonth, formatMoney } from "@/lib/format";
+import { PLATFORM_FEE_PERCENT, sellerNet } from "@/lib/fees";
 import { useT } from "@/lib/i18n";
 
 const PENDING_STATUSES = ["mablaglangan", "topshirildi", "ozgartirish_soraldi"];
@@ -53,16 +54,26 @@ export default function DaromadPage() {
   const contractById = new Map(contracts.map((c) => [c.id, c]));
 
   const paid = (milestones ?? []).filter((m) => m.status === "qabul_qilindi");
-  const totalPaid = paid.reduce((sum, m) => sum + m.amount, 0);
-  /* Yechish mumkin bo'lgan qism — ishlangan minus allaqachon yechilgan */
+  /* Brutto — shartnomada kelishilgan summa; sof — xizmat haqi ushlangandan
+     keyingisi. Ikkalasi ham ko'rsatiladi: mutaxassis nima uchun qancha
+     ushlanganini ko'rmasa, escrow'ga ishonch yo'qoladi. */
+  const grossPaid = paid.reduce((sum, m) => sum + m.amount, 0);
+  const totalPaid = paid.reduce((sum, m) => sum + sellerNet(m.amount), 0);
+  const feeWithheld = grossPaid - totalPaid;
+  /* Yechish mumkin bo'lgan qism — ishlangan (sof) minus allaqachon yechilgan */
   const withdrawable = Math.max(0, totalPaid - withdrawn);
+  /* `nizo` ham hisobga olinadi: nizo ochilganda pul escrow'da turaveradi va
+     mutaxassis uni "Kutilmoqda" da ko'rishi kerak — aks holda nizo paytida
+     summa ekrandan yo'qolib qolardi. */
   const totalPending = (milestones ?? [])
-    .filter(
-      (m) =>
+    .filter((m) => {
+      const status = contractById.get(m.contractId)?.status;
+      return (
         PENDING_STATUSES.includes(m.status) &&
-        contractById.get(m.contractId)?.status === "faol"
-    )
-    .reduce((sum, m) => sum + m.amount, 0);
+        (status === "faol" || status === "nizo")
+      );
+    })
+    .reduce((sum, m) => sum + sellerNet(m.amount), 0);
 
   const payments = [...paid].sort((a, b) =>
     (b.approvedAt ?? "").localeCompare(a.approvedAt ?? "")
@@ -74,7 +85,7 @@ export default function DaromadPage() {
   for (const m of paid) {
     if (!m.approvedAt) continue;
     const key = m.approvedAt.slice(0, 7);
-    monthlyTotals.set(key, (monthlyTotals.get(key) ?? 0) + m.amount);
+    monthlyTotals.set(key, (monthlyTotals.get(key) ?? 0) + sellerNet(m.amount));
   }
   const now = new Date();
   const monthly = Array.from({ length: 6 }, (_, i) => {
@@ -135,6 +146,12 @@ export default function DaromadPage() {
               <p className="mt-2 font-heading text-xl font-bold text-success">
                 {formatMoney(totalPaid, lang)}
               </p>
+              {feeWithheld > 0 && (
+                <p className="mt-1 text-2xs text-faint">
+                  {formatMoney(grossPaid, lang)} − {PLATFORM_FEE_PERCENT}%{" "}
+                  {t("earn.feeLabel")} ({formatMoney(feeWithheld, lang)})
+                </p>
+              )}
             </Card>
             <Card>
               <p className="text-2xs font-medium uppercase tracking-wide text-faint">
@@ -203,8 +220,13 @@ export default function DaromadPage() {
                 key: "amount",
                 header: t("earn.colAmount"),
                 render: (m) => (
-                  <span className="font-medium text-success">
-                    {formatMoney(m.amount, lang)}
+                  <span className="flex flex-col">
+                    <span className="font-medium text-success">
+                      {formatMoney(sellerNet(m.amount), lang)}
+                    </span>
+                    <span className="text-2xs text-faint">
+                      {formatMoney(m.amount, lang)} − {PLATFORM_FEE_PERCENT}%
+                    </span>
                   </span>
                 ),
               },
@@ -213,7 +235,7 @@ export default function DaromadPage() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-medium text-success">
-                    {formatMoney(m.amount, lang)}
+                    {formatMoney(sellerNet(m.amount), lang)}
                   </span>
                   <span className="text-2xs text-faint">
                     {m.approvedAt ? formatDate(m.approvedAt, lang) : "—"}

@@ -189,6 +189,10 @@ export function SupportModal({ open, onClose, source, route }: SupportModalProps
           </span>
           <p className="font-heading text-base font-bold text-ink">{t("support.error_title")}</p>
           <p className="text-sm text-muted">{t("support.error_body")}</p>
+          {/* Zaxira yo'l: server sozlanmagan bo'lsa (TELEGRAM_* env yo'q)
+              har bir so'rov yiqiladi — foydalanuvchi boshi berk ko'chada
+              qolmasligi uchun muqobil aloqa aytiladi. */}
+          <p className="text-2xs text-faint">{t("support.error_fallback")}</p>
         </div>
       )}
 
