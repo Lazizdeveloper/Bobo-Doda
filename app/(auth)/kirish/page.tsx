@@ -21,8 +21,8 @@ function EyeIcon({ open }: { open: boolean }) {
   if (open) {
     return (
       <svg
-        width="19"
-        height="19"
+        width="21"
+        height="21"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -38,8 +38,8 @@ function EyeIcon({ open }: { open: boolean }) {
   }
   return (
     <svg
-      width="19"
-      height="19"
+      width="21"
+      height="21"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -58,7 +58,7 @@ function EyeIcon({ open }: { open: boolean }) {
 
 function GoogleIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
       <path
         fill="#4285F4"
         d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
@@ -81,7 +81,7 @@ function GoogleIcon() {
 
 function TelegramIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
       <path
         d="M21.5 4.6 18.6 19c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.5L18 7c.4-.3-.1-.5-.6-.2L7.3 13.2l-4.4-1.4c-1-.3-1-1 .2-1.4L20.2 3.3c.8-.3 1.5.2 1.3 1.3Z"
         fill="#229ED9"
@@ -91,7 +91,7 @@ function TelegramIcon() {
 }
 
 function KirishForm() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -314,40 +314,40 @@ function KirishForm() {
         {/* CHAP USTUN: TIZIMGA KIRISH FORMASI (Login Form)                 */}
         {/* ============================================================== */}
         <div
-          className={`flex-col justify-center px-6 py-12 sm:px-12 md:px-14 lg:px-20 xl:px-24 transition-all duration-300 ${
+          className={`flex-col justify-center px-6 py-10 sm:px-10 md:px-12 lg:px-16 xl:px-20 transition-all duration-300 ${
             isLogin
               ? "flex visible opacity-100"
               : "hidden md:flex md:invisible md:opacity-0 md:pointer-events-none"
           }`}
           aria-hidden={!isLogin}
         >
-          <div className="w-full max-w-md mx-auto">
+          <div className="w-full max-w-md sm:max-w-lg xl:max-w-[530px] mx-auto">
             {/* Desktop Brand Logo */}
-            <Link href="/" className="mb-8 hidden md:inline-flex items-center gap-3 group">
+            <Link href="/" className="mb-8 lg:mb-9 hidden md:inline-flex items-center gap-3.5 group">
               <img
                 src="/logo-icon.png"
                 alt="Bobo&Doda"
-                className="h-10 w-10 object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+                className="h-11 w-11 lg:h-12 lg:w-12 object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
               />
-              <span className="font-heading font-black text-xl tracking-tight text-ink">
+              <span className="font-heading font-black text-2xl lg:text-3xl tracking-tight text-ink">
                 BOBO&amp;DODA
               </span>
             </Link>
 
-            <h1 className="font-heading text-3xl sm:text-4xl font-black text-ink tracking-tight">
+            <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-ink tracking-tight">
               {t("auth.loginTitle")}
             </h1>
-            <p className="mt-2.5 text-sm sm:text-base text-muted leading-relaxed">
+            <p className="mt-2.5 sm:mt-3 text-sm sm:text-base lg:text-lg text-muted leading-relaxed font-normal">
               {t("auth.loginSubtitle")}
             </p>
 
             {/* 1-klikli tezkor ijtimoiy kirish */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 sm:mt-7 grid grid-cols-2 gap-3.5">
               <button
                 type="button"
                 onClick={() => handleSocialLogin("google")}
                 disabled={!!socialLoading || loading}
-                className="flex h-12 items-center justify-center gap-2.5 rounded-xl border border-line bg-surface/80 px-4 text-xs font-bold text-ink transition-all hover:border-[#4285F4]/50 hover:bg-card hover:shadow-sm disabled:opacity-50"
+                className="flex h-13 sm:h-14 items-center justify-center gap-3 rounded-2xl border border-line bg-surface/80 px-4 text-sm font-bold text-ink transition-all hover:border-[#4285F4]/60 hover:bg-card hover:shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 <GoogleIcon />
                 <span>Google</span>
@@ -356,7 +356,7 @@ function KirishForm() {
                 type="button"
                 onClick={() => handleSocialLogin("telegram")}
                 disabled={!!socialLoading || loading}
-                className="flex h-12 items-center justify-center gap-2.5 rounded-xl border border-line bg-surface/80 px-4 text-xs font-bold text-ink transition-all hover:border-[#229ED9]/50 hover:bg-card hover:shadow-sm disabled:opacity-50"
+                className="flex h-13 sm:h-14 items-center justify-center gap-3 rounded-2xl border border-line bg-surface/80 px-4 text-sm font-bold text-ink transition-all hover:border-[#229ED9]/60 hover:bg-card hover:shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 <TelegramIcon />
                 <span>Telegram</span>
@@ -364,19 +364,19 @@ function KirishForm() {
             </div>
 
             {/* Ajratuvchi chiziq */}
-            <div className="relative my-6">
+            <div className="relative my-6 sm:my-7">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-line" />
               </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-                <span className="bg-card px-3 text-faint">{t("auth.orDivider")}</span>
+              <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
+                <span className="bg-card px-3.5 text-muted">{t("auth.orDivider")}</span>
               </div>
             </div>
 
             {/* Kirish formasi */}
-            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4" noValidate>
+            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4.5 sm:gap-5" noValidate>
               <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
                   {t("auth.regPhone")}
                 </label>
                 <input
@@ -386,21 +386,21 @@ function KirishForm() {
                   value={loginPhone}
                   onChange={(e) => setLoginPhone(e.target.value)}
                   placeholder="+998 90 123 45 67"
-                  className={`w-full rounded-xl border px-4 py-3 text-sm text-ink placeholder:text-faint transition-all outline-none ${
+                  className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
                     errors.phone
                       ? "border-danger focus:ring-2 focus:ring-danger/20"
                       : "border-line bg-surface/60 focus:bg-card focus:border-primary focus:ring-2 focus:ring-primary/20"
                   }`}
                 />
                 {errors.phone && (
-                  <p className="mt-1 text-2xs text-danger font-medium" role="alert">
+                  <p className="mt-1.5 text-xs text-danger font-medium" role="alert">
                     {errors.phone}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
                   {t("auth.password")}
                 </label>
                 <div className="relative">
@@ -410,7 +410,7 @@ function KirishForm() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder={t("auth.passwordPh")}
-                    className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm text-ink placeholder:text-faint transition-all outline-none ${
+                    className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 pr-12 sm:pr-14 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
                       errors.password
                         ? "border-danger focus:ring-2 focus:ring-danger/20"
                         : "border-line bg-surface/60 focus:bg-card focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -420,27 +420,27 @@ function KirishForm() {
                     type="button"
                     tabIndex={-1}
                     onClick={() => setLoginShowPassword(!loginShowPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1"
+                    className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1.5"
                     aria-label={loginShowPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
                   >
                     <EyeIcon open={loginShowPassword} />
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-2xs text-danger font-medium" role="alert">
+                  <p className="mt-1.5 text-xs text-danger font-medium" role="alert">
                     {errors.password}
                   </p>
                 )}
               </div>
 
               {/* Eslab qolish va Parolni unutdingizmi */}
-              <div className="flex items-center justify-between text-xs pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-muted hover:text-ink">
+              <div className="flex items-center justify-between text-xs sm:text-sm pt-0.5">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none text-muted hover:text-ink font-medium">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-line text-primary focus:ring-primary/20 accent-[#FF7A1A]"
+                    className="h-4.5 w-4.5 rounded border-line text-primary focus:ring-primary/20 accent-[#FF7A1A]"
                   />
                   <span>{t("auth.rememberMe")}</span>
                 </label>
@@ -454,7 +454,7 @@ function KirishForm() {
               </div>
 
               {errors.form && (
-                <div className="rounded-xl border border-danger/30 bg-danger/5 p-3 text-center text-xs font-semibold text-danger" role="alert">
+                <div className="rounded-2xl border border-danger/30 bg-danger/5 p-3.5 text-center text-xs sm:text-sm font-semibold text-danger" role="alert">
                   {errors.form}
                 </div>
               )}
@@ -462,7 +462,7 @@ function KirishForm() {
               <button
                 type="submit"
                 disabled={loading || !!socialLoading}
-                className="mt-2 flex h-13 w-full items-center justify-center rounded-xl bg-primary px-6 text-sm font-black uppercase tracking-wider text-white shadow-md transition-all duration-200 hover:bg-primary-hover hover:shadow-lg active:scale-[0.99] disabled:opacity-50"
+                className="mt-2.5 flex h-14 sm:h-15 w-full items-center justify-center rounded-2xl bg-primary px-6 text-sm sm:text-base font-black uppercase tracking-wider text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/30 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -479,7 +479,7 @@ function KirishForm() {
             </form>
 
             {/* Mobil switch taklifi */}
-            <div className="mt-8 text-center text-xs text-muted md:hidden">
+            <div className="mt-8 text-center text-xs sm:text-sm text-muted md:hidden">
               {t("auth.dontHaveAccount")}{" "}
               <button
                 type="button"
@@ -496,28 +496,28 @@ function KirishForm() {
         {/* O'NG USTUN: RO'YXATDAN O'TISH FORMASI (Sign Up Form)            */}
         {/* ============================================================== */}
         <div
-          className={`flex-col justify-center px-6 py-12 sm:px-12 md:px-14 lg:px-20 xl:px-24 transition-all duration-300 ${
+          className={`flex-col justify-center px-6 py-10 sm:px-10 md:px-12 lg:px-16 xl:px-20 transition-all duration-300 ${
             !isLogin
               ? "flex visible opacity-100"
               : "hidden md:flex md:invisible md:opacity-0 md:pointer-events-none"
           }`}
           aria-hidden={isLogin}
         >
-          <div className="w-full max-w-md mx-auto">
-            <h1 className="font-heading text-3xl sm:text-4xl font-black text-ink tracking-tight">
+          <div className="w-full max-w-md sm:max-w-lg xl:max-w-[530px] mx-auto">
+            <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-ink tracking-tight">
               {t("auth.registerTitle")}
             </h1>
-            <p className="mt-2.5 text-sm sm:text-base text-muted leading-relaxed">
+            <p className="mt-2.5 sm:mt-3 text-sm sm:text-base lg:text-lg text-muted leading-relaxed font-normal">
               {t("auth.subtitle")}
             </p>
 
             {/* 1-klikli tezkor ijtimoiy ro'yxatdan o'tish */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 sm:mt-7 grid grid-cols-2 gap-3.5">
               <button
                 type="button"
                 onClick={() => handleSocialLogin("google")}
                 disabled={!!socialLoading || loading}
-                className="flex h-12 items-center justify-center gap-2.5 rounded-xl border border-line bg-surface/80 px-4 text-xs font-bold text-ink transition-all hover:border-[#4285F4]/50 hover:bg-card hover:shadow-sm disabled:opacity-50"
+                className="flex h-13 sm:h-14 items-center justify-center gap-3 rounded-2xl border border-line bg-surface/80 px-4 text-sm font-bold text-ink transition-all hover:border-[#4285F4]/60 hover:bg-card hover:shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 <GoogleIcon />
                 <span>Google</span>
@@ -526,7 +526,7 @@ function KirishForm() {
                 type="button"
                 onClick={() => handleSocialLogin("telegram")}
                 disabled={!!socialLoading || loading}
-                className="flex h-12 items-center justify-center gap-2.5 rounded-xl border border-line bg-surface/80 px-4 text-xs font-bold text-ink transition-all hover:border-[#229ED9]/50 hover:bg-card hover:shadow-sm disabled:opacity-50"
+                className="flex h-13 sm:h-14 items-center justify-center gap-3 rounded-2xl border border-line bg-surface/80 px-4 text-sm font-bold text-ink transition-all hover:border-[#229ED9]/60 hover:bg-card hover:shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
               >
                 <TelegramIcon />
                 <span>Telegram</span>
@@ -534,19 +534,19 @@ function KirishForm() {
             </div>
 
             {/* Ajratuvchi chiziq */}
-            <div className="relative my-6">
+            <div className="relative my-6 sm:my-7">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-line" />
               </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-                <span className="bg-card px-3 text-faint">{t("auth.orDivider")}</span>
+              <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
+                <span className="bg-card px-3.5 text-muted">{t("auth.orDivider")}</span>
               </div>
             </div>
 
             {/* Ro'yxatdan o'tish formasi */}
-            <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4" noValidate>
+            <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4.5 sm:gap-5" noValidate>
               <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
                   {t("auth.regName")}
                 </label>
                 <input
@@ -555,21 +555,21 @@ function KirishForm() {
                   value={regFullName}
                   onChange={(e) => setRegFullName(e.target.value)}
                   placeholder={t("auth.regNamePh")}
-                  className={`w-full rounded-xl border px-4 py-3 text-sm text-ink placeholder:text-faint transition-all outline-none ${
+                  className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
                     errors.fullName
                       ? "border-danger focus:ring-2 focus:ring-danger/20"
                       : "border-line bg-surface/60 focus:bg-card focus:border-primary focus:ring-2 focus:ring-primary/20"
                   }`}
                 />
                 {errors.fullName && (
-                  <p className="mt-1 text-2xs text-danger font-medium" role="alert">
+                  <p className="mt-1.5 text-xs text-danger font-medium" role="alert">
                     {errors.fullName}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
                   {t("auth.regPhone")}
                 </label>
                 <input
@@ -579,21 +579,21 @@ function KirishForm() {
                   value={regPhone}
                   onChange={(e) => setRegPhone(e.target.value)}
                   placeholder="+998 90 123 45 67"
-                  className={`w-full rounded-xl border px-4 py-3 text-sm text-ink placeholder:text-faint transition-all outline-none ${
+                  className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
                     errors.phone
                       ? "border-danger focus:ring-2 focus:ring-danger/20"
                       : "border-line bg-surface/60 focus:bg-card focus:border-primary focus:ring-2 focus:ring-primary/20"
                   }`}
                 />
                 {errors.phone && (
-                  <p className="mt-1 text-2xs text-danger font-medium" role="alert">
+                  <p className="mt-1.5 text-xs text-danger font-medium" role="alert">
                     {errors.phone}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-ink mb-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
                   {t("auth.password")}
                 </label>
                 <div className="relative">
@@ -602,8 +602,14 @@ function KirishForm() {
                     autoComplete="new-password"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Kamida 8 belgi (harf va raqam)"
-                    className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm text-ink placeholder:text-faint transition-all outline-none ${
+                    placeholder={
+                      lang === "uz"
+                        ? "Kamida 8 belgi (harf va raqam)"
+                        : lang === "ru"
+                        ? "Минимум 8 символов (буквы и цифры)"
+                        : "At least 8 chars (letters and digits)"
+                    }
+                    className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 pr-12 sm:pr-14 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
                       errors.password
                         ? "border-danger focus:ring-2 focus:ring-danger/20"
                         : "border-line bg-surface/60 focus:bg-card focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -613,47 +619,73 @@ function KirishForm() {
                     type="button"
                     tabIndex={-1}
                     onClick={() => setRegShowPassword(!regShowPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1"
+                    className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1.5"
                     aria-label={regShowPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
                   >
                     <EyeIcon open={regShowPassword} />
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-2xs text-danger font-medium" role="alert">
+                  <p className="mt-1.5 text-xs text-danger font-medium" role="alert">
                     {errors.password}
                   </p>
                 )}
               </div>
 
               {/* Shartlarga rozilik chekboksi */}
-              <div className="flex items-start gap-2.5 pt-1 text-xs">
+              <div className="flex items-start gap-3 pt-1 text-xs sm:text-sm">
                 <input
                   type="checkbox"
                   id="terms-check"
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-line text-primary focus:ring-primary/20 accent-[#FF7A1A]"
+                  className="mt-1 h-4.5 w-4.5 rounded border-line text-primary focus:ring-primary/20 accent-[#FF7A1A]"
                 />
-                <label htmlFor="terms-check" className="cursor-pointer text-muted leading-relaxed select-none">
-                  <Link href="/shartlar" target="_blank" className="font-bold text-ink underline hover:text-primary">
-                    {t("auth.termsLink")}
-                  </Link>{" "}
-                  va{" "}
-                  <Link href="/maxfiylik" target="_blank" className="font-bold text-ink underline hover:text-primary">
-                    {t("auth.privacyLink")}
-                  </Link>{" "}
-                  {t("auth.termsAccept")}
+                <label htmlFor="terms-check" className="cursor-pointer text-muted leading-relaxed select-none font-medium">
+                  {lang === "en" ? (
+                    <>
+                      I agree to the{" "}
+                      <Link href="/shartlar" target="_blank" className="font-bold text-ink underline hover:text-primary">
+                        Terms of Service
+                      </Link>{" "}
+                      and{" "}
+                      <Link href="/maxfiylik" target="_blank" className="font-bold text-ink underline hover:text-primary">
+                        Privacy Policy
+                      </Link>
+                    </>
+                  ) : lang === "ru" ? (
+                    <>
+                      Я принимаю{" "}
+                      <Link href="/shartlar" target="_blank" className="font-bold text-ink underline hover:text-primary">
+                        Условия использования
+                      </Link>{" "}
+                      и{" "}
+                      <Link href="/maxfiylik" target="_blank" className="font-bold text-ink underline hover:text-primary">
+                        Политику конфиденциальности
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/shartlar" target="_blank" className="font-bold text-ink underline hover:text-primary">
+                        {t("auth.termsLink")}
+                      </Link>{" "}
+                      va{" "}
+                      <Link href="/maxfiylik" target="_blank" className="font-bold text-ink underline hover:text-primary">
+                        {t("auth.privacyLink")}
+                      </Link>{" "}
+                      {t("auth.termsAccept")}
+                    </>
+                  )}
                 </label>
               </div>
               {errors.terms && (
-                <p className="text-2xs text-danger font-medium" role="alert">
+                <p className="text-xs text-danger font-medium" role="alert">
                   {errors.terms}
                 </p>
               )}
 
               {errors.form && (
-                <div className="rounded-xl border border-danger/30 bg-danger/5 p-3 text-center text-xs font-semibold text-danger" role="alert">
+                <div className="rounded-2xl border border-danger/30 bg-danger/5 p-3.5 text-center text-xs sm:text-sm font-semibold text-danger" role="alert">
                   {errors.form}
                 </div>
               )}
@@ -661,7 +693,7 @@ function KirishForm() {
               <button
                 type="submit"
                 disabled={loading || !!socialLoading}
-                className="mt-2 flex h-13 w-full items-center justify-center rounded-xl bg-primary px-6 text-sm font-black uppercase tracking-wider text-white shadow-md transition-all duration-200 hover:bg-primary-hover hover:shadow-lg active:scale-[0.99] disabled:opacity-50"
+                className="mt-2.5 flex h-14 sm:h-15 w-full items-center justify-center rounded-2xl bg-primary px-6 text-sm sm:text-base font-black uppercase tracking-wider text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/30 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -677,8 +709,8 @@ function KirishForm() {
               </button>
 
               {/* Aniq eslatma: Telegram yoki Google orqali tasdiqlanadi */}
-              <p className="mt-3 text-center text-2xs text-muted flex items-center justify-center gap-1.5 leading-tight">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary shrink-0" aria-hidden="true">
+              <p className="mt-3.5 text-center text-xs text-muted flex items-center justify-center gap-2 leading-relaxed font-medium">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary shrink-0" aria-hidden="true">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <path d="m9 12 2 2 4-4" />
                 </svg>
@@ -687,7 +719,7 @@ function KirishForm() {
             </form>
 
             {/* Mobil switch taklifi */}
-            <div className="mt-8 text-center text-xs text-muted md:hidden">
+            <div className="mt-8 text-center text-xs sm:text-sm text-muted md:hidden">
               {t("auth.alreadyHaveAccount")}{" "}
               <button
                 type="button"
@@ -713,31 +745,31 @@ function KirishForm() {
             : "polygon(0 0, 100% 0, 86% 100%, 0 100%)",
         }}
       >
-        <div className="relative flex h-full w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-[#FF7A1A] via-[#FF6600] to-[#E65300] p-10 lg:p-16 xl:p-20 text-white shadow-2xl pointer-events-auto">
+        <div className="relative flex h-full w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-[#FF7A1A] via-[#FF6600] to-[#E65300] p-10 lg:p-14 xl:p-20 text-white shadow-2xl pointer-events-auto">
           {/* Ambient Glow Lights */}
           <div className="pointer-events-none absolute -left-28 -top-28 h-96 w-96 rounded-full bg-white/20 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 -right-28 h-96 w-96 rounded-full bg-black/20 blur-3xl" />
 
           {/* Yuqori 3D brend logotipi (faqat panel chapda bo'lganda ko'rinadi) */}
           <div
-            className={`relative z-10 flex items-center gap-3.5 transition-all duration-400 ${
+            className={`relative z-10 flex items-center gap-4 transition-all duration-400 ${
               !isLogin ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"
             }`}
           >
-            <Link href="/" className="inline-flex items-center gap-3.5 group">
+            <Link href="/" className="inline-flex items-center gap-4 group">
               <img
                 src="/logo-icon.png"
                 alt="Bobo&Doda"
-                className="h-12 w-12 object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-105"
+                className="h-12 w-12 lg:h-14 lg:w-14 object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-105"
               />
-              <span className="font-heading font-black text-2xl tracking-tight text-white drop-shadow-sm">
+              <span className="font-heading font-black text-2xl lg:text-3xl tracking-tight text-white drop-shadow-sm">
                 BOBO&amp;DODA
               </span>
             </Link>
           </div>
 
           {/* Markaziy interaktiv kontent */}
-          <div className="relative z-10 flex flex-col items-center justify-center text-center my-auto px-4 lg:px-8">
+          <div className="relative z-10 flex flex-col items-center justify-center text-center my-auto px-4 lg:px-10">
             {/* 1-HOLAT: Ro'yxatdan o'tishda (Panel chapda, Kirish taklifi) */}
             <div
               className={`flex flex-col items-center transition-all duration-500 ${
@@ -746,16 +778,16 @@ function KirishForm() {
                   : "opacity-0 translate-y-4 scale-95 pointer-events-none absolute"
               }`}
             >
-              <h2 className="font-heading text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight leading-tight max-w-md">
+              <h2 className="font-heading text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight leading-tight max-w-lg">
                 {t("auth.alreadyHaveAccount")}
               </h2>
-              <p className="mt-4 max-w-sm text-sm lg:text-base text-white/90 leading-relaxed font-medium">
+              <p className="mt-4 sm:mt-5 max-w-md text-base lg:text-lg text-white/95 leading-relaxed font-medium">
                 {t("auth.alreadyHaveAccountDesc")}
               </p>
               <button
                 type="button"
                 onClick={() => switchMode("login")}
-                className="mt-10 inline-flex items-center justify-center rounded-2xl border-2 border-white bg-transparent px-10 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-md transition-all duration-200 hover:bg-white hover:text-[#FF7A1A] active:scale-95 cursor-pointer"
+                className="mt-8 lg:mt-10 inline-flex items-center justify-center rounded-2xl border-2 border-white bg-transparent px-10 lg:px-12 py-3.5 lg:py-4 text-xs lg:text-sm font-black uppercase tracking-widest text-white shadow-lg transition-all duration-200 hover:bg-white hover:text-[#FF7A1A] active:scale-95 cursor-pointer"
               >
                 {t("auth.tabLogin")}
               </button>
@@ -769,16 +801,16 @@ function KirishForm() {
                   : "opacity-0 -translate-y-4 scale-95 pointer-events-none absolute"
               }`}
             >
-              <h2 className="font-heading text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight leading-tight max-w-md">
+              <h2 className="font-heading text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight leading-tight max-w-lg">
                 {t("auth.dontHaveAccount")}
               </h2>
-              <p className="mt-4 max-w-sm text-sm lg:text-base text-white/90 leading-relaxed font-medium">
+              <p className="mt-4 sm:mt-5 max-w-md text-base lg:text-lg text-white/95 leading-relaxed font-medium">
                 {t("auth.dontHaveAccountDesc")}
               </p>
               <button
                 type="button"
                 onClick={() => switchMode("register")}
-                className="mt-10 inline-flex items-center justify-center rounded-2xl border-2 border-white bg-transparent px-10 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-md transition-all duration-200 hover:bg-white hover:text-[#FF7A1A] active:scale-95 cursor-pointer"
+                className="mt-8 lg:mt-10 inline-flex items-center justify-center rounded-2xl border-2 border-white bg-transparent px-10 lg:px-12 py-3.5 lg:py-4 text-xs lg:text-sm font-black uppercase tracking-widest text-white shadow-lg transition-all duration-200 hover:bg-white hover:text-[#FF7A1A] active:scale-95 cursor-pointer"
               >
                 {t("auth.tabRegister")}
               </button>
@@ -786,8 +818,8 @@ function KirishForm() {
           </div>
 
           {/* Pastki xavfsiz kafolat nishoni */}
-          <div className="relative z-10 flex items-center justify-center gap-2.5 text-white/90 text-xs font-semibold">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <div className="relative z-10 flex items-center justify-center gap-2.5 text-white/90 text-xs sm:text-sm font-semibold">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="m9 12 2 2 4-4" />
             </svg>
