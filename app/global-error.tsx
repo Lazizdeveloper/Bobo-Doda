@@ -48,7 +48,7 @@ export default function GlobalError({
               right: 24,
               height: 3,
               background:
-                "repeating-linear-gradient(90deg,#15803D 0 7px,transparent 7px 13px)",
+                "repeating-linear-gradient(90deg,#FF7A1A 0 7px,transparent 7px 13px)",
             }}
           />
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 10px" }}>
@@ -56,7 +56,7 @@ export default function GlobalError({
           </h1>
           <p
             style={{
-              color: "#4C6156",
+              color: "#4B5262",
               fontSize: 14,
               lineHeight: 1.6,
               margin: "0 0 24px",
@@ -70,7 +70,7 @@ export default function GlobalError({
             type="button"
             onClick={() => reset()}
             style={{
-              background: "#15803D",
+              background: "#FF7A1A",
               color: "#FFFFFF",
               border: 0,
               borderRadius: 10,

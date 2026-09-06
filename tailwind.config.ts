@@ -18,38 +18,38 @@ const config: Config = {
         /* Mato — oq */
         bg: "#FFFFFF",
         card: "#FFFFFF",
-        "card-hover": "#F2F8F4",
-        /* Yumshoq yashil-oq to'ldirish: jadval sarlavhasi, ikkilamchi panel */
-        surface: "#F5FAF7",
-        /* Harakat — o'rmon yashil. Ustidagi matn doim on-primary (oq) */
-        primary: "#15803D",
-        "primary-hover": "#116632",
+        "card-hover": "#FFF8F2",
+        /* Yumshoq iliq to'ldirish (Landing page bilan bir xil) */
+        surface: "#FBFBFA",
+        /* Harakat — Bobo&Doda Brand Orange. Matn oq (on-primary) */
+        primary: "#FF7A1A",
+        "primary-hover": "#EA670C",
         "on-primary": "#FFFFFF",
-        /* Urg'u — zaytun-lime (eski so'zana lime'ining o'qiladigan varianti) */
-        accent: "#4D7C0F",
-        /* Jarayon holati — archa-ko'kish yashil (yakunlangan yashildan farqli) */
-        info: "#0F766E",
-        /* Matn */
-        ink: "#0C1F16",
-        muted: "#4C6156",
-        faint: "#5E7568",
-        /* Chiziq — yashil chok ipi */
-        line: "#DDEAE3",
-        "line-strong": "#15803D",
+        /* Urg'u — lime (landing page 03 bosqich kartasi) */
+        accent: "#C8F230",
+        /* Jarayon holati — ko'kish */
+        info: "#0284C7",
+        /* Matn — Landing page'dagi chuqur ink va neytral to'q ranglar */
+        ink: "#141414",
+        muted: "#4B5262",
+        faint: "#6E7686",
+        /* Chiziq — nozik neytral chegaralar */
+        line: "#EAE5E0",
+        "line-strong": "#FF7A1A",
         /* Forma elementi chegarasi — WCAG 1.4.11 uchun 3:1 */
-        field: "#7B9587",
-        /* Semantik — faqat status/xabar uchun */
+        field: "#D4CCC4",
+        /* Semantik — status/xabar uchun */
         danger: "#DC2626",
-        warning: "#B45309",
-        success: "#15803D",
+        warning: "#D97706",
+        success: "#10B981",
         /* "deep" variantlar — o'z rangining ochiq to'ldirishi (/10) ustida
            matn AA (>=4.5:1) bo'lishi uchun. Faqat Badge/tint bloklarida. */
-        "primary-deep": "#0E5C2C",
-        "accent-deep": "#3F6A0A",
-        "info-deep": "#0B5A54",
-        "success-deep": "#0E5C2C",
-        "warning-deep": "#8F4208",
-        "danger-deep": "#B4161B",
+        "primary-deep": "#C7500B",
+        "accent-deep": "#5A6A18",
+        "info-deep": "#0369A1",
+        "success-deep": "#047857",
+        "warning-deep": "#B45309",
+        "danger-deep": "#B91C1C",
       },
       fontFamily: {
         heading: ["var(--font-unbounded)", "sans-serif"],
@@ -80,8 +80,8 @@ const config: Config = {
         card: "0 1px 2px rgba(12,31,22,.06)",
         "card-hover": "0 4px 14px rgba(12,31,22,.10)",
         overlay: "0 16px 40px rgba(12,31,22,.16)",
-        /* Yashil tugmaning "ko'tarilgan" hissi — ostidagi to'q yashil chiziq */
-        raised: "0 2px 0 0 #0E5C2C",
+        /* To'q sariq tugmaning "ko'tarilgan" hissi — ostidagi to'q chiziq */
+        raised: "0 2px 0 0 #C7500B",
       },
     },
   },

@@ -31,8 +31,8 @@ export function RatingStars({
               width={px}
               height={px}
               viewBox="0 0 16 16"
-              fill={filled ? "#15803D" : "none"}
-              stroke={filled ? "#15803D" : "#7B9587"}
+              fill={filled ? "#f59e0b" : "none"}
+              stroke={filled ? "#f59e0b" : "#d4ccc4"}
               strokeWidth="1.2"
               aria-hidden="true"
             >

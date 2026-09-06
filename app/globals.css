@@ -2,29 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Suzani Light — tokenlar tailwind.config.ts bilan bir xil turishi shart */
+/* Bobo&Doda Brand Theme — tokenlar tailwind.config.ts bilan bir xil turishi shart */
 :root {
   --font-onest: "Onest";
   --font-unbounded: "Unbounded";
   --font-mono: "JetBrains Mono";
   --bg: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-hover: #f2f8f4;
-  --surface: #f5faf7;
-  --primary: #15803d;
-  --primary-hover: #116632;
+  --bg-card-hover: #fff8f2;
+  --surface: #fbfbfa;
+  --primary: #ff7a1a;
+  --primary-hover: #ea670c;
   --on-primary: #ffffff;
-  --accent: #4d7c0f;
-  --info: #0f766e;
-  --text: #0c1f16;
-  --text-muted: #4c6156;
-  --text-faint: #5e7568;
-  --border: #ddeae3;
-  --border-strong: #15803d;
-  --field: #7b9587;
+  --accent: #c8f230;
+  --info: #0284c7;
+  --text: #141414;
+  --text-muted: #4b5262;
+  --text-faint: #6e7686;
+  --border: #eae5e0;
+  --border-strong: #ff7a1a;
+  --field: #d4ccc4;
   --danger: #dc2626;
-  --warning: #b45309;
-  --success: #15803d;
+  --warning: #d97706;
+  --success: #10b981;
 }
 
 html {

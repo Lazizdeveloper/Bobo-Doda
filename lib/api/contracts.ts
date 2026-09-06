@@ -43,7 +43,10 @@ export interface AuthService {
   getSession(): Model.Session | null;
   login(input: { phone: string; password: string }): Promise<Model.Session>;
   register(input: { phone: string; password: string; fullName: string }): Promise<Model.Session>;
-  verifyTelegram(code: string): Promise<Model.Session>;
+  loginWithTelegram(payload?: { id?: string; username?: string; first_name?: string; role?: Model.UserRole }): Promise<Model.Session>;
+  loginWithGoogle(payload?: { email?: string; name?: string; sub?: string; role?: Model.UserRole }): Promise<Model.Session>;
+  verifyTelegram(code?: string): Promise<Model.Session>;
+  verifyGoogle(email?: string): Promise<Model.Session>;
   chooseRole(role: Model.UserRole): Promise<Model.Session>;
   resetPassword(input: { phone: string; code: string; newPassword: string }): Promise<void>;
   /**
