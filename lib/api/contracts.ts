@@ -48,7 +48,12 @@ export interface AuthService {
   verifyTelegram(code?: string): Promise<Model.Session>;
   verifyGoogle(email?: string): Promise<Model.Session>;
   chooseRole(role: Model.UserRole): Promise<Model.Session>;
-  resetPassword(input: { phone: string; code: string; newPassword: string }): Promise<void>;
+  resetPassword(input: {
+    phone: string;
+    code: string;
+    newPassword: string;
+    method?: "telegram" | "google";
+  }): Promise<void>;
   /**
    * Access token'ni yangilaydi (`POST /auth/refresh`).
    *
@@ -72,6 +77,7 @@ export interface UsersService {
   getCurrent(): Promise<Model.User | null>;
   getSellerProfile(): Promise<Model.SellerProfile>;
   updateName(fullName: string): Promise<void>;
+  updateUserProfile(data: Partial<Model.User>): Promise<void>;
   completeSellerProfile(input: {
     fullName: string;
     bio: string;
@@ -192,7 +198,14 @@ export interface ContractsService {
 export interface MilestonesService {
   list(contractId: string): Promise<Model.Milestone[]>;
   listMine(): Promise<Model.Milestone[]>;
-  submit(id: string): Promise<Model.Milestone>;
+  submit(
+    id: string,
+    deliverable?: {
+      link?: string;
+      note?: string;
+      files?: Model.DeliverableFile[];
+    }
+  ): Promise<Model.Milestone>;
   accept(id: string): Promise<Model.Milestone>;
   requestRevision(id: string, comment: string): Promise<Model.Milestone>;
 }
@@ -209,10 +222,10 @@ export interface PaymentsService {
   removeCard(id: string): Promise<void>;
   /* Yechish ADMIN TASDIG'IGA so'rov yuboradi — pul darhol yechilmaydi.
      Ilgari ikkalasi ham darhol yechar va admin navbatiga umuman tushmasdi. */
-  /** Mutaxassis daromadini yechish so'rovi */
-  withdrawEarnings(cardId: string): Promise<Model.WithdrawalRequest>;
+  /** Mutaxassis daromadini yechish so'rovi (ixtiyoriy qisman summa bilan) */
+  withdrawEarnings(cardId: string, amount?: number): Promise<Model.WithdrawalRequest>;
   /** Xaridor balansidagi (qaytgan escrow) mablag'ni yechish so'rovi */
-  withdrawBalance(cardId: string): Promise<Model.WithdrawalRequest>;
+  withdrawBalance(cardId: string, amount?: number): Promise<Model.WithdrawalRequest>;
   getWithdrawnTotal(): Promise<number>;
   /** Kutilayotgan so'rovlar summasi — mavjud mablag'dan ayiriladi */
   getPendingWithdrawalTotal(): Promise<number>;
@@ -222,7 +235,12 @@ export interface PaymentsService {
 export interface MessagesService {
   list(threadId: string): Promise<Model.Message[]>;
   listMine(): Promise<Model.Message[]>;
-  send(threadId: string, body: string, image?: string): Promise<Model.Message>;
+  send(
+    threadId: string,
+    body: string,
+    image?: string,
+    attachments?: { images?: string[]; files?: Model.DeliverableFile[] }
+  ): Promise<Model.Message>;
   /** threadId -> joriy foydalanuvchi shu suhbatni oxirgi marta o'qigan vaqt */
   getReadStatus(): Promise<Record<string, string>>;
   /** Suhbat sahifasi ochilganda chaqiriladi, uni "o'qilgan" deb belgilaydi */

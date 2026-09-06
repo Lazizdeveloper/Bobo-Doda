@@ -41,6 +41,7 @@ export const usersService: UsersService = {
   getCurrent: () => call(mock.getCurrentUser),
   getSellerProfile: () => call(mock.getSellerProfile),
   updateName: (name) => call(() => mock.updateUserName(name)),
+  updateUserProfile: (data) => call(() => mock.updateUserProfile(data)),
   completeSellerProfile: (input) => call(() => mock.completeSellerProfile(input)),
   updateSellerProfile: (input) => call(() => mock.updateSellerProfile(input)),
   setAvailability: (available) => call(() => mock.setAvailability(available)),
@@ -110,7 +111,7 @@ export const contractsService: ContractsService = {
 export const milestonesService: MilestonesService = {
   list: (id) => call(() => mock.getMilestones(id)),
   listMine: () => call(mock.getAllMilestones),
-  submit: (id) => call(() => mock.submitMilestone(id)),
+  submit: (id, deliverable) => call(() => mock.submitMilestone(id, deliverable)),
   accept: (id) => call(() => mock.acceptMilestone(id)),
   requestRevision: (id, comment) => call(() => mock.requestRevision(id, comment)),
 };
@@ -121,8 +122,8 @@ export const paymentsService: PaymentsService = {
   getCards: () => call(mock.getCards),
   addCard: (input) => call(() => mock.addCard(input)),
   removeCard: (id) => call(() => mock.removeCard(id)),
-  withdrawEarnings: (cardId) => call(() => mock.withdrawFunds(cardId)),
-  withdrawBalance: (cardId) => call(() => mock.withdrawBalance(cardId)),
+  withdrawEarnings: (cardId, amount) => call(() => mock.withdrawFunds(cardId, amount)),
+  withdrawBalance: (cardId, amount) => call(() => mock.withdrawBalance(cardId, amount)),
   getPendingWithdrawalTotal: () => call(mock.getPendingWithdrawalTotal),
   listMyWithdrawalRequests: () => call(mock.getMyWithdrawalRequests),
   getWithdrawnTotal: () => call(mock.getWithdrawnTotal),
@@ -131,7 +132,7 @@ export const paymentsService: PaymentsService = {
 export const messagesService: MessagesService = {
   list: (id) => call(() => mock.getMessages(id)),
   listMine: () => call(mock.getAllMessages),
-  send: (id, body, image) => call(() => mock.sendMessage(id, body, image)),
+  send: (id, body, image, attachments) => call(() => mock.sendMessage(id, body, image, attachments)),
   getReadStatus: () => call(mock.getThreadReads),
   markRead: (id) => call(() => mock.markThreadRead(id)),
 };

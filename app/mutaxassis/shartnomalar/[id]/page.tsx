@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { ChatImageAttach } from "@/components/ui/ChatImageAttach";
+import { ChatFileAttach } from "@/components/ui/ChatFileAttach";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
@@ -22,9 +22,10 @@ import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
 import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
+import { ReceiptModal } from "@/components/shared/ReceiptModal";
 import { authService, contractsService, messagesService, milestonesService, reviewsService, servicesService } from "@/lib/api";
-import type { Contract, Message, Milestone, Review, Service } from "@/lib/types";
-import { formatDate, formatMoney, formatTime } from "@/lib/format";
+import type { Contract, DeliverableFile, Message, Milestone, Review, Service } from "@/lib/types";
+import { formatDate, formatFileSize, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 export default function ShartnomaWorkroomPage() {
@@ -42,8 +43,11 @@ export default function ShartnomaWorkroomPage() {
   const [submitTarget, setSubmitTarget] = useState<Milestone | null>(null);
   const [workLink, setWorkLink] = useState("");
   const [workNote, setWorkNote] = useState("");
+  const [deliverableFiles, setDeliverableFiles] = useState<DeliverableFile[]>([]);
+  const [isAgreed, setIsAgreed] = useState(true);
   const [linkError, setLinkError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [receiptMilestone, setReceiptMilestone] = useState<Milestone | null>(null);
 
   /* Bekor qilish */
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -51,7 +55,8 @@ export default function ShartnomaWorkroomPage() {
 
   /* Chat */
   const [draft, setDraft] = useState("");
-  const [draftImage, setDraftImage] = useState<string | undefined>(undefined);
+  const [draftImages, setDraftImages] = useState<string[]>([]);
+  const [draftFiles, setDraftFiles] = useState<DeliverableFile[]>([]);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const loadVersionRef = useRef(0);
@@ -100,25 +105,47 @@ export default function ShartnomaWorkroomPage() {
 
   function openSubmitModal(milestone: Milestone) {
     setSubmitTarget(milestone);
-    setWorkLink("");
-    setWorkNote("");
+    setWorkLink(milestone.deliverableLink || "");
+    setWorkNote(milestone.deliverableNote || "");
+    setDeliverableFiles(milestone.deliverableFiles ? [...milestone.deliverableFiles] : []);
+    setIsAgreed(true);
     setLinkError("");
+  }
+
+  function handleAddFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const newFiles: DeliverableFile[] = Array.from(files).map((file) => ({
+      id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || "application/octet-stream",
+      url: URL.createObjectURL(file),
+    }));
+    setDeliverableFiles((prev) => [...prev, ...newFiles].slice(0, 5));
+    e.target.value = "";
+  }
+
+  function handleRemoveFile(index: number) {
+    setDeliverableFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleSubmitWork(e: FormEvent) {
     e.preventDefault();
     if (!submitTarget || !contract) return;
-    if (!workLink.trim()) {
+    if (!workLink.trim() && deliverableFiles.length === 0) {
       setLinkError(t("sm.errLink"));
       return;
     }
     setSubmitting(true);
     try {
       /* Topshirish — asosiy amal. U muvaffaqiyatli bo'lsa, modal yopiladi va
-         holat yangilanadi. Ilgari chat xabari shu bloknig ichida edi: xabar
-         yiqilsa umumiy xato chiqar, modal ochiq qolar va bosqich ALLAQACHON
-         topshirilgan bo'lardi — qayta bosilsa BAD_STATE. */
-      await milestonesService.submit(submitTarget.id);
+         holat yangilanadi. Deliverable link, izoh va biriktirilgan fayllar saqlanadi. */
+      await milestonesService.submit(submitTarget.id, {
+        link: workLink.trim(),
+        note: workNote.trim(),
+        files: deliverableFiles,
+      });
       setMilestones(await milestonesService.list(contract.id));
       toast(t("sm.done"));
       setSubmitTarget(null);
@@ -129,12 +156,12 @@ export default function ShartnomaWorkroomPage() {
     }
     setSubmitting(false);
 
-    /* Havola/izoh chatga yozilishi — ikkilamchi, yiqilsa topshirish bekor
-       qilinmaydi, faqat ogohlantiriladi. */
+    /* Havola/izoh chatga yozilishi — ikkilamchi */
     try {
-      const chatText = workNote.trim()
-        ? `${workNote.trim()}\n${workLink.trim()}`
-        : workLink.trim();
+      const fileNames = deliverableFiles.length > 0
+        ? `\n📎 Fayllar (${deliverableFiles.length}): ${deliverableFiles.map((f) => f.name).join(", ")}`
+        : "";
+      const chatText = `📦 Ish topshirildi: "${submitTarget.title}"\n${workNote.trim() ? `${workNote.trim()}\n` : ""}${workLink.trim() ? `${workLink.trim()}\n` : ""}${fileNames}`.trim();
       const message = await messagesService.send(contract.id, chatText);
       setMessages((prev) => [...prev, message]);
     } catch {
@@ -160,18 +187,33 @@ export default function ShartnomaWorkroomPage() {
   async function handleSendMessage(e: FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if ((!text && !draftImage) || !contract) return;
+    const hasAttachments = draftImages.length > 0 || draftFiles.length > 0;
+    if ((!text && !hasAttachments) || !contract) return;
     setSending(true);
     try {
-      const message = await messagesService.send(contract.id, text, draftImage);
+      const message = await messagesService.send(
+        contract.id,
+        text,
+        draftImages[0],
+        { images: draftImages, files: draftFiles }
+      );
       setMessages((prev) => [...prev, message]);
       setDraft("");
-      setDraftImage(undefined);
+      setDraftImages([]);
+      setDraftFiles([]);
     } catch {
       toast(t("common.error"), "error");
     } finally {
       setSending(false);
     }
+  }
+
+  function handleRemoveDraftImage(index: number) {
+    setDraftImages((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleRemoveDraftFile(index: number) {
+    setDraftFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   if (loadError) return <ErrorState error={loadError} onRetry={reload} />;
@@ -186,6 +228,13 @@ export default function ShartnomaWorkroomPage() {
     milestones.every(
       (m) => m.status !== "topshirildi" && m.status !== "ozgartirish_soraldi"
     );
+
+  const canSubmitActiveMilestone =
+    contract.status === "faol"
+      ? milestones.find(
+          (m) => m.status === "mablaglangan" || m.status === "ozgartirish_soraldi"
+        ) || null
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -216,15 +265,47 @@ export default function ShartnomaWorkroomPage() {
               </div>
             </div>
           </div>
-          <div className="text-left sm:text-right">
-            <p className="text-2xs font-medium uppercase tracking-wide text-faint">
-              {t("contract.total")}
-            </p>
-            <p className="mt-1 font-heading text-lg font-bold text-ink">
-              {formatMoney(contract.totalAmount, lang)}
-            </p>
+          <div className="flex flex-col sm:items-end gap-3 text-left sm:text-right">
+            <div>
+              <p className="text-2xs font-medium uppercase tracking-wide text-faint">
+                {t("contract.total")}
+              </p>
+              <p className="mt-1 font-heading text-lg font-bold text-ink">
+                {formatMoney(contract.totalAmount, lang)}
+              </p>
+            </div>
+            {canSubmitActiveMilestone && (
+              <Button
+                onClick={() => openSubmitModal(canSubmitActiveMilestone)}
+                className="shadow-sm font-bold"
+              >
+                🚀 {t("ms.submitAction")}
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Faol shartnomani topshirish yoki kutish holati tushuntirishi */}
+        {contract.status === "faol" && (
+          <div className="mt-4 rounded-card border border-primary/20 bg-primary/5 p-3.5 text-xs text-muted flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <span className="text-lg">💡</span>
+              <span>
+                {canSubmitActiveMilestone
+                  ? `Hozir topshirish mumkin bo'lgan bosqich: "${canSubmitActiveMilestone.title}". Ishni yakunlash uchun natijalarni biriktirib topshiring.`
+                  : "Barcha ishlar topshirildi. Buyurtmachi tekshirib tasdiqlashi bilan shartnoma avtomatik yakunlanadi va to'lov balansingizga o'tadi."}
+              </span>
+            </div>
+            {canSubmitActiveMilestone && (
+              <Button
+                size="sm"
+                onClick={() => openSubmitModal(canSubmitActiveMilestone)}
+              >
+                {t("ms.submitAction")}
+              </Button>
+            )}
+          </div>
+        )}
 
         {milestones.length > 1 && (
           <div className="mt-6 border-t border-line pt-4">
@@ -361,6 +442,7 @@ export default function ShartnomaWorkroomPage() {
               contractStatus={contract.status}
               onSubmit={openSubmitModal}
               revisionsIncluded={service?.revisionsIncluded}
+              onViewReceipt={(m) => setReceiptMilestone(m)}
             />
           ))}
         </div>
@@ -398,6 +480,8 @@ export default function ShartnomaWorkroomPage() {
           ) : (
             messages.map((msg) => {
               const mine = msg.senderId === myId;
+              const allImages = msg.images && msg.images.length > 0 ? msg.images : (msg.image ? [msg.image] : []);
+              const allFiles = msg.files || [];
               return (
                 <div
                   key={msg.id}
@@ -406,20 +490,67 @@ export default function ShartnomaWorkroomPage() {
                   }`}
                 >
                   <div
-                    className={`flex flex-col gap-1.5 rounded-card px-3 py-2 text-sm ${
+                    className={`flex flex-col gap-2 rounded-card px-3.5 py-2.5 text-sm ${
                       mine
                         ? "rounded-br-[4px] bg-primary text-on-primary"
                         : "rounded-bl-[4px] bg-card-hover text-ink"
                     }`}
                   >
-                    {msg.image && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={msg.image}
-                        alt={t("chat.attachedImage")}
-                        className="max-h-48 rounded-input object-cover"
-                      />
+                    {allImages.length > 0 && (
+                      <div
+                        className={`grid gap-2 ${
+                          allImages.length === 1
+                            ? "grid-cols-1"
+                            : allImages.length === 2
+                            ? "grid-cols-2"
+                            : "grid-cols-2 sm:grid-cols-3"
+                        }`}
+                      >
+                        {allImages.map((imgUrl, i) => (
+                          <a
+                            key={i}
+                            href={imgUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group relative block overflow-hidden rounded-input focus:outline-none focus:ring-2 focus:ring-primary"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={imgUrl}
+                              alt={t("chat.attachedImage")}
+                              className="max-h-48 w-full rounded-input object-cover transition-transform group-hover:scale-105"
+                            />
+                          </a>
+                        ))}
+                      </div>
                     )}
+
+                    {allFiles.length > 0 && (
+                      <div className="flex flex-col gap-1.5 pt-0.5">
+                        {allFiles.map((file) => (
+                          <a
+                            key={file.id}
+                            href={file.url}
+                            download={file.name}
+                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors ${
+                              mine
+                                ? "bg-white/15 text-white hover:bg-white/25"
+                                : "bg-card border border-line text-ink hover:bg-surface"
+                            }`}
+                          >
+                            <span className="text-base">📎</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium underline">{file.name}</p>
+                              <p className={`text-2xs ${mine ? "text-white/80" : "text-muted"}`}>
+                                {formatFileSize(file.size)}
+                              </p>
+                            </div>
+                            <span className="text-xs font-semibold">⬇</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
                     {msg.text && (
                       <span className="whitespace-pre-line break-words">{msg.text}</span>
                     )}
@@ -435,21 +566,64 @@ export default function ShartnomaWorkroomPage() {
           <div ref={chatEndRef} />
         </div>
 
+        {/* Biriktirilgan fayllar ko'rinishi (draft preview) */}
+        {(draftImages.length > 0 || draftFiles.length > 0) && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-line bg-surface/50 p-2.5">
+            {draftImages.map((img, idx) => (
+              <div key={idx} className="relative group rounded-md border border-line bg-card overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img} alt="Preview" className="h-14 w-14 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveDraftImage(idx)}
+                  className="absolute top-0.5 right-0.5 rounded-full bg-black/70 text-white w-4 h-4 flex items-center justify-center text-xs hover:bg-danger transition-colors"
+                  aria-label="O'chirish"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {draftFiles.map((file, idx) => (
+              <div key={file.id || idx} className="flex items-center gap-2 rounded-md border border-line bg-card px-2.5 py-1.5 text-xs text-ink max-w-xs shadow-xs">
+                <span>📎</span>
+                <span className="truncate max-w-[120px] font-medium">{file.name}</span>
+                <span className="text-2xs text-muted">({formatFileSize(file.size)})</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveDraftFile(idx)}
+                  className="ml-1 text-muted hover:text-danger font-bold text-sm"
+                  aria-label="O'chirish"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <form
           onSubmit={handleSendMessage}
           className="flex items-end gap-2 border-t border-line p-3"
         >
-          <ChatImageAttach value={draftImage} onChange={setDraftImage} />
+          <ChatFileAttach
+            onAddImages={(imgs) => setDraftImages((prev) => [...prev, ...imgs])}
+            onAddFiles={(fls) => setDraftFiles((prev) => [...prev, ...fls])}
+            attachedCount={draftImages.length + draftFiles.length}
+          />
           <div className="flex-1">
             <Input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder={t("chat.placeholder")}
-                aria-label={t("chat.placeholder")}
-                maxLength={5000}
+              aria-label={t("chat.placeholder")}
+              maxLength={5000}
             />
           </div>
-          <Button type="submit" loading={sending} disabled={!draft.trim() && !draftImage}>
+          <Button
+            type="submit"
+            loading={sending}
+            disabled={!draft.trim() && draftImages.length === 0 && draftFiles.length === 0}
+          >
             {t("chat.send")}
           </Button>
         </form>
@@ -504,6 +678,7 @@ export default function ShartnomaWorkroomPage() {
             <Button
               loading={submitting}
               onClick={(e) => handleSubmitWork(e as unknown as FormEvent)}
+              disabled={(!workLink.trim() && deliverableFiles.length === 0) || !isAgreed}
             >
               {t("sm.title")}
             </Button>
@@ -537,8 +712,109 @@ export default function ShartnomaWorkroomPage() {
             placeholder={t("sm.notePh")}
             rows={3}
           />
+
+          {/* Fayllar yuklash (Upwork-style drag & drop / picker) */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-muted">
+                {t("sm.files")}
+              </label>
+              <span className="text-[11px] text-faint">{t("sm.filesHint")}</span>
+            </div>
+
+            <label
+              htmlFor="deliverable-file-input"
+              className="flex flex-col items-center justify-center gap-2 rounded-input border-2 border-dashed border-line p-4 text-center cursor-pointer transition hover:border-primary/50 hover:bg-surface"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-primary"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span className="text-xs font-semibold text-primary">
+                {t("sm.filesUpload")}
+              </span>
+              <span className="text-[11px] text-faint">
+                ZIP, PDF, DOCX, PNG, JPG, MP4 (max 50MB)
+              </span>
+              <input
+                id="deliverable-file-input"
+                type="file"
+                multiple
+                className="sr-only"
+                onChange={handleAddFiles}
+                disabled={submitting || deliverableFiles.length >= 5}
+              />
+            </label>
+
+            {/* Yuklangan fayllar ro'yxati */}
+            {deliverableFiles.length > 0 && (
+              <div className="flex flex-col gap-1.5 mt-1">
+                {deliverableFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between rounded-input border border-line bg-surface p-2 text-xs"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-muted shrink-0" aria-hidden="true">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                        <polyline points="13 2 13 9 20 9" />
+                      </svg>
+                      <span className="truncate font-medium text-ink">{file.name}</span>
+                      <span className="shrink-0 text-2xs text-faint">({formatFileSize(file.size)})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(idx)}
+                      disabled={submitting}
+                      className="text-faint hover:text-danger ml-2 p-1"
+                      aria-label="Faylni o'chirish"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tasdiqlovchi checkbox */}
+          <label className="flex items-start gap-2.5 cursor-pointer pt-1 text-xs text-muted select-none">
+            <input
+              type="checkbox"
+              checked={isAgreed}
+              onChange={(e) => setIsAgreed(e.target.checked)}
+              className="mt-0.5 rounded border-line text-primary focus:ring-primary h-4 w-4"
+            />
+            <span>{t("sm.confirmComplete")}</span>
+          </label>
         </form>
       </Modal>
+
+      {/* Rasmiy to'lov kvitansiyasi modali */}
+      <ReceiptModal
+        open={!!receiptMilestone}
+        onClose={() => setReceiptMilestone(null)}
+        milestone={receiptMilestone}
+        contractTitle={contract?.title}
+        contractId={contract?.id}
+        buyerName={contract?.buyerName}
+        sellerName={contract?.sellerName}
+      />
     </div>
   );
 }

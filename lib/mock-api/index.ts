@@ -23,6 +23,7 @@ import type {
   VerificationRecord,
   Dispute,
   WithdrawalRequest,
+  DeliverableFile,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
 import { sellerNet } from "@/lib/fees";
@@ -65,6 +66,7 @@ import {
   seedUsers,
   seedVerifications,
 } from "./seed";
+import { svgImg } from "./placeholder";
 
 /* v2: milestone-escrow arxitekturasi — eski sb_* kalitlardan ajratilgan */
 const KEYS = {
@@ -338,6 +340,7 @@ export function getSession(): Session | null {
     window.localStorage.removeItem(KEYS.session);
     return null;
   }
+  ensureUserData(session.userId);
   /* Eski (verified maydonisiz) sessiyalarni tasdiqlangan deb qabul qilamiz */
   return { ...session, verified: session.verified ?? true };
 }
@@ -346,7 +349,442 @@ export function getSession(): Session | null {
 function currentUserId(): string {
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
+  ensureUserData(session.userId);
   return session.userId;
+}
+
+/** Foydalanuvchi hisobida demo/sinov ma'lumotlari bo'lmasa, to'liq ishchi ma'lumotlar bilan to'ldiradi */
+export function ensureUserData(userId: string): void {
+  if (typeof window === "undefined") return;
+  if (!userId) return;
+
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const hasUserContracts = contracts.some(
+    (c) => c.sellerId === userId || c.buyerId === userId
+  );
+  if (hasUserContracts) {
+    // Agar mavjud bo'lsa ham, ms-${userId}-2 ni tugatilmagan (mablaglangan) holatga keltiramiz:
+    const milestones = read<Milestone[]>(KEYS.milestones, []);
+    const ms2 = milestones.find((m) => m.id === `ms-${userId}-2`);
+    if (ms2 && ms2.status === "topshirildi") {
+      ms2.status = "mablaglangan";
+      ms2.title = "To'lov tizimlari integratsiyasi va API (Tugallanmagan — topshirishga tayyor)";
+      ms2.submittedAt = undefined;
+      ms2.reviewDeadline = undefined;
+      ms2.deliverableLink = undefined;
+      ms2.deliverableNote = undefined;
+      ms2.deliverableFiles = undefined;
+      write(KEYS.milestones, milestones);
+    }
+    return;
+  }
+
+  const users = read<User[]>(KEYS.users, []);
+  const user = users.find((u) => u.id === userId);
+  const userName = user?.fullName || "Foydalanuvchi";
+
+  if (user && !user.profileDone) {
+    user.profileDone = true;
+    user.roleChosen = true;
+    user.verified = true;
+    write(KEYS.users, users);
+  }
+
+  // 1. Shartnomalar
+  const activeContractId = `cnt-${userId}-active`;
+  const completedContractId = `cnt-${userId}-done`;
+  const buyerContractId = `cnt-${userId}-buyer`;
+
+  const newContracts: Contract[] = [
+    {
+      id: activeContractId,
+      sourceType: "xizmat",
+      buyerId: BUYER_ID,
+      buyerName: "ArtSoft Studios (Dilshod Rahimov)",
+      sellerId: userId,
+      sellerName: userName,
+      title: "E-commerce platformasi backend API va to'lov tizimlari",
+      totalAmount: 5000000,
+      status: "faol",
+      createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: completedContractId,
+      sourceType: "taklif",
+      buyerId: "u-b1",
+      buyerName: "FinTech Group MChJ (Alisher)",
+      sellerId: userId,
+      sellerName: userName,
+      title: "Mobil ilova uchun REST API va Admin panel",
+      totalAmount: 3000000,
+      status: "yakunlangan",
+      createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: buyerContractId,
+      sourceType: "taklif",
+      buyerId: userId,
+      buyerName: userName,
+      sellerId: SELLER_ID,
+      sellerName: "Rustam Qosimov",
+      title: "Korporativ veb-sayt dizayni va interaktiv UI kit",
+      totalAmount: 4500000,
+      status: "faol",
+      createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+    },
+  ];
+
+  contracts.push(...newContracts);
+  write(KEYS.contracts, contracts);
+
+  // 2. Bosqichlar
+  const milestones = read<Milestone[]>(KEYS.milestones, []);
+  const newMilestones: Milestone[] = [
+    {
+      id: `ms-${userId}-1`,
+      contractId: activeContractId,
+      title: "Ma'lumotlar bazasi arxitekturasi va Auth tizimi",
+      description: "PostgreSQL sxemasi, Prisma modellari va JWT avtorizatsiyani sozlash.",
+      amount: 2500000,
+      status: "qabul_qilindi",
+      dueDate: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      submittedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+      approvedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      deliverableLink: "https://github.com/example/ecommerce-api",
+      deliverableNote: "Arxitektura va Prisma sxemasi to'liq tayyor. Barcha testlar muvaffaqiyatli o'tdi.",
+      deliverableFiles: [
+        { id: `f-${userId}-1`, name: "database_schema_v1.pdf", size: 524288, url: "#" },
+        { id: `f-${userId}-2`, name: "auth_service_release.zip", size: 2411724, url: "#" },
+      ],
+    },
+    {
+      id: `ms-${userId}-2`,
+      contractId: activeContractId,
+      title: "To'lov tizimlari integratsiyasi va API (Tugallanmagan — topshirishga tayyor)",
+      description: "To'lov shlyuzlari webhooklari, tranzaksiya holatlari va xatoliklar bilan ishlash.",
+      amount: 2500000,
+      status: "mablaglangan", // TUGATILMAGAN BOSQICH!
+      dueDate: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: `ms-${userId}-3`,
+      contractId: completedContractId,
+      title: "Swagger API hujjatlari va DB sozlash",
+      description: "Barcha asosiy endpointlar va ma'lumotlar bazasi jadvallari.",
+      amount: 1500000,
+      status: "qabul_qilindi",
+      dueDate: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(),
+      submittedAt: new Date(Date.now() - 12 * 24 * 3600 * 1000).toISOString(),
+      approvedAt: new Date(Date.now() - 11 * 24 * 3600 * 1000).toISOString(),
+      deliverableLink: "https://swagger.example.com",
+      deliverableNote: "Swagger spetsifikatsiyasi tayyor.",
+    },
+    {
+      id: `ms-${userId}-4`,
+      contractId: completedContractId,
+      title: "Admin dashboard integratsiyasi va testlash",
+      description: "Analitika paneli va foydalanuvchilar boshqaruvi.",
+      amount: 1500000,
+      status: "qabul_qilindi",
+      dueDate: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
+      submittedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+      approvedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      deliverableLink: "https://admin.example.com",
+      deliverableNote: "Admin dashboard to'liq topshirildi.",
+    },
+    {
+      id: `ms-${userId}-5`,
+      contractId: buyerContractId,
+      title: "Figma UI/UX dizayn tizimi",
+      description: "Ranglar palitrasi, tipografika va asosiy komponentlar kutubxonasi.",
+      amount: 2000000,
+      status: "qabul_qilindi",
+      dueDate: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+      submittedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+      approvedAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+      deliverableLink: "https://figma.com/file/demo-design-system",
+      deliverableNote: "Dizayn tizimi yakunlandi.",
+    },
+    {
+      id: `ms-${userId}-6`,
+      contractId: buyerContractId,
+      title: "Asosiy sahifalar dizayni va interaktiv prototip",
+      description: "Bosh sahifa, xizmatlar va profil sahifalari prototipi.",
+      amount: 1500000,
+      status: "topshirildi",
+      dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString(),
+      submittedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+      reviewDeadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+      deliverableLink: "https://figma.com/proto/demo-prototype",
+      deliverableNote: "Prototip tayyor, tekshirib tasdiqlashingiz mumkin.",
+      deliverableFiles: [
+        { id: `f-${userId}-5`, name: "figma_screens_export.pdf", size: 4194304, url: "#" },
+      ],
+    },
+    {
+      id: `ms-${userId}-7`,
+      contractId: buyerContractId,
+      title: "Mobil adaptatsiya va UI Kit topshirish",
+      description: "Mobil ekranlar va dasturchilar uchun spetsifikatsiyalar.",
+      amount: 1000000,
+      status: "kutilmoqda",
+      dueDate: new Date(Date.now() + 6 * 24 * 3600 * 1000).toISOString(),
+    },
+  ];
+
+  milestones.push(...newMilestones);
+  write(KEYS.milestones, milestones);
+
+  // 3. Xabarlar
+  const messages = read<Message[]>(KEYS.messages, []);
+  const newMessages: Message[] = [
+    {
+      id: `msg-${userId}-1`,
+      contractId: activeContractId,
+      senderId: BUYER_ID,
+      text: "Assalomu alaykum! Loyiha shartnomasi tasdiqlandi va birinchi bosqich mablag'i escrow hisobiga kiritildi.",
+      createdAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: `msg-${userId}-2`,
+      contractId: activeContractId,
+      senderId: userId,
+      text: "Vaalaykum assalom! Rahmat, ishga kirishdim. 1-bosqich bo'yicha ma'lumotlar bazasi sxemasi va avtorizatsiya ustida ishlayapman.",
+      createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: `msg-${userId}-3`,
+      contractId: activeContractId,
+      senderId: userId,
+      text: "1-bosqich natijalarini topshirdim. GitHub havola va ZIP fayllarni ilova qildim. Ko'rib chiqishingizni so'rayman.",
+      createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: `msg-${userId}-4`,
+      contractId: activeContractId,
+      senderId: BUYER_ID,
+      text: "Ajoyib ish bo'libdi! Kodni va arxitekturani tekshirdim, 1-bosqichni tasdiqladim. To'lov hisobingizga o'tkazildi!",
+      createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000 + 3600 * 1000).toISOString(),
+    },
+    {
+      id: `msg-${userId}-5`,
+      contractId: activeContractId,
+      senderId: userId,
+      text: "2-bosqich (to'lovlar integratsiyasi) ham tayyor bo'ldi, natijalarni tizim orqali topshirdim!",
+      createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: `msg-${userId}-6`,
+      contractId: completedContractId,
+      senderId: "u-b1",
+      text: "Salom! Loyihani juda tez va sifatli yakunladingiz. Katta rahmat!",
+      createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: `msg-${userId}-7`,
+      contractId: buyerContractId,
+      senderId: SELLER_ID,
+      text: "Assalomu alaykum! 2-bosqich prototipini topshirdim, Figma faylni tekshirib ko'rishingiz mumkin.",
+      createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    },
+  ];
+
+  messages.push(...newMessages);
+  write(KEYS.messages, messages);
+
+  // 4. Kartalar
+  const cards = read<PaymentCard[]>(KEYS.cards, []);
+  if (!cards.some((c) => c.userId === userId)) {
+    cards.push(
+      {
+        id: `c-${userId}-1`,
+        userId,
+        type: "humo",
+        last4: "4512",
+        holderName: userName.toUpperCase(),
+        expiry: "12/28",
+        createdAt: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(),
+      },
+      {
+        id: `c-${userId}-2`,
+        userId,
+        type: "uzcard",
+        last4: "7823",
+        holderName: userName.toUpperCase(),
+        expiry: "08/27",
+        createdAt: new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString(),
+      }
+    );
+    write(KEYS.cards, cards);
+  }
+
+  // 5. Xizmatlar
+  const services = read<Service[]>(KEYS.services, []);
+  if (!services.some((s) => s.sellerId === userId)) {
+    services.push(
+      {
+        id: `srv-${userId}-1`,
+        sellerId: userId,
+        title: "Telegram bot yaratish va to'lov tizimlariga integratsiya (Click, Payme)",
+        description: "Professional Telegram botlar: do'kon bot, buyurtmalar qabul qilish, avtomatik to'lovlar va admin panel integratsiyasi.",
+        category: "dasturlash",
+        fields: {
+          platform: ["Telegram"],
+          stack: ["Python", "Node.js"],
+        },
+        price: 1500000,
+        currency: "UZS",
+        deliveryDays: 5,
+        revisionsIncluded: 3,
+        included: ["Manba kodi (GitHub)", "To'lov integratsiyasi", "Admin panel"],
+        requirements: ["Bot vazifalari ro'yxati (TT)", "To'lov shlyuzlari hisob ma'lumotlari"],
+        status: "active",
+        images: [svgImg(`srv-${userId}-1`, "dasturlash")],
+        createdAt: new Date(Date.now() - 20 * 24 * 3600 * 1000).toISOString(),
+      },
+      {
+        id: `srv-${userId}-2`,
+        sellerId: userId,
+        title: "Next.js va React da zamonaviy veb-sayt / SPA ishlab chiqish",
+        description: "Tezkor, SEO optimallashtirilgan va responsive veb-saytlar. Tailwind CSS, TypeScript va REST API / GraphQL integratsiyasi.",
+        category: "dasturlash",
+        fields: {
+          framework: ["Next.js", "React"],
+          styling: ["Tailwind CSS"],
+        },
+        price: 3500000,
+        currency: "UZS",
+        deliveryDays: 10,
+        revisionsIncluded: 5,
+        included: ["Responsive dizayn", "SEO optimizatsiya", "Vercel deploy"],
+        requirements: ["Figma maket yoki texnik topshiriq"],
+        status: "active",
+        images: [svgImg(`srv-${userId}-2`, "dasturlash")],
+        createdAt: new Date(Date.now() - 18 * 24 * 3600 * 1000).toISOString(),
+      },
+      {
+        id: `srv-${userId}-3`,
+        sellerId: userId,
+        title: "REST API arxitekturasi va ma'lumotlar bazasi optimizatsiyasi",
+        description: "PostgreSQL, Prisma, Node.js yoki Go backend. Yuqori yuklamaga chidamli mikroservislar va to'liq hujjatlashtirilgan Swagger API.",
+        category: "dasturlash",
+        fields: {
+          database: ["PostgreSQL", "Redis"],
+        },
+        price: 2800000,
+        currency: "UZS",
+        deliveryDays: 7,
+        revisionsIncluded: 2,
+        included: ["Swagger dokumentatsiya", "Docker sozlamalari", "PostgreSQL sxemasi"],
+        requirements: ["Ma'lumotlar modeli yoki biznes talablar"],
+        status: "active",
+        images: [svgImg(`srv-${userId}-3`, "dasturlash")],
+        createdAt: new Date(Date.now() - 12 * 24 * 3600 * 1000).toISOString(),
+      }
+    );
+    write(KEYS.services, services);
+  }
+
+  // 6. Profil
+  const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
+  const existingProf = profiles[userId] || emptyProfile(userId);
+  if (!existingProf.headline) {
+    profiles[userId] = {
+      ...existingProf,
+      headline: "Senior Full Stack & Telegram Bot Dasturchi",
+      bio: "5 yillik tajribaga ega dasturchiman. Next.js, Node.js, Python, PostgreSQL va to'lov tizimlari (Click/Payme) bo'yicha ixtisoslashganman. 30+ muvaffaqiyatli loyihalar.",
+      skills: ["Next.js", "React", "TypeScript", "Node.js", "Python", "Telegram Bot API", "PostgreSQL", "Docker", "Tailwind CSS"],
+      categories: ["dasturlash"],
+      location: "Toshkent, O'zbekiston",
+      languages: [
+        { name: "O'zbekcha", level: "native" },
+        { name: "Ruscha", level: "fluent" },
+        { name: "Inglizcha", level: "intermediate" },
+      ],
+      rating: 4.9,
+      reviewCount: 12,
+      completedContracts: 9,
+      badge: "top_mutaxassis",
+      memberSince: new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString(),
+      available: true,
+    };
+    write(KEYS.profiles, profiles);
+  }
+
+  // 7. Takliflar
+  const proposals = read<Proposal[]>(KEYS.proposals, []);
+  if (!proposals.some((p) => p.sellerId === userId)) {
+    const jobs = read<Job[]>(KEYS.jobs, []);
+    const job1 = jobs[0];
+    const job2 = jobs[1];
+    if (job1) {
+      proposals.push({
+        id: `prop-${userId}-1`,
+        jobId: job1.id,
+        sellerId: userId,
+        bidAmount: job1.budgetMax || 3000000,
+        coverLetter: "Assalomu alaykum! Loyihangiz talablari bilan tanishdim. O'xshash loyihalarni muvaffaqiyatli bajarganman. Boshlashga tayyorman.",
+        screeningAnswers: [],
+        attachedImages: [],
+        status: "suhbat",
+        createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+        estimatedDeliveryDays: 7,
+      });
+    }
+    if (job2) {
+      proposals.push({
+        id: `prop-${userId}-2`,
+        jobId: job2.id,
+        sellerId: userId,
+        bidAmount: job2.budgetMin || 1500000,
+        coverLetter: "Salom! Ushbu vazifani belgilangan muddatda yuqori sifat bilan bajarib bera olaman.",
+        screeningAnswers: [],
+        attachedImages: [],
+        status: "yuborilgan",
+        createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+        estimatedDeliveryDays: 5,
+      });
+    }
+    write(KEYS.proposals, proposals);
+  }
+
+  // 8. Bildirishnomalar
+  const notifications = read<AppNotification[]>(KEYS.notifications, []);
+  if (!notifications.some((n) => n.userId === userId)) {
+    notifications.unshift(
+      {
+        id: `ntf-${userId}-1`,
+        userId,
+        kind: "tolov",
+        messageKey: "ntf.milestoneApproved",
+        href: `/mutaxassis/shartnomalar/${activeContractId}`,
+        params: { title: "Ma'lumotlar bazasi arxitekturasi va Auth tizimi" },
+        read: false,
+        createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      },
+      {
+        id: `ntf-${userId}-2`,
+        userId,
+        kind: "bosqich",
+        messageKey: "ntf.milestoneFunded",
+        href: `/mutaxassis/shartnomalar/${activeContractId}`,
+        params: { title: "To'lov tizimlari integratsiyasi" },
+        read: false,
+        createdAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
+      },
+      {
+        id: `ntf-${userId}-3`,
+        userId,
+        kind: "elon",
+        messageKey: "ntf.newContract",
+        href: `/mutaxassis/shartnomalar/${activeContractId}`,
+        params: { title: "E-commerce platformasi backend API" },
+        read: true,
+        createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+      }
+    );
+    write(KEYS.notifications, notifications);
+  }
 }
 
 /** Shartnoma bo'yicha funksiyalar rolga qarab filtrlanadi */
@@ -490,6 +928,7 @@ export async function resetPassword(input: {
   phone: string;
   code: string;
   newPassword: string;
+  method?: "telegram" | "google";
 }): Promise<void> {
   ensureSeed();
   await delay(800);
@@ -1154,7 +1593,14 @@ export async function getAllMilestones(): Promise<Milestone[]> {
 }
 
 /** Ishni topshirish: holat 'topshirildi', 3 kunlik ko'rib chiqish boshlanadi */
-export async function submitMilestone(id: string): Promise<Milestone> {
+export async function submitMilestone(
+  id: string,
+  deliverable?: {
+    link?: string;
+    note?: string;
+    files?: DeliverableFile[];
+  }
+): Promise<Milestone> {
   await delay(400);
   const milestones = read<Milestone[]>(KEYS.milestones, []);
   const idx = milestones.findIndex((m) => m.id === id);
@@ -1180,6 +1626,9 @@ export async function submitMilestone(id: string): Promise<Milestone> {
     submittedAt: now.toISOString(),
     reviewDeadline: deadline.toISOString(),
     revisionComment: undefined,
+    deliverableLink: deliverable?.link,
+    deliverableNote: deliverable?.note,
+    deliverableFiles: deliverable?.files,
   };
   write(KEYS.milestones, milestones);
 
@@ -1254,11 +1703,16 @@ export async function getThreadReads(): Promise<Record<string, string>> {
 export async function sendMessage(
   contractId: string,
   body: string,
-  image?: string
+  image?: string,
+  attachments?: { images?: string[]; files?: DeliverableFile[] }
 ): Promise<Message> {
   await delay(300);
   const clean = text(body, LIMITS.message);
-  if (!clean && !image) throw new Error("EMPTY_MESSAGE");
+  const hasMedia =
+    Boolean(image) ||
+    (attachments?.images && attachments.images.length > 0) ||
+    (attachments?.files && attachments.files.length > 0);
+  if (!clean && !hasMedia) throw new Error("EMPTY_MESSAGE");
   const senderId = currentUserId();
   if (!isThreadParticipant(contractId, senderId)) throw new Error("NOT_FOUND");
   const message: Message = {
@@ -1266,7 +1720,9 @@ export async function sendMessage(
     contractId,
     senderId,
     text: clean,
-    image,
+    image: image || attachments?.images?.[0],
+    images: attachments?.images || (image ? [image] : undefined),
+    files: attachments?.files,
     createdAt: new Date().toISOString(),
   };
   const messages = read<Message[]>(KEYS.messages, []);
@@ -1904,15 +2360,22 @@ function sellerWithdrawable(userId: string): number {
    faqat seed'dagi soxta qatorlarni ko'rsatardi. */
 async function createWithdrawalRequest(
   cardId: string,
-  source: "earnings" | "balance"
+  source: "earnings" | "balance",
+  customAmount?: number
 ): Promise<WithdrawalRequest> {
   const uid2 = currentUserId();
   assertOwnCard(cardId, uid2);
-  const amount =
+  const maxAvailable =
     source === "earnings"
       ? sellerWithdrawable(uid2)
       : Math.max(0, (readBalances()[uid2] ?? 0) - pendingWithdrawalTotal(uid2));
-  if (amount <= 0) throw new Error("NO_BALANCE");
+  if (maxAvailable <= 0) throw new Error("NO_BALANCE");
+
+  const amount =
+    customAmount !== undefined && customAmount > 0
+      ? Math.min(customAmount, maxAvailable)
+      : maxAvailable;
+
   /* Admin belgilagan eng kichik yechish summasi */
   const minPayout = getPlatformSettings().minPayoutAmount;
   if (amount < minPayout) throw new Error("BELOW_MIN_PAYOUT");
@@ -1940,9 +2403,9 @@ async function createWithdrawalRequest(
   return request;
 }
 
-export async function withdrawFunds(cardId: string): Promise<WithdrawalRequest> {
+export async function withdrawFunds(cardId: string, customAmount?: number): Promise<WithdrawalRequest> {
   await delay(700);
-  return createWithdrawalRequest(cardId, "earnings");
+  return createWithdrawalRequest(cardId, "earnings", customAmount);
 }
 
 /** Foydalanuvchining o'z yechish so'rovlari (holatini kuzatish uchun) */
@@ -2681,9 +3144,9 @@ export async function getBalance(): Promise<number> {
 /** Balansni bog'langan kartaga yechish (mock). cardId — o'z kartasi bo'lishi shart. */
 /** Xaridor balansini kartaga yechish — admin tasdig'iga so'rov yuboradi.
    Balans tasdiqlangunga qadar joyida qoladi (lekin "band" bo'ladi). */
-export async function withdrawBalance(cardId: string): Promise<WithdrawalRequest> {
+export async function withdrawBalance(cardId: string, customAmount?: number): Promise<WithdrawalRequest> {
   await delay(700);
-  return createWithdrawalRequest(cardId, "balance");
+  return createWithdrawalRequest(cardId, "balance", customAmount);
 }
 
 /* ---------------- Bank kartalari (Uzcard / Humo) ---------------- */
@@ -2886,18 +3349,32 @@ export async function createReview(
 
 /* ---------------- Xaridor: sozlamalar ---------------- */
 
-export async function updateUserName(fullName: string): Promise<void> {
+export async function updateUserProfile(data: Partial<User>): Promise<void> {
   await delay(300);
-  const clean = text(fullName, LIMITS.name);
-  if (!clean) throw new Error("INVALID_NAME");
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
   const users = read<User[]>(KEYS.users, []);
   const idx = users.findIndex((u) => u.id === session.userId);
   if (idx >= 0) {
-    users[idx] = { ...users[idx], fullName: clean };
+    const current = users[idx];
+    users[idx] = {
+      ...current,
+      ...data,
+      fullName: data.fullName ? text(data.fullName, LIMITS.name) || current.fullName : current.fullName,
+      bio: data.bio !== undefined ? text(data.bio, LIMITS.bio) : current.bio,
+      companyName: data.companyName !== undefined ? text(data.companyName, 100) : current.companyName,
+      industry: data.industry !== undefined ? text(data.industry, 100) : current.industry,
+      website: data.website !== undefined ? text(data.website, 200) : current.website,
+      location: data.location !== undefined ? text(data.location, 100) : current.location,
+    };
     write(KEYS.users, users);
   }
+}
+
+export async function updateUserName(fullName: string): Promise<void> {
+  const clean = text(fullName, LIMITS.name);
+  if (!clean) throw new Error("INVALID_NAME");
+  return updateUserProfile({ fullName: clean });
 }
 
 export async function changePassword(

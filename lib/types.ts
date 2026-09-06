@@ -13,6 +13,16 @@ export interface User {
   roleChosen?: boolean;
   profileDone?: boolean;
   verified?: boolean;
+  /* Ish beruvchi / Xaridor qo'shimcha ma'lumotlari */
+  companyName?: string;
+  industry?: string;
+  website?: string;
+  location?: string;
+  bio?: string;
+  email?: string;
+  telegramUsername?: string;
+  googleConnected?: boolean;
+  telegramConnected?: boolean;
 }
 
 export type TrustBadge = "yangi" | "ishonchli" | "top_mutaxassis";
@@ -224,6 +234,14 @@ export type MilestoneStatus =
   | "qabul_qilindi" // tasdiqlandi, to'landi
   | "ozgartirish_soraldi"; // buyurtmachi o'zgartirish so'radi
 
+export interface DeliverableFile {
+  id: string;
+  name: string;
+  size: number;
+  url: string;
+  type?: string;
+}
+
 export interface Milestone {
   id: string;
   contractId: string;
@@ -239,6 +257,12 @@ export interface Milestone {
   revisionComment?: string;
   /** Ushbu bosqichda nechta marta o'zgartirish so'ralgani */
   revisionCount?: number;
+  /** Topshirilgan ish havolasi (Figma, GitHub, Google Drive va h.k.) */
+  deliverableLink?: string;
+  /** Topshirilgan ish bo'yicha mutaxassis izohi */
+  deliverableNote?: string;
+  /** Topshirilgan ish fayllari (ZIP, PDF, rasmlar, hujjatlar) */
+  deliverableFiles?: DeliverableFile[];
 }
 
 export interface Message {
@@ -248,6 +272,10 @@ export interface Message {
   text: string;
   /** ixtiyoriy ilova — bitta rasm, base64 data-URL */
   image?: string;
+  /** bir nechta rasmlar */
+  images?: string[];
+  /** biriktirilgan fayllar (PDF, ZIP, va h.k.) */
+  files?: DeliverableFile[];
   createdAt: string;
 }
 
@@ -445,4 +473,5 @@ export interface AccountPreferences {
   contracts: boolean;
   payments: boolean;
   marketing: boolean;
+  proposals?: boolean;
 }
