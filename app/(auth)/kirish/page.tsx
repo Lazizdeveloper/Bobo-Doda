@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { LangSwitch } from "@/components/shared/LangSwitch";
+import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 
 type Mode = "register" | "login";
 
@@ -103,13 +104,15 @@ function KirishForm() {
 
   /* Ro'yxatdan o'tish holati */
   const [regFullName, setRegFullName] = useState("");
-  const [regPhone, setRegPhone] = useState("");
+  const [regPhone, setRegPhone] = useState("+998");
+  const [regPhoneValid, setRegPhoneValid] = useState(false);
   const [regPassword, setRegPassword] = useState("");
   const [regShowPassword, setRegShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(true);
 
   /* Kirish holati */
-  const [loginPhone, setLoginPhone] = useState("");
+  const [loginPhone, setLoginPhone] = useState("+998");
+  const [loginPhoneValid, setLoginPhoneValid] = useState(false);
   const [loginPassword, setLoginPassword] = useState("");
   const [loginShowPassword, setLoginShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -170,10 +173,11 @@ function KirishForm() {
   /* Ro'yxatdan o'tish validatsiyasi */
   function validateRegister(): boolean {
     const next: Errors = {};
-    if (regFullName.trim().length < 2) {
-      next.fullName = t("auth.errName");
+    const nameWords = regFullName.trim().split(/\s+/).filter(Boolean);
+    if (nameWords.length < 2 || nameWords.some((w) => w.length < 2)) {
+      next.fullName = t("auth.errFullNameValid");
     }
-    if (!/^\+?\d{9,15}$/.test(regPhone.replace(/[\s-]/g, ""))) {
+    if (!regPhone || regPhone.length < 9 || !regPhoneValid) {
       next.phone = t("auth.errPhone");
     }
     if (regPassword.length < 8 || !/[A-Za-z]/.test(regPassword) || !/\d/.test(regPassword)) {
@@ -189,7 +193,7 @@ function KirishForm() {
   /* Kirish validatsiyasi */
   function validateLogin(): boolean {
     const next: Errors = {};
-    if (!/^\+?\d{9,15}$/.test(loginPhone.replace(/[\s-]/g, ""))) {
+    if (!loginPhone || loginPhone.length < 9 || !loginPhoneValid) {
       next.phone = t("auth.errPhone");
     }
     if (loginPassword.length < 6) {
@@ -375,29 +379,16 @@ function KirishForm() {
 
             {/* Kirish formasi */}
             <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4.5 sm:gap-5" noValidate>
-              <div>
-                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
-                  {t("auth.regPhone")}
-                </label>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={loginPhone}
-                  onChange={(e) => setLoginPhone(e.target.value)}
-                  placeholder="+998 90 123 45 67"
-                  className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
-                    errors.phone
-                      ? "border-danger focus:ring-2 focus:ring-danger/20"
-                      : "border-line bg-surface/60 focus:bg-card focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  }`}
-                />
-                {errors.phone && (
-                  <p className="mt-1.5 text-xs text-danger font-medium" role="alert">
-                    {errors.phone}
-                  </p>
-                )}
-              </div>
+              <CountryPhoneInput
+                value={loginPhone}
+                label={t("auth.regPhone")}
+                error={errors.phone}
+                onChange={(fullNum, isValid) => {
+                  setLoginPhone(fullNum);
+                  setLoginPhoneValid(isValid);
+                  if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
+                }}
+              />
 
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
@@ -511,40 +502,8 @@ function KirishForm() {
               {t("auth.subtitle")}
             </p>
 
-            {/* 1-klikli tezkor ijtimoiy ro'yxatdan o'tish */}
-            <div className="mt-6 sm:mt-7 grid grid-cols-2 gap-3.5">
-              <button
-                type="button"
-                onClick={() => handleSocialLogin("google")}
-                disabled={!!socialLoading || loading}
-                className="flex h-13 sm:h-14 items-center justify-center gap-3 rounded-2xl border border-line bg-surface/80 px-4 text-sm font-bold text-ink transition-all hover:border-[#4285F4]/60 hover:bg-card hover:shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-              >
-                <GoogleIcon />
-                <span>Google</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSocialLogin("telegram")}
-                disabled={!!socialLoading || loading}
-                className="flex h-13 sm:h-14 items-center justify-center gap-3 rounded-2xl border border-line bg-surface/80 px-4 text-sm font-bold text-ink transition-all hover:border-[#229ED9]/60 hover:bg-card hover:shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-              >
-                <TelegramIcon />
-                <span>Telegram</span>
-              </button>
-            </div>
-
-            {/* Ajratuvchi chiziq */}
-            <div className="relative my-6 sm:my-7">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-line" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
-                <span className="bg-card px-3.5 text-muted">{t("auth.orDivider")}</span>
-              </div>
-            </div>
-
-            {/* Ro'yxatdan o'tish formasi */}
-            <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4.5 sm:gap-5" noValidate>
+            {/* Ro'yxatdan o'tish formasi — Google va Telegram tugmalari yo'q, toza ro'yxatdan o'tish */}
+            <form onSubmit={handleRegisterSubmit} className="mt-8 flex flex-col gap-4.5 sm:gap-5" noValidate>
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
                   {t("auth.regName")}
@@ -553,7 +512,10 @@ function KirishForm() {
                   type="text"
                   autoComplete="name"
                   value={regFullName}
-                  onChange={(e) => setRegFullName(e.target.value)}
+                  onChange={(e) => {
+                    setRegFullName(e.target.value);
+                    if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: undefined }));
+                  }}
                   placeholder={t("auth.regNamePh")}
                   className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
                     errors.fullName
@@ -568,29 +530,17 @@ function KirishForm() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
-                  {t("auth.regPhone")}
-                </label>
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={regPhone}
-                  onChange={(e) => setRegPhone(e.target.value)}
-                  placeholder="+998 90 123 45 67"
-                  className={`w-full h-13 sm:h-14 rounded-2xl border px-4.5 sm:px-5 text-sm sm:text-base text-ink placeholder:text-muted/60 transition-all outline-none ${
-                    errors.phone
-                      ? "border-danger focus:ring-2 focus:ring-danger/20"
-                      : "border-line bg-surface/60 focus:bg-card focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  }`}
-                />
-                {errors.phone && (
-                  <p className="mt-1.5 text-xs text-danger font-medium" role="alert">
-                    {errors.phone}
-                  </p>
-                )}
-              </div>
+              {/* Markaziy Osiyo Davlatlari tanlovi bilan Telefon Input */}
+              <CountryPhoneInput
+                value={regPhone}
+                label={t("auth.regPhone")}
+                error={errors.phone}
+                onChange={(fullNum, isValid) => {
+                  setRegPhone(fullNum);
+                  setRegPhoneValid(isValid);
+                  if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
+                }}
+              />
 
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
@@ -601,7 +551,10 @@ function KirishForm() {
                     type={regShowPassword ? "text" : "password"}
                     autoComplete="new-password"
                     value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
+                    onChange={(e) => {
+                      setRegPassword(e.target.value);
+                      if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
                     placeholder={
                       lang === "uz"
                         ? "Kamida 8 belgi (harf va raqam)"
@@ -619,7 +572,7 @@ function KirishForm() {
                     type="button"
                     tabIndex={-1}
                     onClick={() => setRegShowPassword(!regShowPassword)}
-                    className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1.5"
+                    className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1.5 cursor-pointer"
                     aria-label={regShowPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
                   >
                     <EyeIcon open={regShowPassword} />
@@ -693,7 +646,7 @@ function KirishForm() {
               <button
                 type="submit"
                 disabled={loading || !!socialLoading}
-                className="mt-2.5 flex h-14 sm:h-15 w-full items-center justify-center rounded-2xl bg-primary px-6 text-sm sm:text-base font-black uppercase tracking-wider text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/30 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+                className="mt-2.5 flex h-14 sm:h-15 w-full items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 text-sm sm:text-base font-black uppercase tracking-wider text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/30 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -704,18 +657,24 @@ function KirishForm() {
                     <span>{t("common.loading")}</span>
                   </span>
                 ) : (
-                  t("auth.registerBtn")
+                  <>
+                    <span>{t("auth.continueToVerify")}</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </>
                 )}
               </button>
 
               {/* Aniq eslatma: Telegram yoki Google orqali tasdiqlanadi */}
-              <p className="mt-3.5 text-center text-xs text-muted flex items-center justify-center gap-2 leading-relaxed font-medium">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary shrink-0" aria-hidden="true">
+              <div className="mt-3.5 rounded-xl border border-primary/15 bg-primary/5 p-3 flex items-center justify-center gap-2 text-center text-xs text-ink/80 leading-relaxed font-medium">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary shrink-0" aria-hidden="true">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <path d="m9 12 2 2 4-4" />
                 </svg>
                 <span>{t("auth.regVerificationNotice")}</span>
-              </p>
+              </div>
             </form>
 
             {/* Mobil switch taklifi */}

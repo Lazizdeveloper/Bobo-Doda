@@ -486,7 +486,12 @@ export const dictionary: Record<string, Entry> = {
   "auth.regPhone": { uz: "Telefon raqami", ru: "Номер телефона" },
   "auth.regPhonePh": { uz: "+998 90 123 45 67", ru: "+998 90 123 45 67" },
   "auth.registerBtn": { uz: "Akkount ochish", ru: "Создать аккаунт" },
+  "auth.continueToVerify": { uz: "Davom etish (Tasdiqlash)", ru: "Продолжить (Подтверждение)" },
   "auth.errName": { uz: "Ismingizni kiriting", ru: "Введите имя" },
+  "auth.errFullNameValid": {
+    uz: "Ism va familiyangizni to'liq kiriting (kamida 2 ta so'z)",
+    ru: "Введите имя и фамилию полностью (минимум 2 слова)",
+  },
   "auth.errPhone": { uz: "To'g'ri telefon raqamini kiriting", ru: "Введите корректный номер телефона" },
   "auth.tabLogin": { uz: "Kirish", ru: "Вход" },
   "auth.tabRegister": { uz: "Ro'yxatdan o'tish", ru: "Регистрация" },
