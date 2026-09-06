@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { authService } from "@/lib/api";
@@ -12,6 +12,10 @@ export default function RolTanlashPage() {
   const pathname = usePathname();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  /* Landing'dan "?role=..." bilan kelinganda rolni avtomatik tanlaymiz —
+     foydalanuvchi allaqachon "Mutaxassis sifatida boshlash" tugmasini
+     bosgan, undan yana bir marta so'rash ortiqcha qadam. */
+  const autoRoleRef = useRef(false);
 
   /* Tasdiqlangan va rol tanlagan foydalanuvchilar o'z kabinetiga qaytariladi */
   useEffect(() => {
@@ -60,6 +64,20 @@ export default function RolTanlashPage() {
 
   const handleSeller = () => chooseRole("mutaxassis");
   const handleBuyer = () => chooseRole("xaridor");
+
+  /* Landing CTA'sidan kelgan rolni bir marta avtomatik qo'llaymiz.
+     `useSearchParams` o'rniga `window` — bu sahifa statik prerender bo'lib
+     qolsin (aks holda Suspense chegarasi talab qilinadi). */
+  useEffect(() => {
+    if (autoRoleRef.current) return;
+    const session = authService.getSession();
+    if (!session || session.role) return;
+    const wanted = new URLSearchParams(window.location.search).get("role");
+    if (wanted !== "mutaxassis" && wanted !== "xaridor") return;
+    autoRoleRef.current = true;
+    void chooseRole(wanted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>

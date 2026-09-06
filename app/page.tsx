@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -7,43 +6,30 @@ import { useT, type Lang } from "@/lib/i18n";
 import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
 import { useSupportModal } from "@/components/shared/SupportModalProvider";
 
-/* ── small utilities ─────────────────────────────────────────────── */
-
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return reduced;
+/* ── Formatter ───────────────────────────────────────────────────────── */
+function formatSum(num: number): string {
+  return num.toLocaleString("uz-UZ");
 }
-
-/* ── page ─────────────────────────────────────────────────────────── */
 
 export default function LandingPage() {
   const { t, lang, setLang } = useT();
   const { openSupportModal } = useSupportModal();
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [activeStep, setActiveStep] = useState(0);
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const reduced = useReducedMotion();
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [headlineIndex, setHeadlineIndex] = useState(0);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [calcBudget, setCalcBudget] = useState(4000000);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  /* Headline rotator (Yoshlar Ventures uslubi) */
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const timer = setInterval(() => {
+      setHeadlineIndex((prev) => (prev + 1) % 4);
+    }, 3600);
+    return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [scrolled]);
-
+  /* Scroll reveal */
   useEffect(() => {
     const nodes = rootRef.current?.querySelectorAll(".reveal");
     if (!nodes || nodes.length === 0) return;
@@ -51,66 +37,194 @@ export default function LandingPage() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.setAttribute("data-visible", "true");
+            entry.target.classList.add("in");
             observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0, rootMargin: "0px 0px -8% 0px" }
+      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
     );
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
   }, []);
 
-  /* escrow steps: whichever step card is centred in the viewport drives
-     the live status panel — a scroll-driven read of contract progress. */
-  useEffect(() => {
-    const nodes = stepRefs.current.filter(Boolean) as HTMLDivElement[];
-    if (nodes.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          const idx = nodes.indexOf(entry.target as HTMLDivElement);
-          if (idx !== -1) setActiveStep(idx);
-        });
-      },
-      { threshold: 0, rootMargin: "-42% 0px -42% 0px" }
-    );
-    nodes.forEach((node) => observer.observe(node));
-    return () => observer.disconnect();
-  }, []);
-
-
+  const tr = (uz: string, ru: string, en: string): string => {
+    if (lang === "ru") return ru;
+    if (lang === "en") return en;
+    return uz;
+  };
 
   const langOptions: Lang[] = ["uz", "ru", "en"];
 
   const navLinks = [
-    { href: "#how-it-works", label: t("nav_how") },
-    { href: "#categories", label: t("nav_cats") },
-    { href: "#pricing", label: t("nav_pricing") },
+    { href: "#portfolio", label: tr("Buyurtmalar", "Проекты", "Projects") },
+    { href: "#stages", label: tr("Qanday ishlaydi", "Как это работает", "How it works") },
+    { href: "#categories", label: tr("Yo'nalishlar", "Направления", "Categories") },
+    { href: "#security", label: tr("Kafolat", "Гарантия", "Escrow") },
+    { href: "#faq", label: tr("Savollar", "Вопросы", "FAQ") },
   ];
 
-  const categories = [
-    { key: "des", icon: "design" },
-    { key: "dev", icon: "code" },
-    { key: "ai", icon: "cpu" },
-    { key: "mar", icon: "megaphone" },
-    { key: "tra", icon: "languages" },
-    { key: "vid", icon: "video" },
-    { key: "biz", icon: "briefcase" },
-    { key: "edu", icon: "cap" },
-    { key: "cyb", icon: "shield" },
-    { key: "dat", icon: "chart" },
-    { key: "cld", icon: "cloud" },
-    { key: "qa", icon: "flask" },
-    { key: "sup", icon: "headset" },
-  ] as const;
+  /* ── Headlines (Yoshlar Ventures Rotating Hero Titles) ─────────────── */
+  const headlines = [
+    {
+      line1: tr("Ishonchli mutaxassis qidiryapsizmi?", "Ищете надежного исполнителя?", "Looking for a vetted expert?"),
+      line2: tr("Biz natijani kafolatlaymiz.", "Мы гарантируем результат.", "We guarantee delivery."),
+    },
+    {
+      line1: tr("Katta va murakkab loyihangizmi?", "Есть сложный цифровой проект?", "Have a complex digital project?"),
+      line2: tr("Top mutaxassislarni topamiz.", "Найдем топ команду.", "We assemble elite talent."),
+    },
+    {
+      line1: tr("Oldindan to'lovdan qo'rqyapsizmi?", "Боитесь потерять предоплату?", "Afraid of upfront risk?"),
+      line2: tr("Mablag' Escrow himoyasida.", "Деньги в безопасности Escrow.", "Funds safe in Escrow."),
+    },
+    {
+      line1: tr("O'z xizmatingizni sotmoqchimisiz?", "Хотите работать удаленно?", "Want high-ticket projects?"),
+      line2: tr("Kafolatlangan daromad oling.", "Берите заказы с гарантией.", "Get paid on time, every time."),
+    },
+  ];
 
+  /* ── Portfolio / Live Job Cards (Marquee) ───────────────────────────── */
+  const portfolioItems = [
+    {
+      num: "01",
+      title: tr("Payme & Click E-Commerce", "E-Commerce с Payme & Click", "Payme & Click E-Commerce"),
+      category: "FinTech / Web",
+      desc: tr(
+        "Onlayn do'kon va to'lov tizimlarining to'liq integratsiyasi.",
+        "Интернет-магазин и интеграция национальных платежей.",
+        "E-commerce platform with automated payment integration."
+      ),
+      budget: "12,500,000 UZS",
+      bids: 8,
+      isHot: true,
+      tag: "Next.js / Node",
+    },
+    {
+      num: "02",
+      title: tr("Restoran CRM & Mobil Ilova", "CRM ресторана & мобильное приложение", "Restaurant CRM & Mobile App"),
+      category: "Mobile / iOS & Android",
+      desc: tr(
+        "Yetkazib berish mobil ilovasi va kassa tizimi integratsiyasi.",
+        "Приложение доставки и синхронизация с кассой iiko.",
+        "Delivery app synced with restaurant POS system."
+      ),
+      budget: "18,000,000 UZS",
+      bids: 14,
+      isHot: false,
+      tag: "Flutter / FastAPI",
+    },
+    {
+      num: "03",
+      title: tr("Fintech Brendbuk & UI/UX", "FinTech брендбук & UI/UX", "Fintech Brandbook & UI/UX"),
+      category: "Design / Product",
+      desc: tr(
+        "To'liq dizayn tizimi, logotip va mobil ilova prototipi.",
+        "Полная дизайн-система и мобильный интерфейс необанка.",
+        "Comprehensive design system & neobank mobile interface."
+      ),
+      budget: "6,000,000 UZS",
+      bids: 19,
+      isHot: true,
+      tag: "Figma / UI System",
+    },
+    {
+      num: "04",
+      title: tr("Telegram Savdo Boti (Click)", "Telegram-бот для продаж (Click)", "Telegram Sales Bot (Click)"),
+      category: "Telegram / Python",
+      desc: tr(
+        "Buyurtma qabul qiluvchi va to'lovli avtomatlashgan bot.",
+        "Умный бот для приема заказов с авто-оплатой и складом.",
+        "Smart automated e-commerce bot with stock management."
+      ),
+      budget: "4,500,000 UZS",
+      bids: 11,
+      isHot: false,
+      tag: "Python / Aiogram",
+    },
+    {
+      num: "05",
+      title: tr("B2B Logistika Platformasi", "B2B платформа логистики", "B2B Logistics Platform"),
+      category: "SaaS / Enterprise",
+      desc: tr(
+        "Yuk tashuvchilar va buyurtmachilar uchun dispetcherlik portali.",
+        "Система мониторинга грузоперевозок и автодиспетчеризация.",
+        "Freight tracking and auto-dispatching logistics portal."
+      ),
+      budget: "24,000,000 UZS",
+      bids: 7,
+      isHot: true,
+      tag: "React / PostgreSQL",
+    },
+    {
+      num: "06",
+      title: tr("Reels & Viral Video Montaj", "Монтаж вирусных Reels & видео", "Viral Reels & Video Editing"),
+      category: "Media / Motion",
+      desc: tr(
+        "Kompaniya uchun 30 ta sifatli Reels, 3D vizual va ovozlashtirish.",
+        "Пакет из 30 вирусных видеороликов с 3D графикой и озвучкой.",
+        "Pack of 30 viral Reels with 3D motion graphics."
+      ),
+      budget: "5,000,000 UZS",
+      bids: 16,
+      isHot: false,
+      tag: "After Effects / 3D",
+    },
+  ];
 
+  /* ── Categories List with full 3-language support ───────────────────── */
+  const categoriesList = [
+    {
+      key: "dev",
+      title: tr("Dasturlash & IT", "Разработка & IT", "Development & IT"),
+      count: tr("1,420+ mutaxassis", "1 420+ специалистов", "1,420+ specialists"),
+      price: tr("500,000 so'mdan", "от 500 000 сум", "from 500,000 UZS"),
+    },
+    {
+      key: "des",
+      title: tr("Dizayn & Kreativ", "Дизайн & Креатив", "Design & Creative"),
+      count: tr("980+ mutaxassis", "980+ специалистов", "980+ specialists"),
+      price: tr("300,000 so'mdan", "от 300 000 сум", "from 300,000 UZS"),
+    },
+    {
+      key: "mar",
+      title: tr("Marketing & SMM", "Маркетинг & SMM", "Marketing & SMM"),
+      count: tr("730+ mutaxassis", "730+ специалистов", "730+ specialists"),
+      price: tr("400,000 so'mdan", "от 400 000 сум", "from 400,000 UZS"),
+    },
+    {
+      key: "ai",
+      title: tr("Sun'iy Intellekt & Data", "ИИ & Аналитика данных", "AI & Data Science"),
+      count: tr("310+ mutaxassis", "310+ специалистов", "310+ specialists"),
+      price: tr("800,000 so'mdan", "от 800 000 сум", "from 800,000 UZS"),
+    },
+    {
+      key: "vid",
+      title: tr("Video & Motion 3D", "Видео & 3D Моушн", "Video & 3D Motion"),
+      count: tr("540+ mutaxassis", "540+ специалистов", "540+ specialists"),
+      price: tr("350,000 so'mdan", "от 350 000 сум", "from 350,000 UZS"),
+    },
+    {
+      key: "tra",
+      title: tr("Matn & Tarjima", "Тексты & Переводы", "Writing & Translation"),
+      count: tr("460+ mutaxassis", "460+ специалистов", "460+ specialists"),
+      price: tr("150,000 so'mdan", "от 150 000 сум", "from 150,000 UZS"),
+    },
+    {
+      key: "biz",
+      title: tr("Biznes & Konsalting", "Бизнес & Консалтинг", "Business & Consulting"),
+      count: tr("390+ mutaxassis", "390+ специалистов", "390+ specialists"),
+      price: tr("600,000 so'mdan", "от 600 000 сум", "from 600,000 UZS"),
+    },
+    {
+      key: "cyb",
+      title: tr("Kiberxavfsizlik & QA", "Кибербезопасность & QA", "Cybersecurity & QA"),
+      count: tr("210+ mutaxassis", "210+ специалистов", "210+ specialists"),
+      price: tr("700,000 so'mdan", "от 700 000 сум", "from 700,000 UZS"),
+    },
+  ];
 
-
-
+  /* ── FAQ Items ─────────────────────────────────────────────────────── */
   const faqs = [
     { q: t("q1"), a: t("a1") },
     { q: t("q2"), a: t("a2") },
@@ -119,698 +233,1716 @@ export default function LandingPage() {
     { q: t("q5"), a: t("a5") },
   ];
 
-
-  const escrowStatuses = [
-    t("escrow_status_0"),
-    t("escrow_status_1"),
-    t("escrow_status_2"),
-    t("escrow_status_3"),
-  ];
-  const escrowFill = [8, 34, 66, 100][activeStep];
+  const specialistShare = Math.round(calcBudget * (1 - PLATFORM_FEE_PERCENT / 100));
 
   return (
     <div ref={rootRef}>
       <style>{`
-  :root {
-    /* brand environment — yellow canvas, tonal not flat */
-    --y-50: #FFFDF3;
-    --y-100: #FFF6D8;
-    --y-200: #FFEBA8;
-    --y-300: #FFDD72;
-    --y-400: #FFCE45;
-    --y-500: #F5B93A;
-    --y-600: #DFA226;
-    --y-700: #9C7315;
-    --y-900: #543D0B;
-    --y-line: #E8C978;
+        :root {
+          /* ── Yoshlar Ventures Design Tokens ───────────────────────── */
+          --orange: #ff7a1a;
+          --orange2: #ff9a4d;
+          --orange-ink: #c7500b;
+          --lime: #c8f230;
+          --ink: #141414;
+          --n700: #2b2f38;
+          --n500: #4b5262;
+          --n300: #b8bec9;
+          --surface: #fbfbfa;
+          --warm: #fff4e9;
+          --warm-ink: #a8480a;
+          --card: #ffffff;
+          --btn: #141414;
+          --btn-fg: #ffffff;
+          --hair: rgba(20, 20, 20, 0.08);
+          --shell: rgba(20, 20, 20, 0.03);
+          --elev: 0 40px 80px -40px rgba(20, 20, 20, 0.25);
+          --elev-sm: 0 24px 48px -32px rgba(20, 20, 20, 0.18);
+          --hi: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          --navbg: rgba(255, 255, 255, 0.85);
+          --ease: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* trust — deep green, the platform's primary UI color */
-    --g-500: #15803D;
-    --g-600: #106932;
-    --g-700: #0E5C2C;
-    --g-800: #0B4322;
-    --g-900: #0A2C17;
-    --g-tint: #E8F5EC;
+          --font-display: var(--font-unbounded), sans-serif;
+          --font-sans: var(--font-onest), sans-serif;
+        }
 
-    /* action / alert — controlled red */
-    --r-500: #E5484D;
-    --r-600: #CC3A3F;
-    --r-700: #A32B2F;
-    --r-tint: #FCEBEB;
+        .yv-lp * { box-sizing: border-box; }
+        .yv-lp *:focus-visible {
+          outline: 2px solid var(--orange);
+          outline-offset: 3px;
+        }
+        .btn-find-work:focus-visible,
+        .btn-apply-header:focus-visible,
+        .btn-primary:focus-visible,
+        .btn-outline:focus-visible,
+        .nav-btn-login:focus-visible,
+        .nav-link-item:focus-visible,
+        .lang-capsule button:focus-visible {
+          border-radius: 999px;
+        }
+        .yv-lp {
+          font-family: var(--font-sans);
+          color: var(--ink);
+          line-height: 1.55;
+          background: var(--surface);
+          -webkit-font-smoothing: antialiased;
+          overflow-x: hidden;
+          position: relative;
+        }
+        .yv-lp a { text-decoration: none; color: inherit; }
+        .yv-lp ul { list-style: none; margin: 0; padding: 0; }
+        .container-yv {
+          width: 100%;
+          max-width: 1200px;
+          margin-inline: auto;
+          padding-inline: 24px;
+        }
 
-    --ink: #1D1B12;
-    --muted: #5E5A44;
-    --faint: #948E70;
-    --white: #FFFFFF;
+        /* ── Dynamic Ambient Background (Grid & Auroras) ──────────── */
+        .ambient-canvas {
+          position: fixed;
+          inset: -2%;
+          z-index: 0;
+          pointer-events: none;
+          overflow: hidden;
+          background: var(--surface);
+        }
+        .grid-pattern {
+          position: absolute;
+          inset: -10%;
+          background-image: linear-gradient(90deg, var(--hair) 1px, transparent 1px),
+                            linear-gradient(180deg, var(--hair) 1px, transparent 1px);
+          background-size: 56px 56px;
+          opacity: 0.45;
+          animation: yv-gridDrift 28s linear infinite;
+          -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, #000, transparent 78%);
+          mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, #000, transparent 78%);
+        }
+        .aurora-a {
+          position: absolute;
+          top: -14%;
+          left: -12%;
+          width: 60vw;
+          height: 60vw;
+          max-width: 860px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 40% 40%, rgba(255, 122, 26, 0.18), transparent 65%);
+          filter: blur(28px);
+          animation: yv-auroraA 24s ease-in-out infinite;
+        }
+        .aurora-b {
+          position: absolute;
+          top: 24%;
+          right: -14%;
+          width: 54vw;
+          height: 54vw;
+          max-width: 780px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 55% 45%, rgba(200, 242, 48, 0.15), transparent 66%);
+          filter: blur(30px);
+          animation: yv-auroraB 30s ease-in-out infinite;
+        }
+        .aurora-c {
+          position: absolute;
+          bottom: -16%;
+          left: 24%;
+          width: 56vw;
+          height: 56vw;
+          max-width: 820px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 50% 50%, rgba(255, 154, 77, 0.14), transparent 64%);
+          filter: blur(28px);
+          animation: yv-auroraC 26s ease-in-out infinite;
+        }
 
-    --radius-sm: 10px;
-    --radius-md: 16px;
-    --radius-lg: 26px;
-    --radius-full: 999px;
+        @keyframes yv-gridDrift { 0% { background-position: 0 0; } 100% { background-position: 56px 56px; } }
+        @keyframes yv-auroraA {
+          0%, 100% { transform: translate(-4%) scale(1); }
+          50% { transform: translate(12%, 8%) scale(1.15); }
+        }
+        @keyframes yv-auroraB {
+          0%, 100% { transform: translate(0) scale(1.05); }
+          50% { transform: translate(-14%, 10%) scale(0.9); }
+        }
+        @keyframes yv-auroraC {
+          0%, 100% { transform: translateY(-4%) scale(0.96); }
+          50% { transform: translate(-10%, 12%) scale(1.12); }
+        }
 
-    --shadow-sm: 0 1px 2px rgba(29,27,18,.08);
-    --shadow-md: 0 10px 26px -10px rgba(29,27,18,.18);
-    --shadow-lg: 0 28px 56px -20px rgba(29,27,18,.24);
-    --shadow-green: 0 20px 44px -16px rgba(21,128,61,.34);
+        /* ── Floating Capsule Navbar (Kengaytirilgan & Ikkala tarafga 5cm uzaytirilgan) ── */
+        .nav-container {
+          width: 100%;
+          max-width: 1580px;
+          margin-inline: auto;
+          padding-inline: 24px;
+        }
+        .header-floating {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 100;
+          padding: 22px 0 0;
+        }
+        .nav-capsule {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 8px 10px 8px 20px;
+          background: var(--navbg);
+          border: 1px solid var(--hair);
+          border-radius: 999px;
+          box-shadow: var(--elev-sm);
+          backdrop-filter: blur(20px) saturate(160%);
+          -webkit-backdrop-filter: blur(20px) saturate(160%);
+          position: relative;
+        }
+        .nav-brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-shrink: 0;
+          text-decoration: none;
+        }
+        .nav-brand-icon {
+          height: 44px;
+          width: auto;
+          display: block;
+          object-fit: contain;
+          filter: drop-shadow(0 4px 10px rgba(255, 122, 26, 0.25));
+          transition: transform 0.25s var(--ease);
+        }
+        .nav-brand:hover .nav-brand-icon {
+          transform: translateY(-1px) scale(1.04);
+        }
+        .nav-brand-title {
+          font-family: var(--font-display);
+          font-size: 21px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: var(--ink);
+        }
+        .nav-menu-links {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          margin-inline: auto;
+        }
+        .nav-link-item {
+          padding: 8px 13px;
+          font-size: 14.5px;
+          font-weight: 600;
+          color: var(--n700);
+          border-radius: 999px;
+          transition: all 0.18s var(--ease);
+          white-space: nowrap;
+        }
+        .nav-link-item:hover {
+          background: var(--shell);
+          color: var(--ink);
+        }
+        .nav-actions-group {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-left: auto;
+          flex-shrink: 0;
+        }
+        .lang-capsule {
+          display: flex;
+          align-items: center;
+          background: var(--shell);
+          border: 1px solid var(--hair);
+          border-radius: 999px;
+          padding: 3px;
+          gap: 2px;
+        }
+        .lang-capsule button {
+          border: none;
+          background: transparent;
+          padding: 7px 11px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          color: var(--n500);
+          cursor: pointer;
+          transition: all 0.18s var(--ease);
+        }
+        .lang-capsule button[aria-pressed="true"] {
+          background: var(--card);
+          color: var(--ink);
+          box-shadow: var(--hi);
+        }
+        .nav-btn-login {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 16px;
+          height: 40px;
+          font-size: 14.5px;
+          font-weight: 600;
+          color: var(--n700);
+          border-radius: 999px;
+          transition: all 0.18s var(--ease);
+          white-space: nowrap;
+          text-decoration: none;
+        }
+        .nav-btn-login:hover {
+          background: var(--shell);
+          color: var(--ink);
+        }
+        .nav-btn-login .login-icon {
+          font-size: 14px;
+          opacity: 0.8;
+        }
+        .btn-find-work {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 48px;
+          box-sizing: border-box;
+          padding: 4px 4px 4px 16px;
+          background: #ffffff;
+          border: 1.5px solid rgba(20, 20, 20, 0.13);
+          color: var(--ink);
+          font-size: 14.5px;
+          font-weight: 700;
+          border-radius: 999px;
+          white-space: nowrap;
+          text-decoration: none;
+          transition: all 0.22s var(--ease);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .btn-find-work:hover {
+          border-color: rgba(20, 20, 20, 0.3);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+          transform: translateY(-1px);
+        }
+        .btn-find-work .work-badge {
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          background: var(--shell);
+          border: 1px solid rgba(20, 20, 20, 0.06);
+          display: grid;
+          place-items: center;
+          color: var(--ink);
+          font-size: 14px;
+          transition: all 0.2s var(--ease);
+        }
+        .btn-find-work:hover .work-badge {
+          background: #ebebe5;
+          transform: scale(1.05);
+        }
+        .btn-apply-header {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 48px;
+          box-sizing: border-box;
+          padding: 4px 4px 4px 16px;
+          background: var(--btn);
+          border: 1.5px solid transparent;
+          color: #ffffff !important;
+          font-size: 14.5px;
+          font-weight: 700;
+          border-radius: 999px;
+          white-space: nowrap;
+          text-decoration: none;
+          transition: all 0.22s var(--ease);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+        }
+        .btn-apply-header span {
+          color: #ffffff !important;
+        }
+        .btn-apply-header:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+        }
+        .btn-apply-header .arrow-badge {
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          background: var(--orange);
+          display: grid;
+          place-items: center;
+          color: #ffffff !important;
+          font-size: 15px;
+          font-weight: 700;
+          transition: transform 0.2s var(--ease);
+        }
+        .btn-apply-header:hover .arrow-badge {
+          transform: scale(1.05);
+        }
+        .btn-mobile-toggle {
+          display: none;
+          width: 46px;
+          height: 46px;
+          border-radius: 999px;
+          background: var(--ink);
+          color: #ffffff;
+          border: none;
+          cursor: pointer;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+        }
 
-    --font-heading: var(--font-unbounded), sans-serif;
-    --font-body: var(--font-onest), sans-serif;
+        /* ── Yoshlar Ventures Buttons ──────────────────────────────── */
+        .btn-primary {
+          background: var(--btn);
+          min-height: 58px;
+          color: #ffffff !important;
+          box-shadow: var(--elev-sm);
+          transition: transform 0.4s var(--ease);
+          border-radius: 999px;
+          align-items: center;
+          gap: 14px;
+          padding: 6px 6px 6px 28px;
+          font-size: 16.5px;
+          font-weight: 600;
+          display: inline-flex;
+          border: none;
+          cursor: pointer;
+        }
+        .btn-primary span {
+          color: #ffffff !important;
+        }
+        .btn-primary:hover {
+          transform: translateY(-3px);
+        }
+        .btn-primary .badge {
+          background: var(--orange);
+          color: #ffffff;
+          border-radius: 999px;
+          place-items: center;
+          width: 46px;
+          height: 46px;
+          font-size: 17px;
+          display: inline-grid;
+        }
+        .btn-outline {
+          border: 1px solid var(--hair);
+          min-height: 58px;
+          color: var(--ink);
+          transition: transform 0.4s var(--ease), background 0.3s var(--ease);
+          background: transparent;
+          border-radius: 999px;
+          align-items: center;
+          gap: 8px;
+          padding: 0 28px;
+          font-size: 16.5px;
+          font-weight: 600;
+          display: inline-flex;
+        }
+        .btn-outline:hover {
+          background: var(--shell);
+          transform: translateY(-3px);
+        }
 
-    /* spacing scale */
-    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-6: 24px;
-    --s-8: 32px; --s-10: 48px; --s-12: 64px; --s-16: 80px; --s-20: 96px; --s-24: 128px;
+        /* Eyebrows */
+        .eyebrow-pill {
+          background: var(--warm);
+          color: var(--warm-ink);
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          border-radius: 999px;
+          align-items: center;
+          gap: 11px;
+          padding: 9px 22px 9px 13px;
+          font-size: 14px;
+          font-weight: 800;
+          display: inline-flex;
+          border: 1px solid rgba(255, 122, 26, 0.24);
+          box-shadow: 0 4px 14px rgba(255, 122, 26, 0.1);
+          margin-bottom: 22px;
+        }
+        .eyebrow-pill-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: var(--orange);
+          box-shadow: 0 0 0 3px rgba(255, 122, 26, 0.22);
+        }
 
-    /* motion */
-    --ease: cubic-bezier(.22,.9,.32,1);
-    --dur-micro: 180ms;
-    --dur-standard: 380ms;
-    --dur-feature: 720ms;
-  }
+        /* ── Hero Section (Navbar bilan teng chegaralar & Kengaytirilgan) ── */
+        .hero-section {
+          position: relative;
+          padding: 160px 0 84px;
+          overflow: hidden;
+          z-index: 1;
+        }
+        .hero-section .container-yv {
+          max-width: 1580px;
+          padding-inline: 24px;
+        }
+        .hero-grid {
+          display: grid;
+          grid-template-columns: 1.15fr 0.85fr;
+          gap: 56px;
+          align-items: center;
+        }
+        .hero-title {
+          font-family: var(--font-display);
+          font-size: clamp(38px, 4.6vw, 70px);
+          font-weight: 800;
+          letter-spacing: -0.04em;
+          line-height: 1.05;
+          margin: 0 0 22px;
+          color: var(--ink);
+        }
+        .hero-title .accent-orange {
+          color: var(--orange);
+        }
+        .hero-desc {
+          font-size: 19px;
+          line-height: 1.62;
+          color: var(--n500);
+          max-width: 580px;
+          margin: 0 0 34px;
+        }
+        .hero-cta {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
+          margin-bottom: 28px;
+        }
 
-  .lp * { box-sizing: border-box; }
-  .lp {
-    font-family: var(--font-body); color: var(--ink); line-height: 1.55;
-    -webkit-font-smoothing: antialiased; position: relative;
-    background: var(--y-400);
-  }
-  .lp a { text-decoration: none; color: inherit; }
-  .lp ul { list-style: none; margin: 0; padding: 0; }
-  /* overflow clipping lives below the navbar, not on .lp itself — an overflow-x
-     ancestor breaks position:sticky, which would silently un-stick the navbar */
-  .lp-scroll { overflow-x: hidden; }
-  .lp h1, .lp h2, .lp h3, .lp h4 { font-family: var(--font-heading); font-weight: 800; margin: 0; overflow-wrap: break-word; word-break: break-word; }
-  .lp p { margin: 0; }
+        /* ── Hero Right: Live Deal & Escrow Card (Zamonaviy Interfeys) ── */
+        .hero-deal-card-wrap {
+          position: relative;
+          max-width: 530px;
+          width: 100%;
+          margin-left: auto;
+          margin-right: 0;
+        }
+        .hero-deal-card {
+          background: rgba(255, 255, 255, 0.96);
+          backdrop-filter: blur(24px) saturate(180%);
+          -webkit-backdrop-filter: blur(24px) saturate(180%);
+          border: 1px solid rgba(20, 20, 20, 0.08);
+          border-radius: 34px;
+          padding: 30px;
+          box-shadow: 0 32px 64px -20px rgba(20, 20, 20, 0.14),
+                      0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+          transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+          position: relative;
+          z-index: 2;
+        }
+        .hero-deal-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 40px 80px -24px rgba(20, 20, 20, 0.18),
+                      0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+        }
+        .deal-card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-bottom: 18px;
+          border-bottom: 1px solid var(--hair);
+          margin-bottom: 20px;
+        }
+        .deal-status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          border-radius: 999px;
+          background: rgba(16, 185, 129, 0.1);
+          color: #059669;
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+        }
+        .deal-status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #10b981;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+          animation: yvPulse 2s infinite;
+        }
+        @keyframes yvPulse {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .deal-escrow-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--warm);
+          color: var(--warm-ink);
+          border: 1px solid rgba(255, 122, 26, 0.18);
+          padding: 6px 12px;
+          border-radius: 999px;
+          font-size: 12.5px;
+          font-weight: 700;
+        }
+        .deal-title-row {
+          margin-bottom: 18px;
+        }
+        .deal-cat-tag {
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--n500);
+          margin-bottom: 6px;
+        }
+        .deal-project-title {
+          font-family: var(--font-display);
+          font-size: 21px;
+          font-weight: 800;
+          color: var(--ink);
+          letter-spacing: -0.02em;
+          line-height: 1.32;
+          margin: 0;
+        }
+        .deal-budget-box {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          background: var(--shell);
+          border: 1px solid var(--hair);
+          border-radius: 20px;
+          padding: 16px 20px;
+          margin-bottom: 18px;
+        }
+        .deal-budget-label {
+          font-size: 13.5px;
+          color: var(--n500);
+          font-weight: 600;
+        }
+        .deal-budget-value {
+          font-family: var(--font-display);
+          font-size: 25px;
+          font-weight: 800;
+          color: var(--orange);
+          letter-spacing: -0.02em;
+        }
+        .deal-parties-grid {
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 18px;
+          background: #ffffff;
+          border: 1px solid var(--hair);
+          border-radius: 20px;
+          padding: 12px 14px;
+        }
+        .deal-party-card {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          overflow: hidden;
+        }
+        .party-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 13px;
+          flex-shrink: 0;
+        }
+        .party-avatar.buyer {
+          background: #e0f2fe;
+          color: #0284c7;
+        }
+        .party-avatar.freelancer {
+          background: #fef3c7;
+          color: #d97706;
+        }
+        .party-name {
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--ink);
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .party-role {
+          font-size: 11px;
+          color: var(--n500);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .deal-parties-arrow {
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          background: var(--shell);
+          border: 1px solid var(--hair);
+          display: grid;
+          place-items: center;
+          font-size: 12px;
+          color: var(--n500);
+        }
+        .deal-milestone-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .deal-milestone-step {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 12px;
+          padding: 8px 12px;
+          border-radius: 12px;
+          background: var(--surface);
+          border: 1px solid var(--hair);
+        }
+        .milestone-left {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 600;
+          color: var(--n700);
+        }
+        .milestone-status {
+          font-weight: 700;
+          font-size: 11px;
+        }
+        .milestone-status.done {
+          color: #059669;
+        }
+        .milestone-status.escrow {
+          color: var(--orange);
+        }
+        .deal-floating-badge-top {
+          position: absolute;
+          top: -14px;
+          right: 4px;
+          z-index: 3;
+          background: #ffffff;
+          border: 1px solid var(--hair);
+          border-radius: 999px;
+          padding: 9px 18px 9px 14px;
+          box-shadow: var(--elev-sm);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--ink);
+          animation: yvFloatSlow 6s ease-in-out infinite;
+        }
+        .deal-floating-badge-bottom {
+          position: absolute;
+          bottom: -14px;
+          left: -8px;
+          z-index: 3;
+          background: var(--ink);
+          color: #ffffff;
+          border-radius: 999px;
+          padding: 9px 18px 9px 14px;
+          box-shadow: 0 16px 36px -10px rgba(20, 20, 20, 0.35);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          animation: yvFloatSlow 6s ease-in-out 3s infinite;
+        }
+        @keyframes yvFloatSlow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-7px); }
+        }
 
-  .container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+        /* ── Yoshlar Ventures Statbar (Metrikalar) ─────────────────── */
+        .statbar-wrap {
+          border-top: 1px solid var(--hair);
+          border-bottom: 1px solid var(--hair);
+          background: var(--card);
+          position: relative;
+          z-index: 1;
+        }
+        .statbar {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          align-items: start;
+          margin: 0 auto;
+          width: 100%;
+        }
+        .statbar > div {
+          border-right: 1px solid var(--hair);
+          padding: clamp(28px, 3.5vw, 44px) clamp(20px, 2.5vw, 48px);
+        }
+        .statbar > div:last-child { border-right: none; }
+        .statbar dt {
+          font-family: var(--font-display);
+          font-size: clamp(28px, 5vw, 56px);
+          font-weight: 700;
+          letter-spacing: -0.04em;
+          line-height: 1;
+          color: var(--ink);
+          margin-bottom: 8px;
+        }
+        .statbar dt.highlight {
+          color: var(--orange);
+        }
+        .statbar dd {
+          margin: 0;
+          font-size: 13px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          font-weight: 600;
+          line-height: 1.45;
+          color: var(--n500);
+        }
 
-  /* anchor nav offset — keeps sticky navbar from covering section targets */
-  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+        /* ── Stages (Support for your stage - 01, 02, 03) ──────────── */
+        .stages-section {
+          padding: clamp(64px, 8vw, 112px) 0;
+          position: relative;
+          z-index: 1;
+        }
+        .section-title {
+          font-family: var(--font-display);
+          letter-spacing: -0.04em;
+          font-size: clamp(32px, 5.2vw, 56px);
+          font-weight: 700;
+          line-height: 1.05;
+          margin: 0 0 16px;
+        }
+        .stage-list {
+          list-style: none;
+          margin: 48px 0 0;
+          padding: 0;
+          border-top: 1px solid var(--hair);
+        }
+        .stage-item {
+          display: grid;
+          grid-template-columns: 88px 1fr 1fr;
+          gap: 8px 28px;
+          padding: 30px 24px;
+          border-bottom: 1px solid var(--hair);
+          border-radius: 20px;
+          align-items: baseline;
+          transition: background 0.3s var(--ease);
+        }
+        .stage-item:hover {
+          background: var(--shell);
+        }
+        .stage-item.lime-card {
+          background: var(--lime);
+          border-bottom-color: transparent;
+        }
+        .stage-num {
+          font-family: var(--font-display);
+          font-size: 15px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          color: var(--n300);
+        }
+        .stage-item.lime-card .stage-num {
+          color: #5A6A18;
+        }
+        .stage-head {
+          font-family: var(--font-display);
+          font-size: clamp(24px, 3.4vw, 36px);
+          font-weight: 700;
+          letter-spacing: -0.03em;
+          margin: 0;
+          color: var(--ink);
+        }
+        .stage-desc {
+          margin: 0;
+          font-size: 16px;
+          line-height: 1.6;
+          color: var(--n500);
+        }
+        .stage-item.lime-card .stage-desc {
+          color: #31380F;
+        }
 
-  /* ── grain overlay (global, extremely subtle) ─────────────────── */
-  .grain {
-    position: fixed; inset: 0; z-index: 900; pointer-events: none;
-    opacity: .05; mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
+        /* ── Strikethrough Stereotypes Block (Yoshlar Ventures uslubi) */
+        .barriers-section {
+          background: var(--warm);
+          border-top: 1px solid var(--hair);
+          border-bottom: 1px solid var(--hair);
+          position: relative;
+          z-index: 1;
+        }
+        .barriers-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          align-items: center;
+          gap: clamp(32px, 5vw, 72px);
+          padding: clamp(64px, 8vw, 112px) 24px;
+        }
+        .strike-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        .strike-item {
+          font-family: var(--font-display);
+          font-size: clamp(24px, 3.4vw, 40px);
+          font-weight: 700;
+          letter-spacing: -0.03em;
+          color: var(--ink);
+          opacity: 0.4;
+          text-decoration: line-through;
+          text-decoration-thickness: 3px;
+          text-decoration-color: var(--orange);
+          padding: 16px 0;
+          border-bottom: 1px solid rgba(20, 20, 20, 0.08);
+        }
+        .strike-item:last-child {
+          border-bottom: none;
+        }
 
-  /* ── shared decorative background system (yellow canvas sections) ─ */
-  .canvas { position: relative; background: var(--y-400); overflow: hidden; }
-  .canvas-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .canvas-decor .blob {
-    position: absolute; border-radius: 50%; filter: blur(2px);
-  }
-  .canvas-decor .line { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(29,27,18,.06); }
-  .canvas-decor .hline { position: absolute; left: 0; right: 0; height: 1px; background: rgba(29,27,18,.06); }
-  .canvas-decor .dotgrid {
-    position: absolute; inset: 0;
-    background-image: radial-gradient(rgba(29,27,18,.10) 1px, transparent 1.4px);
-    background-size: 26px 26px;
-    -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, #000 0%, transparent 72%);
-            mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, #000 0%, transparent 72%);
-  }
-  .canvas > .container, .canvas > * > .container { position: relative; z-index: 1; }
-  @keyframes driftA { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(14px,-10px); } }
-  @keyframes driftB { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(-10px,12px); } }
-  @media (prefers-reduced-motion: reduce) { .canvas-decor .blob { animation: none !important; } }
+        /* ── Marquee Portfolio / Jobs Carousel ─────────────────────── */
+        .marquee-container {
+          overflow: hidden;
+          padding: 16px 0 32px;
+          position: relative;
+        }
+        .marquee-track {
+          display: flex;
+          gap: 20px;
+          width: max-content;
+          animation: yv-marquee 42s linear infinite;
+        }
+        .marquee-track:hover {
+          animation-play-state: paused;
+        }
+        @keyframes yv-marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .yv-job-card {
+          flex: 0 0 clamp(280px, 80vw, 360px);
+          background: var(--card);
+          border: 1px solid var(--hair);
+          border-radius: 28px;
+          padding: 28px;
+          box-shadow: var(--elev-sm);
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+        }
+        .yv-job-card:hover {
+          transform: translateY(-6px);
+          box-shadow: var(--elev);
+        }
+        .card-big-num {
+          position: absolute;
+          right: -8px;
+          top: -18px;
+          font-family: var(--font-display);
+          font-size: 96px;
+          font-weight: 800;
+          letter-spacing: -0.06em;
+          color: var(--shell);
+          pointer-events: none;
+          line-height: 1;
+        }
+        .card-tag {
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--n500);
+          margin-bottom: 12px;
+        }
+        .card-job-title {
+          font-family: var(--font-display);
+          font-size: 20px;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          color: var(--ink);
+          margin: 0 0 10px;
+          line-height: 1.25;
+        }
+        .card-job-desc {
+          font-size: 14px;
+          line-height: 1.6;
+          color: var(--n500);
+          margin: 0 0 24px;
+        }
+        .card-job-footer {
+          padding-top: 16px;
+          border-top: 1px solid var(--hair);
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+        }
+        .card-job-amount {
+          font-family: var(--font-display);
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          color: var(--orange);
+        }
+        .card-bid-pill {
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--ink);
+          background: var(--warm);
+          padding: 4px 10px;
+          border-radius: 999px;
+        }
 
-  /* ── skip link ────────────────────────────────────────────────── */
-  .skip-link { position: fixed; top: -60px; left: 16px; z-index: 2000; background: var(--g-600); color: #fff; padding: 10px 18px; border-radius: var(--radius-sm); font-weight: 700; font-size: 14px; transition: top var(--dur-micro) var(--ease); }
-  .skip-link:focus { top: 16px; }
+        /* ── Categories Grid ───────────────────────────────────────── */
+        .cat-grid-yv {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 18px;
+          margin-top: 40px;
+        }
+        .cat-card-yv {
+          background: var(--card);
+          border: 1px solid var(--hair);
+          border-radius: 22px;
+          padding: 24px;
+          transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .cat-card-yv:hover {
+          transform: translateY(-4px);
+          box-shadow: var(--elev-sm);
+        }
+        .cat-icon-wrap {
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          background: var(--warm);
+          color: var(--orange);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 18px;
+        }
+        .cat-card-yv h3 {
+          font-family: var(--font-display);
+          font-size: 18px;
+          font-weight: 700;
+          margin: 0 0 8px;
+        }
+        .cat-card-yv p {
+          font-size: 13.5px;
+          color: var(--n500);
+          margin: 0 0 16px;
+        }
+        .cat-card-bottom {
+          padding-top: 14px;
+          border-top: 1px solid var(--hair);
+          display: flex;
+          justify-content: space-between;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--ink);
+        }
 
-  /* ── eyebrow ──────────────────────────────────────────────────── */
-  .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; background: var(--white); color: var(--g-700); border-radius: var(--radius-full); font-weight: 700; font-size: 13px; letter-spacing: .3px; box-shadow: var(--shadow-sm); }
-  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--g-500); }
-  .eyebrow.red { color: var(--r-700); }
-  .eyebrow.red .dot { background: var(--r-500); }
-  .eyebrow.on-dark { background: rgba(255,255,255,.10); color: #fff; box-shadow: none; }
-  .eyebrow.on-dark .dot { background: var(--y-400); }
+        /* ── Escrow Simulator Section ──────────────────────────────── */
+        .calc-box-yv {
+          background: var(--card);
+          border: 1px solid var(--hair);
+          border-radius: 32px;
+          padding: clamp(32px, 5vw, 64px);
+          box-shadow: var(--elev-sm);
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 48px;
+          align-items: center;
+        }
+        .calc-slider-input {
+          width: 100%;
+          height: 8px;
+          border-radius: 999px;
+          background: var(--shell);
+          outline: none;
+          accent-color: var(--orange);
+          cursor: pointer;
+          margin: 20px 0;
+        }
 
-  /* ── buttons ──────────────────────────────────────────────────── */
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 24px; border-radius: var(--radius-full); font-weight: 700; font-size: 15px; font-family: var(--font-body); cursor: pointer; border: none; transition: transform var(--dur-micro) var(--ease), box-shadow var(--dur-micro) var(--ease), background-color var(--dur-micro) var(--ease), color var(--dur-micro) var(--ease), border-color var(--dur-micro) var(--ease); white-space: nowrap; min-height: 48px; }
-  .btn .arrow { transition: transform var(--dur-micro) var(--ease); display: inline-flex; }
-  .btn:hover .arrow { transform: translateX(4px); }
-  .btn.btn-green { background: var(--g-600); color: #fff; box-shadow: var(--shadow-green); }
-  .btn.btn-green:hover { background: var(--g-700); transform: translateY(-2px); }
-  .btn.btn-outline-dark { background: transparent; color: var(--ink); border: 1.5px solid rgba(29,27,18,.28); }
-  .btn.btn-outline-dark:hover { border-color: var(--g-600); color: var(--g-700); background: rgba(255,255,255,.5); }
-  .btn.btn-white { background: #fff; color: var(--g-800); }
-  .btn.btn-white:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-  .btn.btn-ghost-dark { background: rgba(255,255,255,.08); color: #fff; border: 1.5px solid rgba(255,255,255,.32); }
-  .btn.btn-ghost-dark:hover { background: rgba(255,255,255,.16); }
-  .btn-sm { padding: 10px 16px; font-size: 13px; min-height: 40px; }
-  .btn-block { width: 100%; }
+        /* ── FAQ Section (Toza Akkordeon) ──────────────────────────── */
+        .faq-box-yv {
+          max-width: 800px;
+          margin: 40px auto 0;
+        }
+        .faq-row {
+          border-bottom: 1px solid var(--hair);
+          padding: 20px 0;
+        }
+        .faq-trigger-btn {
+          width: 100%;
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          text-align: left;
+          font-family: var(--font-display);
+          font-size: 17px;
+          font-weight: 700;
+          color: var(--ink);
+        }
+        .faq-icon-cross {
+          font-size: 20px;
+          color: var(--orange);
+          transition: transform 0.2s;
+        }
+        .faq-row[data-open="true"] .faq-icon-cross {
+          transform: rotate(45deg);
+        }
+        .faq-content-p {
+          padding-top: 14px;
+          font-size: 15px;
+          color: var(--n500);
+          line-height: 1.65;
+          margin: 0;
+        }
 
-  /* ── navbar ───────────────────────────────────────────────────── */
-  .navbar { position: sticky; top: 0; z-index: 1000; background: rgba(255, 249, 224, .78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid rgba(29,27,18,.10); }
-  .navbar::before { content: ''; display: block; height: 3px; width: 100%; background: linear-gradient(90deg, var(--g-600) 0% 55%, var(--y-500) 55% 82%, var(--r-500) 82% 100%); }
-  .nav-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
-  .nav-logo { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-heading); font-size: 21px; font-weight: 800; color: var(--ink); letter-spacing: -.3px; }
-  .nav-logo-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--g-600); position: relative; flex-shrink: 0; box-shadow: 0 3px 0 0 var(--y-500); }
-  .nav-logo-mark::after { content: ''; position: absolute; inset: 8px; border-radius: 4px; background: var(--y-400); }
-  .nav-logo span { color: var(--g-600); }
-  .brand-lockup { gap: 12px; }
-  .brand-lockup .nav-logo-mark { width: 40px; height: 40px; border-radius: 12px; box-shadow: 0 4px 0 0 var(--y-500); }
-  .brand-lockup .nav-logo-mark::after { inset: 10px; border-radius: 5px; }
-  .brand-lockup-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
-  .brand-lockup-word { font-size: 30px; letter-spacing: -.6px; }
-  .brand-lockup-tagline { font-family: var(--font-body); font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--g-600); }
-  .nav-links { display: flex; align-items: center; gap: 28px; }
-  .nav-links a { font-size: 14.5px; font-weight: 600; color: var(--muted); transition: color var(--dur-micro); }
-  .nav-links a:hover { color: var(--g-700); }
-  .nav-actions { display: flex; align-items: center; gap: 14px; }
-  .nav-help-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(29,27,18,.16); background: transparent; color: var(--muted); cursor: pointer; transition: var(--dur-micro); flex-shrink: 0; }
-  .nav-help-btn:hover { color: var(--g-700); border-color: var(--g-600); background: var(--g-tint); }
-  .lang-pill { display: flex; background: rgba(255,255,255,.6); border: 1px solid rgba(29,27,18,.14); border-radius: var(--radius-full); padding: 3px; }
-  .lang-pill button { background: none; border: none; padding: 5px 10px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; transition: var(--dur-micro); text-transform: uppercase; font-family: var(--font-body); }
-  .lang-pill button[aria-pressed="true"] { background: var(--g-600); color: #fff; }
-  .hamburger { display: none; background: none; border: 1px solid rgba(29,27,18,.18); border-radius: var(--radius-sm); width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); }
-  .mobile-panel { display: none; }
+        /* ── Final Call To Action ──────────────────────────────────── */
+        .cta-final-yv {
+          padding: clamp(80px, 10vw, 130px) 0;
+          text-align: center;
+          position: relative;
+          z-index: 1;
+        }
+        .cta-final-title {
+          font-family: var(--font-display);
+          font-size: clamp(34px, 5vw, 62px);
+          font-weight: 800;
+          letter-spacing: -0.04em;
+          line-height: 1.05;
+          max-width: 760px;
+          margin: 0 auto 20px;
+        }
 
-  /* ── hero ─────────────────────────────────────────────────────── */
-  .hero { position: relative; padding: 56px 0 88px; overflow: hidden; background: var(--y-400); }
-  .hero-grid { display: grid; grid-template-columns: 6.4fr 5.6fr; gap: 48px; align-items: center; }
-  .hero-badge { opacity: 0; transform: translateY(14px); animation: heroIn var(--dur-feature) var(--ease) forwards; animation-delay: .05s; }
-  .hero-h1 { font-size: clamp(32px, 5vw, 64px); line-height: 1.04; letter-spacing: -1.6px; color: var(--ink); margin: 22px 0 20px; overflow-wrap: break-word; word-break: break-word; }
-  .hero-h1 span { display: block; opacity: 0; transform: translateY(20px); animation: heroIn var(--dur-feature) var(--ease) forwards; }
-  .hero-h1 span:first-child { animation-delay: .15s; }
-  .hero-h1 span.grad { animation-delay: .28s; color: var(--g-700); }
-  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; opacity: 0; transform: translateY(16px); animation: heroIn var(--dur-feature) var(--ease) forwards; animation-delay: .4s; }
-  .hero-trust-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 22px; margin-top: 40px; padding-top: 26px; border-top: 1px solid rgba(29,27,18,.14); opacity: 0; transform: translateY(16px); animation: heroIn var(--dur-feature) var(--ease) forwards; animation-delay: .62s; }
-  .hero-trust-item { display: flex; align-items: center; gap: 9px; font-size: 14.5px; font-weight: 700; color: var(--ink); }
-  .hero-trust-item svg { color: var(--g-600); flex-shrink: 0; }
-  .hero-trust-sep { color: var(--y-700); font-weight: 400; }
-  @keyframes heroIn { to { opacity: 1; transform: translateY(0); } }
-  @media (prefers-reduced-motion: reduce) {
-    .hero-badge, .hero-h1 span, .hero-actions, .hero-trust-row { animation: none !important; opacity: 1 !important; transform: none !important; }
-  }
+        /* ── Footer (Yoshlar Ventures uslubi) ──────────────────────── */
+        .footer-yv {
+          border-top: 1px solid var(--hair);
+          background: var(--card);
+          padding: 60px 0 36px;
+          position: relative;
+          z-index: 1;
+        }
+        .footer-grid-yv {
+          display: grid;
+          grid-template-columns: 1.6fr 1fr 1fr 1fr;
+          gap: 40px;
+          margin-bottom: 48px;
+        }
+        .footer-logo-title {
+          font-family: var(--font-display);
+          font-size: 18px;
+          font-weight: 800;
+          margin-bottom: 12px;
+        }
+        .footer-desc-p {
+          font-size: 14px;
+          color: var(--n500);
+          line-height: 1.6;
+          max-width: 280px;
+        }
+        .footer-col-yv h4 {
+          font-size: 12px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: var(--n500);
+          margin-bottom: 16px;
+        }
+        .footer-col-yv ul { display: flex; flex-direction: column; gap: 10px; }
+        .footer-col-yv a, .footer-col-yv button {
+          color: var(--n700);
+          font-size: 14px;
+          font-weight: 500;
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          text-align: left;
+          font-family: inherit;
+        }
+        .footer-col-yv a:hover, .footer-col-yv button:hover {
+          color: var(--orange);
+        }
 
-  /* ── hero product visual (realistic marketplace UI) ──────────── */
-  .hero-visual { position: relative; opacity: 0; transform: translateY(24px) scale(.98); animation: heroIn var(--dur-feature) var(--ease) forwards; animation-delay: .35s; }
-  @media (prefers-reduced-motion: reduce) { .hero-visual { animation: none !important; opacity: 1 !important; transform: none !important; } }
-  .dash-card { position: relative; z-index: 2; background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); border: 1px solid rgba(29,27,18,.08); overflow: hidden; }
-  .dash-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid rgba(29,27,18,.08); }
-  .dash-head-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--g-700); background: var(--g-tint); padding: 5px 10px; border-radius: var(--radius-full); }
-  .dash-head-tag .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--g-600); animation: pulse 1.8s ease-in-out infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-  .dash-body { padding: 20px 22px 22px; }
-  .dash-title { font-family: var(--font-heading); font-size: 17px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
-  .dash-meta { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); font-weight: 600; margin-bottom: 16px; }
-  .dash-chip-verified { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--g-700); background: var(--g-tint); padding: 4px 9px; border-radius: var(--radius-full); margin-bottom: 16px; }
-  .dash-parties { display: flex; gap: 12px; margin-bottom: 18px; }
-  .dash-party { flex: 1; display: flex; align-items: center; gap: 9px; background: var(--y-50); border-radius: var(--radius-sm); padding: 9px 12px; }
-  .dash-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; }
-  .dash-avatar.green { background: var(--g-600); }
-  .dash-avatar.gold { background: var(--y-500); color: #453207; }
-  .dash-party-lbl { font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
-  .dash-party-val { font-size: 12.5px; color: var(--ink); font-weight: 700; }
-  .dash-progress-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-  .dash-progress-row span:first-child { font-size: 12.5px; font-weight: 700; color: var(--muted); }
-  .dash-progress-row span:last-child { font-size: 12.5px; font-weight: 800; color: var(--g-700); }
-  .dash-bar { height: 8px; border-radius: var(--radius-full); background: var(--y-100); overflow: hidden; margin-bottom: 18px; }
-  .dash-bar-fill { height: 100%; border-radius: var(--radius-full); background: var(--g-600); width: 66%; transition: width 1s var(--ease); }
-  .dash-milestones { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
-  .dash-ms { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink); }
-  .dash-ms-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .dash-ms-dot.done { background: var(--g-600); color: #fff; }
-  .dash-ms-dot.active { background: var(--y-100); border: 2px solid var(--y-500); }
-  .dash-ms-dot.pending { background: var(--y-50); border: 2px solid rgba(29,27,18,.14); }
-  .dash-ms.muted { color: var(--muted); }
-  .dash-footer { display: flex; align-items: center; justify-content: space-between; background: var(--g-tint); border-radius: var(--radius-sm); padding: 12px 14px; }
-  .dash-footer-lbl { font-size: 11px; color: var(--g-700); font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
-  .dash-footer-val { font-size: 16px; font-weight: 800; color: var(--ink); font-family: var(--font-heading); }
-  .dash-lock { width: 30px; height: 30px; border-radius: 50%; background: var(--g-600); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        /* ── Mobile Responsive ─────────────────────────────────────── */
+        @media (max-width: 1380px) {
+          .nav-link-item { padding: 7px 9px; font-size: 13.5px; }
+          .nav-capsule { gap: 8px; padding-left: 14px; padding-right: 8px; }
+          .btn-find-work, .btn-apply-header { padding: 4px 4px 4px 13px; font-size: 13.5px; }
+        }
+        @media (max-width: 1240px) {
+          .nav-menu-links { display: none; }
+        }
+        @media (max-width: 980px) {
+          .hero-grid { grid-template-columns: 1fr; }
+          .hero-deal-card-wrap { max-width: 100%; }
+          .deal-floating-badge-top, .deal-floating-badge-bottom { display: none; }
+          .statbar { grid-template-columns: 1fr; }
+          .statbar > div { border-right: none; border-bottom: 1px solid var(--hair); }
+          .stage-item { grid-template-columns: 1fr; }
+          .barriers-grid { grid-template-columns: 1fr; }
+          .cat-grid-yv { grid-template-columns: repeat(2, 1fr); }
+          .calc-box-yv { grid-template-columns: 1fr; }
+          .footer-grid-yv { grid-template-columns: 1fr 1fr; }
+          .nav-actions-group .btn-find-work,
+          .nav-actions-group .btn-apply-header,
+          .nav-actions-group .nav-btn-login,
+          .nav-actions-group .lang-capsule { display: none; }
+          .btn-mobile-toggle { display: flex; }
+        }
+        @media (max-width: 640px) {
+          .cat-grid-yv { grid-template-columns: 1fr; }
+          .footer-grid-yv { grid-template-columns: 1fr; }
+          .hero-cta { flex-direction: column; width: 100%; }
+          .hero-cta a { width: 100%; justify-content: center; }
+        }
 
-  .float-chip { position: absolute; z-index: 3; display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid rgba(29,27,18,.08); border-radius: var(--radius-md); padding: 12px 14px; box-shadow: var(--shadow-md); animation: float 7s ease-in-out infinite; }
-  .float-chip.top { top: -18px; right: -10px; animation-delay: 0s; }
-  .float-chip.bottom { bottom: -20px; right: -16px; animation-delay: 2.8s; }
-  .float-chip-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .float-chip-icon.green { background: var(--g-tint); color: var(--g-600); }
-  .float-chip-icon.gold { background: var(--y-100); color: var(--y-900); }
-  .float-chip h5 { font-size: 12.5px; font-weight: 700; color: var(--ink); }
-  .float-chip p { font-size: 11.5px; color: var(--muted); }
-  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-  @media (prefers-reduced-motion: reduce) { .float-chip, .dash-head-tag .pulse { animation: none; } }
+        /* ── Reduced Motion Accessibility ──────────────────────────── */
+        @media (prefers-reduced-motion: reduce) {
+          .grid-pattern,
+          .aurora-a,
+          .aurora-b,
+          .aurora-c,
+          .marquee-track,
+          .deal-status-dot,
+          .deal-floating-badge-top,
+          .deal-floating-badge-bottom {
+            animation: none !important;
+          }
+          .marquee-track {
+            transform: none !important;
+          }
+          .marquee-container {
+            overflow-x: auto;
+          }
+          .yv-job-card,
+          .btn-primary,
+          .btn-outline,
+          .btn-find-work,
+          .btn-apply-header,
+          .hero-deal-card,
+          .cat-card-yv {
+            transition: none !important;
+            transform: none !important;
+          }
+        }
+      `}</style>
 
-  /* ── reveal (scroll) ──────────────────────────────────────────── */
-  .reveal { opacity: 0; transform: translateY(20px); transition: opacity var(--dur-feature) var(--ease), transform var(--dur-feature) var(--ease); }
-  .reveal[data-visible="true"] { opacity: 1; transform: translateY(0); }
-  .rd1[data-visible="true"] { transition-delay: .06s; } .rd2[data-visible="true"] { transition-delay: .12s; }
-  .rd3[data-visible="true"] { transition-delay: .18s; } .rd4[data-visible="true"] { transition-delay: .24s; }
-  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+      <div className="yv-lp">
+        {/* Dynamic Background Canvas */}
+        <div className="ambient-canvas" aria-hidden="true">
+          <div className="grid-pattern" />
+          <div className="aurora-a" />
+          <div className="aurora-b" />
+          <div className="aurora-c" />
+        </div>
 
-  /* ── section header ───────────────────────────────────────────── */
-  .section-pad { padding: var(--s-24) 0; }
-  .sec-head { max-width: 640px; margin: 0 auto var(--s-12); text-align: center; }
-  .sec-head h2 { font-size: clamp(28px, 3.4vw, 40px); letter-spacing: -.7px; color: var(--ink); margin: 16px 0 14px; }
-  .sec-head p { font-size: 17px; color: var(--muted); }
-  .sec-head.left { margin-left: 0; text-align: left; }
-  .on-dark .sec-head h2 { color: #fff; }
-  .on-dark .sec-head p { color: rgba(255,255,255,.7); }
+        {/* ── FLOATING CAPSULE NAVBAR ───────────────────────────────── */}
+        <header className="header-floating">
+          <div className="nav-container">
+            <nav className="nav-capsule" aria-label="Asosiy navigatsiya">
+              <Link href="/" className="nav-brand" aria-label="Bobo&Doda">
+                <img
+                  src="/logo-icon.png"
+                  alt="Bobo&Doda"
+                  width={44}
+                  height={44}
+                  className="nav-brand-icon"
+                />
+                <span className="nav-brand-title">BOBO&amp;DODA</span>
+              </Link>
 
-  /* ── trust bar (horizontal metric bar) ───────────────────────── */
-  .trust-section { padding: var(--s-10) 0; background: var(--white); border-top: 1px solid rgba(29,27,18,.08); border-bottom: 1px solid rgba(29,27,18,.08); }
-  .trust-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-bottom: var(--s-10); }
-  .trust-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--y-50); border: 1px solid var(--y-line); border-radius: var(--radius-full); font-size: 13.5px; font-weight: 700; color: var(--ink); }
-  .trust-chip .flag-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--g-500); }
-  .trust-chip.badge { color: var(--g-700); border-color: transparent; background: var(--g-tint); }
-  .trust-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-6); }
-  .trust-stat { text-align: center; }
-  .trust-stat h3 { font-size: 38px; letter-spacing: -.8px; color: var(--ink); font-family: var(--font-heading); white-space: nowrap; }
-  .trust-stat span { font-size: 13px; color: var(--muted); font-weight: 600; }
-
-  /* ── escrow / how it works — main product story ─────────────── */
-  .escrow-section { background: var(--white); }
-
-  /* ── categories (asymmetric grid) ─────────────────────────────── */
-  .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; max-width: 1160px; margin: 0 auto; }
-  .cat-card { display: flex; flex-direction: column; min-height: 192px; padding: 26px; border-radius: var(--radius-md); border: 1px solid rgba(29,27,18,.10); background: #fff; box-shadow: var(--shadow-sm); transition: transform var(--dur-standard) var(--ease), box-shadow var(--dur-standard) var(--ease), border-color var(--dur-standard) var(--ease); }
-  .cat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--g-500); }
-  .cat-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; background: var(--g-tint); color: var(--g-600); transition: color var(--dur-micro) var(--ease); }
-  .cat-card h3 { font-size: 16.5px; margin-bottom: 6px; }
-  .cat-card p { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
-  .cat-meta { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: var(--g-700); padding-top: 14px; border-top: 1px solid rgba(29,27,18,.10); margin-top: auto; }
-  .cat-meta .go { transition: transform var(--dur-micro) var(--ease); }
-  .cat-card:hover .cat-meta .go { transform: translateX(3px); }
-
-  /* ── pricing ──────────────────────────────────────────────────── */
-  .price-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--s-6); max-width: 980px; margin: 0 auto; }
-  .price-card { background: #fff; border: 1px solid rgba(29,27,18,.10); border-radius: var(--radius-lg); padding: 32px; text-align: center; }
-  .price-card.hi { background: var(--g-700); color: #fff; box-shadow: var(--shadow-green); transform: translateY(-8px); }
-  .price-card.zero { background: var(--y-100); border-color: transparent; }
-  .price-card h3 { font-size: 14px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 14px; }
-  .price-card.hi h3 { color: rgba(255,255,255,.7); }
-  .price-card .val { font-family: var(--font-heading); font-size: 44px; font-weight: 800; color: var(--ink); margin-bottom: 10px; }
-  .price-card.hi .val { color: #fff; }
-  .price-card.zero .val { color: var(--y-900); }
-  .price-card p.desc { font-size: 14px; color: var(--muted); }
-  .price-card.hi p.desc { color: rgba(255,255,255,.75); }
-
-  /* ── security (deep green break #1) ──────────────────────────── */
-  .sec-section { background: var(--g-900); color: #fff; position: relative; overflow: hidden; }
-  .sec-section::before { content: ''; position: absolute; inset: 0; pointer-events: none; background:
-      radial-gradient(circle at 8% 8%, rgba(255,206,69,.14), transparent 45%),
-      radial-gradient(circle at 92% 92%, rgba(229,72,77,.12), transparent 45%); }
-  .sec-section .container { position: relative; z-index: 1; }
-  .sec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-  .sec-card { padding: 28px 22px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); }
-  .sec-card-icon { width: 50px; height: 50px; border-radius: 14px; background: rgba(255,206,69,.14); color: var(--y-400); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
-  .sec-card h3 { font-size: 16px; margin-bottom: 8px; color: #fff; }
-  .sec-card p { font-size: 13.5px; color: rgba(255,255,255,.68); line-height: 1.55; }
-
-  /* ── FAQ (controlled accordion, grid-trick smooth height) ──────── */
-  .faq-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-  .faq-item { border: 1px solid rgba(29,27,18,.12); border-radius: var(--radius-md); background: #fff; overflow: hidden; }
-  .faq-item button.faq-trigger { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 700; font-size: 15px; color: var(--ink); }
-  .faq-plus { width: 26px; height: 26px; border-radius: 50%; background: var(--g-tint); color: var(--g-600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform var(--dur-standard) var(--ease); }
-  .faq-item[data-open="true"] .faq-plus { transform: rotate(135deg); background: var(--g-600); color: #fff; }
-  .faq-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-standard) var(--ease); }
-  .faq-item[data-open="true"] .faq-body { grid-template-rows: 1fr; }
-  .faq-body-inner { overflow: hidden; }
-  .faq-body p { padding: 0 22px 20px; font-size: 14px; color: var(--muted); line-height: 1.6; }
-  @media (prefers-reduced-motion: reduce) { .faq-body { transition: none; } }
-  .faq-footer { max-width: 760px; margin: 32px auto 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding-top: 24px; border-top: 1px solid rgba(29,27,18,.12); }
-  .faq-view-all { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--g-700); }
-  .faq-view-all:hover { color: var(--g-800); }
-  .faq-help-cta { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; color: var(--muted); }
-
-  /* ── final CTA (deep green break #2) ─────────────────────────── */
-  .cta-section { padding: var(--s-24) 0; background: var(--y-400); }
-  .cta-box { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 80px 40px; text-align: center; color: #fff; background: var(--g-800); }
-  .cta-box::before { content: ''; position: absolute; inset: 0; pointer-events: none; background:
-      radial-gradient(circle at 12% 15%, rgba(255,206,69,.22), transparent 45%),
-      radial-gradient(circle at 88% 88%, rgba(229,72,77,.16), transparent 45%); }
-  .cta-box > * { position: relative; z-index: 1; }
-  .cta-box h2 { font-size: clamp(30px, 3.8vw, 44px); margin-bottom: 18px; color: #fff; letter-spacing: -.8px; }
-  .cta-box p { font-size: 17px; color: rgba(255,255,255,.72); margin-bottom: 36px; max-width: 520px; margin-inline: auto; }
-  .cta-actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
-
-  /* ── footer ───────────────────────────────────────────────────── */
-  .footer { padding: 56px 0 28px; background: var(--g-900); color: rgba(255,255,255,.7); }
-  .f-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 44px; }
-  .f-brand p { color: rgba(255,255,255,.55); margin-top: 14px; max-width: 260px; font-size: 13.5px; line-height: 1.6; }
-  .f-brand .nav-logo { color: #fff; }
-  .f-col h4 { font-size: 12.5px; font-weight: 800; color: #fff; margin-bottom: 18px; text-transform: uppercase; letter-spacing: .5px; }
-  .f-col ul { display: flex; flex-direction: column; gap: 11px; }
-  .f-col a { color: rgba(255,255,255,.55); font-size: 13.5px; transition: var(--dur-micro); }
-  .f-col a:hover { color: var(--y-400); }
-  .f-link-btn { all: unset; color: rgba(255,255,255,.55); font-size: 13.5px; font-family: var(--font-body); cursor: pointer; transition: var(--dur-micro); }
-  .f-link-btn:hover { color: var(--y-400); }
-  .f-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.10); font-size: 13px; flex-wrap: wrap; gap: 16px; }
-  .footer .lang-pill { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); }
-  .footer .lang-pill button { color: rgba(255,255,255,.6); }
-  .footer .lang-pill button[aria-pressed="true"] { background: var(--g-600); color: #fff; }
-
-  /* ── responsive ───────────────────────────────────────────────── */
-  @media (max-width: 1080px) {
-    .hero-grid { grid-template-columns: 1fr; text-align: center; }
-    .hero-actions, .hero-trust-row { justify-content: center; }
-    .hero-visual { max-width: 460px; margin: 0 auto; padding-top: 30px; }
-    .cat-grid { grid-template-columns: repeat(2, 1fr); }
-    .spec-grid { grid-template-columns: repeat(2, 1fr); }
-    .proj-layout { grid-template-columns: 1fr; }
-    .sec-grid { grid-template-columns: repeat(2, 1fr); }
-    .trust-stats { grid-template-columns: repeat(2, 1fr); gap: 32px; }
-    .f-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
-    .steps-row { grid-template-columns: 1fr 1fr; gap: 16px; }
-    .prob-row { grid-template-columns: 60px 1fr; row-gap: 12px; }
-    .prob-arrow { display: none; }
-  }
-  /* nav content needs ~975px minimum to fit without wrapping — switch to the
-     hamburger menu earlier than the rest of the mobile layout kicks in, or
-     tablet widths (761–1023px) overflow the desktop nav row */
-  @media (max-width: 1023px) {
-    .nav-links, .nav-actions .btn, .nav-actions .lang-pill { display: none; }
-    .hamburger { display: flex; }
-    .mobile-panel.open { display: block; border-top: 1px solid rgba(29,27,18,.1); background: rgba(255,249,224,.98); padding: 16px 0 22px; }
-    .mobile-panel a.mp-link { display: block; padding: 14px 0; font-size: 15px; font-weight: 600; color: var(--ink); border-bottom: 1px solid rgba(29,27,18,.1); }
-    .mp-link-btn { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 14px 0; font-size: 15px; font-weight: 600; font-family: var(--font-body); color: var(--ink); border-bottom: 1px solid rgba(29,27,18,.1); cursor: pointer; }
-    .mobile-panel .mp-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-  }
-  @media (max-width: 760px) {
-    .brand-lockup .nav-logo-mark { width: 34px; height: 34px; }
-    .brand-lockup-word { font-size: 24px; }
-    .brand-lockup-tagline { font-size: 9.5px; letter-spacing: 1px; }
-    .hero { padding: 40px 0 56px; }
-    .price-grid { grid-template-columns: 1fr; }
-    .price-card.hi { transform: none; }
-    .cat-grid, .spec-grid { grid-template-columns: 1fr; }
-    .steps-row { grid-template-columns: 1fr; }
-    .f-grid { grid-template-columns: 1fr; gap: 32px; }
-    .f-brand p { max-width: none; }
-    .cta-box { padding: 52px 22px; }
-    .cta-actions { flex-direction: column; }
-    .cta-actions .btn { width: 100%; }
-    .section-pad { padding: var(--s-16) 0; }
-    .trust-stats { grid-template-columns: repeat(2, 1fr); }
-    .trust-stat h3 { font-size: 27px; }
-    .f-bottom { flex-direction: column; text-align: center; }
-    .escrow-visual { padding: 26px 22px; }
-    .ev-stats { gap: 20px; }
-    .test-card { padding: 32px 24px; }
-    .test-quote { font-size: 17px; }
-    .proj-card.featured h3 { font-size: 21px; }
-  }
-`}</style>
-
-      <div className="lp">
-        <div className="grain" aria-hidden="true" />
-        <noscript>
-          <style>{`.reveal, .hero-badge, .hero-h1 span, .hero-actions, .hero-trust-row, .hero-visual { opacity: 1 !important; transform: none !important; animation: none !important; }`}</style>
-        </noscript>
-        <a href="#main-content" className="skip-link">
-          {lang === "ru" ? "Перейти к содержимому" : lang === "en" ? "Skip to content" : "Asosiy kontentga o'tish"}
-        </a>
-
-        <header className="navbar">
-          <div className="container nav-row">
-            <Link href="/" className="nav-logo brand-lockup">
-              <span className="nav-logo-mark" aria-hidden="true" />
-              <span className="brand-lockup-text">
-                <span className="brand-lockup-word">Bobo<span>&amp;Doda</span></span>
-                <span className="brand-lockup-tagline">{t("brand_tagline")}</span>
-              </span>
-            </Link>
-            <nav className="nav-links" aria-label={t("a11y.mainNav")}>
-              {navLinks.map((l) => (
-                <a key={l.href} href={l.href}>{l.label}</a>
-              ))}
-            </nav>
-            <div className="nav-actions">
-              <button
-                type="button"
-                className="nav-help-btn"
-                aria-label={t("nav_help")}
-                title={t("nav_help")}
-                onClick={() => openSupportModal({ source: "navbar" })}
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 1.8-2 3.5" /><path d="M12 17h.01" /></svg>
-              </button>
-              <div className="lang-pill" role="group" aria-label={t("a11y.language")}>
-                {langOptions.map((opt) => (
-                  <button key={opt} type="button" onClick={() => setLang(opt)} aria-pressed={lang === opt}>
-                    {opt}
-                  </button>
+              <div className="nav-menu-links">
+                {navLinks.map((l) => (
+                  <a key={l.href} href={l.href} className="nav-link-item">
+                    {l.label}
+                  </a>
                 ))}
               </div>
-              <Link href="/kirish?tab=kirish" className="btn btn-outline-dark btn-sm">{t("nav_login")}</Link>
-              <Link href="/kirish" className="btn btn-green btn-sm">{t("nav_start")}</Link>
-              <button
-                className="hamburger"
-                aria-expanded={menuOpen}
-                aria-label={t("a11y.openMenu")}
-                onClick={() => setMenuOpen((v) => !v)}
-              >
-                {menuOpen ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-                )}
-              </button>
-            </div>
-          </div>
-          <div className={`mobile-panel ${menuOpen ? "open" : ""}`}>
-            <div className="container">
-              {navLinks.map((l) => (
-                <a key={l.href} href={l.href} className="mp-link" onClick={() => setMenuOpen(false)}>{l.label}</a>
-              ))}
-              <button
-                type="button"
-                className="mp-link mp-link-btn"
-                onClick={() => {
-                  setMenuOpen(false);
-                  openSupportModal({ source: "navbar" });
-                }}
-              >
-                {t("nav_help")}
-              </button>
-              <div className="mp-actions">
-                <div className="lang-pill" role="group" aria-label={t("a11y.language")}>
+
+              <div className="nav-actions-group">
+                <div className="lang-capsule" role="group" aria-label={t("a11y.language")}>
                   {langOptions.map((opt) => (
-                    <button key={opt} type="button" onClick={() => setLang(opt)} aria-pressed={lang === opt}>{opt}</button>
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setLang(opt)}
+                      aria-pressed={lang === opt}
+                    >
+                      {opt}
+                    </button>
                   ))}
                 </div>
-                <Link href="/kirish?tab=kirish" className="btn btn-outline-dark btn-block">{t("nav_login")}</Link>
-                <Link href="/kirish" className="btn btn-green btn-block">{t("nav_start")}</Link>
+
+                <Link href="/kirish?tab=kirish" className="nav-btn-login">
+                  <span className="login-icon" aria-hidden="true">👤</span>
+                  <span>{tr("Kirish", "Войти", "Log in")}</span>
+                </Link>
+
+                <Link href="/mutaxassis/ish-elonlari" className="btn-find-work">
+                  <span>{tr("Ish topish", "Найти работу", "Find jobs")}</span>
+                  <span className="work-badge" aria-hidden="true">💼</span>
+                </Link>
+
+                <Link href="/kirish?tab=register&role=xaridor" className="btn-apply-header">
+                  <span>{tr("E'lon berish", "Заказать", "Post a job")}</span>
+                  <span className="arrow-badge" aria-hidden="true">↗</span>
+                </Link>
+
+                <button
+                  type="button"
+                  className="btn-mobile-toggle"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label={tr("Menyu", "Меню", "Menu")}
+                  aria-expanded={menuOpen}
+                  aria-controls="mobile-nav-dropdown"
+                >
+                  {menuOpen ? "✕" : "☰"}
+                </button>
               </div>
-            </div>
+            </nav>
+
+            {/* Mobile Dropdown */}
+            {menuOpen && (
+              <div
+                id="mobile-nav-dropdown"
+                role="region"
+                aria-label={tr("Mobil navigatsiya menyusi", "Мобильное меню навигации", "Mobile navigation menu")}
+                style={{
+                  background: "var(--card)",
+                  borderRadius: 24,
+                  border: "1px solid var(--hair)",
+                  boxShadow: "var(--elev)",
+                  padding: "20px 24px",
+                  marginTop: 12,
+                }}
+              >
+                {navLinks.map((l) => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                      display: "block",
+                      padding: "12px 0",
+                      fontSize: 16,
+                      fontWeight: 600,
+                      borderBottom: "1px solid var(--hair)",
+                    }}
+                  >
+                    {l.label}
+                  </a>
+                ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <Link
+                      href="/kirish?tab=kirish"
+                      className="btn-outline"
+                      style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46 }}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      👤 {tr("Kirish", "Войти", "Log in")}
+                    </Link>
+                    <Link
+                      href="/mutaxassis/ish-elonlari"
+                      className="btn-outline"
+                      style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46, borderColor: "rgba(20,20,20,0.15)", background: "#ffffff", fontWeight: 700 }}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      💼 {tr("Ish topish", "Найти работу", "Find jobs")}
+                    </Link>
+                  </div>
+                  <Link
+                    href="/kirish?tab=register&role=xaridor"
+                    className="btn-primary"
+                    style={{ width: "100%", textAlign: "center", justifyContent: "center", minHeight: 48, padding: "0 20px" }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span>{tr("E'lon berish", "Разместить заказ", "Post a job")}</span>
+                    <span className="badge" aria-hidden="true">↗</span>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 
-        <div className="lp-scroll">
         <main id="main-content">
-          {/* HERO */}
-          <section className="hero">
-            <div className="canvas-decor" aria-hidden="true">
-              <div className="dotgrid" />
-              <div className="blob" style={{ width: 520, height: 520, top: -180, right: -160, background: "radial-gradient(circle, rgba(255,255,255,.30), transparent 68%)", animation: reduced ? "none" : "driftA 16s ease-in-out infinite" }} />
-              <div className="blob" style={{ width: 360, height: 360, bottom: -140, left: -120, background: "radial-gradient(circle, rgba(11,67,34,.10), transparent 70%)", animation: reduced ? "none" : "driftB 20s ease-in-out infinite" }} />
-              <div className="line" style={{ left: "14%" }} />
-              <div className="line" style={{ right: "14%" }} />
-            </div>
-            <div className="container hero-grid">
-              <div>
-                <span className="eyebrow hero-badge"><span className="dot" />{t("hero_tag")}</span>
-                <h1 className="hero-h1">
-                  <span>{t("hero_h1a")}</span>
-                  <span className="grad">{t("hero_h1b")}</span>
-                </h1>
-                <div className="hero-actions">
-                  <Link href="/kirish?tab=register&role=xaridor" className="btn btn-green">
-                    {t("hero_cta1")}<span className="arrow" aria-hidden="true">→</span>
-                  </Link>
-                  <Link href="/kirish?tab=register&role=mutaxassis" className="btn btn-outline-dark">{t("hero_cta2")}</Link>
+          {/* ── HERO SECTION ─────────────────────────────────────────── */}
+          <section className="hero-section">
+            <div className="container-yv">
+              <div className="hero-grid">
+                <div>
+                  <span className="eyebrow-pill">
+                    <span className="eyebrow-pill-dot" aria-hidden="true" />
+                    {tr(
+                      "Markaziy Osiyo raqamli xizmatlar bozori",
+                      "Рынок цифровых услуг Центральной Азии",
+                      "Central Asia Digital Services Marketplace"
+                    )}
+                  </span>
+
+                  <h1 className="hero-title">
+                    <span>{headlines[headlineIndex].line1}</span>
+                    <br />
+                    <span className="accent-orange">{headlines[headlineIndex].line2}</span>
+                  </h1>
+
+                  <p className="hero-desc">
+                    {tr(
+                      "Xavfsiz bitimlar platformasi. Mablag'ingiz xavfsiz Escrow hisobida muzlatiladi va ish to'liq topshirilgandagina ijrochiga to'lanadi.",
+                      "Платформа безопасных сделок. Средства надежно блокируются на счете Escrow и выплачиваются исполнителю только после полного приема работы.",
+                      "Escrow-secured digital marketplace. Your budget is protected and released to the freelancer only upon your 100% satisfaction."
+                    )}
+                  </p>
+
+                  <div className="hero-cta">
+                    <Link href="/kirish?tab=register&role=xaridor" className="btn-primary">
+                      <span>{tr("Buyurtma berish", "Разместить заказ", "Post a project")}</span>
+                      <span className="badge" aria-hidden="true">↗</span>
+                    </Link>
+                    <Link href="#portfolio" className="btn-outline">
+                      {tr("Buyurtmalarni ko'rish", "Смотреть заказы", "Explore jobs")}
+                    </Link>
+                  </div>
+
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 12, padding: "8px 18px 8px 12px", borderRadius: 999, background: "var(--card)", border: "1px solid var(--hair)", boxShadow: "var(--elev-sm)" }}>
+                    <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18, color: "var(--orange)" }}>
+                      100%
+                    </span>
+                    <span style={{ fontSize: 13.5, color: "var(--n500)", fontWeight: 600 }}>
+                      {tr("Kafolatlangan Escrow xavfsizligi", "Гарантированная защита Escrow", "Guaranteed Escrow Protection")}
+                    </span>
+                  </div>
                 </div>
-                <div className="hero-trust-row">
-                  <span className="hero-trust-item">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                    {t("hero_trust_escrow")}
-                  </span>
-                  <span className="hero-trust-sep">·</span>
-                  <span className="hero-trust-item">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-                    {t("trust_badge_verified")}
-                  </span>
-                  <span className="hero-trust-sep">·</span>
-                  <span className="hero-trust-item">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z" /></svg>
-                    {t("trust_countries_short")}
-                  </span>
+
+                {/* Right Visual: Live Deal & Escrow Dashboard Card */}
+                <div>
+                  <div className="hero-deal-card-wrap">
+                    {/* Floating Trust Badge 1 */}
+                    <div className="deal-floating-badge-top" aria-hidden="true">
+                      <span style={{ fontSize: 16 }}>⚡</span>
+                      <span>{tr("12 daqiqada 9 ta taklif", "9 откликов за 12 минут", "9 proposals in 12 min")}</span>
+                    </div>
+
+                    <div className="hero-deal-card">
+                      <div className="deal-card-header">
+                        <div className="deal-status-pill">
+                          <span className="deal-status-dot" aria-hidden="true" />
+                          <span>{tr("Jonli bitim #BD-4892", "Сделка #BD-4892", "Deal #BD-4892")}</span>
+                        </div>
+                        <div className="deal-escrow-badge">
+                          <span aria-hidden="true">🛡️</span>
+                          <span>100% Escrow</span>
+                        </div>
+                      </div>
+
+                      <div className="deal-title-row">
+                        <div className="deal-cat-tag">
+                          {tr("FinTech / E-Tijorat", "FinTech / Э-Коммерция", "FinTech / E-Commerce")}
+                        </div>
+                        <h3 className="deal-project-title">
+                          {tr(
+                            "Payme & Click integratsiyali onlayn do'kon",
+                            "Интернет-магазин с интеграцией Payme & Click",
+                            "Online store with Payme & Click integration"
+                          )}
+                        </h3>
+                      </div>
+
+                      <div className="deal-budget-box">
+                        <span className="deal-budget-label">
+                          {tr("Muzlatilgan kafolat depoziti:", "Защищенный депозит:", "Escrow deposit:")}
+                        </span>
+                        <span className="deal-budget-value">8,500,000 UZS</span>
+                      </div>
+
+                      <div className="deal-parties-grid">
+                        <div className="deal-party-card">
+                          <div className="party-avatar buyer">AQ</div>
+                          <div style={{ overflow: "hidden" }}>
+                            <div className="party-name">Azamat Q.</div>
+                            <div className="party-role">
+                              {tr("Xaridor (Verified)", "Заказчик (Verified)", "Client (Verified)")}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="deal-parties-arrow" aria-hidden="true">⇄</div>
+
+                        <div className="deal-party-card">
+                          <div className="party-avatar freelancer">DR</div>
+                          <div style={{ overflow: "hidden" }}>
+                            <div className="party-name">Diyora R.</div>
+                            <div className="party-role">⭐ 4.99 • Senior UI/UX</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="deal-milestone-list">
+                        <div className="deal-milestone-step">
+                          <div className="milestone-left">
+                            <span>✓</span>
+                            <span>
+                              {tr("Depozit Escrow hisobida muzlatildi", "Депозит заблокирован в Escrow", "Deposit locked in Escrow")}
+                            </span>
+                          </div>
+                          <span className="milestone-status escrow">8,500,000 UZS</span>
+                        </div>
+                        <div className="deal-milestone-step">
+                          <div className="milestone-left">
+                            <span>✓</span>
+                            <span>
+                              {tr("Sayt dizayni va arxitekturasi topshirildi", "Дизайн и код согласованы", "Design & code approved")}
+                            </span>
+                          </div>
+                          <span className="milestone-status done">
+                            {tr("Qabul qilindi", "Принято", "Approved")}
+                          </span>
+                        </div>
+                        <div className="deal-milestone-step">
+                          <div className="milestone-left">
+                            <span>⏳</span>
+                            <span>
+                              {tr("Yakuniy to'lov ijrochiga o'tkazilmoqda", "Выплата исполнителю", "Payout to specialist")}
+                            </span>
+                          </div>
+                          <span className="milestone-status" style={{ color: "var(--n500)" }}>
+                            {tr("Jarayonda", "В процессе", "In progress")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Floating Trust Badge 2 */}
+                    <div className="deal-floating-badge-bottom" aria-hidden="true">
+                      <span style={{ color: "var(--lime)" }}>🔒</span>
+                      <span>{tr("Mablag' kafolati: 0% xavf", "Гарантия возврата 100%", "100% money-back guarantee")}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
+          </section>
 
-              <div className="hero-visual">
-                <div className="float-chip top">
-                  <span className="float-chip-icon gold"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg></span>
-                  <div>
-                    <h5>{t("fc_1")}</h5>
-                    <p>{t("fc_1_sub")}</p>
-                  </div>
-                </div>
+          {/* ── STATBAR (Yoshlar Ventures uslubidagi ulkan raqamlar) ───── */}
+          <section className="statbar-wrap">
+            <dl className="nav-container statbar">
+              <div>
+                <dt>18,400+</dt>
+                <dd>{tr("Muvaffaqiyatli bitimlar", "Успешных контрактов", "Completed contracts")}</dd>
+              </div>
+              <div>
+                <dt className="highlight">100%</dt>
+                <dd>{tr("Muzlatilgan kafolat", "Защита средств Escrow", "Escrow protected funds")}</dd>
+              </div>
+              <div>
+                <dt>&lt; 14 min</dt>
+                <dd>{tr("O'rtacha birinchi taklif", "Средний первый отклик", "Average response time")}</dd>
+              </div>
+            </dl>
+          </section>
 
-                <div className="dash-card">
-                  <div className="dash-head">
-                    <span className="dash-head-tag"><span className="pulse" />{t("hero_dash_tag")}</span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--g-600)" }}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                  </div>
-                  <div className="dash-body">
-                    <div className="dash-title">{t("proj1_title")}</div>
-                    <div className="dash-meta">
-                      <span>{t("proj1_budget")}</span>
-                      <span>·</span>
-                      <span>{t("proj1_timeline")}</span>
+          {/* ── STAGES: SUPPORT FOR YOUR STAGE (01, 02, 03) ────────────── */}
+          <section className="stages-section" id="stages">
+            <div className="container-yv">
+              <span className="eyebrow-pill">
+                <span className="eyebrow-pill-dot" aria-hidden="true" />
+                {tr("Ish jarayoni", "Процесс работы", "Process")}
+              </span>
+              <h2 className="section-title">
+                {tr("Har bir bosqichda to'liq nazorat", "Простые шаги к результату", "Simple steps to success")}
+              </h2>
+
+              <ul className="stage-list">
+                <li className="stage-item">
+                  <span className="stage-num">01</span>
+                  <h3 className="stage-head">
+                    {tr("E'lon va talablar", "Размещение заказа", "Post requirements")}
+                  </h3>
+                  <p className="stage-desc">
+                    {tr(
+                      "Loyihangiz tavsifi va byudjetini kiriting. Sara mutaxassislar bir necha daqiqada o'z takliflarini berishadi.",
+                      "Опишите задачу и бюджет. Проверенные специалисты предложат решения в течение нескольких минут.",
+                      "Describe your task and budget. Vetted specialists will submit proposals within minutes."
+                    )}
+                  </p>
+                </li>
+
+                <li className="stage-item">
+                  <span className="stage-num">02</span>
+                  <h3 className="stage-head">
+                    {tr("Escrow muzlatish", "Заморозка средств", "Escrow deposit")}
+                  </h3>
+                  <p className="stage-desc">
+                    {tr(
+                      "Mablag' xavfsiz Escrow hisobida ushlab turiladi. Mutaxassis to'lov kafolatlanganini bilgan holda ishga kirishadi.",
+                      "Средства безопасно резервируются сервисом. Исполнитель приступает к работе, зная, что оплата гарантирована.",
+                      "Funds are safely reserved in Escrow. The specialist starts work knowing payment is guaranteed."
+                    )}
+                  </p>
+                </li>
+
+                <li className="stage-item lime-card">
+                  <span className="stage-num">03</span>
+                  <h3 className="stage-head">
+                    {tr("Tasdiqlash va to'lov", "Приемка и выплата", "Review & payout")}
+                  </h3>
+                  <p className="stage-desc">
+                    {tr(
+                      "Siz natijani to'liq tekshirib qabul qilasiz. Pul faqat siz tasdiqlaganingizdan keyingina mutaxassisga o'tkaziladi.",
+                      "Вы проверяете результат. Деньги переводятся специалисту только после вашего окончательного подтверждения.",
+                      "You review and approve the result. Money is released to the specialist only after your confirmation."
+                    )}
+                  </p>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          {/* ── STRIKETHROUGH STEREOTYPES (Yoshlar Ventures uslubi) ─────── */}
+          <section className="barriers-section">
+            <div className="container-yv barriers-grid">
+              <ul className="strike-list">
+                <li className="strike-item">
+                  {tr("«Mutaxassis pulni olib yo'qolsa-chi?»", "«А вдруг исполнитель исчезнет?»", "“What if the freelancer disappears?”")}
+                </li>
+                <li className="strike-item">
+                  {tr("«Sifatsiz ish topshirilsa-chi?»", "«Сделают не то, что просили»", "“What if the work is unsatisfactory?”")}
+                </li>
+                <li className="strike-item">
+                  {tr("«Qayerdan ishonchli odam topaman?»", "«У меня нет времени на споры»", "“Where do I find trusted talent?”")}
+                </li>
+              </ul>
+
+              <div>
+                <h2 className="section-title" style={{ fontSize: "clamp(28px, 4vw, 46px)" }}>
+                  {tr("Bularning bari ortda qoldi", "Никаких рисков с Bobo&Doda", "Zero risks with Bobo&Doda")}
+                </h2>
+                <p style={{ margin: "18px 0 28px", fontSize: 17, lineHeight: 1.65, color: "var(--n700)" }}>
+                  {tr(
+                    "Bizning 100% Escrow kafolati va mustaqil hakamlik tizimimiz har bir so'mingiz himoyada bo'lishini ta'minlaydi. Faqat sifatli natija uchun to'laysiz.",
+                    "Наша система Escrow и независимый арбитраж гарантируют, что ни один сум не пропадет зря. Вы платите только за реальный результат.",
+                    "Our 100% Escrow protection and independent dispute resolution ensure every soum is safe. You only pay for verified results."
+                  )}
+                </p>
+                <Link href="/kirish?tab=register&role=xaridor" className="btn-primary">
+                  <span>{tr("Xavfsiz boshlash", "Начать без риска", "Start risk-free")}</span>
+                  <span className="badge" aria-hidden="true">↗</span>
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* ── MARQUEE PORTFOLIO / RECENT JOBS ───────────────────────── */}
+          <section className="stages-section" id="portfolio" style={{ paddingBottom: 30 }}>
+            <div className="container-yv" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 36 }}>
+              <div>
+                <span className="eyebrow-pill">
+                  <span className="eyebrow-pill-dot" aria-hidden="true" />
+                  {tr("Qaynoq loyihalar", "Лента проектов", "Live Feed")}
+                </span>
+                <h2 className="section-title" style={{ margin: 0 }}>
+                  {tr("Jonli buyurtmalar oqimi", "Свежие заказы в реальном времени", "Live project feed in real time")}
+                </h2>
+              </div>
+              <Link href="/kirish?tab=register&role=mutaxassis" className="btn-outline" style={{ display: "none" }}>
+                {tr("Barchasi ↗", "Все ↗", "View all ↗")}
+              </Link>
+            </div>
+
+            <div className="marquee-container">
+              <div className="marquee-track">
+                {/* 1-loop */}
+                {portfolioItems.map((item) => (
+                  <article key={item.num} className="yv-job-card">
+                    <span className="card-big-num" aria-hidden="true">{item.num}</span>
+                    <div>
+                      <div className="card-tag">{item.category}</div>
+                      <h3 className="card-job-title">{item.title}</h3>
+                      <p className="card-job-desc">{item.desc}</p>
                     </div>
-                    <span className="dash-chip-verified">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                      {t("verified_label")}
-                    </span>
-                    <div className="dash-parties">
-                      <div className="dash-party">
-                        <span className="dash-avatar green">X</span>
-                        <div>
-                          <div className="dash-party-lbl">{t("hero_dash_client")}</div>
-                          <div className="dash-party-val">Jasur T.</div>
-                        </div>
-                      </div>
-                      <div className="dash-party">
-                        <span className="dash-avatar gold">A</span>
-                        <div>
-                          <div className="dash-party-lbl">{t("hero_dash_specialist")}</div>
-                          <div className="dash-party-val">Aziza Y.</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="dash-progress-row">
-                      <span>{t("hero_dash_progress")}</span>
-                      <span>80%</span>
-                    </div>
-                    <div className="dash-bar"><div className="dash-bar-fill" style={{ width: "80%" }} /></div>
-                    <div className="dash-milestones">
-                      <div className="dash-ms">
-                        <span className="dash-ms-dot done"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg></span>
-                        {t("hero_dash_m1")}
-                      </div>
-                      <div className="dash-ms">
-                        <span className="dash-ms-dot active" />
-                        {t("escrow_status_2")}
-                      </div>
-                      <div className="dash-ms muted">
-                        <span className="dash-ms-dot pending" />
-                        {t("hero_dash_m3")}
-                      </div>
-                    </div>
-                    <div className="dash-footer">
+                    <div className="card-job-footer">
                       <div>
-                        <div className="dash-footer-lbl">{t("hero_dash_escrow")}</div>
-                        <div className="dash-footer-val">{t("proj1_budget")}</div>
+                        <div style={{ fontSize: 11.5, color: "var(--n500)", textTransform: "uppercase", fontWeight: 700 }}>
+                          {tr("Byudjet", "Бюджет", "Budget")}
+                        </div>
+                        <div className="card-job-amount">{item.budget}</div>
                       </div>
-                      <span className="dash-lock">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                      <span className="card-bid-pill">
+                        {tr(`${item.bids} ta taklif`, `${item.bids} откликов`, `${item.bids} proposals`)}
                       </span>
                     </div>
-                  </div>
-                </div>
-
-                <div className="float-chip bottom">
-                  <span className="float-chip-icon green"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m22 2-7 20-4-9-9-4Z" /></svg></span>
-                  <div>
-                    <h5>{t("fc_2")}</h5>
-                    <p>{t("fc_2_sub")}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* TRUST BAR */}
-          <section className="trust-section">
-            <div className="container">
-              <div className="trust-top">
-                <span className="trust-chip"><span className="flag-dot" />{t("country_uz")}</span>
-                <span className="trust-chip"><span className="flag-dot" />{t("country_kz")}</span>
-                <span className="trust-chip"><span className="flag-dot" />{t("country_kg")}</span>
-                <span className="trust-chip"><span className="flag-dot" />{t("country_tj")}</span>
-                <span className="trust-chip"><span className="flag-dot" />{t("country_tm")}</span>
-                <span className="trust-chip badge">{t("trust_badge_startups")}</span>
-                <span className="trust-chip badge">{t("trust_badge_secure")}</span>
-                <span className="trust-chip badge">{t("trust_badge_verified")}</span>
-              </div>
-            </div>
-          </section>
-
-          {/* ESCROW — main product story, scroll-driven */}
-          <section className="section-pad escrow-section" id="how-it-works">
-            <div className="container">
-              <div className="sec-head reveal">
-                <span className="eyebrow"><span className="dot" />{t("escrow_tag")}</span>
-                <h2>{t("escrow_h2")}</h2>
-                <p>{t("escrow_sub")}</p>
-              </div>
-
-              <div className="steps-row">
-                {[
-                  { h: t("step1_h"), p: t("step1_p") },
-                  { h: t("step2_h"), p: t("step2_p") },
-                  { h: t("step3_h"), p: t("step3_p") },
-                  { h: t("step4_h"), p: t("step4_p") },
-                ].map((s, i) => (
-                  <div
-                    className={`step-item reveal rd${i + 1} ${activeStep === i ? "active" : ""}`}
-                    key={i}
-                    ref={(el) => { stepRefs.current[i] = el; }}
-                  >
-                    <div className="step-num">{i + 1}</div>
-                    <h3>{s.h}</h3>
-                    <p>{s.p}</p>
-                  </div>
+                  </article>
+                ))}
+                {/* 2-loop (infinite marquee seamless effect) */}
+                {portfolioItems.map((item) => (
+                  <article key={`loop-${item.num}`} className="yv-job-card">
+                    <span className="card-big-num" aria-hidden="true">{item.num}</span>
+                    <div>
+                      <div className="card-tag">{item.category}</div>
+                      <h3 className="card-job-title">{item.title}</h3>
+                      <p className="card-job-desc">{item.desc}</p>
+                    </div>
+                    <div className="card-job-footer">
+                      <div>
+                        <div style={{ fontSize: 11.5, color: "var(--n500)", textTransform: "uppercase", fontWeight: 700 }}>
+                          {tr("Byudjet", "Бюджет", "Budget")}
+                        </div>
+                        <div className="card-job-amount">{item.budget}</div>
+                      </div>
+                      <span className="card-bid-pill">
+                        {tr(`${item.bids} ta taklif`, `${item.bids} откликов`, `${item.bids} proposals`)}
+                      </span>
+                    </div>
+                  </article>
                 ))}
               </div>
-
-              <div className="escrow-visual reveal" role="status" aria-live="polite">
-                <div className="ev-row">
-                  <div>
-                    <div className="ev-status">{escrowStatuses[activeStep]}</div>
-                    <div className="ev-amount">{t("proj1_budget")}</div>
-                  </div>
-                  <span className="ev-lock">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                  </span>
-                </div>
-                <div className="ev-bar"><div className="ev-bar-fill" style={{ width: `${escrowFill}%` }} /></div>
-                <div className="ev-stats">
-                  <div className="ev-stat"><h5>0%</h5><span>{t("ev_s1")}</span></div>
-                  <div className="ev-stat"><h5>100%</h5><span>{t("ev_s2")}</span></div>
-                </div>
-              </div>
             </div>
           </section>
 
-          {/* CATEGORIES — asymmetric grid */}
-          <section className="section-pad canvas" id="categories">
-            <div className="canvas-decor" aria-hidden="true">
-              <div className="dotgrid" />
-              <div className="hline" style={{ top: "18%" }} />
-              <div className="blob" style={{ width: 380, height: 380, bottom: "-10%", left: "-8%", background: "radial-gradient(circle, rgba(11,67,34,.08), transparent 70%)" }} />
-            </div>
-            <div className="container">
-              <div className="sec-head reveal">
-                <span className="eyebrow"><span className="dot" />{t("cat_tag")}</span>
-                <h2>{t("cat_h2_main")}</h2>
-                <p>{t("cat_sub_main")}</p>
+          {/* ── CATEGORIES (Yo'nalishlar) ─────────────────────────────── */}
+          <section className="stages-section" id="categories" style={{ paddingTop: 30 }}>
+            <div className="container-yv">
+              <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 40px" }}>
+                <span className="eyebrow-pill">
+                  <span className="eyebrow-pill-dot" aria-hidden="true" />
+                  {tr("Xizmat toifalari", "Направления", "Categories")}
+                </span>
+                <h2 className="section-title">
+                  {tr("Istalgan sohadagi professionallar", "Все сферы цифровых услуг", "Experts across all digital fields")}
+                </h2>
               </div>
-              <div className="cat-grid">
-                {categories.map((c, i) => (
-                  <Link href="/kirish" className={`cat-card reveal rd${(i % 4) + 1}`} key={c.key}>
+
+              <div className="cat-grid-yv">
+                {categoriesList.map((c) => (
+                  <Link href={`/kirish?tab=register&role=xaridor&cat=${c.key}`} key={c.key} className="cat-card-yv">
                     <div>
-                      <div className="cat-icon">
-                        <CategoryIcon name={c.icon} />
+                      <div className="cat-icon-wrap">
+                        <span style={{ fontSize: 20 }}>⚡</span>
                       </div>
-                      <h3>{t(`c_${c.key}`)}</h3>
-                      <p>{t(`c_${c.key}_p`)}</p>
+                      <h3>{c.title}</h3>
+                      <p>{c.count}</p>
                     </div>
-                    <div className="cat-meta">
-                      {t(`c_${c.key}_price`)}
-                      <span className="go" aria-hidden="true">→</span>
+                    <div className="cat-card-bottom">
+                      <span>{c.price}</span>
+                      <span aria-hidden="true">↗</span>
                     </div>
                   </Link>
                 ))}
@@ -818,149 +1950,188 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* PRICING */}
-          <section className="section-pad" style={{ background: "var(--white)" }} id="pricing">
-            <div className="container">
-              <div className="sec-head reveal">
-                <span className="eyebrow"><span className="dot" />{t("pricing_tag")}</span>
-                <h2>{t("pricing_h2")}</h2>
-                <p>{t("pricing_sub")}</p>
-              </div>
-              <div className="price-grid">
-                <div className="price-card reveal">
-                  <h3>{t("price_specialist_title")}</h3>
-                  <div className="val">{PLATFORM_FEE_PERCENT}%</div>
-                  <p className="desc">{t("price_specialist_desc")}</p>
+          {/* ── ESCROW CALCULATOR ─────────────────────────────────────── */}
+          <section className="stages-section" id="security" style={{ background: "var(--warm)" }}>
+            <div className="container-yv">
+              <div className="calc-box-yv">
+                <div>
+                  <span className="eyebrow-pill">
+                    <span className="eyebrow-pill-dot" aria-hidden="true" />
+                    {tr("Kalkulyator", "Калькулятор", "Calculator")}
+                  </span>
+                  <h2 className="section-title" style={{ fontSize: "clamp(28px, 4vw, 44px)" }}>
+                    {tr("Shaffof hisob-kitob va kafolat", "Рассчитайте бюджет сделки", "Transparent pricing & guarantee")}
+                  </h2>
+                  <p style={{ color: "var(--n500)", fontSize: 16, lineHeight: 1.65 }}>
+                    {tr(
+                      "Hech qanday yashirin komissiyalarsiz. Xaridor uchun xizmat haqi 0%. Mablag' to'liq xavfsiz hisobda muzlatiladi.",
+                      "Никаких скрытых комиссий. Для заказчика комиссия 0%. Escrow блокирует всю сумму до финала.",
+                      "No hidden fees. 0% platform fee for clients. Escrow locks the entire budget securely until final delivery."
+                    )}
+                  </p>
                 </div>
-                <div className="price-card hi reveal rd1">
-                  <h3>{t("price_client_title")}</h3>
-                  <div className="val">{t("price_client_value")}</div>
-                  <p className="desc">{t("price_client_desc")}</p>
-                </div>
-                <div className="price-card zero reveal rd2">
-                  <h3>{t("price_hidden_title")}</h3>
-                  <div className="val">0</div>
-                  <p className="desc">{t("price_hidden_desc")}</p>
-                </div>
-              </div>
-            </div>
-          </section>
 
-          {/* SECURITY — deep green contrast break */}
-          <section className="section-pad sec-section on-dark" id="security">
-            <div className="container">
-              <div className="sec-head reveal">
-                <span className="eyebrow on-dark"><span className="dot" />{t("sec_tag")}</span>
-                <h2>{t("sec_h2")}</h2>
-                <p>{t("sec_sub")}</p>
-              </div>
-              <div className="sec-grid">
-                {[
-                  { h: t("sec1_h"), p: t("sec1_p"), icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /> },
-                  { h: t("sec2_h"), p: t("sec2_p"), icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></> },
-                  { h: t("sec3_h"), p: t("sec3_p"), icon: <><polyline points="20 6 9 17 4 12" /></> },
-                  { h: t("sec4_h"), p: t("sec4_p"), icon: <><circle cx="12" cy="12" r="10" /><path d="M12 8v5" /><path d="M12 16h.01" /></> },
-                ].map((s, i) => (
-                  <div className={`sec-card reveal rd${i + 1}`} key={s.h}>
-                    <div className="sec-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{s.icon}</svg>
-                    </div>
-                    <h3>{s.h}</h3>
-                    <p>{s.p}</p>
+                <div style={{ background: "var(--card)", padding: 32, borderRadius: 24, border: "1px solid var(--hair)" }}>
+                  <label
+                    htmlFor="escrow-calc-slider"
+                    style={{ display: "block", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--n500)", cursor: "pointer" }}
+                  >
+                    {tr("Loyiha summasi", "Сумма проекта", "Project budget")}
+                  </label>
+                  <div
+                    style={{ fontFamily: "var(--font-display)", fontSize: 36, fontWeight: 800, color: "var(--orange)", margin: "8px 0" }}
+                    aria-live="polite"
+                  >
+                    {formatSum(calcBudget)} UZS
                   </div>
-                ))}
+                  <input
+                    id="escrow-calc-slider"
+                    type="range"
+                    min={500000}
+                    max={20000000}
+                    step={500000}
+                    value={calcBudget}
+                    onChange={(e) => setCalcBudget(Number(e.target.value))}
+                    aria-label={tr("Loyiha summasi", "Сумма проекта", "Project budget")}
+                    aria-valuemin={500000}
+                    aria-valuemax={20000000}
+                    aria-valuenow={calcBudget}
+                    aria-valuetext={`${formatSum(calcBudget)} UZS`}
+                    className="calc-slider-input"
+                  />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, borderTop: "1px solid var(--hair)", paddingTop: 18 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                      <span style={{ color: "var(--n500)" }}>{tr("Xaridor to'lovi:", "Оплата заказчика:", "Client pays:")}</span>
+                      <strong>{formatSum(calcBudget)} UZS</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                      <span style={{ color: "var(--n500)" }}>{tr("Escrow himoyasi:", "Защита Escrow:", "Escrow protection:")}</span>
+                      <strong style={{ color: "var(--orange)" }}>
+                        {tr("100% Kafolatlangan", "100% Гарантировано", "100% Guaranteed")}
+                      </strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800 }}>
+                      <span>{tr("Mutaxassis oladi:", "Исполнитель получит:", "Specialist receives:")}</span>
+                      <span style={{ color: "var(--ink)" }}>{formatSum(specialistShare)} UZS</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* FAQ */}
-          <section className="section-pad canvas" id="faq">
-            <div className="canvas-decor" aria-hidden="true">
-              <div className="dotgrid" />
-            </div>
-            <div className="container">
-              <div className="sec-head reveal">
-                <span className="eyebrow"><span className="dot" />{t("faq_tag")}</span>
-                <h2>{t("faq_h2")}</h2>
+          {/* ── FAQ ───────────────────────────────────────────────────── */}
+          <section className="stages-section" id="faq">
+            <div className="container-yv">
+              <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
+                <span className="eyebrow-pill">
+                  <span className="eyebrow-pill-dot" aria-hidden="true" />
+                  {t("faq_tag")}
+                </span>
+                <h2 className="section-title">{t("faq_h2")}</h2>
               </div>
-              <div className="faq-list">
+
+              <div className="faq-box-yv">
                 {faqs.map((f, i) => {
                   const open = openFaq === i;
                   return (
-                    <div className="faq-item reveal" data-open={open} key={f.q}>
+                    <div key={f.q} className="faq-row" data-open={open}>
                       <button
                         type="button"
-                        className="faq-trigger"
-                        aria-expanded={open}
-                        aria-controls={`faq-panel-${i}`}
                         id={`faq-trigger-${i}`}
+                        className="faq-trigger-btn"
                         onClick={() => setOpenFaq(open ? null : i)}
+                        aria-expanded={open}
+                        aria-controls={`faq-answer-${i}`}
                       >
-                        {f.q}
-                        <span className="faq-plus" aria-hidden="true">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                        </span>
+                        <span>{f.q}</span>
+                        <span className="faq-icon-cross" aria-hidden="true">+</span>
                       </button>
-                      <div className="faq-body" id={`faq-panel-${i}`} role="region" aria-labelledby={`faq-trigger-${i}`}>
-                        <div className="faq-body-inner">
-                          <p>{f.a}</p>
+                      {open && (
+                        <div id={`faq-answer-${i}`} role="region" aria-labelledby={`faq-trigger-${i}`}>
+                          <p className="faq-content-p">{f.a}</p>
                         </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
-              <div className="faq-footer reveal">
-                <Link href="/savol-javob" className="faq-view-all">
-                  {t("faq_view_all")} <span aria-hidden="true">→</span>
-                </Link>
-                <div className="faq-help-cta">
-                  <span>{t("faq_still_need_help")}</span>
-                  <button type="button" className="btn btn-outline-dark btn-sm" onClick={() => openSupportModal({ source: "faq" })}>
-                    {t("faq_ask_support")}
-                  </button>
-                </div>
+
+              <div style={{ textAlign: "center", marginTop: 32 }}>
+                <button
+                  type="button"
+                  onClick={() => openSupportModal({ source: "faq" })}
+                  className="btn-outline"
+                  style={{ minHeight: 46, fontSize: 14 }}
+                >
+                  {t("faq_still_need_help")} {t("faq_ask_support")} ↗
+                </button>
               </div>
             </div>
           </section>
 
-          {/* FINAL CTA — deep green break #2 */}
-          <section className="cta-section">
-            <div className="container">
-              <div className="cta-box reveal">
-                <h2>{t("cta_ready")}</h2>
-                <p>{t("cta_desc")}</p>
-                <div className="cta-actions">
-                  <Link href="/kirish?tab=register&role=xaridor" className="btn btn-white">
-                    {t("cta_btn1")}<span className="arrow" aria-hidden="true">→</span>
-                  </Link>
-                  <Link href="/kirish?tab=register&role=mutaxassis" className="btn btn-ghost-dark">
-                    {t("cta_btn2")}<span className="arrow" aria-hidden="true">→</span>
-                  </Link>
-                </div>
+          {/* ── FINAL CALL TO ACTION ──────────────────────────────────── */}
+          <section className="cta-final-yv">
+            <div className="container-yv">
+              <span className="eyebrow-pill">
+                <span className="eyebrow-pill-dot" aria-hidden="true" />
+                Bobo&amp;Doda
+              </span>
+              <h2 className="cta-final-title">
+                {tr(
+                  "Keyingi loyihangizni bugun xavfsiz boshlang",
+                  "Начните ваш следующий проект прямо сейчас",
+                  "Start your next project safely today"
+                )}
+              </h2>
+              <p style={{ fontSize: 18, color: "var(--n500)", maxWidth: 520, margin: "0 auto 36px" }}>
+                {tr(
+                  "E'lon joylashtiring va bir necha daqiqada sara mutaxassislardan takliflar oling.",
+                  "Разместите задачу за 2 минуты и получите первые отклики проверенных специалистов.",
+                  "Post your task in 2 minutes and get proposals from top verified experts."
+                )}
+              </p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
+                <Link href="/kirish?tab=register&role=xaridor" className="btn-primary">
+                  <span>{tr("E'lon berish", "Разместить заказ", "Post a job")}</span>
+                  <span className="badge" aria-hidden="true">↗</span>
+                </Link>
+                <Link href="/kirish?tab=register&role=mutaxassis" className="btn-outline">
+                  {tr("Mutaxassis bo'lish", "Стать исполнителем", "Become a specialist")}
+                </Link>
               </div>
             </div>
           </section>
         </main>
 
-        <footer className="footer">
-          <div className="container">
-            <div className="f-grid">
-              <div className="f-brand">
-                <Link href="/" className="nav-logo">
-                  <span className="nav-logo-mark" aria-hidden="true" />
-                  Bobo<span>&amp;Doda</span>
-                </Link>
-                <p>{t("foot_desc")}</p>
+        {/* ── FOOTER ────────────────────────────────────────────────── */}
+        <footer className="footer-yv">
+          <div className="container-yv">
+            <div className="footer-grid-yv">
+              <div>
+                <div className="footer-logo-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <img
+                    src="/logo-icon.png"
+                    alt="Bobo&Doda"
+                    width={32}
+                    height={32}
+                    style={{ height: 32, width: 32, objectFit: "contain", display: "block" }}
+                  />
+                  <span>BOBO&amp;DODA</span>
+                </div>
+                <p className="footer-desc-p">{t("foot_desc")}</p>
               </div>
-              <div className="f-col">
+
+              <div className="footer-col-yv">
                 <h4>{t("f_product")}</h4>
                 <ul>
-                  <li><a href="#how-it-works">{t("f_how")}</a></li>
-                  <li><a href="#pricing">{t("f_pricing")}</a></li>
+                  <li><a href="#portfolio">{tr("Buyurtmalar", "Проекты", "Projects")}</a></li>
+                  <li><a href="#stages">{t("f_how")}</a></li>
+                  <li><a href="#categories">{t("nav_cats")}</a></li>
                 </ul>
               </div>
-              <div className="f-col">
+
+              <div className="footer-col-yv">
                 <h4>{t("f_legal")}</h4>
                 <ul>
                   <li><Link href="/shartlar">{t("f_terms")}</Link></li>
@@ -968,65 +2139,39 @@ export default function LandingPage() {
                   <li><Link href="/oferta">{t("f_offer")}</Link></li>
                 </ul>
               </div>
-              <div className="f-col">
+
+              <div className="footer-col-yv">
                 <h4>{t("f_support")}</h4>
                 <ul>
                   <li><Link href="/savol-javob">{t("f_faq")}</Link></li>
                   <li><Link href="/yordam-markazi">{t("f_help")}</Link></li>
                   <li>
-                    <button type="button" className="f-link-btn" onClick={() => openSupportModal({ source: "footer" })}>
+                    <button type="button" onClick={() => openSupportModal({ source: "footer" })}>
                       {t("f_contact_us")}
                     </button>
                   </li>
                 </ul>
               </div>
             </div>
-            <div className="f-bottom">
-              <p>&copy; 2026 Bobo&amp;Doda. {t("foot_rights")}</p>
-              <div className="lang-pill" role="group" aria-label={t("a11y.language")}>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--hair)", paddingTop: 24, fontSize: 13, color: "var(--n500)", flexWrap: "wrap", gap: 14 }}>
+              <div>&copy; 2026 Bobo&amp;Doda. {t("foot_rights")}</div>
+              <div className="lang-capsule" role="group" aria-label={t("a11y.language")}>
                 {langOptions.map((opt) => (
-                  <button key={opt} type="button" onClick={() => setLang(opt)} aria-pressed={lang === opt}>{opt}</button>
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setLang(opt)}
+                    aria-pressed={lang === opt}
+                  >
+                    {opt}
+                  </button>
                 ))}
               </div>
             </div>
           </div>
         </footer>
-        </div>
       </div>
     </div>
   );
-}
-
-function CategoryIcon({ name }: { name: string }) {
-  const props = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 } as const;
-  switch (name) {
-    case "design":
-      return <svg {...props}><path d="M12 19l7-7-3-3-7 7v3h3Z" /><path d="M18 13l-3-3 2-2 3 3-2 2Z" /></svg>;
-    case "code":
-      return <svg {...props}><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>;
-    case "cpu":
-      return <svg {...props}><rect x="6" y="6" width="12" height="12" rx="2" /><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" /></svg>;
-    case "megaphone":
-      return <svg {...props}><path d="M3 11v3a1 1 0 0 0 1 1h2l4 5V6L6 11H4a1 1 0 0 0-1 1Z" /><path d="M15 8a4 4 0 0 1 0 8M19 5a8 8 0 0 1 0 14" /></svg>;
-    case "languages":
-      return <svg {...props}><path d="M4 5h9M9 3v2M6 8c1.5 3.5 3.8 5.7 6.5 7M13 8c-1 3-3.5 6-7.5 8" /><path d="M15 21l4-9 4 9M16.3 18h5.4" /></svg>;
-    case "video":
-      return <svg {...props}><rect x="2" y="5" width="15" height="14" rx="2" /><path d="M22 8.5v7L17 13Z" /></svg>;
-    case "briefcase":
-      return <svg {...props}><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>;
-    case "cap":
-      return <svg {...props}><path d="M2 9.5 12 5l10 4.5-10 4.5-10-4.5Z" /><path d="M6 11.5V16c0 1.5 2.5 3 6 3s6-1.5 6-3v-4.5" /></svg>;
-    case "shield":
-      return <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="M9 12l2 2 4-4" /></svg>;
-    case "chart":
-      return <svg {...props}><rect x="3" y="12" width="4" height="8" /><rect x="10" y="7" width="4" height="13" /><rect x="17" y="3" width="4" height="17" /></svg>;
-    case "cloud":
-      return <svg {...props}><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4 2A4 4 0 0 0 6.5 19h11Z" /></svg>;
-    case "flask":
-      return <svg {...props}><path d="M9 2v6.5L4.3 17a2 2 0 0 0 1.75 3h11.9a2 2 0 0 0 1.75-3L15 8.5V2" /><path d="M8.5 2h7" /><path d="M8 14h8" /></svg>;
-    case "headset":
-      return <svg {...props}><path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z" /><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3Z" /></svg>;
-    default:
-      return null;
-  }
 }

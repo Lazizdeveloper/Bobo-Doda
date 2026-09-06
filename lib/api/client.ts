@@ -30,6 +30,7 @@ export const authService: AuthService = {
   verifyTelegram: (code) => call(() => mock.verifyTelegram(code)),
   chooseRole: (role) => call(() => mock.chooseRole(role)),
   resetPassword: (input) => call(() => mock.resetPassword(input)),
+  refresh: () => call(mock.refreshSession),
   logout: mock.logout,
 };
 
@@ -119,6 +120,8 @@ export const paymentsService: PaymentsService = {
   removeCard: (id) => call(() => mock.removeCard(id)),
   withdrawEarnings: (cardId) => call(() => mock.withdrawFunds(cardId)),
   withdrawBalance: (cardId) => call(() => mock.withdrawBalance(cardId)),
+  getPendingWithdrawalTotal: () => call(mock.getPendingWithdrawalTotal),
+  listMyWithdrawalRequests: () => call(mock.getMyWithdrawalRequests),
   getWithdrawnTotal: () => call(mock.getWithdrawnTotal),
 };
 
@@ -155,6 +158,7 @@ export const verificationService: VerificationService = {
 
 export const supportService: SupportService = {
   listMine: () => call(mock.getSupportTickets),
+  listReplies: (ticketId) => call(() => mock.getSupportReplies(ticketId)),
   create: (input) => call(() => mock.createSupportTicket(input)),
 };
 

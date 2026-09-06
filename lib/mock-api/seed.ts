@@ -11,6 +11,7 @@ import type {
   Service,
   User,
   VerificationRecord,
+  WithdrawalRequest,
 } from "@/lib/types";
 import { svgGallery, svgImg } from "@/lib/mock-api/placeholder";
 
@@ -218,6 +219,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 1,
     available: true,
     rating: 4.9,
+    reviewCount: 24,
     completedContracts: 26,
     badge: "top_mutaxassis",
     memberSince: "2026-01-10T10:00:00.000Z",
@@ -246,6 +248,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 2,
     available: true,
     rating: 5.0,
+    reviewCount: 25,
     completedContracts: 28,
     badge: "top_mutaxassis",
     memberSince: "2026-01-15T11:30:00.000Z",
@@ -273,6 +276,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 3,
     available: true,
     rating: 4.8,
+    reviewCount: 14,
     completedContracts: 16,
     badge: "ishonchli",
     memberSince: "2026-02-01T09:15:00.000Z",
@@ -289,6 +293,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 1,
     available: true,
     rating: 4.7,
+    reviewCount: 9,
     completedContracts: 11,
     badge: "ishonchli",
     memberSince: "2026-02-12T14:20:00.000Z",
@@ -305,6 +310,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 4,
     available: true,
     rating: 4.9,
+    reviewCount: 9,
     completedContracts: 10,
     badge: "ishonchli",
     memberSince: "2026-03-01T16:45:00.000Z",
@@ -321,6 +327,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 2,
     available: true,
     rating: 4.8,
+    reviewCount: 7,
     completedContracts: 8,
     badge: "ishonchli",
     memberSince: "2026-03-10T12:00:00.000Z",
@@ -341,6 +348,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 5,
     available: false,
     rating: 4.6,
+    reviewCount: 5,
     completedContracts: 6,
     badge: "ishonchli",
     memberSince: "2026-03-18T08:30:00.000Z",
@@ -357,6 +365,7 @@ export const seedProfiles: Record<string, SellerProfile> = {
     responseTimeHours: 1,
     available: true,
     rating: 5.0,
+    reviewCount: 4,
     completedContracts: 5,
     badge: "ishonchli",
     memberSince: "2026-04-01T10:00:00.000Z",
@@ -916,7 +925,9 @@ export const seedNotifications: AppNotification[] = [
     userId: "u-1",
     kind: "xabar",
     messageKey: "ntf.newMessage",
-    params: { title: "Ichki CRM uchun hisobot moduli" },
+    /* `ntf.newMessage` matni {name} kutadi, {title} emas — noto'g'ri kalit
+       berilsa foydalanuvchi bildirishnomada xom "{name}" ni ko'radi. */
+    params: { name: "Dilshod Rahimov" },
     href: "/mutaxassis/shartnomalar/cnt-5",
     read: false,
     createdAt: "2026-03-16T11:05:00.000Z",
@@ -957,6 +968,66 @@ export const seedNotifications: AppNotification[] = [
    ro'yxatdan hisoblanadi (`verifiedIdentitySet`). Ilgari bu ma'lumot
    admin panelining mock faylida turardi va asosiy ilova unga bog'liq edi;
    admin alohida branch'ga chiqarilgach, u shu yerga ko'chirildi. */
+export const seedWithdrawals: WithdrawalRequest[] = [
+  {
+    id: "wdr-1",
+    userId: "u-1",
+    userName: "Rustam Qosimov",
+    userRole: "mutaxassis",
+    source: "earnings",
+    amount: 3325000, // 3 500 000 − 5% xizmat haqi
+    currency: "UZS",
+    cardDetails: "UZCARD •••• 4589",
+    cardId: "card-seed-1",
+    status: "kutilmoqda",
+    createdAt: "2026-04-19T10:00:00.000Z",
+  },
+  {
+    id: "wdr-2",
+    userId: "u-2",
+    userName: "Nigora Karimova",
+    userRole: "mutaxassis",
+    source: "earnings",
+    amount: 1900000, // 2 000 000 − 5% xizmat haqi
+    currency: "UZS",
+    cardDetails: "HUMO •••• 1122",
+    cardId: "card-seed-2",
+    status: "tasdiqlangan",
+    createdAt: "2026-02-16T11:30:00.000Z",
+    processedAt: "2026-02-16T14:00:00.000Z",
+    processedBy: "adm-ops",
+  },
+  {
+    id: "wdr-3",
+    userId: "u-6",
+    userName: "Shahzod Mirzayev",
+    userRole: "mutaxassis",
+    source: "earnings",
+    amount: 810000,
+    currency: "UZS",
+    cardDetails: "UZCARD •••• 9900",
+    cardId: "card-seed-3",
+    status: "kutilmoqda",
+    createdAt: "2026-04-20T09:15:00.000Z",
+  },
+  {
+    id: "wdr-4",
+    userId: "u-sus1",
+    userName: "Botir Qobilov",
+    userRole: "mutaxassis",
+    source: "earnings",
+    amount: 1200000,
+    currency: "UZS",
+    cardDetails: "UZCARD •••• 7711",
+    cardId: "card-seed-4",
+    status: "rad_etilgan",
+    createdAt: "2026-04-10T11:00:00.000Z",
+    processedAt: "2026-04-11T12:00:00.000Z",
+    processedBy: "adm-ceo",
+    rejectionReason: "Shubhali faoliyat va hisobning bloklanganligi sababli yechish to'xtatildi.",
+  },
+];
+
 export const seedVerifications: VerificationRecord[] = [
   {
     userId: "u-1",

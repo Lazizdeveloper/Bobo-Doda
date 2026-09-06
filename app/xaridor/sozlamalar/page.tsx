@@ -88,7 +88,7 @@ export default function XaridorSozlamalarPage() {
           <p className="text-sm text-muted mt-1">{t("bset.accountHint")}</p>
         </div>
         <div className="md:col-span-2">
-          <Card padding="lg" stitch>
+          <Card padding="lg">
             <form onSubmit={handleSave} className="flex flex-col gap-5" noValidate>
               <Input
                 label={t("onboard.fullName")}

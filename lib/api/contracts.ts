@@ -28,12 +28,40 @@ export interface PaymentDTO {
 }
 
 export interface AuthService {
+  /**
+   * Joriy sessiya — SINXRON va shunday qoladi.
+   *
+   * Backend'da bu access token'ning o'zi emas, uning brauzerda saqlangan
+   * SNAPSHOT'i (userId/role/verified). Token httpOnly cookie'da bo'ladi va
+   * JS uni o'qiy olmaydi — shuning uchun bu yerda faqat "kim kirgan"
+   * ma'lumoti turadi. Layout guard'lari va xabar egaligini hisoblash har
+   * render'da kerak bo'lgani uchun bu chaqiruv async bo'la olmaydi.
+   *
+   * MUHIM: bu snapshot HIMOYA EMAS — u brauzerda o'zgartirilishi mumkin.
+   * Haqiqiy tekshiruv har so'rovda server tomonida bo'ladi.
+   */
   getSession(): Model.Session | null;
   login(input: { phone: string; password: string }): Promise<Model.Session>;
   register(input: { phone: string; password: string; fullName: string }): Promise<Model.Session>;
   verifyTelegram(code: string): Promise<Model.Session>;
   chooseRole(role: Model.UserRole): Promise<Model.Session>;
   resetPassword(input: { phone: string; code: string; newPassword: string }): Promise<void>;
+  /**
+   * Access token'ni yangilaydi (`POST /auth/refresh`).
+   *
+   * Qaytaradi: yangilangan sessiya, yoki `null` — refresh token ham
+   * o'lgan bo'lsa (foydalanuvchi qayta kirishi kerak).
+   *
+   * Kim chaqiradi: `client.ts` dagi HTTP qatlami. Har qanday so'rov 401
+   * bilan qaytsa — BIR MARTA `refresh()` qilinadi va so'rov qayta
+   * yuboriladi; ikkinchi 401 da `logout()` va login'ga yo'naltirish.
+   * Bu mantiq UI'da EMAS, adapterda bo'lishi shart, aks holda har bir
+   * ekran o'zi token boshqarishi kerak bo'lardi.
+   *
+   * Mock'da amalda hech narsa qilmaydi (token yo'q) — shartnoma
+   * backend uchun mavjud.
+   */
+  refresh(): Promise<Model.Session | null>;
   logout(): void;
 }
 
@@ -176,11 +204,16 @@ export interface PaymentsService {
     expiry: string;
   }): Promise<Model.PaymentCard>;
   removeCard(id: string): Promise<void>;
-  /** Mutaxassis daromadini bog'langan kartaga yechish */
-  withdrawEarnings(cardId: string): Promise<void>;
-  /** Xaridor balansidagi (qaytgan escrow) mablag'ni kartaga yechish */
-  withdrawBalance(cardId: string): Promise<number>;
+  /* Yechish ADMIN TASDIG'IGA so'rov yuboradi — pul darhol yechilmaydi.
+     Ilgari ikkalasi ham darhol yechar va admin navbatiga umuman tushmasdi. */
+  /** Mutaxassis daromadini yechish so'rovi */
+  withdrawEarnings(cardId: string): Promise<Model.WithdrawalRequest>;
+  /** Xaridor balansidagi (qaytgan escrow) mablag'ni yechish so'rovi */
+  withdrawBalance(cardId: string): Promise<Model.WithdrawalRequest>;
   getWithdrawnTotal(): Promise<number>;
+  /** Kutilayotgan so'rovlar summasi — mavjud mablag'dan ayiriladi */
+  getPendingWithdrawalTotal(): Promise<number>;
+  listMyWithdrawalRequests(): Promise<Model.WithdrawalRequest[]>;
 }
 
 export interface MessagesService {
@@ -222,6 +255,8 @@ export interface VerificationService {
 
 export interface SupportService {
   listMine(): Promise<Model.SupportTicket[]>;
+  /** Chiptaga kelgan support javoblari (egalik tekshiriladi) */
+  listReplies(ticketId: string): Promise<Model.SupportReply[]>;
   create(input: Pick<Model.SupportTicket, "topic" | "subject" | "message">): Promise<Model.SupportTicket>;
 }
 

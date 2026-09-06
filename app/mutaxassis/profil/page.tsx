@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
@@ -26,25 +27,41 @@ export default function ProfilPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [viewingPortfolio, setViewingPortfolio] = useState<PortfolioItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
 
-  useEffect(() => {
+  /* Yuklash xatosi ALOHIDA holat. Ilgari bu yerda `.catch()` yo'q edi:
+     bitta so'rov yiqilsa `setLoading(false)` hech qachon chaqirilmasdi va
+     sahifa abadiy skeletonda qolib ketardi (ustiga ushlanmagan promise
+     rejection ham chiqardi). Backend'da bu — sessiya tugashi yoki tarmoq
+     uzilishining eng ehtimolli natijasi. */
+  const load = useCallback(() => {
+    setLoadError(null);
+    setLoading(true);
     Promise.all([
       usersService.getCurrent(),
       usersService.getSellerProfile(),
       servicesService.listMine(),
       reviewsService.listMine(),
       contractsService.list(),
-    ]).then(([u, p, s, r, c]) => {
-      setUser(u);
-      setProfile(p);
-      setServices(s.filter((svc) => svc.status === "active"));
-      setReviews(r);
-      setContracts(c);
-      setLoading(false);
-    });
+    ])
+      .then(([u, p, s, r, c]) => {
+        setUser(u);
+        setProfile(p);
+        setServices(s.filter((svc) => svc.status === "active"));
+        setReviews(r);
+        setContracts(c);
+      })
+      .catch(setLoadError)
+      .finally(() => setLoading(false));
   }, []);
 
+  useEffect(load, [load]);
+
   const buyerByContract = new Map(contracts.map((c) => [c.id, c.buyerName]));
+
+  if (loadError) {
+    return <ErrorState error={loadError} onRetry={load} />;
+  }
 
   if (loading || !profile) {
     return (

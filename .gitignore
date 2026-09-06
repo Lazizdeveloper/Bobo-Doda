@@ -21,6 +21,7 @@
 .DS_Store
 .playwright-mcp/
 *.pem
+*.zip
 
 # debug
 npm-debug.log*

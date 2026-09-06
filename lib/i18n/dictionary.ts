@@ -275,6 +275,12 @@ export const dictionary: Record<string, Entry> = {
   "help.send": { uz: "Murojaat yuborish", ru: "Отправить обращение" },
   "help.sent": { uz: "Murojaat qabul qilindi", ru: "Обращение принято" },
   "help.myTickets": { uz: "Murojaatlarim", ru: "Мои обращения" },
+  "help.yourMessage": { uz: "Sizning xabaringiz", ru: "Ваше сообщение" },
+  "help.supportReply": { uz: "Qo'llab-quvvatlash javobi", ru: "Ответ поддержки" },
+  "help.noReplyYet": {
+    uz: "Hozircha javob yo'q — operatorlar odatda 24 soat ichida javob beradi",
+    ru: "Ответа пока нет — операторы обычно отвечают в течение 24 часов",
+  },
   "help.status_ochiq": { uz: "Ochiq", ru: "Открыто" },
   "help.status_javob_berildi": { uz: "Javob berildi", ru: "Есть ответ" },
   "help.status_yopilgan": { uz: "Yopilgan", ru: "Закрыто" },
@@ -1862,6 +1868,67 @@ export const dictionary: Record<string, Entry> = {
   "ntf.contractCompleted": {
     uz: "Shartnoma yakunlandi: {title}",
     ru: "Контракт завершён: {title}",
+  },
+  "ntf.withdrawalApproved": {
+    uz: "Pul yechish so'rovingiz tasdiqlandi — {amount} so'm kartangizga o'tkazildi",
+    ru: "Ваш запрос на вывод одобрен — {amount} сум переведено на карту",
+  },
+  "ntf.withdrawalRejected": {
+    uz: "Pul yechish so'rovingiz rad etildi: {reason}",
+    ru: "Ваш запрос на вывод отклонён: {reason}",
+  },
+  /* Admin qarorlari — foydalanuvchi o'zi boshlamagan, lekin unga bevosita
+     ta'sir qiladigan hodisalar (`kind: "tizim"`). */
+  "ntf.kycApproved": {
+    uz: "Shaxsingiz tasdiqlandi — profilingizda \"Shaxsi tasdiqlangan\" belgisi paydo bo'ldi",
+    ru: "Ваша личность подтверждена — в профиле появился знак «Личность подтверждена»",
+  },
+  "ntf.kycRejected": {
+    uz: "Shaxsni tasdiqlash rad etildi: {reason}. Hujjatlarni qayta yuborishingiz mumkin",
+    ru: "Подтверждение личности отклонено: {reason}. Вы можете отправить документы заново",
+  },
+  "ntf.disputeResolved": {
+    uz: "\"{title}\" bo'yicha nizo arbitraj qarori bilan yopildi — sizga {amount} so'm ajratildi",
+    ru: "Спор по «{title}» закрыт решением арбитража — вам начислено {amount} сум",
+  },
+  "ntf.jobClosedByAdmin": {
+    uz: "\"{title}\" e'loningiz moderator tomonidan yopildi: {reason}",
+    ru: "Ваш заказ «{title}» закрыт модератором: {reason}",
+  },
+  "ntf.servicePaused": {
+    uz: "\"{title}\" xizmatingiz moderatsiya tufayli bozordan vaqtincha olindi: {reason}",
+    ru: "Ваша услуга «{title}» временно снята с витрины модератором: {reason}",
+  },
+  "ntf.serviceRestored": {
+    uz: "\"{title}\" xizmatingiz tekshiruvdan o'tdi va bozorga qaytarildi",
+    ru: "Ваша услуга «{title}» прошла проверку и возвращена на витрину",
+  },
+  "wd.pending": { uz: "Tasdiqlash kutilmoqda", ru: "Ожидает подтверждения" },
+  "wd.requests": { uz: "Yechish so'rovlarim", ru: "Мои заявки на вывод" },
+  "wd.minPayout": { uz: "Eng kam yechish summasi", ru: "Минимальная сумма вывода" },
+  "wd.statusPending": { uz: "Kutilmoqda", ru: "Ожидает" },
+  "wd.statusReview": { uz: "Ko'rib chiqilmoqda", ru: "На рассмотрении" },
+  "wd.statusApproved": { uz: "Tasdiqlangan", ru: "Подтверждена" },
+  "wd.statusRejected": { uz: "Rad etilgan", ru: "Отклонена" },
+  "wd.belowMin": {
+    uz: "Yechish uchun eng kam summa to'planmagan.",
+    ru: "Сумма меньше минимальной для вывода.",
+  },
+  "wd.emptyRequests": {
+    uz: "Hali yechish so'rovi yuborilmagan.",
+    ru: "Заявок на вывод пока нет.",
+  },
+  "wd.pendingHint": {
+    uz: "So'rov administratorga yuborildi — tasdiqlangach kartangizga o'tkaziladi",
+    ru: "Запрос отправлен администратору — после подтверждения средства уйдут на карту",
+  },
+  "wd.requested": {
+    uz: "So'rov yuborildi — administrator tasdig'i kutilmoqda",
+    ru: "Запрос отправлен — ожидается подтверждение администратора",
+  },
+  "wd.noBalance": {
+    uz: "Yechish uchun mablag' yo'q (yoki allaqachon so'rov yuborilgan)",
+    ru: "Нет средств для вывода (или запрос уже отправлен)",
   },
   "ntf.supportReplied": {
     uz: "Yordam xizmati chiptangizga javob berdi: {subject}",

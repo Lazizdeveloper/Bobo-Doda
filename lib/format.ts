@@ -7,9 +7,19 @@ import type { Lang } from "@/lib/i18n/dictionary";
    Ko'p valyuta backend real kurs va asl valyutani qaytargandagina qaytadi. */
 const UZS_LABEL: Record<Lang, string> = { uz: "so'm", ru: "сум", en: "soum" };
 
+/** Faqat raqam — valyuta belgisisiz (masalan bildirishnoma matni belgini
+    o'zi qo'shadi: "{amount} so'm"). Guruhlash `formatMoney` bilan BIR XIL.
+
+    Ilgari bunday joylarda `n.toLocaleString()` chaqirilardi: argumentsiz
+    variant BRAUZER lokalini oladi, ya'ni bitta summa bir foydalanuvchida
+    "3 500 000", boshqasida "3,500,000" va uchinchisida "3.500.000" bo'lib
+    ko'rinardi. Pul ko'rsatiladigan joyda bu qabul qilib bo'lmaydi. */
+export function formatAmount(amount: number): string {
+  return new Intl.NumberFormat("ru-RU").format(amount);
+}
+
 export function formatMoney(amount: number, lang: Lang = "uz"): string {
-  const formatted = new Intl.NumberFormat("ru-RU").format(amount);
-  return `${formatted} ${UZS_LABEL[lang] ?? UZS_LABEL.uz}`;
+  return `${formatAmount(amount)} ${UZS_LABEL[lang] ?? UZS_LABEL.uz}`;
 }
 
 /* O'zbek oy nomlari QO'LDA yoziladi, brauzer Intl'iga tashlab qo'yilmaydi.

@@ -11,12 +11,26 @@ backend `client.ts` ni almashtiradi — sahifa/komponentlar qayta yozilmaydi.**
 | `contracts.ts` | Typed service interfeyslari + DTO'lar (`AuthService`, `JobsService`, `PaymentDTO`, `ApiPage<T>`, `ApiListQuery`) | **O'zgarmaydi** — shartnoma shu |
 | `errors.ts` | `ApiError` + `ApiErrorCode` taksonomiyasi (HTTP statusga bog'langan, `retryable`, `fieldErrors`) | **O'zgarmaydi** |
 | `state-machines.ts` | Holat o'tishlari (shartnoma/bosqich/…) — UI va server bir manbadan | Ulashiladi |
-| `client.ts` | Adapter: interfeyslarni **amalga oshiradi** | **Shu fayl almashadi** |
+| `client.ts` | Kabinetlar adapteri: interfeyslarni **amalga oshiradi** | **Shu fayl almashadi** |
+| `admin.ts` | Admin adapteri: har bir amalni `guard()`/`guardAsync()` bilan o'rab, xatoni `ApiError` ga o'giradi | **Shu fayl ham almashadi** |
 | `index.ts` | Yagona ommaviy chegara (`export *`) | O'zgarmaydi |
 
 UI qoidasi: har doim `@/lib/api` dan import qiling, hech qachon `@/lib/mock-api`
 dan to'g'ridan-to'g'ri emas. Domen service obyektlarini afzal ko'ring
 (`jobsService.list()`), `client.ts` dagi kabi.
+
+**Admin uchun ham xuddi shu qoida**: `app/admin/**` va `components/admin/**`
+faqat `@/lib/api/admin` dan import qiladi, `@/lib/admin-api` dan EMAS.
+Admin funksiyalari sinxron bo'lgani uchun `admin.ts` sinxron `guard()`
+ishlatadi (`client.ts` dagi async `call()` o'rniga) — imzolar o'zgarmaydi,
+lekin xato baribir `ApiError` bo'lib chiqadi va `<ErrorState>` uni kod
+bo'yicha to'g'ri ko'rsatadi.
+
+**Admin sahifasi `localStorage` ga tegmaydi.** Kerakli amal qatlamda bo'lmasa,
+uni sahifada "vaqtincha" yozib qo'ymang — `lib/admin-api.ts` ga qo'shing va
+`lib/api/admin.ts` dan chiqaring. Aks holda amal ruxsat tekshiruvidan, audit
+izidan va kvota himoyasidan tashqarida qoladi va backend ulanganda jimgina
+ishlamay qoladi.
 
 ## Backend'ga o'tish retsepti
 
@@ -70,6 +84,13 @@ Server javobidagi HTTP statusni `ApiErrorCode` ga bog'lang (`toApiError`):
 `fieldErrors?: Record<string,string>` — server maydon-darajali validatsiyani
 qaytarganda, uni to'g'ridan-to'g'ri `Input error` proplariga ulash mumkin.
 
+**`LEGACY_CODES` — shartnomaning bir qismi.** Ma'lumot qatlami tashlaydigan
+har bir kod (`"PHONE_EXISTS"`, `"ACCOUNT_BLOCKED"`, `"CARD_LIMIT"` …) shu
+jadvalda bo'lishi SHART. Jadvalda yo'q kod `UNKNOWN` + 500 + `retryable: true`
+ga tushadi, ya'ni ekranda hech qachon yordam bermaydigan "Qayta urinish"
+tugmasi chiqadi. Yangi `throw new Error("...")` qo'shsangiz, kodni `errors.ts`
+ga ham yozing — buni lint ushlay olmaydi.
+
 ## Pagination (backend'da yoqiladi)
 
 `ApiListQuery` (`cursor`/`limit`/`search`/`sort`) va `ApiPage<T>`
@@ -95,9 +116,11 @@ va h.k.) — mock butunlay `client.ts` orqasida.
 Amaldagi holat:
 
 - `app/` va `components/` ichida `@/lib/mock-api` importi **0 ta**.
-- `@/lib/api` dan import qilinadigan yagona no-service nom —
+- `@/lib/api` dan import qilinadigan no-service nomlar — faqat ikkitasi:
   `DATA_CHANGED_EVENT` (ma'lumot yangilanganini bildiruvchi signal; backend'da
-  websocket/SSE push yoki kesh invalidatsiyasiga almashadi).
+  websocket/SSE push yoki kesh invalidatsiyasiga almashadi) va `ApiError`
+  (`ErrorState` xato kodini o'qish uchun; `@/lib/api/errors` dan ham
+  import qilinadi).
 - Model tiplari (`Specialist`, `AccountPreferences` va boshqalar) `@/lib/types`
   da — mock qatlamida emas.
 

@@ -10,11 +10,12 @@ import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { CardPicker } from "@/components/shared/cards";
-import { contractsService, milestonesService, paymentsService } from "@/lib/api";
-import type { PaymentCard } from "@/lib/types";
-import type { Contract, Milestone } from "@/lib/types";
+import { WithdrawalRequests } from "@/components/shared/WithdrawalRequests";
+import { ApiError, contractsService, milestonesService, paymentsService } from "@/lib/api";
+import type { Contract, Milestone, PaymentCard, WithdrawalRequest } from "@/lib/types";
 import { formatDate, formatMonth, formatMoney } from "@/lib/format";
 import { PLATFORM_FEE_PERCENT, sellerNet } from "@/lib/fees";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { useT } from "@/lib/i18n";
 
 const PENDING_STATUSES = ["mablaglangan", "topshirildi", "ozgartirish_soraldi"];
@@ -25,6 +26,11 @@ export default function DaromadPage() {
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [withdrawn, setWithdrawn] = useState(0);
+  const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
+  /* Eng kam yechish summasi admin sozlamasidan. Tugma undan pastda o'chiq
+     bo'ladi — aks holda foydalanuvchi bosib, faqat xato toast'ini olardi. */
+  const [minPayout, setMinPayout] = useState(0);
+  const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [cards, setCards] = useState<PaymentCard[]>([]);
   const [cardId, setCardId] = useState("");
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -38,8 +44,13 @@ export default function DaromadPage() {
       contractsService.list(),
       paymentsService.getWithdrawnTotal(),
       paymentsService.getCards(),
+      paymentsService.getPendingWithdrawalTotal(),
+      paymentsService.listMyWithdrawalRequests(),
     ])
-      .then(([milestoneList, contractList, withdrawnTotal, cardList]) => {
+      .then(([milestoneList, contractList, withdrawnTotal, cardList, pending, requestList]) => {
+        setPendingWithdrawal(pending);
+        setMinPayout(getPlatformSettings().minPayoutAmount);
+        setRequests(requestList);
         setMilestones(milestoneList);
         setContracts(contractList);
         setWithdrawn(withdrawnTotal);
@@ -60,8 +71,9 @@ export default function DaromadPage() {
   const grossPaid = paid.reduce((sum, m) => sum + m.amount, 0);
   const totalPaid = paid.reduce((sum, m) => sum + sellerNet(m.amount), 0);
   const feeWithheld = grossPaid - totalPaid;
-  /* Yechish mumkin bo'lgan qism — ishlangan (sof) minus allaqachon yechilgan */
-  const withdrawable = Math.max(0, totalPaid - withdrawn);
+  /* Yechish mumkin bo'lgan qism — ishlangan (sof) minus allaqachon yechilgan
+     minus admin tasdig'ini kutayotgan (band) summa. */
+  const withdrawable = Math.max(0, totalPaid - withdrawn - pendingWithdrawal);
   /* `nizo` ham hisobga olinadi: nizo ochilganda pul escrow'da turaveradi va
      mutaxassis uni "Kutilmoqda" da ko'rishi kerak — aks holda nizo paytida
      summa ekrandan yo'qolib qolardi. */
@@ -100,11 +112,17 @@ export default function DaromadPage() {
     setWithdrawing(true);
     try {
       await paymentsService.withdrawEarnings(cardId);
-      setWithdrawn(await paymentsService.getWithdrawnTotal());
-      toast(t("earn.withdrawn"));
+      /* Admin tasdig'iga so'rov — pul darhol yechilmaydi */
+      setPendingWithdrawal(await paymentsService.getPendingWithdrawalTotal());
+      setRequests(await paymentsService.listMyWithdrawalRequests());
+      toast(t("wd.requested"));
       setWithdrawOpen(false);
-    } catch {
-      toast(t("common.error"), "error");
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : "";
+      toast(
+        code === "BELOW_MINIMUM" ? t("wd.belowMin") : t("common.error"),
+        "error"
+      );
     } finally {
       setWithdrawing(false);
     }
@@ -118,7 +136,7 @@ export default function DaromadPage() {
         </h1>
         <Button
           onClick={() => setWithdrawOpen(true)}
-          disabled={!milestones || withdrawable === 0}
+          disabled={!milestones || withdrawable < Math.max(1, minPayout)}
         >
           {t("earn.withdraw")}
         </Button>
@@ -161,6 +179,16 @@ export default function DaromadPage() {
                 {formatMoney(withdrawable, lang)}
               </p>
               <p className="mt-1 text-2xs text-faint">{t("earn.withdrawableHint")}</p>
+              {minPayout > 0 && withdrawable > 0 && withdrawable < minPayout && (
+                <p className="mt-1 text-2xs text-warning-deep">
+                  {t("wd.minPayout")}: {formatMoney(minPayout, lang)}
+                </p>
+              )}
+              {pendingWithdrawal > 0 && (
+                <p className="mt-1 text-2xs text-warning-deep">
+                  {t("wd.pending")}: {formatMoney(pendingWithdrawal, lang)}
+                </p>
+              )}
             </Card>
             <Card>
               <p className="text-2xs font-medium uppercase tracking-wide text-faint">
@@ -174,6 +202,9 @@ export default function DaromadPage() {
           </>
         )}
       </div>
+
+      {/* Yechish so'rovlari — admin tasdig'i kutilayotganlar ham shu yerda */}
+      {requests.length > 0 && <WithdrawalRequests requests={requests} />}
 
       {/* So'nggi to'lovlar */}
       <section className="flex flex-col gap-3">
@@ -316,6 +347,7 @@ export default function DaromadPage() {
             </span>
           </div>
           <p className="text-xs text-muted">{t("earn.methodDesc")}</p>
+          <p className="text-2xs text-faint">{t("wd.pendingHint")}</p>
           <div>
             <p className="mb-2 text-xs font-medium text-muted">
               {t("card.selectTitle")}

@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/Textarea";
 import { TagInput } from "@/components/ui/TagInput";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
+import { getSelectableCategories } from "@/lib/categories";
+import type { ServiceCategory } from "@/lib/types";
 import { usersService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { LIMITS } from "@/lib/validate";
@@ -26,6 +28,13 @@ export default function RoyxatPage() {
   const { t } = useT();
   const router = useRouter();
   const { toast } = useToast();
+
+  /* Admin o'chirgan kategoriyada yangi ish yaratib bo'lmaydi. Ro'yxat mount'dan
+     KEYIN toraytiriladi: server render'ida `localStorage` yo'q, shuning uchun
+     darhol filtrlansa hidratsiya mos kelmasdi. */
+  const [selectableCategories, setSelectableCategories] =
+    useState<ServiceCategory[]>(CATEGORIES);
+  useEffect(() => setSelectableCategories(getSelectableCategories()), []);
 
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
@@ -125,7 +134,7 @@ export default function RoyxatPage() {
             {t("onboard.categories")}
           </span>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => {
+            {selectableCategories.map((cat) => {
               const selected = categories.includes(cat);
               return (
                 <button

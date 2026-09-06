@@ -14,11 +14,27 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Xavfsizlik header'lari. `next.config.mjs` dagi CSP bilan BIR XIL bo'lishi
-# shart — ikki fayl har xil bo'lsa, brauzer ikkala CSP'ning kesishmasini
-# qo'llaydi va nosozlikni tushunish qiyinlashadi.
-# Shriftlar `@fontsource` orqali LOKAL (self) — Google Fonts hostiga ruxsat
-# kerak emas.
+# ─────────────────────────────────────────────────────────────────────────
+# Xavfsizlik header'lari.
+#
+# CSP ning YAGONA MANBASI — ildizdagi `csp.config.mjs`. Quyidagi qator
+# o'sha fayl SHU MUHITDA chiqaradigan natija bilan bir xil bo'lishi shart;
+# `scripts/check-csp.cjs` buni `npm run verify` ichida tekshiradi.
+#
+# Sabab: ikkala header ham javobga qo'shiladi va brauzer ULARNING
+# KESISHMASINI qo'llaydi — biri ruxsat bergan narsani ikkinchisi taqiqlasa,
+# taqiq yutadi. Ajralib ketgan CSP eng qiyin topiladigan nosozlik.
+#
+# ⚠️ BACKEND BOSHQA DOMENDA BO'LSA:
+#   1. Netlify env'da `NEXT_PUBLIC_API_URL=https://api.bobododa.uz` bering.
+#      (`next.config.mjs` uni avtomatik `connect-src` ga qo'shadi.)
+#   2. Quyidagi `connect-src` ga o'sha originni VA `wss://` variantini
+#      QO'LDA qo'shing — toml env o'zgaruvchisini o'qiy olmaydi. Ya'ni:
+#      connect-src 'self' https://api.bobododa.uz wss://api.bobododa.uz
+#   3. Ikkinchi qadam unutilsa `npm run verify` build'ni YIQITADI va
+#      qaysi direktiva farq qilganini aniq ko'rsatadi — bu ataylab shunday.
+# Aks holda brauzer HAR BIR API so'rovini jimgina bloklaydi.
+# ─────────────────────────────────────────────────────────────────────────
 [[headers]]
   for = "/*"
   [headers.values]
@@ -28,3 +44,4 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     X-DNS-Prefetch-Control = "off"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"

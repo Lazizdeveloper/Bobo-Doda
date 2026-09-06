@@ -60,13 +60,16 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   bazada — akkaunt almashtirib ikki tomonlama oqimni sinash mumkin.
 - Backend, real Telegram/to'lov, soatlik shartnoma va Connects — YO'Q.
   Nizo ochish, sabab/dalil yuborish va shartnomani muzlatish frontend oqimi bor.
-- **Admin panel `main`da YO'Q** — u `admin-panel` branch'iga chiqarilgan
-  (18 sahifa, ~5 500 qator: `app/admin`, `app/rahbariyat`, `components/admin`,
-  `lib/admin-*.ts`, `lib/api/admin.ts`). Kerak bo'lsa: `git checkout admin-panel`.
-  Shu sababli `npm run dev` endi BITTA server ko'taradi (:3000) — ilgari admin
-  uchun ikkinchi server va alohida `.next-admin` papkasi bor edi.
-  KYC yozuvlari (`seedVerifications`) asosiy `lib/mock-api/seed.ts` ga ko'chirilgan —
+- **Admin panel asosiy oqimda** (`app/admin` — 18 sahifa, `app/rahbariyat`,
+  `components/admin`, `lib/admin-*.ts`, `lib/api/admin.ts`). Ilgari u alohida
+  `admin-panel` branch'ida turardi; u branch `main`ning ajdodi bo'lgani uchun
+  rebase emas, fayllarni tiklash yo'li bilan qaytarildi (aks holda kabinetlar
+  review'idagi 46 ta tuzatish yo'qolardi). `npm run dev` BITTA server
+  ko'taradi (:3000) — admin uchun alohida server/`.next-admin` yo'q.
+  KYC yozuvlari (`seedVerifications`) asosiy `lib/mock-api/seed.ts` da —
   ochiq profildagi "Shaxsi tasdiqlangan" belgisi shundan hisoblanadi.
+- **Admin panel ATAYLAB o'zbekcha** (`useT()` ishlatmaydi, `LangSwitch` yo'q):
+  u mijozga emas, ichki operatorlarga mo'ljallangan. Kabinetlar UZ/RU/EN.
 - Komponent kutubxonalari ishlatilmaydi — hammasi `/components/ui` da noldan.
 
 ## Stack
@@ -84,7 +87,7 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   aks holda foydalanuvchi ma'lumot o'chgan deb o'ylaydi.
 - Ma'lumot: `/lib/mock-api` — async funksiyalar, localStorage (`sb2_*` kalitlar),
   `seed.ts` (`SEED_VERSION` bilan — versiya oshsa mock ma'lumot qayta yoziladi
-  va sessiya tozalanadi). Ko'p seller: u-1 (demo) + u-s2/u-s3/u-s4 (katalog uchun).
+  va sessiya tozalanadi). Ko'p seller: u-1 (demo) + u-2/u-3/u-4 (katalog uchun).
 - Shartnoma o'qish funksiyalari (`getContracts`, `getAllMilestones`,
   `getAllMessages`) sessiya roliga qarab filtrlanadi (seller/buyer tomoni).
 - i18n: `/lib/i18n` — **UZ/RU/EN**. `dictionary.ts` (uz+ru) + `en.ts` (ingliz,
@@ -115,6 +118,19 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   (8 mezon). Boshqaruv ham, Sozlamalar ham shu ro'yxatdan o'qiydi; ilgari
   ikkalasi alohida hisoblab, bitta profil uchun ikki xil foiz ko'rsatardi.
 - TrustBadge mantiqla: `computeBadge()` lib/types.ts da (5+/4.5→ishonchli, 25+/4.8→top).
+- **Mutaxassis obro'si (`rating` · `reviewCount` · `completedContracts` ·
+  `badge`) — DENORMALLASHTIRILGAN hisoblagichlar.** Ular profilda saqlanadi,
+  lekin ularni o'zgartiradigan HAR BIR hodisada qayta hisoblanadi:
+  `createReview` (surilgan o'rtacha + badge), admin `deleteReview`
+  (o'rtachadan chiqariladi), shartnoma `yakunlangan` bo'lishi
+  (`acceptMilestone`, `applyEscrowRules` avto-qabuli va arbitraj `payout`/
+  `split`). Yordamchilar: `applyNewReviewToProfile` /
+  `removeReviewFromProfile` / `incrementCompletedContracts`.
+  Ilgari bu to'rt maydon seed'da yozilib **boshqa hech qachon o'zgarmasdi** —
+  1 yulduzli sharh ham, 100 ta yakunlangan ish ham raqamga ta'sir qilmasdi.
+  `identityVerified` va `completionRate` esa saqlanmaydi, har o'qishda
+  hisoblanadi. Backend'da bu yangilanish sharh/shartnoma yozuvi bilan BITTA
+  tranzaksiyada bo'lishi kerak.
 
 ## Dizayn tili: "Suzani Light" (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
 **Bu bo'lim faqat ikkala kabinetga (`/mutaxassis`, `/xaridor`) va
@@ -156,8 +172,10 @@ yangi rang qo'shilsa ham shu chegara saqlanishi shart.
 - **Modal/drawer pardasi `bg-ink/40`** — oq fonda `bg-bg/80` ko'rinmaydi.
 - **Imzo element — yugurma chok (running stitch)**: `<Card stitch>` (panel
   tepasida yashil chok) va `shadow-raised`. Faqat asosiy panellarda — hozir
-  3 joyda: xaridor "Harakat talab qilinadi" bloki va ikkala rolning shartnoma
-  workroom sarlavhasi. Har kartaga qo'yilsa shovqin bo'ladi.
+  5 joyda: xaridor "Harakat talab qilinadi" bloki, ikkala rolning shartnoma
+  workroom sarlavhasi va mutaxassis boshqaruvidagi ikki ro'yxat (kelgan
+  takliflar, mos ish e'lonlari). Har kartaga qo'yilsa shovqin bo'ladi —
+  yangi joyga qo'shishdan oldin shu ro'yxatni yangilang.
 - Animatsiya minimal (hover 150ms, modal/toast `sb-fade-in` 200ms, skeleton),
   `prefers-reduced-motion` hurmat qilinadi.
 - **Landing (`app/page.tsx`) o'zining ALOHIDA palitrasiga ega — Tailwind
@@ -187,8 +205,8 @@ badge chiplari — count-up statistika olib tashlangan, chunki raqamlar
 o'ylab topilgan edi) → eskrou (4 bosqich, scroll-driven
 `IntersectionObserver` — qaysi bosqich markazda bo'lsa, pastdagi
 eskrou-hisob vizuali status/progress-bar/summani shunga moslab yangilaydi)
-→ 8 kategoriya (assimetrik grid — 2 ta katta `.big` kartochka to'q yashil
-fonda span 2×2) → narxlar (mutaxassis 5% / xaridor bepul / yashirin to'lov 0)
+→ 13 kategoriya (4 ustunli teng grid `.cat-grid`; 1080px'da 2, 760px'da
+1 ustun) → narxlar (mutaxassis 5% / xaridor bepul / yashirin to'lov 0)
 → xavfsizlik (to'q yashil kontrast, 4 qatlam: Escrow/Identity/Acceptance/
 Dispute) → FAQ (controlled accordion, grid-template-rows bilan silliq
 balandlik animatsiyasi, `<details>` emas — aria-expanded bilan) → yakuniy
@@ -197,8 +215,9 @@ CTA (to'q yashil + sariq porlash) → footer (to'q yashil, sariq aksent).
 uzaytirgan, o'ylab topilgan ma'lumot ko'rsatgan va JS yuklamasini oshirgan):
 muammo/yechim (3 editorial qator), katta bayonot bloki, tanlangan
 mutaxassislar, faol e'lonlar, raqobatchilar jadvali, fikrlar karuseli
-(autoplay + klaviatura bilan). Ularning CSS bloklari va ma'lumot massivlari
-ham tozalangan. Amalga oshirish: inline `<style>` bloki (CSS custom
+(autoplay + klaviatura bilan). Ularning ma'lumot massivlari tozalangan;
+qolib ketgan CSS qoidalari (`.spec-grid`, `.proj-*`, `.test-*`, `.prob-*`,
+`.trust-stat*`) landing review'ida olib tashlandi. Amalga oshirish: inline `<style>` bloki (CSS custom
   property'lar, Tailwind class'lari EMAS). Scroll-reveal (`IntersectionObserver`,
   `.reveal` klassi) `prefers-reduced-motion`ni hurmat qiladi (ambient blob
   drift, count-up, karusel autoplay va hero load-in animatsiyasi ham shu
@@ -287,6 +306,102 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
 - **Ish holati**: `SellerProfile.available` (bozor kartalarida ham badge).
 - Yangi xaridorda reyting 0 → e'lonlarda "Yangi xaridor" badge (yulduz o'rniga).
 
+## Admin panel (`/admin`, `/rahbariyat`)
+- **RBAC**: `AdminAccount.permissions` (16 huquq) + `role: "admin" | "super_admin"`.
+  `app/admin/layout.tsx` sessiya, super-admin marshrutlari va har bir sahifaning
+  huquqini tekshiradi → `/admin/ruxsat-yoq`. Mutatsiyalarda `requireAdmin()` /
+  `requirePermission(p)` / `requireSuperAdmin()` — "sessiya bormi" yetarli EMAS.
+- **Pul yechish oqimi (uchdan biri ham chetlab o'tilmaydi)**:
+  foydalanuvchi `withdrawFunds`/`withdrawBalance` → `WithdrawalRequest`
+  (`sb2_withdrawal_requests`, holat `kutilmoqda`) → admin `/admin/tolovlar` da
+  tasdiqlaydi (`approveWithdrawal` — `sb2_withdrawn` yoki `sb2_balances` ni
+  KAMAYTIRADI) yoki sabab bilan rad etadi. So'ralgan summa "band" bo'ladi
+  (`getPendingWithdrawalTotal`) — ikki marta so'rab bo'lmaydi. Foydalanuvchi
+  holatni Daromad/Xarajatlar sahifasida ko'radi (`WithdrawalRequests`).
+- **Arbitraj** (`forceCloseContract`) FAQAT escrow'dagi pulni taqsimlaydi:
+  chiqarilgan (`qabul_qilindi`) bosqichlar tegilmaydi, mablag'lanmagan
+  (`kutilmoqda`) bosqichlarda pul yo'q. `split` da `contract.totalAmount` ham
+  kamayadi — jami doimo bosqichlar yig'indisiga teng.
+- **Platforma sozlamalari** — `lib/platform-settings.ts` YAGONA MANBA
+  (`sb2_platform_settings`). Haqiqatan ishlaydiganlar: escrow avto-qabul kuni,
+  minimal yechish summasi, to'g'ridan-to'g'ri takliflar kaliti,
+  `registration_enabled` / `payments_paused` kill-switch'lari. Komissiya foizi
+  va KYC chegarasi `readOnly` — komissiya `lib/fees.ts` dan build vaqtida
+  keladi (landing va yordam matnlari ham shundan), ish vaqtida o'zgarsa
+  va'da bilan hisob-kitob ajralib ketardi.
+- **Kategoriyalar**: admin ro'yxati ilovaning `CATEGORIES` (8 ta) bilan bir xil
+  slug'lardan iborat; `serviceCount` hisoblanadi. "Faol" tugmasi haqiqiy —
+  o'chirilgan kategoriyada YANGI xizmat/e'lon yaratib bo'lmaydi
+  (`lib/categories.ts`), mavjudlari bozorda qolaveradi. Tekshiruv MA'LUMOT
+  QATLAMIDA (`assertCategoryOpen` → `CATEGORY_DISABLED`), faqat dropdown'da
+  emas — aks holda ochiq turgan eski tab yoki qoralama uni chetlab o'tardi. Butunlay yangi
+  kategoriya backend + deploy talab qiladi (`ServiceCategory` — kompilyatsiya
+  vaqtidagi tip, har biriga o'z forma maydonlari bog'langan).
+- **Admin `write()`** ilova bilan bir xil: kvota himoyasi (`STORAGE_FULL`) va
+  `DATA_CHANGED_EVENT`. Seed `seeded()` orqali faqat BIR MARTA yoziladi —
+  admin tozalagan navbat qayta to'lmaydi.
+- **Admin chegarasi — `lib/api/admin.ts`.** Admin ekranlari FAQAT shu moduldan
+  import qiladi; `@/lib/admin-api` ga to'g'ridan-to'g'ri murojaat QILINMAYDI.
+  Modul har bir operatsiyani `ApiError` ga o'raydi. Bu ilova tomonidagi
+  `client.ts` ning admin ekvivalenti: backend'ga o'tishda almashtiriladigan
+  YAGONA fayl.
+- **Admin chegarasi ASYNC.** Har bir o'qish va mutatsiya `Promise` qaytaradi
+  (`asyncGuard`), chunki backend'da ular HTTP so'rov bo'ladi — sinxron
+  qoldirilsa, backend ulangan kunda HAR BIR chaqiruv joyi qayta yozilardi.
+  FAQAT TO'RTTASI sinxron: `getCurrentAdmin`, `getAdminSession`,
+  `hasPermission`, `adminLogout` — ular brauzerdagi sessiya snapshot'ini
+  o'qiydi (ilova tomonidagi `authService.getSession()` bilan bir xil qoida).
+  Yangi amal qo'shsangiz — `asyncGuard` ishlating va chaqiruv joyida
+  `await` qilishni unutmang: `await`siz xato `Promise` rejection bo'lib
+  `try/catch` dan o'tib ketadi va jimgina yo'qoladi.
+- **Admin sahifalari `localStorage` ga to'g'ridan-to'g'ri TEGMAYDI.** Ilgari
+  `loyihalar` (`sb2_jobs`), `xizmatlar` (`sb2_services`), `nizolar`
+  (`sb2_milestones`, `sb2_disputes`) va `yordam` (`sb2_ticket_chat_*`)
+  o'zi o'qib-yozardi — ruxsat tekshiruvisiz, auditsiz, kvota himoyasisiz va
+  backend ulanganda jimgina ishlamay qoladigan holda. Kerakli amallar endi
+  qatlamda: `closeJobAsAdmin`, `setServiceStatus`, `getTicketConversation`;
+  bosqichlar `getAdminData().milestones` dan olinadi.
+- **Admin ro'yxatlari SERVER tomonida sahifalanadi.** Har navbat uchun
+  `list*Queue(query)` → **`Promise<AdminPage<T>>`** (`items`/`page`/`perPage`/
+  `total`/`totalPages`); filtrlash va `slice` sahifada EMAS, `lib/admin-api.ts`
+  da. Funksiyalar ATAYLAB async — backend'da ular HTTP so'rov bo'ladi, sinxron
+  qoldirilsa har bir chaqiruv joyi o'sha kuni qayta yozilardi.
+  KPI raqamlari `getAdminCounters()` dan (sahifa endi hamma qatorni
+  ko'rmaydi). Offset ishlatiladi, kursor emas — operatorga "42 tadan
+  7-sahifa" kerak. `getAdminData()` `@deprecated`: u faqat hali
+  ko'chirilmagan sahifalar va dashboard uchun qolgan.
+  **BARCHA 11 ta ro'yxat sahifasi ko'chirilgan** — `getAdminData()` ni endi
+  faqat dashboard va ikkita kichik konfiguratsiya ekrani (sozlamalar,
+  kategoriyalar) chaqiradi. Namuna — `app/admin/audit/page.tsx`.
+- **Uch qoida (backend ham shunga amal qiladi):**
+  1. **Qatorlar SERVER tomonida birlashtiriladi.** Sahifada bir sahifa qator
+     bor, boshqa kolleksiya yo'q — shuning uchun jadval ko'rsatadigan hamma
+     narsa qatorda keladi: `AdminUserRow` (moderatsiya + KYC holati),
+     `AdminDisputeRow` (shartnoma nomi, taraflar), `AdminVerificationRow` va
+     `AdminTicketRow` (foydalanuvchi nomi).
+  2. **Fasetlar `status` filtridan OLDIN hisoblanadi** (`AdminPage.facets`,
+     `_all` kaliti bilan). Aks holda "To'xtatilgan" tabiga o'tganda "Faol"
+     kartochkasi 0 ko'rsatardi. Prefiksli kalitlar: `role:`, `severity:`;
+     yig'indilar: `amountSum`, `ratingSum`, `proposals`.
+  3. **Detal — IKKINCHI so'rov** (`getUserDetail`, `getContractMilestones`,
+     `getDisputeContext`). Bog'liq yozuvlar ro'yxat javobiga solinmaydi.
+     To'lovlar sahifasida faqat FAOL tab so'rov yuboradi.
+- **Guard tartibi: `loadError` HAR DOIM `!data` dan OLDIN.** Aks holda
+  yuklash yiqilganda `data` `null` bo'lib qolib, sahifa abadiy
+  "Yuklanmoqda..." ko'rsatadi va `<ErrorState>` bloki o'lik kodga aylanadi
+  (bu 11 ta sahifada shunday edi).
+- **Xato matnlari** — `lib/admin-error-text.ts` (`adminErrorText`) YAGONA
+  MANBA. Har sahifada alohida jadval yozilmasin; `DangerousActionModal` ham
+  shundan foydalanadi (ilgari u xom kod satrini — "FORBIDDEN" — ko'rsatardi).
+- **Admin qarorlari foydalanuvchiga bildirishnoma yuboradi** (`kind: "tizim"`):
+  KYC tasdiq/rad, arbitraj natijasi (ikkala tomonga, ulushlari bilan), e'lon
+  majburiy yopilishi (+ faol takliflar avto-rad), xizmat to'xtatilishi/
+  tiklanishi. Ilgari faqat ticket javobi va yechish qarori xabar berardi.
+- **Ikonkalar** — `components/admin/AdminIcon.tsx` (inline SVG). Emoji
+  qo'yilmasin: u OS'ga qarab har xil chiziladi va skrinrider uni o'qiydi.
+- Har bir sahifada `loadError` + `<ErrorState onRetry>`; native
+  `confirm()`/`alert()` ishlatilmaydi — `Modal` + `Toast`.
+
 ## Xavfsizlik (mock doirasida)
 - **Kirish validatsiyasi**: `lib/validate.ts` — `amount()` (chekli/musbat/
   ≤10 mlrd butun son; Infinity/NaN/manfiy rad etiladi), `text()`/`textList()`
@@ -304,19 +419,32 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
 - **Bank kartasi**: to'liq raqam saqlanmaydi (faqat last4+tur+muddat); yechish
   faqat o'z kartasiga (`assertOwnCard`). Karta: 16 raqam + tur (Visa/Mastercard/
   Uzcard/Humo) prefiks validatsiyasi (`detectCardType`).
-- **Security header'lar** (`next.config.mjs`): CSP (Google Fonts uchun ruxsat
-  bilan), X-Frame-Options DENY, X-Content-Type-Options, Referrer-Policy,
-  Permissions-Policy.
+- **Security header'lar — YAGONA MANBA `csp.config.mjs`** (ildizda).
+  `next.config.mjs` shundan import qiladi; `netlify.toml` dagi nusxani
+  `scripts/check-csp.cjs` solishtiradi va farq bo'lsa `npm run verify`
+  yiqiladi (ikkala header ham javobga tushadi va brauzer ULARNING
+  KESISHMASINI qo'llaydi — ajralib ketgani eng qiyin topiladigan nosozlik).
+  Shriftlar `@fontsource` orqali LOKAL → `font-src 'self'` (Google Fonts
+  hostiga ruxsat KERAK EMAS). Bundan tashqari X-Frame-Options DENY,
+  X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS.
+  **`connect-src` — backend uchun eng muhim joy**: u `NEXT_PUBLIC_API_URL`
+  dan avtomatik to'ldiriladi (`wss://` varianti bilan birga). API boshqa
+  domenda bo'lib, bu qo'shilmasa — brauzer HAR BIR so'rovni jimgina
+  bloklaydi.
 - **XSS**: React JSX avtomatik escape (dangerouslySetInnerHTML/eval umuman yo'q).
 - **ARXITEKTURA CHEKLOVI (bilib qo'yish shart)**: auth+ma'lumot to'liq
   localStorage'da — DevTools orqali har qanday hisobga kirish/ma'lumotni
   o'zgartirish mumkin. Egalik tekshiruvlari (sellerId/buyerId) — UX darajasidagi
   himoya; **haqiqiy xavfsizlik faqat backend bilan keladi**. 6 xonali kodning
   istalganini qabul qilish ham ataylab mock (production'da real Telegram OTP).
-- **npm audit**: Next 14.2.35'da advisory'lar bor, lekin deyarli hammasi biz
-  ishlatmaydigan server funksiyalariga (Image Optimizer, RSC, middleware,
-  WebSocket) tegishli. To'liq yopish Next 16 major upgrade talab qiladi —
-  alohida bosqichga qoldirilgan.
+- **npm audit** (holat 2026-09-04, loyiha ALLAQACHON Next 16.2.12 da —
+  ilgari bu yerda "Next 14.2.35" deb yozilgan edi, eskirgan ma'lumot):
+  5 ta advisory (1 moderate, 4 high) qoldi va hammasi Next'ning ichki
+  `postcss` bog'liqligiga tegishli (sourceMappingURL orqali ixtiyoriy `.map`
+  faylni o'qish, `</style>` escape qilinmasligi). Bular build vaqtidagi CSS
+  qayta ishlashga taalluqli — biz foydalanuvchi nazorat qiladigan CSS'ni
+  kompilyatsiya qilmaymiz, shuning uchun amaliy xavf past. `npm audit fix`
+  bilan yopiladi; qilinganda shu bandni yangilang.
 
 ## Deploy (Netlify) — DIQQAT
 - Bosh sahifa (`/`) — oddiy Next.js route (`app/page.tsx`), alohida
@@ -350,7 +478,7 @@ Studios, `BUYER_ID`): `job-2`da 1 ta taklif bor (ko'rib chiqish/yollash),
 faol shartnoma (`ms-1-1` qabul qilingan, `ms-1-2` mablag'langan — topshirish
 uchun tayyor).
 
-**Seed'da tayyor turgan demo holatlar** (`SEED_VERSION` = 14):
+**Seed'da tayyor turgan demo holatlar** (`SEED_VERSION` = 16):
 - `off-1` — u-b2 → u-1 kutilayotgan **taklifnoma** (A yo'l: chat, qabul/rad).
 - `off-2` — qabul qilingan taklif, `cnt-5` shartnomasini ochgan.
 - `off-3` — rad etilgan taklif (xaridor ro'yxatida holat xilma-xilligi uchun).
@@ -358,8 +486,11 @@ uchun tayyor).
   `kutilmoqda`): mahsulotning asosiy g'oyasi — escrow to'lovi (`fundContract`)
   shu yerda sinaladi.
 - 5 ta bildirishnoma (ikkala demo hisobda ham o'qilmagani bor).
-- Nizoli `cnt-3`/`cnt-4` — nizo oqimi uchun (admin panel `admin-panel`
-  branch'ida).
+- `wdr-1` — demo mutaxassisning (u-1) **kutilayotgan yechish so'rovi**
+  (3 325 000 = 3 500 000 − 5%). Uni `/admin/tolovlar` da tasdiqlab, mutaxassis
+  Daromad sahifasidagi raqamlar qanday o'zgarishini ko'rish mumkin —
+  yangi "so'rov → admin tasdig'i → balans" oqimining demo holati.
+- Nizoli `cnt-3`/`cnt-4` — nizo oqimi va admin arbitraji uchun.
 
 **Seed sanalari avtomatik yangilanadi**: `ensureSeed()` barcha ISO sanani
 bitta offset bilan siljitadi — eng yangi HODISA taxminan 2 kun oldin bo'ladi,

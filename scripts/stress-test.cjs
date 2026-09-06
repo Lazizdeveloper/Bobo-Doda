@@ -9,13 +9,13 @@ const roles = {
     routes: [
       "/xaridor",
       "/xaridor/bozor",
-      "/xaridor/bozor/xizmat/s-1",
+      "/xaridor/bozor/xizmat/svc-1",
       "/xaridor/bozor/mutaxassis/u-1",
       "/xaridor/elonlarim",
-      "/xaridor/elonlarim/j-1",
+      "/xaridor/elonlarim/job-1",
       "/xaridor/elonlarim/yangi",
       "/xaridor/shartnomalar",
-      "/xaridor/shartnomalar/c-7",
+      "/xaridor/shartnomalar/cnt-5",
       "/xaridor/takliflarim",
       "/xaridor/xabarlar",
       "/xaridor/xarajatlar",
@@ -35,14 +35,14 @@ const roles = {
     routes: [
       "/mutaxassis",
       "/mutaxassis/ish-elonlari",
-      "/mutaxassis/ish-elonlari/j-1",
+      "/mutaxassis/ish-elonlari/job-1",
       "/mutaxassis/takliflarim",
-      "/mutaxassis/takliflarim/kelgan/o-1",
+      "/mutaxassis/takliflarim/kelgan/off-1",
       "/mutaxassis/shartnomalar",
-      "/mutaxassis/shartnomalar/c-1",
+      "/mutaxassis/shartnomalar/cnt-1",
       "/mutaxassis/xabarlar",
       "/mutaxassis/xizmatlarim",
-      "/mutaxassis/xizmatlarim/s-1",
+      "/mutaxassis/xizmatlarim/svc-1",
       "/mutaxassis/xizmatlarim/yangi",
       "/mutaxassis/profil",
       "/mutaxassis/daromad",
@@ -226,7 +226,14 @@ async function mobileSmoke(browser, roleName, config) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    /* Konteyner/CI muhitida (Docker, GitHub Actions) Chromium'ning user
+       namespace sandbox'i mavjud emas va sahifa "Page crashed" bilan
+       yiqiladi; /dev/shm ham ko'pincha kichik. Bu ikki bayroqsiz suite
+       lokalda ishlab, CI'da ishlamaydi. */
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
   const crawl = [];
   const mobile = [];
   for (const [name, config] of Object.entries(roles)) {

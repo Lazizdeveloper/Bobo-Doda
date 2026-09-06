@@ -40,6 +40,15 @@ export function TopNav({ base }: TopNavProps) {
     setMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   const items = [
     { href: "/xaridor", label: t("nav.dashboard"), exact: true },
     { href: "/xaridor/bozor", label: t("nav.market") },
@@ -119,7 +128,13 @@ export function TopNav({ base }: TopNavProps) {
 
       {/* Mobile Nav */}
       {menuOpen && (
-        <div id="mobile-nav" className="border-t border-line bg-surface px-4 py-3 md:hidden">
+        <div
+          id="mobile-nav"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("a11y.openMenu")}
+          className="border-t border-line bg-surface px-4 py-3 md:hidden"
+        >
           <nav className="flex flex-col gap-2">
             {items.map((item) => (
               <Link key={item.href} href={item.href} className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">

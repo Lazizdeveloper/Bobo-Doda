@@ -50,7 +50,15 @@ export interface SellerProfile {
   portfolio: PortfolioItem[];
   /** o'rtacha javob vaqti (soatda) — ishonch signali */
   responseTimeHours: number;
+  /** O'rtacha reyting (0-5). `reviewCount` bilan BIRGA yangilanadi —
+      ikkalasi denormallashtirilgan hisoblagich: sharh qo'shilganda/
+      o'chirilganda `applyReviewToProfile` qayta hisoblaydi. */
   rating: number;
+  /** Reytingni tashkil qilgan sharhlar soni. Ilgari bu maydon yo'q edi va
+      ochiq profil yulduz yonida ko'rsatilayotgan xizmatlardagi sharhlar
+      sonini (`reviews.length`) chizardi — 4.9 reyting "(2)" bilan
+      ko'rinardi, ya'ni raqamlar bir-biriga mos kelmasdi. */
+  reviewCount: number;
   completedContracts: number;
   badge: TrustBadge;
   memberSince: string;
@@ -271,6 +279,34 @@ export interface PaymentCard {
   createdAt: string;
 }
 
+/* Pul yechish so'rovi. Foydalanuvchi yaratadi (`requestWithdrawal`), admin
+   tasdiqlaydi yoki rad etadi. Tasdiqlanmaguncha summa "band" hisoblanadi —
+   shuning uchun uni ikki marta so'rab bo'lmaydi. */
+export type WithdrawalStatus =
+  | "kutilmoqda"
+  | "korib_chiqilmoqda"
+  | "tasdiqlangan"
+  | "rad_etilgan";
+
+export interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  /** Mutaxassis daromadidan (`earnings`) yoki xaridor balansidan (`balance`) */
+  source: "earnings" | "balance";
+  amount: number;
+  currency: "UZS";
+  /** Faqat oxirgi 4 raqam ko'rinadigan niqob — to'liq raqam saqlanmaydi */
+  cardDetails: string;
+  cardId: string;
+  status: WithdrawalStatus;
+  createdAt: string;
+  processedAt?: string;
+  processedBy?: string;
+  rejectionReason?: string;
+}
+
 export interface Session {
   userId: string;
   role: UserRole | null;
@@ -279,7 +315,15 @@ export interface Session {
   verified: boolean;
 }
 
-export type NotificationKind = "elon" | "taklif" | "bosqich" | "xabar" | "tolov";
+/** `tizim` — admin qarori (KYC, arbitraj, moderatsiya). Foydalanuvchi
+    o'zi boshlamagan, lekin uni bevosita ta'sir qiladigan hodisalar. */
+export type NotificationKind =
+  | "elon"
+  | "taklif"
+  | "bosqich"
+  | "xabar"
+  | "tolov"
+  | "tizim";
 
 export interface AppNotification {
   id: string;
@@ -309,7 +353,21 @@ export interface VerificationRecord {
   birthDate: string;
   documents: string[];
   submittedAt?: string;
+  /** Admin qaror qabul qilgan vaqt (tasdiqlash yoki rad etish) */
+  reviewedAt?: string;
   rejectionReason?: string;
+}
+
+/** Yordam chiptasidagi javob (hozircha faqat support operatoridan).
+    Admin `replyToTicket` bilan yozadi, foydalanuvchi Yordam sahifasida
+    o'qiydi — ilgari javob yozilardi-yu, foydalanuvchiga HECH QAYERDA
+    ko'rsatilmasdi: u "javob berildi" bildirishnomasini olib, sahifani
+    ochganda faqat holat belgisini ko'rardi. */
+export interface SupportReply {
+  sender: string;
+  text: string;
+  at: string;
+  isAdmin: boolean;
 }
 
 export type SupportTopic =

@@ -16,14 +16,19 @@ import type {
   Service,
   Session,
   Specialist,
+  SupportReply,
   SupportTicket,
   User,
   UserRole,
   VerificationRecord,
   Dispute,
+  WithdrawalRequest,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
 import { sellerNet } from "@/lib/fees";
+import { formatAmount } from "@/lib/format";
+import { getPlatformSettings } from "@/lib/platform-settings";
+import { getDisabledCategories } from "@/lib/categories";
 export type { AccountPreferences, Specialist } from "@/lib/types";
 import {
   amount,
@@ -50,6 +55,7 @@ import {
   seedMessages,
   seedMilestones,
   seedNotifications,
+  seedWithdrawals,
   seedOfferMessages,
   seedOffers,
   seedProfiles,
@@ -83,11 +89,17 @@ const KEYS = {
   balances: "sb2_balances",
   withdrawn: "sb2_withdrawn",
   cards: "sb2_cards",
+  withdrawalRequests: "sb2_withdrawal_requests",
   session: "sb_session",
   seeded: "sb2_seeded",
 } as const;
 
 export const DATA_CHANGED_EVENT = "bobododa:data-changed";
+
+/* Operatsion sozlamalar admin panelidan boshqariladi (`lib/platform-settings.ts`
+   — yagona manba). Ilgari ilova `sb2_system_settings` dan, admin esa
+   `sb2_platform_settings` ga yozardi va ikkalasi hech qachon kesishmasdi:
+   admin paneldagi har bir tugma bezak edi. */
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -126,7 +138,7 @@ function write<T>(key: string, value: T): void {
 }
 
 /* v6: Rich interconnected operations seed */
-const SEED_VERSION = "14";
+const SEED_VERSION = "16";
 
 /** To'liq ISO sana-vaqt satri ("2026-03-05T16:00:00.000Z").
     Faqat shu shakl siljitiladi — "1994-05-12" kabi tug'ilgan sanalar tegilmaydi. */
@@ -200,6 +212,9 @@ function ensureSeed(): void {
       messages: [...seedMessages, ...seedOfferMessages],
       reviews: seedReviews,
       notifications: seedNotifications,
+      /* Yechish so'rovlari ikkala tomonga ham tegishli — admin navbatida ham,
+         mutaxassisning "So'rovlarim" ro'yxatida ham bir xil yozuv ko'rinadi */
+      withdrawalRequests: seedWithdrawals,
     };
     const newest = newestSeedDate(payload);
     const offset = newest ? Date.now() - SEED_FRESHNESS_LAG_MS - newest : 0;
@@ -216,6 +231,7 @@ function ensureSeed(): void {
     write(KEYS.messages, fresh.messages);
     write(KEYS.reviews, fresh.reviews);
     write(KEYS.notifications, fresh.notifications);
+    write(KEYS.withdrawalRequests, fresh.withdrawalRequests);
     /* Eski versiya sessiyasi endi mavjud bo'lmagan hisobga ishora qilishi mumkin */
     window.localStorage.removeItem(KEYS.session);
     window.localStorage.setItem(KEYS.seeded, SEED_VERSION);
@@ -256,6 +272,10 @@ function applyEscrowRules(): void {
     if (own.length > 0 && own.every((m) => m.status === "qabul_qilindi")) {
       contracts[i] = { ...c, status: "yakunlangan" };
       cChanged = true;
+      /* Avto-yakunlanish ham "bajarilgan ish" — qo'lda qabul qilingani bilan
+         bir xil hisoblanadi, aks holda avto-qabuldan o'tgan shartnomalar
+         mutaxassis obro'siga umuman qo'shilmasdi. */
+      incrementCompletedContracts(c.sellerId);
       pushNotification(c.sellerId, "tolov", "ntf.contractCompleted", `/mutaxassis/shartnomalar/${c.id}`, { title: c.title });
       pushNotification(c.buyerId, "tolov", "ntf.contractCompleted", `/xaridor/shartnomalar/${c.id}`, { title: c.title });
     }
@@ -372,6 +392,7 @@ function emptyProfile(userId: string): SellerProfile {
     portfolio: [],
     responseTimeHours: 0,
     rating: 0,
+    reviewCount: 0,
     completedContracts: 0,
     badge: "yangi",
     memberSince: new Date().toISOString(),
@@ -393,8 +414,9 @@ export async function register(data: {
 }): Promise<Session> {
   ensureSeed();
   await delay(500);
-  const system = read<{ registration?: boolean }>("sb2_system_settings", {});
-  if (system.registration === false) throw new Error("REGISTRATION_PAUSED");
+  if (!getPlatformSettings().registrationEnabled) {
+    throw new Error("REGISTRATION_PAUSED");
+  }
   const phone = normalizePhone(data.phone);
   const password = text(data.password, LIMITS.password);
   if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
@@ -564,6 +586,17 @@ export function logout(): void {
   window.localStorage.removeItem(KEYS.session);
 }
 
+/** Sessiyani yangilash (`POST /auth/refresh` ning mock ekvivalenti).
+ *
+ * Mock'da token yo'q — shuning uchun bu funksiya shunchaki joriy sessiyani
+ * qaytaradi (bloklangan hisob bo'lsa `getSession` uni o'zi `null` qiladi).
+ * Shartnoma BACKEND uchun mavjud: u yerda bu httpOnly cookie'dagi refresh
+ * token bilan yangi access token oladi. `null` qaytishi — "qayta kiring". */
+export async function refreshSession(): Promise<Session | null> {
+  await delay(120);
+  return getSession();
+}
+
 /* ---------------- Foydalanuvchi / profil ---------------- */
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -583,6 +616,9 @@ export async function getSellerProfile(): Promise<SellerProfile> {
   const profile = profiles[userId] ?? emptyProfile(userId);
   return {
     ...profile,
+    /* Eski yozuvda bu maydon bo'lmasligi mumkin — ekranda "(undefined)"
+       chiqmasligi uchun o'qishda normallashtiriladi. */
+    reviewCount: profile.reviewCount ?? 0,
     identityVerified: verifiedIdentitySet().has(userId),
     completionRate: completionRateOf(userId),
   };
@@ -670,12 +706,24 @@ export async function getService(id: string): Promise<Service | null> {
   return services.find((s) => s.id === id) ?? null;
 }
 
+/** Admin o'chirgan kategoriyada YANGI yozuv yaratib bo'lmaydi.
+    Bu tekshiruv ilgari faqat UI'da (dropdown ro'yxatida) bor edi — ochiq
+    turgan eski tab, saqlangan qoralama yoki to'g'ridan-to'g'ri chaqiruv uni
+    chetlab o'tardi. Ma'lumot qatlami — kill-switch'ning YAGONA ishonchli
+    joyi (backend'da ham shunday bo'ladi). */
+function assertCategoryOpen(category: string): void {
+  if (getDisabledCategories().has(category)) {
+    throw new Error("CATEGORY_DISABLED");
+  }
+}
+
 export async function createService(
   data: Omit<Service, "id" | "sellerId" | "currency" | "createdAt">
 ): Promise<Service> {
   await delay(500);
   const session = getSession();
   if (!session || session.role !== "mutaxassis") throw new Error("FORBIDDEN");
+  assertCategoryOpen(data.category);
   const service: Service = {
     ...data,
     title: text(data.title, LIMITS.title),
@@ -964,7 +1012,7 @@ export async function cancelContract(id: string): Promise<Contract> {
       "tolov",
       "ntf.refundIssued",
       "/xaridor/xarajatlar",
-      { amount: refund.toLocaleString("uz-UZ"), title: contract.title }
+      { amount: formatAmount(refund), title: contract.title }
     );
   }
   return contracts[idx];
@@ -1008,7 +1056,10 @@ export async function submitMilestone(id: string): Promise<Milestone> {
   assertTransition(milestoneMachine, milestones[idx].status, "topshirildi", "seller");
   const now = new Date();
   const deadline = new Date(now);
-  deadline.setDate(deadline.getDate() + 3);
+  /* Ko'rib chiqish muddati admin sozlamasidan — ilgari `+3` qattiq yozilgan
+     edi va admin paneldagi "Avtomatik qabul muddati" hech narsaga ta'sir
+     qilmasdi. */
+  deadline.setDate(deadline.getDate() + getPlatformSettings().escrowAutoReleaseDays);
   milestones[idx] = {
     ...milestones[idx],
     status: "topshirildi",
@@ -1322,6 +1373,24 @@ export async function getSupportTickets(): Promise<SupportTicket[]> {
   return read<SupportTicket[]>(KEYS.supportTickets, [])
     .filter((ticket) => ticket.userId === uid)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Chipta bo'yicha support javoblari. EGALIK tekshiriladi — boshqa
+    foydalanuvchining chiptasidagi yozishmani o'qib bo'lmaydi. */
+export async function getSupportReplies(
+  ticketId: string
+): Promise<SupportReply[]> {
+  ensureSeed();
+  await delay(120);
+  const uid2 = currentUserId();
+  const ticket = read<SupportTicket[]>(KEYS.supportTickets, []).find(
+    (item) => item.id === ticketId
+  );
+  if (!ticket) throw new Error("NOT_FOUND");
+  if (ticket.userId !== uid2) throw new Error("FORBIDDEN");
+  return read<SupportReply[]>(`sb2_ticket_chat_${ticketId}`, []).sort((a, b) =>
+    a.at.localeCompare(b.at)
+  );
 }
 
 export async function createSupportTicket(
@@ -1680,13 +1749,30 @@ export async function getWithdrawnTotal(): Promise<number> {
 
 /** Mutaxassis daromadini bog'langan kartaga yechish: qabul qilingan bosqichlar
    summasidan hali yechilmagan qismini o'sha kartaga o'tkazadi (mock). */
-export async function withdrawFunds(cardId: string): Promise<void> {
-  await delay(700);
-  const uid2 = currentUserId();
-  assertOwnCard(cardId, uid2);
+/** Kutilayotgan (hali admin ko'rib chiqmagan) yechish so'rovlari summasi.
+   Bu summa "band" — uni ikkinchi marta so'rab bo'lmaydi. */
+export function pendingWithdrawalTotal(userId: string): number {
+  return read<WithdrawalRequest[]>(KEYS.withdrawalRequests, [])
+    .filter(
+      (r) =>
+        r.userId === userId &&
+        (r.status === "kutilmoqda" || r.status === "korib_chiqilmoqda")
+    )
+    .reduce((sum, r) => sum + r.amount, 0);
+}
+
+export async function getPendingWithdrawalTotal(): Promise<number> {
+  ensureSeed();
+  await delay(100);
+  return pendingWithdrawalTotal(currentUserId());
+}
+
+/** Mutaxassisning yechib olinishi mumkin bo'lgan SOF summasi (band qilinganidan
+    tashqari). Daromad ekrani ham, so'rov yaratish ham shu bitta manbadan. */
+function sellerWithdrawable(userId: string): number {
   const myContracts = new Set(
     read<Contract[]>(KEYS.contracts, [])
-      .filter((c) => c.sellerId === uid2)
+      .filter((c) => c.sellerId === userId)
       .map((c) => c.id)
   );
   /* Xizmat haqi HAR BOSQICHDAN alohida ushlanadi, jamidan emas — yaxlitlash
@@ -1694,10 +1780,65 @@ export async function withdrawFunds(cardId: string): Promise<void> {
   const earned = read<Milestone[]>(KEYS.milestones, [])
     .filter((m) => myContracts.has(m.contractId) && m.status === "qabul_qilindi")
     .reduce((sum, m) => sum + sellerNet(m.amount), 0);
-  const withdrawn = read<Record<string, number>>(KEYS.withdrawn, {});
-  if ((withdrawn[uid2] ?? 0) >= earned) throw new Error("NO_BALANCE");
-  withdrawn[uid2] = earned;
-  write(KEYS.withdrawn, withdrawn);
+  const withdrawn = read<Record<string, number>>(KEYS.withdrawn, {})[userId] ?? 0;
+  return Math.max(0, earned - withdrawn - pendingWithdrawalTotal(userId));
+}
+
+/** Yechish so'rovini yaratadi (admin tasdig'iga yuboradi).
+   Ilgari bu funksiya pulni DARHOL yechilgan deb belgilardi va admin
+   navbatiga umuman tushmasdi — admin paneldagi "To'lovlar" navbati esa
+   faqat seed'dagi soxta qatorlarni ko'rsatardi. */
+async function createWithdrawalRequest(
+  cardId: string,
+  source: "earnings" | "balance"
+): Promise<WithdrawalRequest> {
+  const uid2 = currentUserId();
+  assertOwnCard(cardId, uid2);
+  const amount =
+    source === "earnings"
+      ? sellerWithdrawable(uid2)
+      : Math.max(0, (readBalances()[uid2] ?? 0) - pendingWithdrawalTotal(uid2));
+  if (amount <= 0) throw new Error("NO_BALANCE");
+  /* Admin belgilagan eng kichik yechish summasi */
+  const minPayout = getPlatformSettings().minPayoutAmount;
+  if (amount < minPayout) throw new Error("BELOW_MIN_PAYOUT");
+
+  const users = read<User[]>(KEYS.users, []);
+  const user = users.find((u) => u.id === uid2);
+  const card = read<PaymentCard[]>(KEYS.cards, []).find((c) => c.id === cardId);
+
+  const request: WithdrawalRequest = {
+    id: uid("wd"),
+    userId: uid2,
+    userName: user?.fullName ?? "",
+    userRole: user?.role ?? "mutaxassis",
+    source,
+    amount,
+    currency: "UZS",
+    /* To'liq karta raqami hech qachon saqlanmaydi — faqat tur + oxirgi 4 raqam */
+    cardDetails: card ? `${card.type.toUpperCase()} •••• ${card.last4}` : "—",
+    cardId,
+    status: "kutilmoqda",
+    createdAt: new Date().toISOString(),
+  };
+  const all = read<WithdrawalRequest[]>(KEYS.withdrawalRequests, []);
+  write(KEYS.withdrawalRequests, [request, ...all]);
+  return request;
+}
+
+export async function withdrawFunds(cardId: string): Promise<WithdrawalRequest> {
+  await delay(700);
+  return createWithdrawalRequest(cardId, "earnings");
+}
+
+/** Foydalanuvchining o'z yechish so'rovlari (holatini kuzatish uchun) */
+export async function getMyWithdrawalRequests(): Promise<WithdrawalRequest[]> {
+  ensureSeed();
+  await delay(150);
+  const uid2 = currentUserId();
+  return read<WithdrawalRequest[]>(KEYS.withdrawalRequests, [])
+    .filter((r) => r.userId === uid2)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 /* ================= XARIDOR (yollovchi) tomoni ================= */
@@ -1720,6 +1861,73 @@ function verifiedIdentitySet(): Set<string> {
   return new Set(
     records.filter((v) => v.status === "tasdiqlangan").map((v) => v.userId)
   );
+}
+
+/* ---------------- Mutaxassis obro'si (reputation) ----------------
+   `rating`, `reviewCount`, `completedContracts` va `badge` — denormallashtirilgan
+   hisoblagichlar: ular profilda SAQLANADI, lekin ularni o'zgartiradigan har bir
+   hodisada (yangi sharh, sharh o'chirilishi, shartnoma yakunlanishi) shu yerdan
+   yangilanadi.
+
+   Ilgari bu to'rt maydon seed'da yozilib, boshqa hech qachon o'zgarmasdi:
+   xaridor 1 yulduz qoldirsa ham mutaxassis 4.9 bo'lib qolaverardi, 100 ta ish
+   yakunlansa ham "26 ta" ko'rinardi va TrustBadge hech qachon ko'tarilmasdi.
+   Ishonchga qurilgan bozorda bu eng og'ir xato edi. Backend'da bu mantiq
+   sharh/shartnoma yozuvi bilan BITTA tranzaksiyada bajariladi. */
+
+/** Profilni o'qib, hisoblagichlarni yangilaydi va badge'ni qayta hisoblaydi. */
+function updateSellerReputation(
+  sellerId: string,
+  change: (profile: SellerProfile) => Partial<SellerProfile>
+): void {
+  const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
+  const current = profiles[sellerId];
+  /* Profili yo'q foydalanuvchi (xaridor yoki chala ro'yxatdan o'tgan) uchun
+     obro' yozuvi yaratilmaydi — aks holda katalogda bo'sh profil paydo bo'lardi. */
+  if (!current) return;
+  const patch = change(current);
+  const next: SellerProfile = { ...current, ...patch };
+  profiles[sellerId] = {
+    ...next,
+    badge: computeBadge(next.completedContracts, next.rating),
+  };
+  write(KEYS.profiles, profiles);
+}
+
+/** Yangi sharh: o'rtachani surilgan usulda qayta hisoblaydi (butun bazani
+    qayta o'qimasdan — backend'da ham xuddi shunday `AVG` yangilanadi). */
+export function applyNewReviewToProfile(sellerId: string, rating: number): void {
+  updateSellerReputation(sellerId, (p) => {
+    /* `?? 0` — eski build'da saqlangan profilda `reviewCount` yo'q; usiz
+       arifmetika NaN berardi va reyting butunlay buzilardi. */
+    const prev = p.reviewCount ?? 0;
+    const count = prev + 1;
+    return {
+      reviewCount: count,
+      rating: Math.round(((p.rating * prev + rating) / count) * 10) / 10,
+    };
+  });
+}
+
+/** Admin sharhni o'chirdi — o'rtachadan chiqariladi. */
+export function removeReviewFromProfile(sellerId: string, rating: number): void {
+  updateSellerReputation(sellerId, (p) => {
+    const prev = p.reviewCount ?? 0;
+    const count = Math.max(0, prev - 1);
+    if (count === 0) return { reviewCount: 0, rating: 0 };
+    return {
+      reviewCount: count,
+      rating: Math.round(((p.rating * prev - rating) / count) * 10) / 10,
+    };
+  });
+}
+
+/** Shartnoma yakunlandi — bajarilgan ishlar soni oshadi va badge qayta
+    hisoblanadi (`computeBadge`: 5+/4.5 → ishonchli, 25+/4.8 → top). */
+export function incrementCompletedContracts(sellerId: string): void {
+  updateSellerReputation(sellerId, (p) => ({
+    completedContracts: p.completedContracts + 1,
+  }));
 }
 
 /** Yakunlangan / (yakunlangan + bekor qilingan) shartnomalar nisbati (0-100).
@@ -1753,6 +1961,7 @@ export async function getSpecialists(): Promise<Specialist[]> {
       user: u,
       profile: {
         ...profiles[u.id],
+        reviewCount: profiles[u.id].reviewCount ?? 0,
         identityVerified: verified.has(u.id),
         completionRate: completionRateOf(u.id),
       },
@@ -1769,6 +1978,7 @@ export async function getSpecialist(userId: string): Promise<Specialist | null> 
     user,
     profile: {
       ...profile,
+      reviewCount: profile.reviewCount ?? 0,
       identityVerified: verifiedIdentitySet().has(userId),
       completionRate: completionRateOf(userId),
     },
@@ -1817,6 +2027,7 @@ export async function createJob(data: {
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
   if (session.role !== "xaridor") throw new Error("FORBIDDEN");
+  assertCategoryOpen(data.category);
   const users = read<User[]>(KEYS.users, []);
   const user = users.find((u) => u.id === session.userId);
   const jobs = read<Job[]>(KEYS.jobs, []);
@@ -2063,6 +2274,10 @@ export async function createOffer(data: {
   if (session.role !== "xaridor" || session.userId === data.sellerId) {
     throw new Error("FORBIDDEN");
   }
+  /* To'g'ridan-to'g'ri takliflar (A yo'l) admin tomonidan o'chirilishi mumkin */
+  if (!getPlatformSettings().instantOffersEnabled) {
+    throw new Error("OFFERS_DISABLED");
+  }
   const offers = read<Offer[]>(KEYS.offers, []);
   /* Bitta mutaxassisga bitta kutilayotgan taklif */
   const hasPending = offers.some(
@@ -2294,8 +2509,7 @@ function findOwnMilestone(
    mumkin. Pul har bosqich qabul qilinganda mutaxassisga o'tadi. */
 export async function fundContract(id: string): Promise<Contract> {
   await delay(700);
-  const system = read<{ paymentsPaused?: boolean }>("sb2_system_settings", {});
-  if (system.paymentsPaused) throw new Error("PAYMENTS_PAUSED");
+  if (getPlatformSettings().paymentsPaused) throw new Error("PAYMENTS_PAUSED");
   const uid2 = currentUserId();
   const contracts = read<Contract[]>(KEYS.contracts, []);
   const idx = contracts.findIndex(
@@ -2351,15 +2565,11 @@ export async function getBalance(): Promise<number> {
 }
 
 /** Balansni bog'langan kartaga yechish (mock). cardId — o'z kartasi bo'lishi shart. */
-export async function withdrawBalance(cardId: string): Promise<number> {
+/** Xaridor balansini kartaga yechish — admin tasdig'iga so'rov yuboradi.
+   Balans tasdiqlangunga qadar joyida qoladi (lekin "band" bo'ladi). */
+export async function withdrawBalance(cardId: string): Promise<WithdrawalRequest> {
   await delay(700);
-  const uid2 = currentUserId();
-  assertOwnCard(cardId, uid2);
-  const balances = readBalances();
-  if (!balances[uid2] || balances[uid2] <= 0) throw new Error("NO_BALANCE");
-  balances[uid2] = 0;
-  write(KEYS.balances, balances);
-  return 0;
+  return createWithdrawalRequest(cardId, "balance");
 }
 
 /* ---------------- Bank kartalari (Uzcard / Humo) ---------------- */
@@ -2453,6 +2663,7 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     const cIdx = contracts.findIndex((c) => c.id === contract.id);
     contracts[cIdx] = { ...contract, status: "yakunlangan" };
     write(KEYS.contracts, contracts);
+    incrementCompletedContracts(contract.sellerId);
   }
 
   pushNotification(
@@ -2546,6 +2757,9 @@ export async function createReview(
   };
   reviews.push(review);
   write(KEYS.reviews, reviews);
+  /* Reyting va TrustBadge shu yerda yangilanadi — sharh yozilib, mutaxassis
+     bahosi o'zgarmay qolsa, butun ishonch tizimi bezakka aylanardi. */
+  applyNewReviewToProfile(contract.sellerId, safeRating);
   pushNotification(
     contract.sellerId,
     "tolov",

@@ -10,9 +10,11 @@ import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { CardPicker } from "@/components/shared/cards";
-import { contractsService, milestonesService, paymentsService } from "@/lib/api";
-import type { Contract, Milestone, PaymentCard } from "@/lib/types";
+import { WithdrawalRequests } from "@/components/shared/WithdrawalRequests";
+import { ApiError, contractsService, milestonesService, paymentsService } from "@/lib/api";
+import type { Contract, Milestone, PaymentCard, WithdrawalRequest } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { useT } from "@/lib/i18n";
 
 const ESCROW_STATUSES = ["mablaglangan", "topshirildi", "ozgartirish_soraldi"];
@@ -23,6 +25,10 @@ export default function XarajatlarPage() {
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [balance, setBalance] = useState(0);
+  const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
+  /* Eng kam yechish summasi admin sozlamasidan */
+  const [minPayout, setMinPayout] = useState(0);
+  const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [cards, setCards] = useState<PaymentCard[]>([]);
   const [cardId, setCardId] = useState("");
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -36,8 +42,13 @@ export default function XarajatlarPage() {
       contractsService.list(),
       paymentsService.getBalance(),
       paymentsService.getCards(),
+      paymentsService.getPendingWithdrawalTotal(),
+      paymentsService.listMyWithdrawalRequests(),
     ])
-      .then(([milestoneList, contractList, balanceValue, cardList]) => {
+      .then(([milestoneList, contractList, balanceValue, cardList, pending, requestList]) => {
+        setPendingWithdrawal(pending);
+        setMinPayout(getPlatformSettings().minPayoutAmount);
+        setRequests(requestList);
         setMilestones(milestoneList);
         setContracts(contractList);
         setBalance(balanceValue);
@@ -54,12 +65,19 @@ export default function XarajatlarPage() {
     if (!cardId) return;
     setWithdrawing(true);
     try {
-      const next = await paymentsService.withdrawBalance(cardId);
-      setBalance(next);
-      toast(t("spend.withdrawn"));
+      await paymentsService.withdrawBalance(cardId);
+      /* Pul darhol yechilmaydi — admin tasdig'iga so'rov ketadi. Balans
+         joyida qoladi, lekin so'ralgan summa "band" bo'ladi. */
+      setPendingWithdrawal(await paymentsService.getPendingWithdrawalTotal());
+      setRequests(await paymentsService.listMyWithdrawalRequests());
+      toast(t("wd.requested"));
       setWithdrawOpen(false);
-    } catch {
-      toast(t("common.error"), "error");
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : "";
+      toast(
+        code === "BELOW_MINIMUM" ? t("wd.belowMin") : t("common.error"),
+        "error"
+      );
     } finally {
       setWithdrawing(false);
     }
@@ -139,11 +157,32 @@ export default function XarajatlarPage() {
               </p>
               <p className="mt-1 text-2xs text-muted">{t("spend.balanceHint")}</p>
             </div>
-            <Button onClick={() => setWithdrawOpen(true)}>
-              {t("spend.withdraw")}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                onClick={() => setWithdrawOpen(true)}
+                disabled={balance - pendingWithdrawal < Math.max(1, minPayout)}
+              >
+                {t("spend.withdraw")}
+              </Button>
+              {pendingWithdrawal > 0 && (
+                <span className="text-2xs text-warning-deep">
+                  {t("wd.pending")}: {formatMoney(pendingWithdrawal, lang)}
+                </span>
+              )}
+              {minPayout > 0 && balance - pendingWithdrawal > 0 &&
+                balance - pendingWithdrawal < minPayout && (
+                  <span className="text-2xs text-warning-deep">
+                    {t("wd.minPayout")}: {formatMoney(minPayout, lang)}
+                  </span>
+                )}
+            </div>
           </div>
         </Card>
+      )}
+
+      {/* Yechish so'rovlari — admin tasdig'i kutilayotganlar ham shu yerda */}
+      {(requests.length > 0 || balance > 0) && (
+        <WithdrawalRequests requests={requests} />
       )}
 
       {/* So'nggi to'lovlar */}
@@ -256,10 +295,11 @@ export default function XarajatlarPage() {
           <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
             <span className="text-xs text-muted">{t("spend.balance")}</span>
             <span className="font-heading text-base font-bold text-success">
-              {formatMoney(balance, lang)}
+              {formatMoney(Math.max(0, balance - pendingWithdrawal), lang)}
             </span>
           </div>
           <p className="text-xs text-muted">{t("spend.withdrawDesc")}</p>
+          <p className="text-2xs text-faint">{t("wd.pendingHint")}</p>
           <div>
             <p className="mb-2 text-xs font-medium text-muted">
               {t("card.selectTitle")}

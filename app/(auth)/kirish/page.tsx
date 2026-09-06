@@ -86,7 +86,15 @@ function KirishForm() {
     try {
       if (mode === "register") {
         await authService.register({ fullName: fullName.trim(), phone: phone.trim(), password });
-        router.push("/rol-tanlash");
+        /* Landing CTA'si "?role=mutaxassis|xaridor" bilan keladi — tanlovni
+           rol sahifasiga uzatamiz, aks holda parametr e'tiborsiz qolar va
+           ikkala CTA bir xil ishlardi. */
+        const wanted = searchParams.get("role");
+        router.push(
+          wanted === "mutaxassis" || wanted === "xaridor"
+            ? `/rol-tanlash?role=${wanted}`
+            : "/rol-tanlash"
+        );
       } else {
         /* Onboarding chala qolgan bo'lsa, kabinet guard'lari kerakli
            bosqichga (profil / tasdiqlash) o'zi yo'naltiradi */

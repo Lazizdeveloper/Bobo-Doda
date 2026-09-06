@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,6 +11,7 @@ import { TagInput } from "@/components/ui/TagInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
+import { getSelectableCategories } from "@/lib/categories";
 import { jobsService } from "@/lib/api";
 import type { ServiceCategory } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -23,6 +24,13 @@ export default function YangiElonPage() {
   const { t, lang } = useT();
   const router = useRouter();
   const { toast } = useToast();
+
+  /* Admin o'chirgan kategoriyada yangi ish yaratib bo'lmaydi. Ro'yxat mount'dan
+     KEYIN toraytiriladi: server render'ida `localStorage` yo'q, shuning uchun
+     darhol filtrlansa hidratsiya mos kelmasdi. */
+  const [selectableCategories, setSelectableCategories] =
+    useState<ServiceCategory[]>(CATEGORIES);
+  useEffect(() => setSelectableCategories(getSelectableCategories()), []);
 
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState<ServiceCategory | "">("");
@@ -154,7 +162,7 @@ export default function YangiElonPage() {
           <div className="flex flex-col gap-4">
             <p className="text-sm text-muted">{t("jwiz.categoryHint")}</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {CATEGORIES.map((cat) => (
+              {selectableCategories.map((cat) => (
                 <button
                   key={cat}
                   type="button"

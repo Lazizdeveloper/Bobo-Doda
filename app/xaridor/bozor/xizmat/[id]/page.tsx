@@ -150,6 +150,7 @@ export default function XizmatTafsilotiPage() {
                     <button
                       key={i}
                       type="button"
+                      aria-label={t("a11y.image").replace("{n}", String(i + 1))}
                       onClick={() => setSelectedImageIdx(i)}
                       className={`relative aspect-[16/10] w-20 shrink-0 overflow-hidden rounded-btn border-2 transition-all ${
                         selectedImageIdx === i
@@ -160,7 +161,7 @@ export default function XizmatTafsilotiPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={src}
-                        alt={t("a11y.image").replace("{n}", String(i + 1))}
+                        alt=""
                         className="h-full w-full object-cover"
                       />
                     </button>

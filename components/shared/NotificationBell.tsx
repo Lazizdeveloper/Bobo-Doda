@@ -13,6 +13,8 @@ const kindIcons: Record<NotificationKind, string> = {
   bosqich: "M6 2h6l3 3v13H6V2Zm6 0v3h3M9 9h5M9 12h5",
   xabar: "M3 4h14v9H7l-4 3V4Z",
   tolov: "M3 6h13a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3V6Zm0 0V4h11",
+  /* Admin qarori — qalqon (moderatsiya/ishonch) */
+  tizim: "M10 2.5 4 5v4.5c0 3.6 2.5 6.4 6 8 3.5-1.6 6-4.4 6-8V5l-6-2.5Zm-2.2 7.7 1.7 1.7 3-3.4",
 };
 
 export function NotificationBell() {

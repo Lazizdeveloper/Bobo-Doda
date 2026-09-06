@@ -39,7 +39,14 @@ function assert(condition, message) {
 let browser;
 
 (async () => {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({
+    headless: true,
+    /* Konteyner/CI muhitida (Docker, GitHub Actions) Chromium'ning user
+       namespace sandbox'i mavjud emas va sahifa "Page crashed" bilan
+       yiqiladi; /dev/shm ham ko'pincha kichik. Bu ikki bayroqsiz suite
+       lokalda ishlab, CI'da ishlamaydi. */
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   const runtimeErrors = [];
@@ -91,7 +98,7 @@ let browser;
 
   /* Seed xaridor: to'lovni ikki marta yuborishdan himoya. */
   await setSession(page, BUYER);
-  await goto(page, "/xaridor/shartnomalar/c-7");
+  await goto(page, "/xaridor/shartnomalar/cnt-5");
   const payButton = page.getByRole("button", { name: /To'lash va faollashtirish/ });
   await payButton.click();
   await page.getByText("Click", { exact: true }).last().click();
@@ -101,13 +108,13 @@ let browser;
   await page.waitForTimeout(900);
   const contractsAfterPay = await storage(page, "sb2_contracts");
   assert(
-    contractsAfterPay.find((item) => item.id === "c-7").status === "faol",
+    contractsAfterPay.find((item) => item.id === "cnt-5").status === "faol",
     "contract funding failed"
   );
 
   /* Seller: incoming offer'ni qabul qilish va kontraktning bir marta yaratilishi. */
   await setSession(page, SELLER);
-  await goto(page, "/mutaxassis/takliflarim/kelgan/o-1");
+  await goto(page, "/mutaxassis/takliflarim/kelgan/off-1");
   const acceptOffer = page.getByRole("button", { name: /qabul qilish/i }).first();
   assert(
     await acceptOffer.isVisible(),
@@ -121,7 +128,7 @@ let browser;
   await page.waitForURL("**/mutaxassis/shartnomalar/**");
   await page.waitForTimeout(300);
   const offers = await storage(page, "sb2_offers");
-  const offer = offers.find((item) => item.id === "o-1");
+  const offer = offers.find((item) => item.id === "off-1");
   if (offer?.status !== "qabul_qilindi") {
     console.error(
       "offer diagnostics",

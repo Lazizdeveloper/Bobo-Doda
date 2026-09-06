@@ -13,7 +13,14 @@ const routes = [
 ];
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    /* Konteyner/CI muhitida (Docker, GitHub Actions) Chromium'ning user
+       namespace sandbox'i mavjud emas va sahifa "Page crashed" bilan
+       yiqiladi; /dev/shm ham ko'pincha kichik. Bu ikki bayroqsiz suite
+       lokalda ishlab, CI'da ishlamaydi. */
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
   const context = await browser.newContext();
   const page = await context.newPage();
   const failures = [];

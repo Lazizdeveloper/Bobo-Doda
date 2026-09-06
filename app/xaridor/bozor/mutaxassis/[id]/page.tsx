@@ -91,7 +91,7 @@ export default function MutaxassisProfiliPage() {
         {/* Left Column */}
         <div className="flex flex-col gap-6">
           {/* Header Card */}
-          <Card padding="lg" stitch>
+          <Card padding="lg">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
               <Avatar name={user.fullName} size="lg" />
               <div className="flex-1">
@@ -114,7 +114,12 @@ export default function MutaxassisProfiliPage() {
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
                   <div className="flex items-center gap-1.5 font-bold text-ink">
                     <RatingStars value={profile.rating} showValue />
-                    <span className="font-normal text-muted">({reviews.length})</span>
+                    {/* Yulduz yonidagi son — reytingni HOSIL QILGAN sharhlar
+                        soni (`profile.reviewCount`). Ilgari bu yerda shu
+                        ekranga yuklangan sharhlar soni (`reviews.length`)
+                        turardi va "4.9 (2)" kabi mos kelmaydigan juftlik
+                        chiqardi. */}
+                    <span className="font-normal text-muted">({profile.reviewCount})</span>
                   </div>
                   <span className="flex items-center gap-1">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
