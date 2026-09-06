@@ -587,6 +587,25 @@ export const dictionary: Record<string, Entry> = {
   "auth.googleBtn": { uz: "Google orqali tasdiqlash", ru: "Подтвердить через Google" },
   "auth.googleConnecting": { uz: "Google hisobiga ulanmoqda...", ru: "Подключение к Google..." },
   "auth.directTelegramVerify": { uz: "Telegram bilan tezkor tasdiqlash", ru: "Быстрое подтверждение через Telegram" },
+  "auth.alreadyHaveAccount": { uz: "Allaqachon hisobingiz bormi?", ru: "Уже есть аккаунт?" },
+  "auth.alreadyHaveAccountDesc": {
+    uz: "Tizimga kiring va loyihalaringiz hamda shartnomalaringizni davom ettiring.",
+    ru: "Войдите в свой аккаунт, чтобы продолжить работу над заказами и проектами.",
+  },
+  "auth.dontHaveAccount": { uz: "Hali hisobingiz yo'qmi?", ru: "Еще нет аккаунта?" },
+  "auth.dontHaveAccountDesc": {
+    uz: "Bir necha soniyada ro'yxatdan o'ting va minglab mutaxassislar olamiga qo'shiling.",
+    ru: "Зарегистрируйтесь за пару секунд и присоединяйтесь к сообществу специалистов.",
+  },
+  "auth.rememberMe": { uz: "Eslab qolish", ru: "Запомнить меня" },
+  "auth.termsAccept": {
+    uz: "qoidalariga roziman",
+    ru: "согласен с правилами",
+  },
+  "auth.termsLink": { uz: "Foydalanish shartlari", ru: "Условия использования" },
+  "auth.privacyLink": { uz: "Maxfiylik siyosati", ru: "Политика конфиденциальности" },
+  "auth.orSocialLogin": { uz: "Yoki quyidagilar orqali kiring", ru: "Или войдите через" },
+  "auth.orSocialRegister": { uz: "Yoki quyidagilar orqali ro'yxatdan o'ting", ru: "Или зарегистрируйтесь через" },
   "auth.roleTitle": { uz: "Kim sifatida davom etasiz?", ru: "Как вы хотите продолжить?" },
   "auth.roleSubtitle": {
     uz: "Bitta hisob faqat bitta rolga tegishli bo'ladi",
