@@ -357,6 +357,7 @@ export const en: Record<string, string> = {
   "auth.privacyLink": "Privacy Policy",
   "auth.orSocialLogin": "Or log in using",
   "auth.orSocialRegister": "Or sign up using",
+  "auth.regVerificationNotice": "After registration, you will verify your account via Telegram or Google",
   "auth.roleTitle": "How do you want to continue?",
   "auth.roleSubtitle": "One account can have only one role",
   "auth.roleSeller": "I'm a specialist",

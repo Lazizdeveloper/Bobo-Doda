@@ -606,6 +606,10 @@ export const dictionary: Record<string, Entry> = {
   "auth.privacyLink": { uz: "Maxfiylik siyosati", ru: "Политика конфиденциальности" },
   "auth.orSocialLogin": { uz: "Yoki quyidagilar orqali kiring", ru: "Или войдите через" },
   "auth.orSocialRegister": { uz: "Yoki quyidagilar orqali ro'yxatdan o'ting", ru: "Или зарегистрируйтесь через" },
+  "auth.regVerificationNotice": {
+    uz: "Ro'yxatdan o'tgach, akkountingizni Telegram yoki Google orqali tasdiqlaysiz",
+    ru: "После регистрации вы подтвердите аккаунт через Telegram или Google",
+  },
   "auth.roleTitle": { uz: "Kim sifatida davom etasiz?", ru: "Как вы хотите продолжить?" },
   "auth.roleSubtitle": {
     uz: "Bitta hisob faqat bitta rolga tegishli bo'ladi",

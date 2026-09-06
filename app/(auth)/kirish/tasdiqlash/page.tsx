@@ -46,7 +46,7 @@ export default function TasdiqlashPage() {
     setError("");
     try {
       const session = await authService.verifyTelegram();
-      router.push(session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
+      router.push(!session.role ? "/rol-tanlash" : session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
     } catch {
       setError(t("common.error"));
       setLoading(false);
@@ -58,7 +58,7 @@ export default function TasdiqlashPage() {
     setError("");
     try {
       const session = await authService.verifyGoogle();
-      router.push(session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
+      router.push(!session.role ? "/rol-tanlash" : session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
     } catch {
       setError(t("common.error"));
       setGoogleLoading(false);
@@ -75,7 +75,7 @@ export default function TasdiqlashPage() {
     setLoading(true);
     try {
       const session = await authService.verifyTelegram(code);
-      router.push(session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
+      router.push(!session.role ? "/rol-tanlash" : session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
     } catch {
       setError(t("auth.codeError"));
       setLoading(false);

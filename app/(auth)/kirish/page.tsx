@@ -211,11 +211,10 @@ function KirishForm() {
         password: regPassword,
       });
       const wanted = searchParams.get("role");
-      router.push(
-        wanted === "mutaxassis" || wanted === "xaridor"
-          ? `/rol-tanlash?role=${wanted}`
-          : "/rol-tanlash"
-      );
+      if (wanted === "mutaxassis" || wanted === "xaridor") {
+        await authService.chooseRole(wanted);
+      }
+      router.push("/kirish/tasdiqlash");
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
       if (code === "PHONE_EXISTS") setErrors({ phone: t("auth.errPhoneExists") });
@@ -663,6 +662,14 @@ function KirishForm() {
                   t("auth.registerBtn")
                 )}
               </button>
+
+              <p className="mt-2.5 text-center text-2xs text-muted flex items-center justify-center gap-1.5 leading-tight">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary shrink-0" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                <span>{t("auth.regVerificationNotice")}</span>
+              </p>
             </form>
 
             {/* Mobil foydalanuvchilar uchun almashtirish taklifi */}
