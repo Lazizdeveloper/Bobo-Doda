@@ -58,7 +58,9 @@ import {
 import {
   BUYER_ID,
   SELLER_ID,
+  seedCards,
   seedContracts,
+  seedDisputes,
   seedJobs,
   seedMessages,
   seedMilestones,
@@ -146,8 +148,8 @@ function write<T>(key: string, value: T): void {
   }
 }
 
-/* v6: Rich interconnected operations seed */
-const SEED_VERSION = "16";
+/* v7: Complete multi-role end-to-end testing demo data */
+const SEED_VERSION = "17";
 
 /** To'liq ISO sana-vaqt satri ("2026-03-05T16:00:00.000Z").
     Faqat shu shakl siljitiladi — "1994-05-12" kabi tug'ilgan sanalar tegilmaydi. */
@@ -224,6 +226,8 @@ function ensureSeed(): void {
       /* Yechish so'rovlari ikkala tomonga ham tegishli — admin navbatida ham,
          mutaxassisning "So'rovlarim" ro'yxatida ham bir xil yozuv ko'rinadi */
       withdrawalRequests: seedWithdrawals,
+      cards: seedCards,
+      disputes: seedDisputes,
     };
     const newest = newestSeedDate(payload);
     const offset = newest ? Date.now() - SEED_FRESHNESS_LAG_MS - newest : 0;
@@ -241,6 +245,16 @@ function ensureSeed(): void {
     write(KEYS.reviews, fresh.reviews);
     write(KEYS.notifications, fresh.notifications);
     write(KEYS.withdrawalRequests, fresh.withdrawalRequests);
+    write(KEYS.cards, fresh.cards);
+    write(KEYS.disputes, fresh.disputes);
+    write(KEYS.balances, {
+      "u-b2": 4500000,
+      "u-b1": 2000000,
+    });
+    write(KEYS.withdrawn, {
+      "u-1": 3325000,
+      "u-2": 1900000,
+    });
     /* Eski versiya sessiyasi endi mavjud bo'lmagan hisobga ishora qilishi mumkin */
     window.localStorage.removeItem(KEYS.session);
     window.localStorage.setItem(KEYS.seeded, SEED_VERSION);

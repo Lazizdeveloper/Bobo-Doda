@@ -118,41 +118,9 @@ export const seedVerifications: VerificationRecord[] = [
   },
 ];
 
-/* ==========================================================================
-   2. DISPUTES & ARBITRATION
-   ========================================================================== */
-export const seedDisputes: Dispute[] = [
-  {
-    id: "dsp-1",
-    contractId: "cnt-3",
-    openedBy: "u-b3",
-    reason: "quality",
-    description: "Mutaxassis Telegram botni topshirdi, lekin Click va Payme to'lovlari xatolik bermoqda va texnik topshiriqda ko'rsatilgan Excel hisobot moduli ishlamayapti. Mutaxassis xabarlarga 4 kundan beri javob bermayapti.",
-    evidence: ["https://images.unsplash.com/photo-1618401471353-b98aedd04e11?w=800&auto=format&fit=crop&q=80"],
-    status: "korib_chiqilmoqda",
-    createdAt: "2026-03-28T14:20:00.000Z",
-  },
-  {
-    id: "dsp-2",
-    contractId: "cnt-4",
-    openedBy: "u-b5",
-    reason: "quality",
-    description: "Mobil ilova iOS da doimiy qulab tushmoqda (crash). Dizayn tasdiqlangan Figma maketiga umuman mos kelmaydi.",
-    evidence: ["https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&auto=format&fit=crop&q=80"],
-    status: "ochiq",
-    createdAt: "2026-04-15T09:10:00.000Z",
-  },
-  {
-    id: "dsp-3",
-    contractId: "cnt-2",
-    openedBy: "u-b2",
-    reason: "other",
-    description: "Dastlabki konseptsiya bo'yicha tushunmovchilik yuzaga kelgan edi, biroq mutaxassis bilan qo'shimcha tuzatish kiritildi va loyiha to'liq qabul qilindi.",
-    evidence: [],
-    status: "hal_qilindi",
-    createdAt: "2026-02-12T11:00:00.000Z",
-  },
-];
+/* `seedDisputes` asosiy seed'ga (`lib/mock-api/seed.ts`) ko'chirildi —
+   ikkala tomon (foydalanuvchi va admin) bitta manbadan foydalanishi uchun. */
+export { seedDisputes } from "@/lib/mock-api/seed";
 
 /* ==========================================================================
    3. SUPPORT TICKETS
