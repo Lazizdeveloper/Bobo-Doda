@@ -161,6 +161,9 @@ export const closeTicket = asyncGuard(adminMock.closeTicket);
 export const approveWithdrawal = asyncGuard(adminMock.approveWithdrawal);
 export const rejectWithdrawal = asyncGuard(adminMock.rejectWithdrawal);
 export const reviewWithdrawal = asyncGuard(adminMock.reviewWithdrawal);
+export const listB2bPendingContracts = asyncGuard(adminMock.listB2bPendingContracts);
+export const approveB2bPayment = asyncGuard(adminMock.approveB2bPayment);
+export const rejectB2bPayment = asyncGuard(adminMock.rejectB2bPayment);
 
 /* ---------------- Tizim ---------------- */
 export const saveCategory = asyncGuard(adminMock.saveCategory);

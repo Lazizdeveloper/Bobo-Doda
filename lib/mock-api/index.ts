@@ -3291,26 +3291,65 @@ function findOwnMilestone(
    mumkin. Pul har bosqich qabul qilinganda mutaxassisga o'tadi. */
 export async function fundContract(
   id: string,
-  input?: { method: PaymentMethod; cardId?: string }
+  input?: {
+    method: PaymentMethod;
+    cardId?: string;
+    receiptUrl?: string;
+    receiptName?: string;
+  }
 ): Promise<Contract> {
   await delay(700);
   if (getPlatformSettings().paymentsPaused) throw new Error("PAYMENTS_PAUSED");
   const uid2 = currentUserId();
-  /* Karta bilan to'lansa — karta AYNAN shu foydalanuvchiniki bo'lishi kerak.
-     Chiqim (`withdrawFunds`) allaqachon shunday tekshirilardi, kirim esa
-     umuman tekshirilmasdi. Backend'da bu server tomonida takrorlanadi. */
-  if (input?.method === "karta" && input.cardId) {
-    const own = read<PaymentCard[]>(KEYS.cards, []).find(
-      (c) => c.id === input.cardId && c.userId === uid2
-    );
-    if (!own) throw new Error("CARD_NOT_FOUND");
-  }
+
   const contracts = read<Contract[]>(KEYS.contracts, []);
   const idx = contracts.findIndex(
     (c) => c.id === id && c.buyerId === uid2 && c.status === "imzolangan"
   );
   if (idx < 0) throw new Error("NOT_FOUND");
   const contract = contracts[idx];
+
+  /* 1. B2B bank o'tkazmasi: to'lov topshirig'i yuklanadi, admin tasdig'iga o'tadi */
+  if (input?.method === "b2b") {
+    contracts[idx] = {
+      ...contract,
+      b2bPending: true,
+      b2bReceiptUrl: input.receiptUrl || "",
+      b2bReceiptName: input.receiptName || "tolov_topshirigi.pdf",
+      b2bSubmittedAt: new Date().toISOString(),
+      paymentMethod: "b2b",
+    };
+    write(KEYS.contracts, contracts);
+
+    pushNotification(
+      contract.sellerId,
+      "tizim",
+      "ntf.b2bPending",
+      `/mutaxassis/shartnomalar/${id}`,
+      { title: contract.title }
+    );
+    return contracts[idx];
+  }
+
+  /* 2. Karta bilan to'lov */
+  if (input?.method === "karta" && input.cardId) {
+    const own = read<PaymentCard[]>(KEYS.cards, []).find(
+      (c) => c.id === input.cardId && c.userId === uid2
+    );
+    if (!own) throw new Error("CARD_NOT_FOUND");
+  }
+
+  /* 3. Bobo&Doda hisob balansi bilan to'lov */
+  if (input?.method === "balans") {
+    const balances = readBalances();
+    const currentBal = balances[uid2] ?? 0;
+    if (currentBal < contract.totalAmount) {
+      throw new Error("INSUFFICIENT_FUNDS");
+    }
+    balances[uid2] = currentBal - contract.totalAmount;
+    write(KEYS.balances, balances);
+  }
+
   assertTransition(contractMachine, contract.status, "faol", "buyer");
 
   /* Barcha kutilayotgan bosqichlar bir to'lovda mablag'lanadi */
@@ -3325,7 +3364,14 @@ export async function fundContract(
   );
   write(KEYS.milestones, updated);
 
-  contracts[idx] = { ...contract, status: "faol" };
+  contracts[idx] = {
+    ...contract,
+    status: "faol",
+    b2bPending: false,
+    paymentMethod: input?.method || "karta",
+    fundedAt: new Date().toISOString(),
+    escrowReference: `ESC-${(input?.method || "karta").toUpperCase()}-${id.toUpperCase()}`,
+  };
   write(KEYS.contracts, contracts);
 
   pushNotification(

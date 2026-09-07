@@ -15,6 +15,9 @@ import {
   listWithdrawalsQueue,
   listContractsQueue,
   listTransactionsQueue,
+  listB2bPendingContracts,
+  approveB2bPayment,
+  rejectB2bPayment,
   getAdminCounters,
   approveWithdrawal,
   rejectWithdrawal,
@@ -33,11 +36,12 @@ export default function PaymentsPage() {
   const { toast } = useToast();
   /* Har tab o'z navbatidan yuklanadi — faol bo'lmagan tab so'rov qilmaydi. */
   const [withdrawalPage, setWithdrawalPage] = useState<AdminPage<WithdrawalRequest> | null>(null);
+  const [b2bPage, setB2bPage] = useState<AdminPage<Contract> | null>(null);
   const [paymentPage, setPaymentPage] = useState<AdminPage<Contract> | null>(null);
   const [transactionPage, setTransactionPage] = useState<AdminPage<TransactionRecord> | null>(null);
   const [financials, setFinancials] = useState<AdminCounters | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
-  const [tab, setTab] = useState<"withdrawals" | "payments" | "transactions">("withdrawals");
+  const [tab, setTab] = useState<"withdrawals" | "b2b" | "payments" | "transactions">("withdrawals");
   const [search, setSearch] = useState("");
   
   // Pagination States
@@ -49,6 +53,13 @@ export default function PaymentsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [approveModalOpen, setApproveModalOpen] = useState(false);
+
+  // B2B Actions
+  const [selectedB2bContract, setSelectedB2bContract] = useState<Contract | null>(null);
+  const [b2bApproveModalOpen, setB2bApproveModalOpen] = useState(false);
+  const [b2bRejectModalOpen, setB2bRejectModalOpen] = useState(false);
+  const [b2bRejectReason, setB2bRejectReason] = useState("");
+
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -56,10 +67,8 @@ export default function PaymentsPage() {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   /* SERVER tomonida filtrlanadi va sahifalanadi. Faqat FAOL tab so'rov
-     yuboradi — uchala ro'yxatni birdan tortib olishning ma'nosi yo'q.
-     Moliyaviy jamilar agregat chaqiruvidan (`/admin/stats`).
-     Xato bo'sh ro'yxatga aylantirilmaydi — admin ma'lumot yo'q deb
-     o'ylamasligi kerak, ayniqsa pul ekranida. */
+     yuboradi — barcha ro'yxatni birdan tortib olishning ma'nosi yo'q.
+     Moliyaviy jamilar agregat chaqiruvidan (`/admin/stats`). */
   const load = useCallback(() => {
     setLoadError(null);
     const query = {
@@ -70,9 +79,11 @@ export default function PaymentsPage() {
     const list =
       tab === "withdrawals"
         ? listWithdrawalsQueue(query).then(setWithdrawalPage)
-        : tab === "payments"
-          ? listContractsQueue(query).then(setPaymentPage)
-          : listTransactionsQueue(query).then(setTransactionPage);
+        : tab === "b2b"
+          ? listB2bPendingContracts(query).then(setB2bPage)
+          : tab === "payments"
+            ? listContractsQueue(query).then(setPaymentPage)
+            : listTransactionsQueue(query).then(setTransactionPage);
 
     Promise.all([list, getAdminCounters().then(setFinancials)]).catch(setLoadError);
   }, [tab, currentPage, rowsPerPage, debouncedSearch]);
@@ -146,6 +157,134 @@ export default function PaymentsPage() {
       setActionLoading(false);
     }
   };
+
+  const handleApproveB2b = async () => {
+    if (!selectedB2bContract) return;
+    setActionLoading(true);
+    try {
+      await approveB2bPayment(selectedB2bContract.id);
+      setB2bApproveModalOpen(false);
+      setSelectedB2bContract(null);
+      toast("Bank to'lovi tasdiqlandi! Shartnoma faollashdi va Escrow kafolatlandi.");
+      load();
+    } catch (err) {
+      toast(adminErrorText(err), "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectB2b = async () => {
+    if (!selectedB2bContract) return;
+    if (b2bRejectReason.trim().length < 5) {
+      setActionError("Rad etish sababi kamida 5 ta belgidan iborat bo'lishi shart.");
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await rejectB2bPayment(selectedB2bContract.id, b2bRejectReason.trim());
+      setB2bRejectModalOpen(false);
+      setSelectedB2bContract(null);
+      setB2bRejectReason("");
+      toast("Bank to'lovi rad etildi va xaridorga xabar berildi.");
+      load();
+    } catch (err) {
+      setActionError(adminErrorText(err));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const b2bColumns: TableColumn<Contract>[] = [
+    {
+      key: "id",
+      header: "Shartnoma / Invoys",
+      render: (c) => (
+        <div>
+          <span className="font-mono font-bold text-xs text-ink block">#{c.id}</span>
+          <span className="font-mono text-2xs text-muted">INV-{c.id.toUpperCase()}-{new Date().getFullYear()}</span>
+        </div>
+      ),
+    },
+    {
+      key: "parties",
+      header: "Taraflar",
+      render: (c) => (
+        <div className="text-2xs text-ink">
+          <p><span className="text-muted">Xaridor:</span> <strong>{c.buyerName}</strong></p>
+          <p><span className="text-muted">Mutaxassis:</span> {c.sellerName}</p>
+        </div>
+      ),
+    },
+    {
+      key: "totalAmount",
+      header: "Kutilayotgan summa",
+      render: (c) => (
+        <div>
+          <span className="font-mono font-bold text-ink text-sm block">{formatMoney(c.totalAmount)}</span>
+          <span className="text-3xs text-muted">Bank H/r orqali</span>
+        </div>
+      ),
+    },
+    {
+      key: "receipt",
+      header: "To'lov topshirig'i",
+      render: (c) => (
+        c.b2bReceiptUrl ? (
+          <a
+            href={c.b2bReceiptUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download={c.b2bReceiptName || `kvitansiya_${c.id}.pdf`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface hover:bg-surface-hover px-2 py-1 text-xs text-primary font-medium transition-colors"
+          >
+            <span>📎</span>
+            <span className="truncate max-w-[130px]">{c.b2bReceiptName || "Kvitansiya fayli"}</span>
+          </a>
+        ) : (
+          <span className="text-2xs text-muted italic">Biriktirilmagan</span>
+        )
+      ),
+    },
+    {
+      key: "date",
+      header: "Yuborilgan sana",
+      render: (c) => <span className="text-xs text-muted">{formatDate(c.b2bSubmittedAt || c.createdAt)}</span>,
+    },
+    {
+      key: "action",
+      header: "Amallar",
+      render: (c) => (
+        <div className="flex gap-1.5">
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => {
+              setSelectedB2bContract(c);
+              setB2bApproveModalOpen(true);
+            }}
+            disabled={actionLoading}
+          >
+            Tasdiqlash
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="text-danger border-danger/20 hover:bg-danger/10"
+            onClick={() => {
+              setSelectedB2bContract(c);
+              setB2bRejectReason("");
+              setActionError("");
+              setB2bRejectModalOpen(true);
+            }}
+            disabled={actionLoading}
+          >
+            Rad etish
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   const getWithdrawalStatusLabel = (status: string) => {
     const map: Record<string, { label: string; tone: BadgeTone }> = {
@@ -361,13 +500,14 @@ export default function PaymentsPage() {
           <div className="flex border-b border-line overflow-x-auto max-w-full pb-0.5">
             {[
               { id: "withdrawals", label: "Yechish so'rovlari" },
+              { id: "b2b", label: "Bank o'tkazmalari (B2B)" },
               { id: "payments", label: "Loyihalar to'lovlari" },
               { id: "transactions", label: "Ledger tranzaksiyalari" },
             ].map((t) => (
               <button
                 key={t.id}
                 onClick={() => {
-                  setTab(t.id as "withdrawals" | "payments" | "transactions");
+                  setTab(t.id as "withdrawals" | "b2b" | "payments" | "transactions");
                   setSearch("");
                 }}
                 className={`border-b-2 px-4 py-2 font-heading text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
@@ -387,9 +527,11 @@ export default function PaymentsPage() {
               placeholder={
                 tab === "withdrawals"
                   ? "Mutaxassis yoki karta bo'yicha..."
-                  : tab === "payments"
-                    ? "Loyiha yoki foydalanuvchi..."
-                    : "ID yoki tavsif bo'yicha..."
+                  : tab === "b2b"
+                    ? "Shartnoma ID, invoys yoki xaridor..."
+                    : tab === "payments"
+                      ? "Loyiha yoki foydalanuvchi..."
+                      : "ID yoki tavsif bo'yicha..."
               }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -462,6 +604,85 @@ export default function PaymentsPage() {
             </>
           ) : (
             <Card className="py-12 text-center text-muted font-sans">{"Yechib olish so'rovlari topilmadi."}</Card>
+          )
+        )}
+
+        {tab === "b2b" && (
+          (b2bPage?.items.length ?? 0) ? (
+            <>
+              <Table
+                columns={b2bColumns}
+                rows={b2bPage?.items ?? []}
+                rowKey={(c) => c.id}
+                renderMobileCard={(c) => (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-ink">#{c.id}</p>
+                        <p className="text-3xs text-muted font-mono">INV-{c.id.toUpperCase()}-{new Date().getFullYear()}</p>
+                      </div>
+                      <Badge tone="warning">Bank to&apos;lovi kutilmoqda</Badge>
+                    </div>
+                    <div className="text-xs text-ink flex flex-col gap-1 border-y border-line/10 py-1.5 my-1">
+                      <p><span className="text-muted">Xaridor:</span> <strong>{c.buyerName}</strong></p>
+                      <p><span className="text-muted">Mutaxassis:</span> {c.sellerName}</p>
+                      <p><span className="text-muted">Kutilayotgan summa:</span> <strong className="font-mono text-primary">{formatMoney(c.totalAmount)}</strong></p>
+                      <p><span className="text-muted">Yuborilgan sana:</span> {formatDate(c.b2bSubmittedAt || c.createdAt)}</p>
+                      {c.b2bReceiptUrl && (
+                        <div className="pt-1">
+                          <a
+                            href={c.b2bReceiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={c.b2bReceiptName || `kvitansiya_${c.id}.pdf`}
+                            className="inline-flex items-center gap-1.5 text-xs text-primary font-medium hover:underline"
+                          >
+                            <span>📎</span> {c.b2bReceiptName || "To'lov kvitansiyasini yuklab olish"}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => {
+                          setSelectedB2bContract(c);
+                          setB2bApproveModalOpen(true);
+                        }}
+                        disabled={actionLoading}
+                      >
+                        Tasdiqlash
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="text-danger border-danger/30"
+                        onClick={() => {
+                          setSelectedB2bContract(c);
+                          setB2bRejectReason("");
+                          setActionError("");
+                          setB2bRejectModalOpen(true);
+                        }}
+                        disabled={actionLoading}
+                      >
+                        Rad etish
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={b2bPage?.totalPages ?? 1}
+                onPageChange={setCurrentPage}
+                totalRows={b2bPage?.total ?? 0}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={setRowsPerPage}
+              />
+            </>
+          ) : (
+            <Card className="py-12 text-center text-muted font-sans">Bank o&apos;tkazmasi orqali to&apos;lov kutilayotgan shartnomalar mavjud emas.</Card>
           )
         )}
 
@@ -631,6 +852,97 @@ export default function PaymentsPage() {
                 {selectedReq?.source === "balance" ? "Xaridor balansi" : "Mutaxassis daromadi"}
               </span>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* B2B Bank to'lovini rad etish modali */}
+      <Modal
+        open={b2bRejectModalOpen}
+        onClose={() => setB2bRejectModalOpen(false)}
+        title="Bank to'lovini rad etish"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted">
+            <strong className="text-ink">{selectedB2bContract?.buyerName}</strong> tomonidan{" "}
+            <strong className="text-ink">#{selectedB2bContract?.id}</strong> shartnoma bo&apos;yicha yuborilgan bank to&apos;lovini rad etish sababini yozing.
+          </p>
+
+          <Textarea
+            label="Rad etish sababi (Xaridorga xabarnoma orqali yuboriladi)"
+            placeholder="Masalan: Bank hisob raqamimizga ko'rsatilgan summa kelib tushmadi yoki kvitansiya rekvizitlari mos kelmadi..."
+            value={b2bRejectReason}
+            onChange={(e) => {
+              setB2bRejectReason(e.target.value);
+              setActionError("");
+            }}
+            error={actionError}
+            required
+            maxLength={400}
+          />
+
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="ghost" onClick={() => setB2bRejectModalOpen(false)}>Bekor qilish</Button>
+            <Button variant="danger" onClick={handleRejectB2b} disabled={!b2bRejectReason.trim() || actionLoading}>
+              Rad etishni tasdiqlash
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* B2B Bank to'lovini tasdiqlash modali */}
+      <Modal
+        open={b2bApproveModalOpen}
+        onClose={() => setB2bApproveModalOpen(false)}
+        title="Bank to'lovini tasdiqlash va Escrow'ga o'tkazish"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setB2bApproveModalOpen(false)} disabled={actionLoading}>
+              Bekor qilish
+            </Button>
+            <Button onClick={handleApproveB2b} loading={actionLoading}>
+              Bank tushumini tasdiqlash
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted">
+            Bank hisobingizga (Kapitalbank H/r 2020 8000 7055 1234 5001) ushbu to&apos;lov kelib tushganini tasdiqlaysizmi? Tasdiqlangach shartnoma faollashadi, barcha bosqichlar mablag&apos;lantiriladi va mutaxassisga ishni boshlashga ruxsat beriladi.
+          </p>
+          <div className="flex flex-col gap-2 rounded-input border border-line bg-surface p-3 text-sm">
+            <div className="flex justify-between gap-3">
+              <span className="text-muted">Shartnoma / Invoys</span>
+              <span className="font-mono font-medium text-ink">#{selectedB2bContract?.id} (INV-{selectedB2bContract?.id.toUpperCase()})</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted">Xaridor</span>
+              <span className="font-medium text-ink">{selectedB2bContract?.buyerName}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted">Mutaxassis</span>
+              <span className="font-medium text-ink">{selectedB2bContract?.sellerName}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted">Kelib tushishi kerak bo&apos;lgan summa</span>
+              <span className="font-heading font-bold text-success text-base">
+                {selectedB2bContract ? formatMoney(selectedB2bContract.totalAmount) : "—"}
+              </span>
+            </div>
+            {selectedB2bContract?.b2bReceiptUrl && (
+              <div className="flex justify-between gap-3 pt-1 border-t border-line">
+                <span className="text-muted">Kvitansiya</span>
+                <a
+                  href={selectedB2bContract.b2bReceiptUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={selectedB2bContract.b2bReceiptName || `kvitansiya_${selectedB2bContract.id}.pdf`}
+                  className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                >
+                  <span>📎</span> {selectedB2bContract.b2bReceiptName || "Faylni ko'rish"}
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

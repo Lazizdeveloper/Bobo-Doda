@@ -377,6 +377,109 @@ export default function ShartnomaWorkroomPage() {
           </div>
         </div>
 
+        {/* ESCROW TO'LOV KAFOLATI BLOKI — Mutaxassis uchun shaffof ko'rinish */}
+        {contract.status === "faol" && (
+          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-sm shadow-sm">
+                🛡️
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-heading text-sm font-bold text-emerald-950 dark:text-emerald-300">
+                    TO&apos;LOV KAFOLATLANGAN (BOBO-DODA ESCROW)
+                  </h3>
+                  <Badge tone="success" className="font-mono text-xs font-bold">
+                    Muzlatilgan: {formatMoney(contract.totalAmount, lang)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-emerald-900/90 dark:text-emerald-200/90 leading-relaxed">
+                  Xaridor (<strong className="text-ink">{contract.buyerName}</strong>) ushbu ish uchun mablag&apos;ni Bobo-Doda kafolat hisob raqamiga to&apos;liq o&apos;tkazgan va summa xavfsiz muzlatilgan. Ishni bexavotir va xotirjam topshirishingiz mumkin. Ish tasdiqlangach, mablag&apos; avtomatik balansingizga o&apos;tadi.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs text-muted border-t border-emerald-500/20 pt-1.5">
+                  <span>🔒 Kafolat kodi: <strong className="font-mono text-ink">{contract.escrowReference || `ESC-${contract.id.toUpperCase()}`}</strong></span>
+                  <span>💳 To&apos;lov usuli: <strong className="text-ink uppercase">{contract.paymentMethod || "Karta/Escrow"}</strong></span>
+                  {contract.fundedAt && <span>📅 Depozit vaqti: <strong className="text-ink">{formatDate(contract.fundedAt, lang)}</strong></span>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {contract.b2bPending && (
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-sm shadow-sm">
+                🏦
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
+                    XARIDORNING BANK O&apos;TKAZMASI TEKSHIRILMOQDA
+                  </h3>
+                  <Badge tone="warning" className="font-mono text-xs font-bold">
+                    Kutilmoqda: {formatMoney(contract.totalAmount, lang)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                  Xaridor (<strong className="text-ink">{contract.buyerName}</strong>) bank o&apos;tkazmasi orqali to&apos;lov topshirig&apos;ini yuborgan. Operatorlarimiz Kapitalbank hisob raqamimizga mablag&apos; tushishini tekshirmoqda (odatda 15-60 daqiqa). Pul hisobga kelib tushishi bilan shartnoma faollashadi va sizga darhol xabarnoma yuboriladi.
+                </p>
+                {contract.b2bReceiptName && (
+                  <p className="mt-1 text-2xs text-muted">
+                    Yuklangan kvitansiya: <span className="font-mono text-ink">{contract.b2bReceiptName}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {contract.status === "imzolangan" && !contract.b2bPending && (
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-sm shadow-sm">
+                ⚠️
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
+                    DIQQAT: XARIDOR HALI TO&apos;LOVNI AMALGA OSHIRMAGAN
+                  </h3>
+                  <Badge tone="warning" className="text-xs font-bold">
+                    To&apos;lov kutilmoqda
+                  </Badge>
+                </div>
+                <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                  Ushbu shartnoma tomonlar o&apos;rtasida tuzilgan, ammo xaridor hali Bobo-Doda kafolat hisobiga to&apos;lovni o&apos;tkazmagan. Qoidalarimizga ko&apos;ra, to&apos;lov platforma kafolat hisobida muzlatilmaguncha ishni topshirmang va ehtiyot bo&apos;ling. Xaridor to&apos;lovni amalga oshirgach, sizga bildirishnoma yuboriladi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {contract.status === "nizo" && (
+          <div className="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger text-white font-bold text-sm shadow-sm">
+                ⚖️
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-heading text-sm font-bold text-danger">
+                    NIZO HOLATI (ARBITRAJ KO&apos;RIB CHIQMOQDA)
+                  </h3>
+                  <Badge tone="danger" className="text-xs font-bold">
+                    Arbitrajda
+                  </Badge>
+                </div>
+                <p className="mt-1 text-muted leading-relaxed">
+                  Ushbu shartnoma bo&apos;yicha nizo ochilgan. Muzlatilgan Escrow mablag&apos;i platforma ma&apos;muriyati tomonidan taqdim etilgan dalillar va ish natijasi asosida adolatli ko&apos;rib chiqilmoqda. Qaror qabul qilinishi bilan ikkala tarafga ham xabar beriladi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Faol shartnomani topshirish yoki kutish holati tushuntirishi */}
         {contract.status === "faol" && (
           <div className="mt-4 rounded-card border border-primary/20 bg-primary/5 p-3.5 text-xs text-muted flex items-center justify-between gap-3 flex-wrap">

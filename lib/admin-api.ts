@@ -1028,6 +1028,105 @@ export function reviewWithdrawal(requestId: string) {
   addAudit("Pul yechish ko'rib chiqishga olindi", requestId, "Status: korib_chiqilmoqda");
 }
 
+export function approveB2bPayment(contractId: string) {
+  const actor = getCurrentAdmin();
+  if (!actor?.permissions.includes("payments")) throw new Error("FORBIDDEN");
+
+  const contracts = read<Contract[]>("sb2_contracts", seedContracts);
+  const idx = contracts.findIndex((c) => c.id === contractId);
+  if (idx === -1) throw new Error("NOT_FOUND");
+  const contract = contracts[idx];
+  if (!contract.b2bPending) throw new Error("NOT_PENDING");
+
+  const milestones = read<Milestone[]>("sb2_milestones", seedMilestones);
+  const updatedMilestones = milestones.map((m) =>
+    m.contractId === contractId && m.status === "kutilmoqda"
+      ? { ...m, status: "mablaglangan" as const }
+      : m
+  );
+  write("sb2_milestones", updatedMilestones);
+
+  contracts[idx] = {
+    ...contract,
+    status: "faol",
+    b2bPending: false,
+    fundedAt: new Date().toISOString(),
+    escrowReference: `ESC-B2B-${contract.id.toUpperCase()}`,
+    paymentMethod: "b2b",
+  };
+  write("sb2_contracts", contracts);
+
+  const transactions = read<TransactionRecord[]>("sb2_transactions", seedTransactions);
+  const tx: TransactionRecord = {
+    id: `tx-b2b-${uid()}`,
+    type: "escrow_mablaglash",
+    userId: contract.buyerId,
+    userName: contract.buyerName,
+    amount: contract.totalAmount,
+    currency: "UZS",
+    referenceId: contract.id,
+    description: `Shartnoma #${contract.id} uchun B2B bank to'lovi tasdiqlandi (Kapitalbank)`,
+    status: "muvaffaqiyatli",
+    createdAt: new Date().toISOString(),
+  };
+  write("sb2_transactions", [tx, ...transactions]);
+
+  pushNotification(
+    contract.sellerId,
+    "bosqich",
+    "ntf.contractFunded",
+    `/mutaxassis/shartnomalar/${contractId}`,
+    { title: contract.title }
+  );
+  pushNotification(
+    contract.buyerId,
+    "tizim",
+    "ntf.contractFunded",
+    `/xaridor/shartnomalar/${contractId}`,
+    { title: contract.title }
+  );
+
+  addAudit(
+    "B2B bank to'lovi tasdiqlandi",
+    contractId,
+    `Shartnoma #${contract.id} bo'yicha ${formatAmount(contract.totalAmount)} UZS bank to'lovi tasdiqlandi va Escrow'ga qabul qilindi. Operator: ${actor.fullName}`
+  );
+
+  return contracts[idx];
+}
+
+export function rejectB2bPayment(contractId: string, reason: string) {
+  const actor = getCurrentAdmin();
+  if (!actor?.permissions.includes("payments")) throw new Error("FORBIDDEN");
+
+  const contracts = read<Contract[]>("sb2_contracts", seedContracts);
+  const idx = contracts.findIndex((c) => c.id === contractId);
+  if (idx === -1) throw new Error("NOT_FOUND");
+  const contract = contracts[idx];
+
+  contracts[idx] = {
+    ...contract,
+    b2bPending: false,
+  };
+  write("sb2_contracts", contracts);
+
+  pushNotification(
+    contract.buyerId,
+    "tizim",
+    "ntf.b2bRejected",
+    `/xaridor/shartnomalar/${contractId}`,
+    { title: contract.title, reason: reason.trim() || "To'lov tushumi tasdiqlanmadi" }
+  );
+
+  addAudit(
+    "B2B bank to'lovi rad etildi",
+    contractId,
+    `Shartnoma #${contract.id} bank to'lovi rad etildi. Sabab: ${reason}. Operator: ${actor.fullName}`
+  );
+
+  return contracts[idx];
+}
+
 export function adminModerate(
   kind: "users" | "kyc" | "disputes" | "support",
   id: string,
@@ -1568,6 +1667,19 @@ export function listContractsQueue(query: AdminQueueQuery = {}): AdminPage<Contr
     search: (c) => matches(query.search, c.title, c.buyerName, c.sellerName, c.id),
     status: (c) => c.status,
     date: (c) => c.createdAt,
+    extraFacets: (rows) => ({
+      amountSum: rows.reduce((sum, c) => sum + c.totalAmount, 0),
+    }),
+  });
+}
+
+export function listB2bPendingContracts(query: AdminQueueQuery = {}): AdminPage<Contract> {
+  requirePermission("payments");
+  const pending = getAdminData().contracts.filter((c) => c.b2bPending);
+  return buildQueue(pending, query, {
+    search: (c) => matches(query.search, c.title, c.buyerName, c.sellerName, c.id),
+    status: (c) => (c.b2bPending ? "kutilmoqda" : "tasdiqlangan"),
+    date: (c) => c.b2bSubmittedAt || c.createdAt,
     extraFacets: (rows) => ({
       amountSum: rows.reduce((sum, c) => sum + c.totalAmount, 0),
     }),

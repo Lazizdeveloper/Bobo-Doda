@@ -703,6 +703,11 @@ export const seedContracts: Contract[] = [
     totalAmount: 5000000,
     status: "imzolangan",
     createdAt: "2026-03-16T12:30:00.000Z",
+    b2bPending: true,
+    b2bReceiptName: "tolov_topshirigi_kapitalbank_4491.pdf",
+    b2bReceiptUrl: "/receipts/sample-b2b.pdf",
+    b2bSubmittedAt: "2026-03-16T13:45:00.000Z",
+    paymentMethod: "b2b",
   },
 ];
 

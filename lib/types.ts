@@ -228,6 +228,13 @@ export interface Contract {
   closeRequested?: boolean;
   closeRequestNote?: string;
   closeRequestedAt?: string;
+  paymentMethod?: PaymentMethod;
+  fundedAt?: string;
+  escrowReference?: string;
+  b2bPending?: boolean;
+  b2bReceiptUrl?: string;
+  b2bReceiptName?: string;
+  b2bSubmittedAt?: string;
 }
 
 export type MilestoneStatus =
@@ -298,7 +305,7 @@ export interface Review {
    Xavfsizlik: to'liq raqam saqlanmaydi, faqat oxirgi 4 raqam + niqoblangan. */
 /** Escrow'ga pul kiritish usuli. Mock'da faqat yozib qo'yiladi; real
     integratsiyada gateway tanlovi shu qiymatdan kelib chiqadi. */
-export type PaymentMethod = "karta" | "click" | "payme" | "b2b";
+export type PaymentMethod = "karta" | "click" | "payme" | "b2b" | "balans";
 
 export type CardType = "visa" | "mastercard" | "uzcard" | "humo";
 

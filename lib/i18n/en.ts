@@ -1155,6 +1155,8 @@ export const en: Record<string, string> = {
   "hire.errDuePast": "The due date can't be in the past",
   "ntf.contractCancelled": "Contract cancelled: {title}",
   "ntf.contractFunded": "Payment arrived in escrow — you can start the work: {title}",
+  "ntf.b2bPending": "The client submitted a bank wire transfer slip for \"{title}\". Bank verification in progress.",
+  "ntf.b2bRejected": "Bank wire payment for \"{title}\" was rejected. Reason: {reason}",
   "ntf.refundIssued": "{amount} UZS refunded to your Bobo&Doda balance: {title}",
   "ntf.newReview": "You received a new review: {rating}★",
   "ntf.contractCompleted": "Contract completed: {title}",

@@ -28,7 +28,7 @@ import {
   ContractStatusBadge,
   MilestoneStatusBadge,
 } from "@/components/shared/StatusBadge";
-import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService, DATA_CHANGED_EVENT } from "@/lib/api";
+import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService, filesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Contract, DeliverableFile, Message, Milestone, PaymentCard, Review, Service } from "@/lib/types";
 import { formatDate, formatFileSize, formatMoney, formatTime, triggerFileDownload } from "@/lib/format";
@@ -49,7 +49,11 @@ export default function XaridorWorkroomPage() {
 
   /* Modallar */
   const [fundOpen, setFundOpen] = useState(false);
-  const [payMethod, setPayMethod] = useState<"karta" | "click" | "payme" | "b2b">("karta");
+  const [payMethod, setPayMethod] = useState<"karta" | "click" | "payme" | "b2b" | "balans">("karta");
+  const [buyerBalance, setBuyerBalance] = useState(0);
+  const [b2bFile, setB2bFile] = useState<DeliverableFile | null>(null);
+  const [b2bUploading, setB2bUploading] = useState(false);
+  const [b2bFileError, setB2bFileError] = useState("");
   /* To'lov 2 bosqichli: usul tanlash → SMS (3DS) tasdiqlash yoki B2B Invoys */
   const [payPhase, setPayPhase] = useState<"method" | "sms">("method");
   const [smsCode, setSmsCode] = useState("");
@@ -96,11 +100,12 @@ export default function XaridorWorkroomPage() {
         setContract(null);
         return;
       }
-      const [nextMilestones, nextMessages, nextReview, nextService] = await Promise.all([
+      const [nextMilestones, nextMessages, nextReview, nextService, balanceValue] = await Promise.all([
         milestonesService.list(found.id),
         messagesService.list(found.id),
         reviewsService.getForContract(found.id),
         found.serviceId ? servicesService.get(found.serviceId) : Promise.resolve(null),
+        paymentsService.getBalance(),
       ]);
       if (version !== loadVersionRef.current) return;
       setContract(found);
@@ -108,6 +113,7 @@ export default function XaridorWorkroomPage() {
       setMessages(nextMessages);
       setReview(nextReview);
       setService(nextService);
+      setBuyerBalance(balanceValue);
       void messagesService.markRead(found.id);
     } catch (error) {
       /* Yuklash xatosi "topilmadi" EMAS — alohida holat ko'rsatiladi */
@@ -176,8 +182,33 @@ export default function XaridorWorkroomPage() {
       setSmsError(t("pay.pickCard"));
       return;
     }
+    if (payMethod === "balans" && contract && buyerBalance < contract.totalAmount) {
+      setSmsError("Hisobingizda to'liq shartnoma summasi uchun mablag' yetarli emas");
+      return;
+    }
     setSmsError("");
     setPayPhase("sms");
+  }
+
+  async function handleB2bFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setB2bFileError("");
+    setB2bUploading(true);
+    try {
+      const uploaded = await filesService.upload(file);
+      setB2bFile({
+        id: uploaded.id,
+        name: uploaded.name,
+        size: uploaded.size,
+        url: uploaded.url,
+      });
+      toast("To'lov topshirig'i (kvitansiya) biriktirildi", "success");
+    } catch {
+      setB2bFileError("Faylni yuklashda xatolik yuz berdi");
+    } finally {
+      setB2bUploading(false);
+    }
   }
 
   function handleCopyB2bDetails() {
@@ -210,22 +241,29 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
       await paymentsService.fundContract(contract.id, {
         method: payMethod,
         cardId: payMethod === "karta" ? payCardId : undefined,
+        receiptUrl: b2bFile?.url,
+        receiptName: b2bFile?.name,
       });
       setFundOpen(false);
-      /* Click/Payme — qayta yo'naltirishga asoslangan usullar: to'lov tizimi
-         qaytganda tushadigan natija sahifasiga o'tamiz (aynan shu sahifa shu
-         maqsad uchun yozilgan, lekin unga hech qayerdan havola yo'q edi).
-         Karta (3DS) va B2B esa sahifada qoladi — u yerda qayta yo'naltirish yo'q. */
+      /* Click/Payme — qayta yo'naltirishga asoslangan usullar */
       if (payMethod === "click" || payMethod === "payme") {
         router.push(
           `/tolov/natija?status=success&reference=${encodeURIComponent(contract.id)}`
         );
         return;
       }
-      toast(t("cfund.done"));
+      if (payMethod === "b2b") {
+        toast("To'lov topshirig'i qabul qilindi! Bank tushumi tekshirilmoqda.", "success");
+      } else {
+        toast(t("cfund.done"));
+      }
       reload();
-    } catch {
-      toast(t("common.error"), "error");
+    } catch (err) {
+      if (err instanceof Error && err.message === "INSUFFICIENT_FUNDS") {
+        toast("Hisobingizda to'liq summa uchun mablag' yetarli emas", "error");
+      } else {
+        toast(t("common.error"), "error");
+      }
     } finally {
       setBusy(false);
     }
@@ -403,6 +441,104 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
             </p>
           </div>
         </div>
+
+        {/* ESCROW TO'LOV KAFOLATI BLOKI — Xaridor uchun xavfsizlik kafolati */}
+        {contract.status === "faol" && (
+          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-sm shadow-sm">
+                🛡️
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-heading text-sm font-bold text-emerald-950 dark:text-emerald-300">
+                    XAVFSIZ ESCROW KAFOLATI FAOL
+                  </h3>
+                  <Badge tone="success" className="font-mono text-xs font-bold">
+                    Muzlatilgan: {formatMoney(contract.totalAmount, lang)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-emerald-900/90 dark:text-emerald-200/90 leading-relaxed">
+                  Pulingiz Bobo-Doda xavfsiz kafolat hisobida muzlatilgan. Mutaxassis (<strong className="text-ink">{contract.sellerName}</strong>) ishni to&apos;liq bajarib, siz tekshirib tasdiqlamaguningizcha mablag&apos; unga o&apos;tkazilmaydi. Agar ish bajarilmasa yoki sifat talabiga javob bermasa, nizo ochib mablag&apos;ingizni to&apos;liq qaytarib olishingiz kafolatlanadi.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs text-muted border-t border-emerald-500/20 pt-1.5">
+                  <span>🔒 Kafolat kodi: <strong className="font-mono text-ink">{contract.escrowReference || `ESC-${contract.id.toUpperCase()}`}</strong></span>
+                  <span>💳 To&apos;lov usuli: <strong className="text-ink uppercase">{contract.paymentMethod || "Karta/Escrow"}</strong></span>
+                  {contract.fundedAt && <span>📅 Depozit sanasi: <strong className="text-ink">{formatDate(contract.fundedAt, lang)}</strong></span>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {contract.b2bPending && (
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-sm shadow-sm">
+                🏦
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
+                    BANK O&apos;TKAZMASI TEKSHIRILMOQDA
+                  </h3>
+                  <Badge tone="warning" className="font-mono text-xs font-bold">
+                    Kutilmoqda: {formatMoney(contract.totalAmount, lang)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                  Bank orqali to&apos;lov topshirig&apos;ingiz qabul qilindi. Operatorlarimiz Kapitalbank hisobimizga mablag&apos; tushishini tasdiqlashi bilan shartnoma faollashadi (odatda 15-60 daqiqa). Shundan so&apos;ng mutaxassis ishga kirishadi.
+                </p>
+                {contract.b2bReceiptName && (
+                  <p className="mt-1 text-2xs text-muted">
+                    Yuklangan to&apos;lov topshirig&apos;i: <span className="font-mono text-ink font-semibold">{contract.b2bReceiptName}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {contract.status === "imzolangan" && !contract.b2bPending && (
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-sm shadow-sm">
+                  ⚠️
+                </span>
+                <div>
+                  <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
+                    SHARTNOMA KAFOLATLANMAGAN (TO&apos;LOV KUTILMOQDA)
+                  </h3>
+                  <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                    Mutaxassis ishni boshlashi uchun to&apos;lovni Bobo-Doda kafolat hisobiga kiritishingiz kerak. Mablag&apos; siz ishni qabul qilguningizcha platformada xavfsiz saqlanadi.
+                  </p>
+                </div>
+              </div>
+              <Button onClick={() => setFundOpen(true)} className="shrink-0 font-bold">
+                💳 {t("cfund.pay")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {contract.status === "nizo" && (
+          <div className="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger text-white font-bold text-sm shadow-sm">
+                ⚖️
+              </span>
+              <div className="flex-1">
+                <h3 className="font-heading text-sm font-bold text-danger">
+                  NIZO ISHI ARBITRAJDA KO&apos;RIB CHIQILMOQDA
+                </h3>
+                <p className="mt-1 text-muted leading-relaxed">
+                  Ushbu shartnoma bo&apos;yicha nizo ochilgan. Platforma ma&apos;muriyati da&apos;volarni tekshirmoqda. Arbitraj xaridor foydasiga qaror chiqarsa, muzlatilgan Escrow mablag&apos;i to&apos;liq sizning hisob balansingizga qaytariladi va kartangizga yechib olishingiz mumkin bo&apos;ladi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {milestones.length > 1 && (
           <div className="mt-6 border-t border-line pt-4">
@@ -1125,7 +1261,7 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
               <Button onClick={handlePayNext}>{t("cfund.pay")}</Button>
             ) : (
               <Button loading={busy} onClick={handleFund}>
-                {t("common.confirm")}
+                {payMethod === "b2b" ? "To'lov topshirig'ini yuborish" : t("common.confirm")}
               </Button>
             )}
           </>
@@ -1145,14 +1281,32 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                 <p className="mb-2 text-xs font-medium text-muted">{t("pay.method")}</p>
                 <RadioGroup
                   options={[
+                    ...(buyerBalance > 0
+                      ? [
+                          {
+                            value: "balans",
+                            label: "Bobo&Doda balansi",
+                            description: `Mavjud: ${formatMoney(buyerBalance, lang)}${
+                              buyerBalance < contract.totalAmount
+                                ? " (Yetarli emas)"
+                                : " (Yetarli)"
+                            }`,
+                          },
+                        ]
+                      : []),
                     { value: "karta", label: t("pay.cardOption"), description: "Visa · Mastercard · Uzcard · Humo · 3D Secure" },
                     { value: "click", label: "Click", description: t("pay.clickHint") },
                     { value: "payme", label: "Payme", description: t("pay.paymeHint") },
                     { value: "b2b", label: t("b2b.method"), description: t("b2b.methodDesc") },
                   ]}
                   value={payMethod}
-                  onChange={(value) => setPayMethod(value as "karta" | "click" | "payme" | "b2b")}
+                  onChange={(value) => setPayMethod(value as "karta" | "click" | "payme" | "b2b" | "balans")}
                 />
+                {smsError && payPhase === "method" && payMethod === "balans" && (
+                  <p className="mt-2 text-2xs font-medium text-danger" role="alert">
+                    {smsError}
+                  </p>
+                )}
               </div>
               {payMethod === "karta" && (
                 <div>
@@ -1234,9 +1388,82 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                     </div>
                   </div>
 
+                  {/* To'lov topshirig'i (Kvitansiya) biriktirish */}
+                  <div className="rounded-input border border-line bg-card p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                        <span>📄</span> To&apos;lov topshirig&apos;i / Kvitansiya (ixtiyoriy, tavsiya etiladi)
+                      </label>
+                      {b2bUploading && <span className="text-2xs text-primary animate-pulse">Yuklanmoqda...</span>}
+                    </div>
+                    <p className="text-2xs text-muted">
+                      Bank ilovasi yoki filiali orqali to&apos;lov qilganingizdan so&apos;ng, to&apos;lov topshirig&apos;i nusxasini (.PDF yoki rasm) yuklang. Bu admin tekshiruvini sezilarli darajada tezlashtiradi.
+                    </p>
+                    {b2bFile ? (
+                      <div className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface px-3 py-2 text-xs">
+                        <div className="flex items-center gap-2 truncate">
+                          <span>📎</span>
+                          <span className="font-medium truncate max-w-[220px]">{b2bFile.name}</span>
+                          <span className="text-2xs text-muted">({formatFileSize(b2bFile.size)})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setB2bFile(null)}
+                          className="text-muted hover:text-danger text-xs font-semibold"
+                        >
+                          O&apos;chirish
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="file"
+                          id="b2b-receipt-file"
+                          accept=".pdf,image/*"
+                          className="hidden"
+                          onChange={handleB2bFileUpload}
+                          disabled={b2bUploading}
+                        />
+                        <label
+                          htmlFor="b2b-receipt-file"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-btn border border-line bg-surface hover:bg-surface-hover px-3 py-1.5 text-xs font-medium text-ink transition-colors"
+                        >
+                          <span>📤</span> Kvitansiya faylini tanlash (.PDF, .JPG, .PNG)
+                        </label>
+                        {b2bFileError && (
+                          <p className="text-2xs text-danger mt-1">{b2bFileError}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
                     {t("b2b.awaitingNotice")}
                   </div>
+                </div>
+              ) : payMethod === "balans" ? (
+                <div className="flex flex-col gap-3 rounded-input border border-primary/20 bg-primary/5 p-4 text-xs">
+                  <div className="flex items-center gap-2 text-primary">
+                    <span className="text-xl">💰</span>
+                    <p className="text-sm font-semibold">Bobo&Doda hisobingizdan to&apos;lash</p>
+                  </div>
+                  <div className="space-y-1.5 text-ink">
+                    <div className="flex justify-between">
+                      <span className="text-muted">Mavjud balans:</span>
+                      <span className="font-medium">{formatMoney(buyerBalance, lang)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted">Shartnoma to&apos;lovi:</span>
+                      <span className="font-semibold text-danger">-{formatMoney(contract.totalAmount, lang)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-line pt-1 font-bold">
+                      <span className="text-muted">To&apos;lovdan keyin qoladigan:</span>
+                      <span className="text-success">{formatMoney(Math.max(0, buyerBalance - contract.totalAmount), lang)}</span>
+                    </div>
+                  </div>
+                  <p className="text-2xs text-muted">
+                    Mablag&apos; shartnoma uchun xavfsiz Escrow depozitiga o&apos;tkaziladi va mutaxassis ishni to&apos;liq topshirib, siz tasdiqlamaguningizcha platformada kafolatlangan holda saqlanadi.
+                  </p>
                 </div>
               ) : (
                 <>

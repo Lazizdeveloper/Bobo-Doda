@@ -228,7 +228,12 @@ export interface PaymentsService {
    *  yuborilardi. */
   fundContract(
     id: string,
-    input?: { method: Model.PaymentMethod; cardId?: string }
+    input?: {
+      method: Model.PaymentMethod;
+      cardId?: string;
+      receiptUrl?: string;
+      receiptName?: string;
+    }
   ): Promise<Model.Contract>;
   getBalance(): Promise<number>;
   getCards(): Promise<Model.PaymentCard[]>;

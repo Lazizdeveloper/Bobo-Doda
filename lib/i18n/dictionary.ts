@@ -2023,6 +2023,14 @@ export const dictionary: Record<string, Entry> = {
     uz: "To'lov escrow'ga tushdi — ishni boshlashingiz mumkin: {title}",
     ru: "Оплата поступила в эскроу — можно начинать работу: {title}",
   },
+  "ntf.b2bPending": {
+    uz: "\"{title}\" bo'yicha xaridor bank to'lov topshirig'ini yubordi. Bank tasdig'i kutilmoqda.",
+    ru: "По контракту \"{title}\" клиент отправил платёжное поручение. Ожидается подтверждение банка.",
+  },
+  "ntf.b2bRejected": {
+    uz: "\"{title}\" bo'yicha bank to'lovi rad etildi. Sabab: {reason}",
+    ru: "Банковский перевод по контракту \"{title}\" отклонён. Причина: {reason}",
+  },
   "ntf.refundIssued": {
     uz: "{amount} so'm Bobo&Doda hisobingizga qaytarildi: {title}",
     ru: "{amount} сум возвращено на ваш баланс Bobo&Doda: {title}",
