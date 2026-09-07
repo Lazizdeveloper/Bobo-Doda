@@ -2150,6 +2150,19 @@ export default function LandingPage() {
                       {t("f_contact_us")}
                     </button>
                   </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== "undefined") {
+                          window.dispatchEvent(new CustomEvent("bobododa:open-feedback"));
+                        }
+                      }}
+                      className="cursor-pointer hover:underline"
+                    >
+                      {t("foot.feedback")}
+                    </button>
+                  </li>
                 </ul>
               </div>
             </div>

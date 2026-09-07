@@ -400,6 +400,7 @@ export const dictionary: Record<string, Entry> = {
   "foot.offer": { uz: "Ommaviy oferta", ru: "Публичная оферта" },
   "foot.help": { uz: "Yordam markazi", ru: "Центр помощи" },
   "foot.faq": { uz: "Savol-javob", ru: "Вопросы и ответы" },
+  "foot.feedback": { uz: "Kamchilik haqida xabar berish", ru: "Сообщить об ошибке" },
   /* Mutaxassis kategoriyalari (sozlamalarda tahrirlanadi) */
   "settings.categories": { uz: "Ish yo'nalishlari", ru: "Направления работы" },
   "settings.completenessDone": {

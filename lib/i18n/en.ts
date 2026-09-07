@@ -242,6 +242,7 @@ export const en: Record<string, string> = {
   "foot.offer": "Public offer",
   "foot.help": "Help center",
   "foot.faq": "FAQ",
+  "foot.feedback": "Report an issue",
   "settings.categories": "Work categories",
   "settings.completenessDone": "All the key fields are filled in!",
   "settings.categoriesHint": "Job matching and marketplace filters are driven by these categories",

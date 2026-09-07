@@ -29,6 +29,17 @@ export function CabinetFooter() {
             {t(link.key)}
           </Link>
         ))}
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("bobododa:open-feedback"));
+            }
+          }}
+          className="text-2xs text-muted transition-colors duration-150 hover:text-ink hover:underline cursor-pointer"
+        >
+          {t("foot.feedback")}
+        </button>
         <span className="ml-auto text-2xs text-faint">
           © {new Date().getFullYear()} Bobo&amp;Doda
         </span>
