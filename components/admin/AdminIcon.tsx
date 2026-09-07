@@ -26,9 +26,16 @@ export type AdminIconName =
   | "categories"
   | "settings"
   | "audit"
-  | "admins";
+  | "admins"
+  | "feedback";
 
 const paths: Record<AdminIconName, ReactElement> = {
+  feedback: (
+    <>
+      <path d="M13.5 2.5H2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2.5v2.5l3-2.5h5.5a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1z" />
+      <path d="M8 5v4M6 7h4" />
+    </>
+  ),
   dashboard: (
     <>
       <rect x="2.5" y="2.5" width="5" height="6" rx="1" />

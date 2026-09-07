@@ -11,6 +11,7 @@ import { LanguageProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/ui/Toast";
 import { OfflineSupport } from "@/components/shared/OfflineSupport";
 import { SupportModalProvider } from "@/components/shared/SupportModalProvider";
+import { PageFeedbackWidget } from "@/components/shared/PageFeedbackWidget";
 
 export const metadata: Metadata = {
   title: "Bobo&Doda — Mutaxassislar bozori",
@@ -36,6 +37,7 @@ export default function RootLayout({
             <SupportModalProvider>
               <OfflineSupport />
               {children}
+              <PageFeedbackWidget />
             </SupportModalProvider>
           </ToastProvider>
         </LanguageProvider>

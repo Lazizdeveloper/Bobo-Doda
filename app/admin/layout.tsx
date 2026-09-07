@@ -13,6 +13,8 @@ import { adminLogout, getCurrentAdmin, getAdminCounters } from "@/lib/api/admin"
 import { DATA_CHANGED_EVENT } from "@/lib/api";
 import type { AdminAccount, AdminPermission } from "@/lib/admin-types";
 
+import { feedbackService } from "@/lib/feedback";
+
 /** Badge hisoblagichlarining boshlang'ich (yuklanmagan) holati */
 const EMPTY_COUNTS = {
   kyc: 0,
@@ -21,6 +23,7 @@ const EMPTY_COUNTS = {
   reports: 0,
   tickets: 0,
   appeals: 0,
+  feedbacks: 0,
 };
 
 interface NavItem {
@@ -111,6 +114,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           reports: c.openReports,
           tickets: c.openTickets,
           appeals: c.pendingAppeals,
+          feedbacks: feedbackService.getStats().pending,
         });
       })
       /* Badge — ikkilamchi ma'lumot: yiqilsa eski raqam qoladi va ekranga
@@ -147,6 +151,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         { permission: "disputes", href: "/admin/nizolar", label: "Nizolar & Arbitraj", icon: "disputes", badgeCount: counts.disputes },
         { permission: "reports", href: "/admin/shikoyatlar", label: "Shikoyatlar & Xavflar", icon: "reports", badgeCount: counts.reports },
         { permission: "appeals", href: "/admin/apellyatsiyalar", label: "Apellyatsiyalar", icon: "appeals", badgeCount: counts.appeals },
+        { permission: "support", href: "/admin/fikrlar", label: "Fikrlar & Kamchiliklar", icon: "feedback", badgeCount: counts.feedbacks },
         { permission: "reviews", href: "/admin/sharhlar", label: "Sharhlar Moderatsiyasi", icon: "reviews" },
       ],
     },
@@ -343,6 +348,7 @@ function routePermission(pathname: string): AdminPermission | null {
   if (pathname.startsWith("/admin/sharhlar")) return "reviews";
   if (pathname.startsWith("/admin/tolovlar")) return "payments";
   if (pathname.startsWith("/admin/yordam")) return "support";
+  if (pathname.startsWith("/admin/fikrlar")) return "support";
   if (pathname.startsWith("/admin/kategoriyalar")) return "categories";
   if (pathname.startsWith("/admin/sozlamalar")) return "settings";
   if (pathname.startsWith("/admin/audit")) return "audit";

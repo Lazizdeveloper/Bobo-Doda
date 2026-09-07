@@ -1,0 +1,200 @@
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
+import { usePathname } from "next/navigation";
+import { feedbackService, type FeedbackType } from "@/lib/feedback";
+import { useToast } from "@/components/ui/Toast";
+
+export function PageFeedbackWidget() {
+  const pathname = usePathname();
+  const { toast } = useToast();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [type, setType] = useState<FeedbackType>("kamchilik");
+  const [message, setMessage] = useState("");
+  const [pageTitle, setPageTitle] = useState("");
+  const [sending, setSending] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      setPageTitle(document.title || pathname);
+    }
+  }, [pathname]);
+
+  // Mobil yoki desktopda Escape bosilganda modal yopilishi
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+
+  // Admin panel sahifalarida (admin boshqaruvi vaqtida) vidjet xalal bermasin
+  if (!mounted || pathname.startsWith("/admin") || pathname.startsWith("/rahbariyat")) {
+    return null;
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!message.trim()) return;
+
+    setSending(true);
+    try {
+      await feedbackService.submit({
+        type,
+        message,
+        pageUrl: typeof window !== "undefined" ? window.location.pathname + window.location.search : pathname,
+        pageTitle: pageTitle || pathname,
+      });
+
+      toast("Rahmat! Xabaringiz qabul qilindi va ma'muriyatga yetkazildi.", "success");
+      setMessage("");
+      setIsOpen(false);
+    } catch {
+      toast("Xatolik yuz berdi. Qayta urinib ko'ring.", "error");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <>
+      {/* 1-RASM: Suzib turuvchi (floating) tugma */}
+      <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="group flex items-center gap-2 rounded-full border border-primary/40 bg-card/95 px-4 py-2 text-xs font-semibold text-ink shadow-md backdrop-blur-md transition-all duration-200 hover:border-primary hover:bg-primary/5 hover:shadow-lg active:scale-95 sm:text-sm"
+          aria-label="Shu sahifada nima kamchilik ko'rdingiz?"
+        >
+          {/* Rasm ichidagi piktogramma: chat bubble + plus */}
+          <span className="flex h-5 w-5 items-center justify-center text-primary transition-transform duration-200 group-hover:scale-110">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              <line x1="12" y1="8" x2="12" y2="14" />
+              <line x1="9" y1="11" x2="15" y2="11" />
+            </svg>
+          </span>
+          <span>Shu sahifada nima kamchilik ko&apos;rdingiz?</span>
+        </button>
+      </div>
+
+      {/* 2-RASM: Pastdan chiquvchi modal (Bottom Sheet Drawer) */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in">
+          {/* Fonni bosganda yopilish */}
+          <div className="fixed inset-0" onClick={() => setIsOpen(false)} aria-hidden="true" />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-title"
+            className="relative z-10 w-full max-w-2xl rounded-t-3xl border-t border-line/80 bg-card p-5 pb-8 shadow-2xl transition-all duration-300 sm:p-7 sm:pb-9 animate-in slide-in-from-bottom"
+          >
+            {/* Tutqich / Drag bar */}
+            <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-line/80" />
+
+            {/* Sarlavha & Yopish */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="feedback-title" className="font-heading text-base font-extrabold text-ink sm:text-lg">
+                  Nima kamchilik ko&apos;rdingiz?
+                </h3>
+                <p className="mt-1 text-xs text-muted">
+                  Shu sahifa haqida yozing. Qaysi sahifada ekaningizni o&apos;zimiz bilamiz.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-ink transition"
+                aria-label="Yopish"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+              {/* Turi: Kamchilik yoki Taklif tablari (2-rasmdagi ko'rinish) */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setType("kamchilik")}
+                  className={`flex h-10 items-center justify-center rounded-xl border text-xs font-bold transition-all sm:text-sm ${
+                    type === "kamchilik"
+                      ? "border-primary bg-primary/10 text-primary shadow-2xs ring-2 ring-primary/20"
+                      : "border-line bg-surface/50 text-muted hover:bg-surface hover:text-ink"
+                  }`}
+                >
+                  Kamchilik
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType("taklif")}
+                  className={`flex h-10 items-center justify-center rounded-xl border text-xs font-bold transition-all sm:text-sm ${
+                    type === "taklif"
+                      ? "border-primary bg-primary/10 text-primary shadow-2xs ring-2 ring-primary/20"
+                      : "border-line bg-surface/50 text-muted hover:bg-surface hover:text-ink"
+                  }`}
+                >
+                  Taklif
+                </button>
+              </div>
+
+              {/* Matn kiritish oynasi */}
+              <div className="flex flex-col gap-1.5">
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  required
+                  rows={4}
+                  placeholder={
+                    type === "kamchilik"
+                      ? "Masalan: kursni qidirish oynasi yo'q ekan"
+                      : "Masalan: ushbu sahifada filtrlarni tezroq saralash qo'shilsa ajoyib bo'lardi"
+                  }
+                  className="w-full resize-none rounded-xl border border-line bg-surface/40 p-3.5 text-sm text-ink placeholder:text-muted/60 focus:border-primary focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
+                />
+              </div>
+
+              {/* Avto-aniqlangan sahifa ma'lumoti */}
+              <div className="flex items-center justify-between text-2xs text-muted">
+                <span className="truncate max-w-[320px] sm:max-w-md">
+                  📍 Sahifa: <span className="font-mono text-ink">{pathname}</span>
+                </span>
+                <span>Admin panelga uzatiladi</span>
+              </div>
+
+              {/* Yuborish tugmasi (2-rasmdagi to'liq enli tugma) */}
+              <button
+                type="submit"
+                disabled={sending || !message.trim()}
+                className="mt-1 flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-bold text-white shadow-md shadow-primary/25 transition-all duration-200 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none sm:text-base cursor-pointer"
+              >
+                {sending ? "Yuborilmoqda..." : "Yuborish"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
