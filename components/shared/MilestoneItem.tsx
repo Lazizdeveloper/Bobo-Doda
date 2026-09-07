@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { MilestoneStatusBadge } from "@/components/shared/StatusBadge";
 import type { Contract, Milestone } from "@/lib/types";
-import { formatDate, formatFileSize, formatMoney } from "@/lib/format";
+import { formatDate, formatFileSize, formatMoney, triggerFileDownload } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 export interface MilestoneItemProps {
@@ -202,24 +202,14 @@ export function MilestoneItem({
                         <p className="text-[10px] text-faint">{formatFileSize(file.size)}</p>
                       </div>
                     </div>
-                    {/* `target="_blank"` OLIB TASHLANDI: biriktirma `data:`
-                        URL bo'lgani uchun brauzer yangi oynaga o'tishni
-                        xavfsizlik sababli bloklaydi va tugma jimgina
-                        ishlamay qolardi. `download` bir xil oynada saqlaydi. */}
-                    {file.url ? (
-                      <a
-                        href={file.url}
-                        download={file.name}
-                        className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line"
-                        title={t("sm.downloadFile")}
-                      >
-                        {t("sm.downloadFile")}
-                      </a>
-                    ) : (
-                      <span className="shrink-0 rounded-btn bg-surface px-2 py-1 text-[11px] font-medium text-faint border border-line">
-                        {t("sm.fileUnavailable")}
-                      </span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => triggerFileDownload(file)}
+                      className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line cursor-pointer"
+                      title={t("sm.downloadFile")}
+                    >
+                      {t("sm.downloadFile")}
+                    </button>
                   </div>
                 ))}
               </div>

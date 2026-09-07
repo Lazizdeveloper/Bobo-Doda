@@ -114,7 +114,7 @@ export const contractMachine: StateMachine<ContractStatus> = {
       preconditions: ["payment captured", "at least one milestone funded"],
     },
     { from: "imzolangan", to: "bekor_qilingan", actors: ["buyer", "seller", "admin"] },
-    { from: "faol", to: "yakunlangan", actors: ["system"], preconditions: ["all milestones accepted"] },
+    { from: "faol", to: "yakunlangan", actors: ["buyer", "system"], preconditions: ["all milestones accepted"] },
     { from: "faol", to: "bekor_qilingan", actors: ["buyer", "seller", "admin"] },
     { from: "faol", to: "nizo", actors: ["buyer", "seller", "admin"] },
     { from: "nizo", to: "faol", actors: ["admin"], postconditions: ["dispute resolved without termination"] },

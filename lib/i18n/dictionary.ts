@@ -976,6 +976,23 @@ export const dictionary: Record<string, Entry> = {
     ru: "Принятые этапы остаются оплаченными, средства из эскроу возвращаются заказчику. Это действие нельзя отменить.",
   },
   "contract.cancelled": { uz: "Shartnoma bekor qilindi", ru: "Контракт отменён" },
+  "contract.closeAction": { uz: "Ishni yopish", ru: "Завершить работу" },
+  "contract.closeTitle": { uz: "Ishni yakunlash (yopish)", ru: "Завершение контракта" },
+  "contract.closeDesc": {
+    uz: "Barcha vazifalar to'liq bajarildimi? Buyurtmachiga shartnomani yopish va to'lovni chiqarish so'rovi yuboriladi.",
+    ru: "Все задачи выполнены? Заказчику будет отправлен запрос на закрытие контракта и выплату.",
+  },
+  "contract.closeNote": { uz: "Yakuniy izoh (ixtiyoriy)", ru: "Итоговый комментарий (необязательно)" },
+  "contract.closeRequested": {
+    uz: "Ishni yopish so'rovi yuborildi. Buyurtmachi tasdiqlashi kutilmoqda.",
+    ru: "Запрос на завершение отправлен. Ожидается подтверждение заказчика.",
+  },
+  "contract.closeBuyerPrompt": {
+    uz: "Mutaxassis barcha ishlarni to'liq yakunlab, shartnomani yopishni so'radi.",
+    ru: "Специалист полностью завершил работу и запросил закрытие контракта.",
+  },
+  "contract.approveClose": { uz: "Ishni qabul qilish va yopish", ru: "Принять работу и закрыть" },
+  "contract.closed": { uz: "Shartnoma muvaffaqiyatli yopildi", ru: "Контракт успешно закрыт" },
 
   /* Bosqichlar */
   "ms.kutilmoqda": { uz: "Kutilmoqda", ru: "Ожидание" },
@@ -2016,6 +2033,10 @@ export const dictionary: Record<string, Entry> = {
   "ntf.contractCompleted": {
     uz: "Shartnoma yakunlandi: {title}",
     ru: "Контракт завершён: {title}",
+  },
+  "ntf.closeRequested": {
+    uz: "Mutaxassis \"{title}\" shartnomasini yopishni so'radi",
+    ru: "Специалист запросил закрытие контракта \"{title}\"",
   },
   "ntf.withdrawalApproved": {
     uz: "Pul yechish so'rovingiz tasdiqlandi — {amount} so'm kartangizga o'tkazildi",

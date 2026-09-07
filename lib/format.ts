@@ -87,3 +87,37 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Biriktirilgan yoki topshirilgan faylni xavfsiz va ishonchli yuklab olish / ochish.
+ * Data URI yoki haqiqiy URL bo'lsa uni yuklaydi, '#' bo'lsa demo fayl generatsiya qiladi.
+ */
+export function triggerFileDownload(file: { name: string; url?: string; size?: number; type?: string }): void {
+  if (typeof window === "undefined") return;
+
+  if (file.url && file.url !== "#" && file.url.trim() !== "") {
+    const a = document.createElement("a");
+    a.href = file.url;
+    a.download = file.name || "fayl";
+    if (file.url.startsWith("http")) {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+
+  // Demo / mock fayllar (#) uchun haqiqiy yuklanadigan test blob yaratish
+  const content = `BOBO & DODA PLATFORM\nTopshirilgan ish natijasi fayli: ${file.name}\nHajmi: ${file.size || 0} bayt\nYuklangan vaqt: ${new Date().toLocaleString()}\n\nUshbu fayl platforma orqali muvaffaqiyatli saqlangan.`;
+  const blob = new Blob([content], { type: file.type || "text/plain;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = file.name || "fayl.txt";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+}
+

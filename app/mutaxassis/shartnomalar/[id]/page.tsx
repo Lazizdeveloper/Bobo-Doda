@@ -27,7 +27,7 @@ import { authService, contractsService, filesService, messagesService, milestone
 import { ApiError } from "@/lib/api/errors";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS } from "@/lib/attachments";
 import type { Contract, DeliverableFile, Message, Milestone, Review, Service } from "@/lib/types";
-import { formatDate, formatFileSize, formatMoney, formatTime } from "@/lib/format";
+import { formatDate, formatFileSize, formatMoney, formatTime, triggerFileDownload } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 export default function ShartnomaWorkroomPage() {
@@ -56,6 +56,11 @@ export default function ShartnomaWorkroomPage() {
   /* Bekor qilish */
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+
+  /* Ishni yopish */
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [closeNote, setCloseNote] = useState("");
+  const [closingContract, setClosingContract] = useState(false);
 
   /* Chat */
   const [draft, setDraft] = useState("");
@@ -118,12 +123,7 @@ export default function ShartnomaWorkroomPage() {
   }
 
   /* Fayl API chegarasidan o'tadi (`filesService.upload`) — u turni va
-     hajmni tekshiradi hamda SAQLANADIGAN havola qaytaradi.
-     Ilgari bu yerda `URL.createObjectURL(file)` ishlatilardi: hosil
-     bo'lgan `blob:` havola faqat o'sha ochiq sahifada yashaydi, sahifa
-     yangilangan zahoti o'ladi va xaridor (boshqa qurilma, boshqa sessiya)
-     faylni UMUMAN ocha olmasdi — ish "topshirilgan" ko'rinardi, lekin
-     natija hech kimga yetib bormasdi. */
+     hajmni tekshiradi hamda SAQLANADIGAN havola qaytaradi. */
   async function handleAddFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []);
     e.target.value = "";
@@ -184,13 +184,9 @@ export default function ShartnomaWorkroomPage() {
     }
     setSubmitting(false);
 
-    /* Havola/izoh chatga yozilishi — ikkilamchi.
-       Fayllar chatga HAQIQIY biriktirma sifatida qo'shiladi: ilgari bu yerda
-       faqat fayl NOMLARI matn qatoriga yozilardi, shuning uchun suhbatda
-       "📎 Fayllar (1): dizayn.zip" ko'rinar, lekin uni bosib bo'lmasdi —
-       foydalanuvchi faylni chatdan ololmasdi. */
+    /* Havola/izoh chatga yozilishi va fayllar biriktirilishi */
     try {
-      const chatText = `📦 ${t("sm.chatSubmitted")}: "${submitTarget.title}"\n${workNote.trim() ? `${workNote.trim()}\n` : ""}${workLink.trim() ? `${workLink.trim()}\n` : ""}`.trim();
+      const chatText = `📦 ${t("sm.chatSubmitted")}: "${submitTarget.title}"\n${workNote.trim() ? `${workNote.trim()}\n` : ""}${workLink.trim() ? `${workLink.trim()}` : ""}`.trim();
       const message = await messagesService.send(
         contract.id,
         chatText,
@@ -200,6 +196,22 @@ export default function ShartnomaWorkroomPage() {
       setMessages((prev) => [...prev, message]);
     } catch {
       toast(t("sm.chatFailed"), "error");
+    }
+  }
+
+  async function handleRequestCloseContract() {
+    if (!contract) return;
+    setClosingContract(true);
+    try {
+      await contractsService.requestClose(contract.id, closeNote);
+      toast(t("contract.closeRequested"));
+      setCloseModalOpen(false);
+      setCloseNote("");
+      reload();
+    } catch {
+      toast(t("common.error"), "error");
+    } finally {
+      setClosingContract(false);
     }
   }
 
@@ -308,13 +320,17 @@ export default function ShartnomaWorkroomPage() {
                 {formatMoney(contract.totalAmount, lang)}
               </p>
             </div>
-            {canSubmitActiveMilestone && (
+            {contract.status === "faol" && !contract.closeRequested && (
               <Button
-                onClick={() => openSubmitModal(canSubmitActiveMilestone)}
-                className="shadow-sm font-bold"
+                variant="secondary"
+                onClick={() => setCloseModalOpen(true)}
+                className="shadow-sm font-bold border-primary/40 text-primary hover:bg-primary/10"
               >
-                🚀 {t("ms.submitAction")}
+                🏁 {t("contract.closeAction")}
               </Button>
+            )}
+            {contract.status === "faol" && contract.closeRequested && (
+              <Badge tone="warning">⏳ {t("contract.closeRequested")}</Badge>
             )}
           </div>
         </div>
@@ -325,19 +341,13 @@ export default function ShartnomaWorkroomPage() {
             <div className="flex items-center gap-2.5">
               <span className="text-lg">💡</span>
               <span>
-                {canSubmitActiveMilestone
-                  ? `Hozir topshirish mumkin bo'lgan bosqich: "${canSubmitActiveMilestone.title}". Ishni yakunlash uchun natijalarni biriktirib topshiring.`
-                  : "Barcha ishlar topshirildi. Buyurtmachi tekshirib tasdiqlashi bilan shartnoma avtomatik yakunlanadi va to'lov balansingizga o'tadi."}
+                {contract.closeRequested
+                  ? t("contract.closeRequested")
+                  : canSubmitActiveMilestone
+                  ? `Hozir topshirish mumkin bo'lgan bosqich: "${canSubmitActiveMilestone.title}". Ishni topshirish uchun quyidagi bosqich kartochkasidagi 'Ishni topshirish' tugmasidan foydalaning.`
+                  : "Barcha ishlar topshirildi. Ishni to'liq yakunlash uchun yuqoridagi 'Ishni yopish' tugmasini bosing."}
               </span>
             </div>
-            {canSubmitActiveMilestone && (
-              <Button
-                size="sm"
-                onClick={() => openSubmitModal(canSubmitActiveMilestone)}
-              >
-                {t("ms.submitAction")}
-              </Button>
-            )}
           </div>
         )}
 
@@ -562,15 +572,16 @@ export default function ShartnomaWorkroomPage() {
                     {allFiles.length > 0 && (
                       <div className="flex flex-col gap-1.5 pt-0.5">
                         {allFiles.map((file) => (
-                          <a
+                          <button
+                            type="button"
                             key={file.id}
-                            href={file.url}
-                            download={file.name}
-                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors ${
+                            onClick={() => triggerFileDownload(file)}
+                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors text-left w-full cursor-pointer ${
                               mine
                                 ? "bg-white/15 text-white hover:bg-white/25"
                                 : "bg-card border border-line text-ink hover:bg-surface"
                             }`}
+                            title={t("sm.downloadFile")}
                           >
                             <span className="text-base">📎</span>
                             <div className="min-w-0 flex-1">
@@ -580,7 +591,7 @@ export default function ShartnomaWorkroomPage() {
                               </p>
                             </div>
                             <span className="text-xs font-semibold">⬇</span>
-                          </a>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -856,6 +867,51 @@ export default function ShartnomaWorkroomPage() {
             <span>{t("sm.confirmComplete")}</span>
           </label>
         </form>
+      </Modal>
+
+      {/* Ishni yopish (shartnomani yakunlash) modali */}
+      <Modal
+        open={closeModalOpen}
+        onClose={() => setCloseModalOpen(false)}
+        title={t("contract.closeTitle")}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setCloseModalOpen(false)}
+              disabled={closingContract}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              loading={closingContract}
+              onClick={handleRequestCloseContract}
+            >
+              {t("contract.closeAction")}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <div className="rounded-input border border-primary/20 bg-primary/5 p-3.5 text-xs text-muted">
+            <p className="font-semibold text-ink mb-1">
+              🏁 {t("contract.closeTitle")}
+            </p>
+            <p>{t("contract.closeDesc")}</p>
+          </div>
+
+          <Textarea
+            label={t("contract.closeNote")}
+            value={closeNote}
+            onChange={(e) => setCloseNote(e.target.value)}
+            placeholder="Masalan: Barcha ishlar to'liq va sifatli bajarildi, barcha natijalar taqdim etildi."
+            rows={3}
+          />
+
+          <p className="text-2xs text-faint">
+            * Ishni yopish so'rovi yuborilgach, buyurtmachi tasdiqlashi bilan shartnoma yakunlanadi va to'lov balansingizga o'tadi.
+          </p>
+        </div>
       </Modal>
 
       {/* Rasmiy to'lov kvitansiyasi modali */}

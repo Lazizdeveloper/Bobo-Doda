@@ -107,6 +107,8 @@ export const contractsService: ContractsService = {
   list: () => call(mock.getContracts),
   get: (id) => call(() => mock.getContract(id)),
   cancel: (id) => call(() => mock.cancelContract(id)),
+  requestClose: (id, note) => call(() => mock.requestCloseContract(id, note)),
+  approveClose: (id) => call(() => mock.approveCloseContract(id)),
 };
 
 export const milestonesService: MilestonesService = {

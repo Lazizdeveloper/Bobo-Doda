@@ -391,19 +391,6 @@ export function ensureUserData(userId: string): void {
     (c) => c.sellerId === userId || c.buyerId === userId
   );
   if (hasUserContracts) {
-    // Agar mavjud bo'lsa ham, ms-${userId}-2 ni tugatilmagan (mablaglangan) holatga keltiramiz:
-    const milestones = read<Milestone[]>(KEYS.milestones, []);
-    const ms2 = milestones.find((m) => m.id === `ms-${userId}-2`);
-    if (ms2 && ms2.status === "topshirildi") {
-      ms2.status = "mablaglangan";
-      ms2.title = "To'lov tizimlari integratsiyasi va API (Tugallanmagan — topshirishga tayyor)";
-      ms2.submittedAt = undefined;
-      ms2.reviewDeadline = undefined;
-      ms2.deliverableLink = undefined;
-      ms2.deliverableNote = undefined;
-      ms2.deliverableFiles = undefined;
-      write(KEYS.milestones, milestones);
-    }
     return;
   }
 
@@ -1860,6 +1847,136 @@ export async function sendMessage(
     }
   }
   return message;
+}
+
+/** Mutaxassis tomonidan ishni to'liq yakunlash va shartnomani yopish so'rovi */
+export async function requestCloseContract(
+  id: string,
+  note?: string
+): Promise<Contract> {
+  await delay(400);
+  const uid = currentUserId();
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const idx = contracts.findIndex((c) => c.id === id && c.sellerId === uid);
+  if (idx < 0) throw new Error("NOT_FOUND");
+  const contract = contracts[idx];
+  if (contract.status !== "faol") throw new Error("BAD_STATE");
+
+  contracts[idx] = {
+    ...contract,
+    closeRequested: true,
+    closeRequestNote: note?.trim() || undefined,
+    closeRequestedAt: new Date().toISOString(),
+  };
+  write(KEYS.contracts, contracts);
+
+  // Chatga xabar yuborish
+  try {
+    const chatMsg = `🏁 Mutaxassis ishni to'liq yakunladi va shartnomani yopishni so'radi.${
+      note?.trim() ? `\nIzoh: ${note.trim()}` : ""
+    }`;
+    await sendMessage(contract.id, chatMsg);
+  } catch {}
+
+  // Xaridorga bildirishnoma
+  pushNotification(
+    contract.buyerId,
+    "bosqich",
+    "ntf.closeRequested",
+    `/xaridor/shartnomalar/${contract.id}`,
+    { title: contract.title }
+  );
+
+  return contracts[idx];
+}
+
+/** Xaridor tomonidan ishni qabul qilish va shartnomani yopish (tasdiqlash) */
+export async function approveCloseContract(id: string): Promise<Contract> {
+  await delay(500);
+  const uid = currentUserId();
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const idx = contracts.findIndex((c) => c.id === id && c.buyerId === uid);
+  if (idx < 0) throw new Error("NOT_FOUND");
+  const contract = contracts[idx];
+  if (contract.status !== "faol") throw new Error("BAD_STATE");
+
+  // Barcha tugallanmagan bosqichlarni qabul qilish
+  const milestones = read<Milestone[]>(KEYS.milestones, []);
+  const now = new Date().toISOString();
+  let updatedAny = false;
+  milestones.forEach((m) => {
+    if (m.contractId === id && m.status !== "qabul_qilindi") {
+      m.status = "qabul_qilindi";
+      m.approvedAt = now;
+      updatedAny = true;
+    }
+  });
+  if (updatedAny) {
+    write(KEYS.milestones, milestones);
+  }
+
+  // Shartnoma holatini 'yakunlangan' qilish
+  contracts[idx] = {
+    ...contract,
+    status: "yakunlangan",
+    closeRequested: false,
+  };
+  write(KEYS.contracts, contracts);
+
+  incrementCompletedContracts(contract.sellerId);
+
+  // Chatga xabar yuborish
+  try {
+    const chatMsg = "🎉 Buyurtmachi barcha ishlarni qabul qildi va shartnoma muvaffaqiyatli yopildi!";
+    await sendMessage(contract.id, chatMsg);
+  } catch {}
+
+  // Bildirishnomalar
+  pushNotification(
+    contract.sellerId,
+    "tolov",
+    "ntf.contractCompleted",
+    `/mutaxassis/shartnomalar/${contract.id}`,
+    { title: contract.title }
+  );
+  pushNotification(
+    contract.buyerId,
+    "tolov",
+    "ntf.contractCompleted",
+    `/xaridor/shartnomalar/${contract.id}`,
+    { title: contract.title }
+  );
+
+  return contracts[idx];
+}
+
+/** Xaridor tomonidan shartnomani yopish so'rovini rad etish */
+export async function rejectCloseContract(
+  id: string,
+  reason?: string
+): Promise<Contract> {
+  await delay(400);
+  const uid = currentUserId();
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const idx = contracts.findIndex((c) => c.id === id && c.buyerId === uid);
+  if (idx < 0) throw new Error("NOT_FOUND");
+  const contract = contracts[idx];
+  if (contract.status !== "faol") throw new Error("BAD_STATE");
+
+  contracts[idx] = {
+    ...contract,
+    closeRequested: false,
+  };
+  write(KEYS.contracts, contracts);
+
+  try {
+    const chatMsg = `⚠️ Buyurtmachi shartnomani yopish so'rovini rad etdi.${
+      reason?.trim() ? `\nSabab: ${reason.trim()}` : ""
+    }`;
+    await sendMessage(contract.id, chatMsg);
+  } catch {}
+
+  return contracts[idx];
 }
 
 /* ---------------- Sharhlar ---------------- */

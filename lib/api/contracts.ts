@@ -193,6 +193,8 @@ export interface ContractsService {
   list(): Promise<Model.Contract[]>;
   get(id: string): Promise<Model.Contract | null>;
   cancel(id: string): Promise<Model.Contract>;
+  requestClose(id: string, note?: string): Promise<Model.Contract>;
+  approveClose(id: string): Promise<Model.Contract>;
 }
 
 export interface MilestonesService {

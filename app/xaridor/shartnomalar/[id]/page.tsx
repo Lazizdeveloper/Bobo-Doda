@@ -31,7 +31,7 @@ import {
 import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Contract, DeliverableFile, Message, Milestone, PaymentCard, Review, Service } from "@/lib/types";
-import { formatDate, formatFileSize, formatMoney, formatTime } from "@/lib/format";
+import { formatDate, formatFileSize, formatMoney, formatTime, triggerFileDownload } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 export default function XaridorWorkroomPage() {
@@ -68,6 +68,7 @@ export default function XaridorWorkroomPage() {
   const [revisionComment, setRevisionComment] = useState("");
   const [revisionError, setRevisionError] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [approveCloseOpen, setApproveCloseOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   /* Sharh formasi */
@@ -245,6 +246,21 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
       await contractsService.cancel(contract.id);
       toast(t("contract.cancelled"));
       setCancelOpen(false);
+      reload();
+    } catch {
+      toast(t("common.error"), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleApproveClose() {
+    if (!contract) return;
+    setBusy(true);
+    try {
+      await contractsService.approveClose(contract.id);
+      toast(t("contract.closed"));
+      setApproveCloseOpen(false);
       reload();
     } catch {
       toast(t("common.error"), "error");
@@ -510,6 +526,35 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
         </p>
       )}
 
+      {/* Mutaxassis ishni yopishni so'ragan holat */}
+      {contract.status === "faol" && contract.closeRequested && (
+        <Card padding="md" className="border-2 border-primary/50 bg-primary/10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🏁</span>
+              <div>
+                <h3 className="font-heading text-sm font-bold text-ink">
+                  {t("contract.closeBuyerPrompt")}
+                </h3>
+                {contract.closeRequestNote && (
+                  <p className="mt-1.5 text-xs text-muted bg-card/80 p-2.5 rounded-input border border-line">
+                    "{contract.closeRequestNote}"
+                  </p>
+                )}
+                <p className="mt-1.5 text-2xs text-muted">
+                  Barcha bosqichlar va topshirilgan ishlarni ko'rib chiqing. Tasdiqlasangiz, barcha bosqichlar qabul qilinadi, escrow'dagi to'lov mutaxassisga o'tkaziladi va shartnoma yopiladi.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <Button onClick={() => setApproveCloseOpen(true)}>
+                ✅ {t("contract.approveClose")}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Bosqichlar — xaridor amallari bilan */}
       <section className="flex flex-col gap-3">
         <h2 className="font-heading text-lg font-bold text-ink">
@@ -636,25 +681,14 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                                 <p className="text-[10px] text-faint">{formatFileSize(file.size)}</p>
                               </div>
                             </div>
-                            {/* `target="_blank"` OLIB TASHLANDI: biriktirma
-                                `data:` URL bo'lgani uchun brauzer yangi
-                                oynaga o'tishni xavfsizlik sababli bloklaydi
-                                va tugma jimgina ishlamay qolardi. `download`
-                                atributi bir xil oynada faylni saqlaydi. */}
-                            {file.url ? (
-                              <a
-                                href={file.url}
-                                download={file.name}
-                                className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line"
-                                title={t("sm.downloadFile")}
-                              >
-                                {t("sm.downloadFile")}
-                              </a>
-                            ) : (
-                              <span className="shrink-0 rounded-btn bg-surface px-2 py-1 text-[11px] font-medium text-faint border border-line">
-                                {t("sm.fileUnavailable")}
-                              </span>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => triggerFileDownload(file)}
+                              className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line cursor-pointer"
+                              title={t("sm.downloadFile")}
+                            >
+                              {t("sm.downloadFile")}
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -879,15 +913,16 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                     {allFiles.length > 0 && (
                       <div className="flex flex-col gap-1.5 pt-0.5">
                         {allFiles.map((file) => (
-                          <a
+                          <button
+                            type="button"
                             key={file.id}
-                            href={file.url}
-                            download={file.name}
-                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors ${
+                            onClick={() => triggerFileDownload(file)}
+                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors text-left w-full cursor-pointer ${
                               mine
                                 ? "bg-white/15 text-white hover:bg-white/25"
                                 : "bg-card border border-line text-ink hover:bg-surface"
                             }`}
+                            title={t("sm.downloadFile")}
                           >
                             <span className="text-base">📎</span>
                             <div className="min-w-0 flex-1">
@@ -897,7 +932,7 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                               </p>
                             </div>
                             <span className="text-xs font-semibold">⬇</span>
-                          </a>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -1011,6 +1046,19 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
         loading={busy}
         onConfirm={handleCancel}
         onCancel={() => setCancelOpen(false)}
+      />
+
+      {/* Ishni qabul qilish va shartnomani yopish modali */}
+      <ConfirmDialog
+        open={approveCloseOpen}
+        title={t("contract.approveClose")}
+        description="Shartnoma bo'yicha topshirilgan barcha ishlarni to'liq qabul qilib, shartnomani yopasizmi? Tasdiqlasangiz, barcha bosqichlar qabul qilinadi, escrow'dagi mablag' mutaxassisga to'lanadi va shartnoma yakunlanadi."
+        confirmLabel={t("contract.approveClose")}
+        cancelLabel={t("common.cancel")}
+        variant="primary"
+        loading={busy}
+        onConfirm={handleApproveClose}
+        onCancel={() => setApproveCloseOpen(false)}
       />
 
       {/* Shartnomani faollashtirish (to'liq oldindan to'lov) — 2 bosqich */}

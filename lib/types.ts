@@ -225,6 +225,9 @@ export interface Contract {
   totalAmount: number;
   status: ContractStatus;
   createdAt: string;
+  closeRequested?: boolean;
+  closeRequestNote?: string;
+  closeRequestedAt?: string;
 }
 
 export type MilestoneStatus =
