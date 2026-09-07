@@ -210,8 +210,24 @@ export interface MilestonesService {
   requestRevision(id: string, comment: string): Promise<Model.Milestone>;
 }
 
+/** Biriktirma fayllarni yuklash (chat va ish topshirish uchun bir xil).
+    Mock'da fayl data-URL ga o'giriladi; backend'da `POST /files` ga
+    yuboriladi va doimiy URL qaytadi — chaqiruvchi UI o'zgarmaydi. */
+export interface FilesService {
+  upload(file: File): Promise<Model.DeliverableFile>;
+}
+
 export interface PaymentsService {
-  fundContract(id: string): Promise<Model.Contract>;
+  /** Escrow'ni to'liq mablag'lash.
+   *  `input` — to'lov usuli va (karta bo'lsa) qaysi karta. Mock uni faqat
+   *  yozib qo'yadi, lekin CHEGARADA turishi shart: real gateway "qaysi
+   *  usul, qaysi instrument" ni bilmasa to'lovni umuman boshlay olmaydi,
+   *  va bu ma'lumot allaqachon UI'da bor edi — shunchaki tashlab
+   *  yuborilardi. */
+  fundContract(
+    id: string,
+    input?: { method: Model.PaymentMethod; cardId?: string }
+  ): Promise<Model.Contract>;
   getBalance(): Promise<number>;
   getCards(): Promise<Model.PaymentCard[]>;
   addCard(input: {

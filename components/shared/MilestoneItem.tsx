@@ -202,16 +202,24 @@ export function MilestoneItem({
                         <p className="text-[10px] text-faint">{formatFileSize(file.size)}</p>
                       </div>
                     </div>
-                    <a
-                      href={file.url || "#"}
-                      download={file.name}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line"
-                      title={t("sm.downloadFile")}
-                    >
-                      {t("sm.downloadFile")}
-                    </a>
+                    {/* `target="_blank"` OLIB TASHLANDI: biriktirma `data:`
+                        URL bo'lgani uchun brauzer yangi oynaga o'tishni
+                        xavfsizlik sababli bloklaydi va tugma jimgina
+                        ishlamay qolardi. `download` bir xil oynada saqlaydi. */}
+                    {file.url ? (
+                      <a
+                        href={file.url}
+                        download={file.name}
+                        className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line"
+                        title={t("sm.downloadFile")}
+                      >
+                        {t("sm.downloadFile")}
+                      </a>
+                    ) : (
+                      <span className="shrink-0 rounded-btn bg-surface px-2 py-1 text-[11px] font-medium text-faint border border-line">
+                        {t("sm.fileUnavailable")}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>

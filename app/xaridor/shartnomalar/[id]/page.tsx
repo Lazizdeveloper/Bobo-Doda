@@ -23,13 +23,14 @@ import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
 import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
+import { CardPicker } from "@/components/shared/cards";
 import {
   ContractStatusBadge,
   MilestoneStatusBadge,
 } from "@/components/shared/StatusBadge";
 import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
-import type { Contract, DeliverableFile, Message, Milestone, Review, Service } from "@/lib/types";
+import type { Contract, DeliverableFile, Message, Milestone, PaymentCard, Review, Service } from "@/lib/types";
 import { formatDate, formatFileSize, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -54,6 +55,13 @@ export default function XaridorWorkroomPage() {
   const [smsCode, setSmsCode] = useState("");
   const [smsError, setSmsError] = useState("");
   const [b2bCopied, setB2bCopied] = useState(false);
+  /* To'lov kartasi — ilgari "Bank kartasi" tanlansa ham QAYSI karta ekani
+     hech qachon so'ralmasdi: 3DS kodi so'raladigan, lekin instrumenti yo'q
+     to'lov edi. Chiqim oqimi (Daromad/Xarajatlar) allaqachon karta
+     tanlatardi; kirim oqimi ham shunday bo'lishi kerak, aks holda real
+     gateway ulanganda yuboriladigan ma'lumot yetishmaydi. */
+  const [cards, setCards] = useState<PaymentCard[]>([]);
+  const [payCardId, setPayCardId] = useState("");
   const [receiptMilestone, setReceiptMilestone] = useState<Milestone | null>(null);
   const [acceptTarget, setAcceptTarget] = useState<Milestone | null>(null);
   const [revisionTarget, setRevisionTarget] = useState<Milestone | null>(null);
@@ -119,10 +127,21 @@ export default function XaridorWorkroomPage() {
     setSmsCode("");
     setSmsError("");
     setFundOpen(true);
+    void paymentsService
+      .getCards()
+      .then((list) => {
+        setCards(list);
+        setPayCardId((current) => current || list[0]?.id || "");
+      })
+      .catch(() => setCards([]));
   }
 
   /* 1-bosqich: usul tanlab, SMS (3DS) tasdiqlashga o'tish */
   function handlePayNext() {
+    if (payMethod === "karta" && !payCardId) {
+      setSmsError(t("pay.pickCard"));
+      return;
+    }
     setSmsError("");
     setPayPhase("sms");
   }
@@ -154,7 +173,10 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
     }
     setBusy(true);
     try {
-      await paymentsService.fundContract(contract.id);
+      await paymentsService.fundContract(contract.id, {
+        method: payMethod,
+        cardId: payMethod === "karta" ? payCardId : undefined,
+      });
       setFundOpen(false);
       /* Click/Payme — qayta yo'naltirishga asoslangan usullar: to'lov tizimi
          qaytganda tushadigan natija sahifasiga o'tamiz (aynan shu sahifa shu
@@ -614,16 +636,25 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                                 <p className="text-[10px] text-faint">{formatFileSize(file.size)}</p>
                               </div>
                             </div>
-                            <a
-                              href={file.url || "#"}
-                              download={file.name}
-                              target="_blank"
-                              rel="noreferrer noopener"
-                              className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line"
-                              title={t("sm.downloadFile")}
-                            >
-                              {t("sm.downloadFile")}
-                            </a>
+                            {/* `target="_blank"` OLIB TASHLANDI: biriktirma
+                                `data:` URL bo'lgani uchun brauzer yangi
+                                oynaga o'tishni xavfsizlik sababli bloklaydi
+                                va tugma jimgina ishlamay qolardi. `download`
+                                atributi bir xil oynada faylni saqlaydi. */}
+                            {file.url ? (
+                              <a
+                                href={file.url}
+                                download={file.name}
+                                className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line"
+                                title={t("sm.downloadFile")}
+                              >
+                                {t("sm.downloadFile")}
+                              </a>
+                            ) : (
+                              <span className="shrink-0 rounded-btn bg-surface px-2 py-1 text-[11px] font-medium text-faint border border-line">
+                                {t("sm.fileUnavailable")}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -929,6 +960,7 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
             onAddImages={(imgs) => setDraftImages((prev) => [...prev, ...imgs])}
             onAddFiles={(fls) => setDraftFiles((prev) => [...prev, ...fls])}
             attachedCount={draftImages.length + draftFiles.length}
+            onError={(message) => toast(message, "error")}
           />
           <div className="flex-1">
             <Input
@@ -1036,6 +1068,24 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                   onChange={(value) => setPayMethod(value as "karta" | "click" | "payme" | "b2b")}
                 />
               </div>
+              {payMethod === "karta" && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-muted">
+                    {t("pay.pickCard")}
+                  </p>
+                  <CardPicker
+                    cards={cards}
+                    value={payCardId}
+                    onChange={setPayCardId}
+                    onCardAdded={(card) => setCards((prev) => [card, ...prev])}
+                  />
+                  {smsError && payPhase === "method" && (
+                    <p className="mt-1.5 text-2xs font-medium text-danger" role="alert">
+                      {smsError}
+                    </p>
+                  )}
+                </div>
+              )}
               <p className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
                 {t("cfund.modalDesc")}
               </p>

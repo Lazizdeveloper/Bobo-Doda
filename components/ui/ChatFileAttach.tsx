@@ -1,6 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { filesService } from "@/lib/api";
+import { ApiError } from "@/lib/api/errors";
+import {
+  ATTACHMENT_ACCEPT,
+  isImageAttachment,
+  MAX_ATTACHMENTS,
+} from "@/lib/attachments";
+import { useT } from "@/lib/i18n";
 import type { DeliverableFile } from "@/lib/types";
 
 export interface ChatFileAttachProps {
@@ -8,6 +16,8 @@ export interface ChatFileAttachProps {
   onAddFiles: (newFiles: DeliverableFile[]) => void;
   attachedCount?: number;
   disabled?: boolean;
+  /** Rad etilgan fayl haqida xabar (toast ko'rsatish uchun) */
+  onError?: (message: string) => void;
 }
 
 export function ChatFileAttach({
@@ -15,68 +25,69 @@ export function ChatFileAttach({
   onAddFiles,
   attachedCount = 0,
   disabled = false,
+  onError,
 }: ChatFileAttachProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const { t } = useT();
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  /* Fayl yuklash API chegarasidan o'tadi (`filesService.upload`) — u tur va
+     hajmni tekshiradi va data-URL qaytaradi. Ilgari bu yerda tekshiruvsiz
+     `FileReader` ishlatilardi: 30 MB'lik ZIP localStorage kvotasini to'ldirib,
+     xabar jimgina yuborilmasdi. */
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
 
-    const filesArray = Array.from(fileList);
-    const newImages: string[] = [];
-    const newFiles: DeliverableFile[] = [];
+    const picked = Array.from(fileList).slice(
+      0,
+      Math.max(0, MAX_ATTACHMENTS - attachedCount)
+    );
+    if (picked.length < fileList.length) onError?.(t("upload.tooMany"));
+    if (picked.length === 0) {
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
 
     setLoading(true);
-    let processed = 0;
+    const images: string[] = [];
+    const files: DeliverableFile[] = [];
+    let rejected = "";
 
-    filesArray.forEach((file) => {
-      const isImage = file.type.startsWith("image/");
-      const reader = new FileReader();
+    for (const file of picked) {
+      try {
+        const uploaded = await filesService.upload(file);
+        if (isImageAttachment(uploaded)) images.push(uploaded.url);
+        else files.push(uploaded);
+      } catch (error) {
+        /* `ApiError.message` — ma'lumot qatlami tashlagan kod satri
+           ("FILE_TOO_LARGE"), foydalanuvchi matni emas. */
+        const code = error instanceof ApiError ? error.message : "";
+        rejected =
+          code === "FILE_TOO_LARGE"
+            ? t("upload.tooLarge")
+            : t("upload.rejected");
+      }
+    }
 
-      reader.onload = () => {
-        const result = reader.result as string;
-        if (isImage) {
-          newImages.push(result);
-        } else {
-          newFiles.push({
-            id: `chat-file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            name: file.name,
-            size: file.size,
-            url: result,
-            type: file.type || "application/octet-stream",
-          });
-        }
+    if (images.length > 0) onAddImages(images);
+    if (files.length > 0) onAddFiles(files);
+    if (rejected) onError?.(rejected);
 
-        processed++;
-        if (processed === filesArray.length) {
-          if (newImages.length > 0) onAddImages(newImages);
-          if (newFiles.length > 0) onAddFiles(newFiles);
-          setLoading(false);
-          if (inputRef.current) inputRef.current.value = "";
-        }
-      };
-
-      reader.onerror = () => {
-        processed++;
-        if (processed === filesArray.length) {
-          setLoading(false);
-          if (inputRef.current) inputRef.current.value = "";
-        }
-      };
-
-      reader.readAsDataURL(file);
-    });
+    setLoading(false);
+    if (inputRef.current) inputRef.current.value = "";
   }
+
+  const full = attachedCount >= MAX_ATTACHMENTS;
 
   return (
     <div className="relative shrink-0">
       <button
         type="button"
-        disabled={disabled || loading}
+        disabled={disabled || loading || full}
         onClick={() => inputRef.current?.click()}
-        aria-label="Fayl yoki rasm biriktirish"
-        title="Fayl yoki rasm biriktirish (bir nechta tanlash mumkin)"
+        aria-label={t("chat.attachLabel")}
+        title={full ? t("upload.tooMany") : t("chat.attachLabel")}
         className="flex h-11 w-11 items-center justify-center rounded-input border border-line bg-card text-muted transition-colors duration-150 hover:border-primary hover:text-ink disabled:opacity-50"
       >
         {loading ? (
@@ -97,7 +108,7 @@ export function ChatFileAttach({
         ref={inputRef}
         type="file"
         multiple
-        accept="image/*,.pdf,.zip,.rar,.tar,.gz,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.fig,.json"
+        accept={ATTACHMENT_ACCEPT}
         hidden
         onChange={handleFileChange}
       />

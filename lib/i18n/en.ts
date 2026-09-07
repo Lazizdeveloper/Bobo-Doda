@@ -103,6 +103,7 @@ export const en: Record<string, string> = {
 
   /* Card payment (3DS SMS confirmation) */
   "pay.method": "Payment method",
+  "pay.pickCard": "Select a card",
   "pay.cardOption": "Bank card",
   "pay.localOption": "Local wallet",
   "pay.localHint": "Payme, Click, Kaspi and other local payment systems",
@@ -303,6 +304,9 @@ export const en: Record<string, string> = {
   "auth.errPhone": "Enter a valid phone number",
   "auth.tabLogin": "Log in",
   "auth.tabRegister": "Sign up",
+  "auth.secureBadge": "Guaranteed secure payments and contracts",
+  "auth.showPassword": "Show password",
+  "auth.hidePassword": "Hide password",
   "auth.loginTitle": "Log in",
   "auth.loginSubtitle": "Log in with your phone number and password",
   "auth.loginBtn": "Log in",
@@ -611,6 +615,8 @@ export const en: Record<string, string> = {
   "chat.imagePreview": "📷 Image",
   "chat.empty": "No messages yet — be the first to write",
   "chat.you": "You",
+  "chat.attachLabel": "Attach a file or image",
+  "chat.fileFrom": "Attached file",
   "chat.attach": "Attach image",
 
   /* Messages page */
@@ -842,6 +848,9 @@ export const en: Record<string, string> = {
   "upload.hint": "PNG or JPG, up to 2 MB",
   "upload.remove": "Remove",
   "upload.limit": "Image limit reached",
+  "upload.tooLarge": "File is too large — 2 MB maximum",
+  "upload.tooMany": "Up to 5 files per message",
+  "upload.fileRejected": "This file type is not supported",
   "upload.rejected": "Some files were rejected: only PNG/JPG/WebP, up to 2 MB",
 
   /* ============ CLIENT side ============ */
@@ -1536,7 +1545,11 @@ export const en: Record<string, string> = {
 
   /* Upwork-style Deliverables, Custom Payout, B2B Invoicing & Receipts */
   "sm.files": "Files or archive (ZIP, PDF, images)",
-  "sm.filesHint": "Up to 5 files, maximum 50 MB each",
+  "sm.filesHint": "Up to 5 files, maximum 2 MB each",
+  "sm.filesTypes": "PDF, ZIP, DOCX, PNG, JPG — up to 2 MB each",
+  "sm.filesUploading": "Uploading file...",
+  "sm.chatSubmitted": "Work submitted",
+  "sm.fileUnavailable": "File unavailable",
   "sm.filesUpload": "Upload files or drag and drop here",
   "sm.deliverableTitle": "Submitted deliverables",
   "sm.deliverableFiles": "Attached deliverables",

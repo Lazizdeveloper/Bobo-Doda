@@ -380,6 +380,7 @@ function KirishForm() {
             {/* Kirish formasi */}
             <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4.5 sm:gap-5" noValidate>
               <CountryPhoneInput
+                id="login-phone"
                 value={loginPhone}
                 label={t("auth.regPhone")}
                 error={errors.phone}
@@ -391,11 +392,15 @@ function KirishForm() {
               />
 
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
+                <label
+                  htmlFor="login-password"
+                  className="block text-xs sm:text-sm font-bold text-ink mb-2"
+                >
                   {t("auth.password")}
                 </label>
                 <div className="relative">
                   <input
+                    id="login-password"
                     type={loginShowPassword ? "text" : "password"}
                     autoComplete="current-password"
                     value={loginPassword}
@@ -412,7 +417,7 @@ function KirishForm() {
                     tabIndex={-1}
                     onClick={() => setLoginShowPassword(!loginShowPassword)}
                     className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1.5"
-                    aria-label={loginShowPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    aria-label={loginShowPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                   >
                     <EyeIcon open={loginShowPassword} />
                   </button>
@@ -505,10 +510,14 @@ function KirishForm() {
             {/* Ro'yxatdan o'tish formasi — Google va Telegram tugmalari yo'q, toza ro'yxatdan o'tish */}
             <form onSubmit={handleRegisterSubmit} className="mt-8 flex flex-col gap-4.5 sm:gap-5" noValidate>
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
+                <label
+                  htmlFor="register-name"
+                  className="block text-xs sm:text-sm font-bold text-ink mb-2"
+                >
                   {t("auth.regName")}
                 </label>
                 <input
+                  id="register-name"
                   type="text"
                   autoComplete="name"
                   value={regFullName}
@@ -532,6 +541,7 @@ function KirishForm() {
 
               {/* Markaziy Osiyo Davlatlari tanlovi bilan Telefon Input */}
               <CountryPhoneInput
+                id="register-phone"
                 value={regPhone}
                 label={t("auth.regPhone")}
                 error={errors.phone}
@@ -543,11 +553,15 @@ function KirishForm() {
               />
 
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-ink mb-2">
+                <label
+                  htmlFor="register-password"
+                  className="block text-xs sm:text-sm font-bold text-ink mb-2"
+                >
                   {t("auth.password")}
                 </label>
                 <div className="relative">
                   <input
+                    id="register-password"
                     type={regShowPassword ? "text" : "password"}
                     autoComplete="new-password"
                     value={regPassword}
@@ -573,7 +587,7 @@ function KirishForm() {
                     tabIndex={-1}
                     onClick={() => setRegShowPassword(!regShowPassword)}
                     className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors p-1.5 cursor-pointer"
-                    aria-label={regShowPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    aria-label={regShowPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                   >
                     <EyeIcon open={regShowPassword} />
                   </button>
@@ -782,7 +796,7 @@ function KirishForm() {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="m9 12 2 2 4-4" />
             </svg>
-            <span>Kafolatlangan xavfsiz to'lov va shartnoma tizimi</span>
+            <span>{t("auth.secureBadge")}</span>
           </div>
         </div>
       </div>

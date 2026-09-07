@@ -171,6 +171,7 @@ export const dictionary: Record<string, Entry> = {
 
   /* Karta orqali to'lov (3DS SMS tasdiqlash) */
   "pay.method": { uz: "To'lov usuli", ru: "Способ оплаты" },
+  "pay.pickCard": { uz: "Kartani tanlang", ru: "Выберите карту" },
   "pay.cardOption": { uz: "Bank kartasi", ru: "Банковская карта" },
   "pay.localOption": { uz: "Mahalliy hamyon", ru: "Локальный кошелёк" },
   "pay.localHint": {
@@ -495,6 +496,12 @@ export const dictionary: Record<string, Entry> = {
   "auth.errPhone": { uz: "To'g'ri telefon raqamini kiriting", ru: "Введите корректный номер телефона" },
   "auth.tabLogin": { uz: "Kirish", ru: "Вход" },
   "auth.tabRegister": { uz: "Ro'yxatdan o'tish", ru: "Регистрация" },
+  "auth.secureBadge": {
+    uz: "Kafolatlangan xavfsiz to'lov va shartnoma tizimi",
+    ru: "Гарантированная безопасная оплата и система контрактов",
+  },
+  "auth.showPassword": { uz: "Parolni ko'rsatish", ru: "Показать пароль" },
+  "auth.hidePassword": { uz: "Parolni yashirish", ru: "Скрыть пароль" },
   "auth.loginTitle": { uz: "Tizimga kirish", ru: "Вход в систему" },
   "auth.loginSubtitle": {
     uz: "Telefon raqamingiz va parolingiz bilan kiring",
@@ -1035,6 +1042,11 @@ export const dictionary: Record<string, Entry> = {
   },
   "chat.you": { uz: "Siz", ru: "Вы" },
   "chat.attach": { uz: "Rasm biriktirish", ru: "Прикрепить изображение" },
+  "chat.attachLabel": {
+    uz: "Fayl yoki rasm biriktirish",
+    ru: "Прикрепить файл или изображение",
+  },
+  "chat.fileFrom": { uz: "Biriktirilgan fayl", ru: "Прикреплённый файл" },
 
   /* Xabarlar sahifasi */
   "messages.title": { uz: "Xabarlar", ru: "Сообщения" },
@@ -1385,6 +1397,18 @@ export const dictionary: Record<string, Entry> = {
   "upload.hint": { uz: "PNG yoki JPG, 2 MB gacha", ru: "PNG или JPG, до 2 МБ" },
   "upload.remove": { uz: "O'chirish", ru: "Удалить" },
   "upload.limit": { uz: "Rasmlar soni chegaraga yetdi", ru: "Достигнут лимит изображений" },
+  "upload.tooLarge": {
+    uz: "Fayl juda katta — 2 MB gacha bo'lishi kerak",
+    ru: "Файл слишком большой — не более 2 МБ",
+  },
+  "upload.tooMany": {
+    uz: "Bir xabarga 5 tagacha fayl biriktirish mumkin",
+    ru: "К одному сообщению можно приложить до 5 файлов",
+  },
+  "upload.fileRejected": {
+    uz: "Bu fayl turi qabul qilinmaydi",
+    ru: "Этот тип файла не поддерживается",
+  },
   "upload.rejected": {
     uz: "Ba'zi fayllar rad etildi: faqat PNG/JPG/WebP, 2 MB gacha",
     ru: "Некоторые файлы отклонены: только PNG/JPG/WebP, до 2 МБ",
@@ -2434,7 +2458,14 @@ export const dictionary: Record<string, Entry> = {
 
   /* Upwork-style Deliverables, Custom Payout, B2B Invoicing & Receipts */
   "sm.files": { uz: "Fayllar yoki arxiv (ZIP, PDF, rasm)", ru: "Файлы или архив (ZIP, PDF, фото)" },
-  "sm.filesHint": { uz: "Maksimal 5 ta fayl, har biri 50 MB gacha", ru: "Максимум 5 файлов, до 50 МБ каждый" },
+  "sm.filesHint": { uz: "Maksimal 5 ta fayl, har biri 2 MB gacha", ru: "Максимум 5 файлов, до 2 МБ каждый" },
+  "sm.filesTypes": {
+    uz: "PDF, ZIP, DOCX, PNG, JPG — har biri 2 MB gacha",
+    ru: "PDF, ZIP, DOCX, PNG, JPG — до 2 МБ каждый",
+  },
+  "sm.filesUploading": { uz: "Fayl yuklanmoqda...", ru: "Файл загружается..." },
+  "sm.chatSubmitted": { uz: "Ish topshirildi", ru: "Работа сдана" },
+  "sm.fileUnavailable": { uz: "Fayl mavjud emas", ru: "Файл недоступен" },
   "sm.filesUpload": { uz: "Fayllarni yuklash yoki bu yerga tashlang", ru: "Загрузить файлы или перетащите сюда" },
   "sm.deliverableTitle": { uz: "Topshirilgan ish natijalari", ru: "Результаты сданной работы" },
   "sm.deliverableFiles": { uz: "Biriktirilgan fayllar", ru: "Прикреплённые файлы" },

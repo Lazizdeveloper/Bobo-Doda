@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/Toast";
 import { CardPicker } from "@/components/shared/cards";
 import { WithdrawalRequests } from "@/components/shared/WithdrawalRequests";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
-import { ApiError, authService, contractsService, milestonesService, paymentsService } from "@/lib/api";
+import { ApiError, contractsService, milestonesService, paymentsService } from "@/lib/api";
 import type { Contract, Milestone, PaymentCard, WithdrawalRequest } from "@/lib/types";
 import { formatAmount, formatDate, formatMoney } from "@/lib/format";
 import { getPlatformSettings } from "@/lib/platform-settings";

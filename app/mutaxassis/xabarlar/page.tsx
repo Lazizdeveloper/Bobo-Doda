@@ -155,7 +155,15 @@ export default function XabarlarPage() {
                     className={`mt-0.5 truncate text-xs ${thread.unread ? "font-medium text-ink" : "text-muted"}`}
                   >
                     {mine && <span className="text-faint">{t("chat.you")}: </span>}
-                    {thread.last.text || (thread.last.image ? t("chat.imagePreview") : "")}
+                    {/* Faqat fayl biriktirilgan xabar ham ko'rinsin — ilgari
+                        matnsiz fayl xabari inbox'da BO'SH qator bo'lib
+                        qolardi va foydalanuvchi nima kelganini bilmasdi. */}
+                    {thread.last.text ||
+                      (thread.last.image
+                        ? t("chat.imagePreview")
+                        : thread.last.files?.length
+                          ? `📎 ${t("chat.fileFrom")}`
+                          : "")}
                   </p>
                 </div>
                 {thread.badge}

@@ -73,6 +73,23 @@ All endpoints require JWT `Authorization: Bearer <token>` unless marked public.
 - **Offline Delivery**: BullMQ workers send fallback emails or Telegram alerts for unread notifications after 15 minutes.
 
 ## 5. File Handling & CDN
+
+**Frontend contract**: every attachment (chat message and milestone
+deliverable) goes through a single boundary operation —
+`filesService.upload(file)` in `lib/api/client.ts`, declared as
+`FilesService` in `lib/api/contracts.ts`. It returns a `DeliverableFile`
+(`{ id, name, size, type, url }`) and the UI only ever stores that `url`.
+
+The mock implementation validates MIME/size (`lib/attachments.ts`) and
+returns a `data:` URL. The real adapter replaces the body of that one
+method with the pre-signed flow below and returns the CDN URL — no page or
+component changes.
+
+> Do **not** reintroduce `URL.createObjectURL()` here. A `blob:` URL is
+> scoped to the tab that created it: it dies on reload and is unresolvable
+> in the counterparty's browser, so submitted work silently reaches nobody
+> and nothing can be sent to the backend.
+
 Files (Avatars, Portfolios, Deliverables) must bypass the Node.js process:
 1. Client requests a pre-signed URL: `POST /api/v1/storage/upload-url` (MIME, size checked).
 2. Client uploads directly to S3.
@@ -84,3 +101,16 @@ Files (Avatars, Portfolios, Deliverables) must bypass the Node.js process:
   - `/api/v1/jobs?q=veb`
   - `/api/v1/specialists?q=dizayn`
   - `categories` and `skills` facet filtering.
+
+## 7. Demo data flag (must be OFF in production)
+
+`NEXT_PUBLIC_DEMO_WORKSPACE=1` makes `lib/mock-api` stamp every newly
+registered account with a ready-made workspace (3 contracts, 7 milestones,
+2 bank cards, 3 services and a profile pre-filled with 4.9 rating / 12
+reviews / "top specialist" badge). It exists for presentations only.
+
+Leave it unset for real users — otherwise someone who just signed up sees
+~9.5M UZS of "withdrawable" money they never earned, cards they never
+linked, and a trust badge they never earned. When the backend lands,
+`ensureUserData()` is deleted outright: the server never invents records
+for a user.

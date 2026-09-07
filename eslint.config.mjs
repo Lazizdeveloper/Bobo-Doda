@@ -15,9 +15,15 @@ export default defineConfig([
     },
   },
   {
-    files: ["scripts/**/*.cjs"],
+    /* Tekshiruv skriptlari — Node CommonJS. `scratch/` dagi bir martalik
+       tekshiruv fayllari ham shu qoidaga kiradi: ular ilova bundle'iga
+       tushmaydi, lekin lint'da `require()` xatosi berib `npm run verify`
+       ni yiqitardi (ya'ni deploy oldidan majburiy tekshiruv umuman
+       o'tmasdi). */
+    files: ["scripts/**/*.cjs", "scratch/**/*.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
   globalIgnores([

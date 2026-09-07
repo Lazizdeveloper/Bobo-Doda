@@ -4,6 +4,7 @@ import type {
   CatalogService,
   ContractsService,
   DisputesService,
+  FilesService,
   JobsService,
   MessagesService,
   MilestonesService,
@@ -116,8 +117,12 @@ export const milestonesService: MilestonesService = {
   requestRevision: (id, comment) => call(() => mock.requestRevision(id, comment)),
 };
 
+export const filesService: FilesService = {
+  upload: (file) => call(() => mock.uploadAttachment(file)),
+};
+
 export const paymentsService: PaymentsService = {
-  fundContract: (id) => call(() => mock.fundContract(id)),
+  fundContract: (id, input) => call(() => mock.fundContract(id, input)),
   getBalance: () => call(mock.getBalance),
   getCards: () => call(mock.getCards),
   addCard: (input) => call(() => mock.addCard(input)),

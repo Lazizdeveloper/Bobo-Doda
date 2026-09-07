@@ -293,6 +293,10 @@ export interface Review {
 
 /* Bank kartalari — mahalliy (Uzcard 8600, Humo 9860) + xalqaro (Visa, Mastercard).
    Xavfsizlik: to'liq raqam saqlanmaydi, faqat oxirgi 4 raqam + niqoblangan. */
+/** Escrow'ga pul kiritish usuli. Mock'da faqat yozib qo'yiladi; real
+    integratsiyada gateway tanlovi shu qiymatdan kelib chiqadi. */
+export type PaymentMethod = "karta" | "click" | "payme" | "b2b";
+
 export type CardType = "visa" | "mastercard" | "uzcard" | "humo";
 
 export interface PaymentCard {

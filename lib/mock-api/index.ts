@@ -8,6 +8,7 @@ import type {
   NotificationKind,
   Offer,
   PaymentCard,
+  PaymentMethod,
   PortfolioItem,
   ProfileLanguage,
   Proposal,
@@ -40,6 +41,11 @@ import {
   text,
   textList,
 } from "@/lib/validate";
+import {
+  attachmentProblem,
+  MAX_ATTACHMENTS,
+  readAsDataUrl,
+} from "@/lib/attachments";
 import {
   assertTransition,
   contractMachine,
@@ -353,8 +359,30 @@ function currentUserId(): string {
   return session.userId;
 }
 
-/** Foydalanuvchi hisobida demo/sinov ma'lumotlari bo'lmasa, to'liq ishchi ma'lumotlar bilan to'ldiradi */
+/** Namoyish ish maydoni YOQILGANMI?
+ *
+ *  `ensureUserData` HAR BIR yangi hisobga tayyor "ish maydoni" quyadi:
+ *  3 ta shartnoma, 7 ta bosqich, 2 ta bank kartasi, 3 ta xizmat va
+ *  4.9 reyting · 12 sharh · "top mutaxassis" belgisi bilan to'ldirilgan
+ *  profil. Bu DEMO uchun qulay, lekin real foydalanuvchi uchun ZARARLI:
+ *  ro'yxatdan o'tgan odam birinchi ekranda o'zi ishlamagan 9,5 mln so'm
+ *  "yechish mumkin" summasini, o'zi bermagan kartalarni va o'zi olmagan
+ *  "Top mutaxassis" belgisini ko'radi. Escrow'ga qurilgan bozorda bu
+ *  ishonchni birinchi daqiqadayoq buzadi (va admin panelidagi KYC/obro'
+ *  raqamlari ham yolg'on bo'lib qoladi).
+ *
+ *  Shuning uchun u endi ATAYLAB O'CHIQ va faqat namoyish muhitida
+ *  `NEXT_PUBLIC_DEMO_WORKSPACE=1` bilan yoqiladi. Backend ulanganda bu
+ *  funksiya butunlay olib tashlanadi — server hech qachon foydalanuvchiga
+ *  yo'q shartnomani ko'rsatmaydi. */
+const DEMO_WORKSPACE_ENABLED =
+  process.env.NEXT_PUBLIC_DEMO_WORKSPACE === "1";
+
+/** Namoyish rejimida yangi hisobni tayyor ish maydoni bilan to'ldiradi.
+    Odatiy holatda (flag berilmagan) hech narsa qilmaydi — yangi hisob
+    BO'SH bo'ladi. */
 export function ensureUserData(userId: string): void {
+  if (!DEMO_WORKSPACE_ENABLED) return;
   if (typeof window === "undefined") return;
   if (!userId) return;
 
@@ -452,10 +480,9 @@ export function ensureUserData(userId: string): void {
       approvedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
       deliverableLink: "https://github.com/example/ecommerce-api",
       deliverableNote: "Arxitektura va Prisma sxemasi to'liq tayyor. Barcha testlar muvaffaqiyatli o'tdi.",
-      deliverableFiles: [
-        { id: `f-${userId}-1`, name: "database_schema_v1.pdf", size: 524288, url: "#" },
-        { id: `f-${userId}-2`, name: "auth_service_release.zip", size: 2411724, url: "#" },
-      ],
+      /* Namunaviy fayl yozuvlari OLIB TASHLANDI: ularning `url` qiymati
+         "#" edi, ya'ni "Yuklab olish" tugmasi hech narsa qilmasdi va
+         foydalanuvchi platformani nosoz deb o'ylardi. */
     },
     {
       id: `ms-${userId}-2`,
@@ -517,9 +544,6 @@ export function ensureUserData(userId: string): void {
       reviewDeadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
       deliverableLink: "https://figma.com/proto/demo-prototype",
       deliverableNote: "Prototip tayyor, tekshirib tasdiqlashingiz mumkin.",
-      deliverableFiles: [
-        { id: `f-${userId}-5`, name: "figma_screens_export.pdf", size: 4194304, url: "#" },
-      ],
     },
     {
       id: `ms-${userId}-7`,
@@ -1071,7 +1095,16 @@ export async function verifyGoogle(email?: string): Promise<Session> {
   const users = read<User[]>(KEYS.users, []);
   const idx = users.findIndex((u) => u.id === session.userId);
   if (idx >= 0) {
-    users[idx] = { ...users[idx], verified: true };
+    /* Google orqali tasdiqlangan email SAQLANADI: `email` parametri
+       qabul qilinar, lekin hech qayerga yozilmasdi — shu sababli
+       "Google email orqali tiklash" oqimi hech qachon ishlay olmasdi
+       (hisobda tiklash uchun email umuman yo'q edi). */
+    users[idx] = {
+      ...users[idx],
+      verified: true,
+      email: email ? text(email, LIMITS.name) : users[idx].email,
+      googleConnected: true,
+    };
     write(KEYS.users, users);
   }
   const updated: Session = { ...session, verified: true };
@@ -1626,9 +1659,13 @@ export async function submitMilestone(
     submittedAt: now.toISOString(),
     reviewDeadline: deadline.toISOString(),
     revisionComment: undefined,
-    deliverableLink: deliverable?.link,
-    deliverableNote: deliverable?.note,
-    deliverableFiles: deliverable?.files,
+    /* Kirish validatsiyasi: cheksiz uzun matn bazaga tushmasin va
+       biriktirmalar haqiqiy (blob: bo'lmagan) havola bilan saqlansin. */
+    /* Havola uchun 500 belgi — Figma/Drive/GitHub havolalari uzun bo'ladi,
+       `listItem` (150) ularni o'rtasidan kesib tashlagan bo'lardi. */
+    deliverableLink: text(deliverable?.link ?? "", LIMITS.fieldValue) || undefined,
+    deliverableNote: text(deliverable?.note ?? "", LIMITS.description) || undefined,
+    deliverableFiles: sanitizeAttachments(deliverable?.files),
   };
   write(KEYS.milestones, milestones);
 
@@ -1645,6 +1682,49 @@ export async function submitMilestone(
     );
   }
   return milestones[idx];
+}
+
+/* ---------------- Biriktirma fayllar ---------------- */
+
+/** Faylni biriktirmaga aylantiradi (tur + hajm tekshiruvidan keyin).
+ *
+ *  Mock'da fayl data-URL sifatida qaytadi va shu holda localStorage'ga
+ *  yoziladi. Ilgari ish topshirish modali `URL.createObjectURL` ishlatardi —
+ *  `blob:` havola faqat o'sha ochiq sahifada yashaydi, shuning uchun xaridor
+ *  (boshqa qurilma, boshqa sessiya) faylni umuman ocha olmasdi.
+ *
+ *  BACKEND: bu yerda fayl `POST /files` ga yuboriladi va javobdagi doimiy
+ *  URL qaytariladi — chaqiruvchi UI kodi o'zgarmaydi. */
+export async function uploadAttachment(file: File): Promise<DeliverableFile> {
+  const problem = attachmentProblem(file);
+  if (problem) throw new Error(problem);
+  const url = await readAsDataUrl(file);
+  await delay(120);
+  return {
+    id: uid("f"),
+    name: text(file.name, LIMITS.listItem) || "fayl",
+    size: file.size,
+    type: file.type || "application/octet-stream",
+    url,
+  };
+}
+
+/** Saqlashdan oldin biriktirma ro'yxatini tozalaydi: soni cheklanadi va
+    faqat haqiqiy (data:/http:) havolalar o'tadi. `blob:` havola bazaga
+    tushsa, u qayta yuklashda o'lik bo'lib qoladi. */
+function sanitizeAttachments(files?: DeliverableFile[]): DeliverableFile[] | undefined {
+  if (!files || files.length === 0) return undefined;
+  const clean = files
+    .filter((f) => typeof f?.url === "string" && /^(data:|https?:)/.test(f.url))
+    .slice(0, MAX_ATTACHMENTS)
+    .map((f) => ({
+      id: f.id || uid("f"),
+      name: text(f.name, LIMITS.listItem) || "fayl",
+      size: Number.isFinite(f.size) ? Math.max(0, Math.round(f.size)) : 0,
+      type: f.type ? text(f.type, 100) : "application/octet-stream",
+      url: f.url,
+    }));
+  return clean.length ? clean : undefined;
 }
 
 /* ---------------- Xabarlar ---------------- */
@@ -1722,7 +1802,7 @@ export async function sendMessage(
     text: clean,
     image: image || attachments?.images?.[0],
     images: attachments?.images || (image ? [image] : undefined),
-    files: attachments?.files,
+    files: sanitizeAttachments(attachments?.files),
     createdAt: new Date().toISOString(),
   };
   const messages = read<Message[]>(KEYS.messages, []);
@@ -3084,10 +3164,22 @@ function findOwnMilestone(
    xaridor BUTUN summani birdan Bobo&Doda hisobiga to'laydi → shartnoma
    faollashadi, barcha bosqichlar 'mablaglangan' bo'ladi, ish boshlanishi
    mumkin. Pul har bosqich qabul qilinganda mutaxassisga o'tadi. */
-export async function fundContract(id: string): Promise<Contract> {
+export async function fundContract(
+  id: string,
+  input?: { method: PaymentMethod; cardId?: string }
+): Promise<Contract> {
   await delay(700);
   if (getPlatformSettings().paymentsPaused) throw new Error("PAYMENTS_PAUSED");
   const uid2 = currentUserId();
+  /* Karta bilan to'lansa — karta AYNAN shu foydalanuvchiniki bo'lishi kerak.
+     Chiqim (`withdrawFunds`) allaqachon shunday tekshirilardi, kirim esa
+     umuman tekshirilmasdi. Backend'da bu server tomonida takrorlanadi. */
+  if (input?.method === "karta" && input.cardId) {
+    const own = read<PaymentCard[]>(KEYS.cards, []).find(
+      (c) => c.id === input.cardId && c.userId === uid2
+    );
+    if (!own) throw new Error("CARD_NOT_FOUND");
+  }
   const contracts = read<Contract[]>(KEYS.contracts, []);
   const idx = contracts.findIndex(
     (c) => c.id === id && c.buyerId === uid2 && c.status === "imzolangan"

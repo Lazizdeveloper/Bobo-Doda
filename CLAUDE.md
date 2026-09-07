@@ -132,7 +132,20 @@ keyingina mutaxassisga o'tadi. UI matnlarida shu ishonch tuyg'usi aks etsin.
   hisoblanadi. Backend'da bu yangilanish sharh/shartnoma yozuvi bilan BITTA
   tranzaksiyada bo'lishi kerak.
 
-## Dizayn tili: "Suzani Light" (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
+## Dizayn tili (tailwind.config.ts) — BOSHQA RANG QO'SHILMASIN
+
+> **ESKIRGAN QISM — DIQQAT.** Quyidagi tavsif dastlabki "Suzani Light"
+> (oq + YASHIL) palitrasi haqida. 2026-09 brend yangilanishidan keyin
+> `tailwind.config.ts` dagi haqiqiy qiymatlar **TO'Q SARIQ**:
+> `primary` #FF7A1A · `primary-hover` #EA670C · `primary-deep` #C7500B ·
+> `accent` #C8F230 (lime) · `info` #0284C7 · `success` #10B981 ·
+> `card-hover` #FFF8F2 · `surface` #FBFBFA · `ink` #141414 ·
+> `line` #EAE5E0 · `field` #D4CCC4. Struktura qoidalari (oq karta,
+> `-deep` variantlari, `bg-X/10` ustida `text-X-deep`, StatusBadge
+> ohanglari, radius/soya/shrift) O'ZGARMAGAN — faqat rang oilasi
+> yashildan sariqqa ko'chgan. Quyidagi matndagi HEX qiymatlarga emas,
+> `tailwind.config.ts` ga ishoning.
+
 **Bu bo'lim faqat ikkala kabinetga (`/mutaxassis`, `/xaridor`) va
 umumiy komponentlarga tegishli — `app/page.tsx` (landing) o'zining alohida
 uch ranglik palitrasiga ega, shu bo'lim oxirida alohida tasvirlangan.**
@@ -239,10 +252,13 @@ seed hisoblarga bu tekshiruv qo'llanilmaydi). Barcha seed hisoblar paroli:
 `DEMO_PASSWORD` = "demo123" (masalan +998901234567 — Rustam Qosimov/
 mutaxassis — `SELLER_ID`, +998918765432 — ArtSoft Studios/xaridor —
 `BUYER_ID`; `lib/mock-api/seed.ts`).
-Ro'yxatdan o'tish avval, Telegram tasdiqlash **eng oxirida**: `/kirish` →
-`/rol-tanlash` (mutaxassis → `/mutaxassis/royxat` profil; xaridor → to'g'ridan-
-to'g'ri tasdiqlashga, profil bosqichi yo'q) → `/kirish/tasdiqlash` (istalgan
-6 xonali kod, `verifyTelegram()`, rolga qarab yo'naltiradi) → dashboard.
+Tartib (2026-09 redizayndan keyin): `/kirish` (ro'yxatdan o'tish) →
+`/kirish/tasdiqlash` (Telegram yoki Google; Telegram'da istalgan 6 xonali kod,
+`verifyTelegram()`, yoki "tezkor tasdiqlash" tugmasi) → `/rol-tanlash`
+(mutaxassis → `/mutaxassis/royxat` profil wizardi; xaridor → to'g'ridan-to'g'ri
+kabinet) → dashboard. **DIQQAT:** ilgari bu yerda "avval rol, keyin tasdiqlash"
+deb yozilgan edi — endi teskari, `verifyTelegram()` roli yo'q sessiyani
+`/rol-tanlash` ga yuboradi.
 Guardlar: `app/mutaxassis/layout.tsx` va `app/xaridor/layout.tsx` (rol +
 verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
 - Mutaxassis sidebar: Boshqaruv, Ish e'lonlari, Takliflarim (kelgan Offer'lar
@@ -401,6 +417,37 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
   qo'yilmasin: u OS'ga qarab har xil chiziladi va skrinrider uni o'qiydi.
 - Har bir sahifada `loadError` + `<ErrorState onRetry>`; native
   `confirm()`/`alert()` ishlatilmaydi — `Modal` + `Toast`.
+
+## Biriktirma fayllar (chat + ish topshirish) — YAGONA QATLAM
+- `lib/attachments.ts`: `MAX_ATTACHMENT_BYTES` (2 MB), `MAX_ATTACHMENTS` (5),
+  ruxsat etilgan MIME/kengaytmalar, `ATTACHMENT_ACCEPT`, `attachmentProblem()`,
+  `readAsDataUrl()`, `isImageAttachment()`.
+- Yuklash FAQAT API chegarasidan: `filesService.upload(file)`
+  (`FilesService`, `lib/api/contracts.ts` + `client.ts` → `uploadAttachment`).
+  Mock data-URL qaytaradi; backend'da shu bitta metod presigned S3 oqimiga
+  almashtiriladi, UI o'zgarmaydi.
+- **`URL.createObjectURL` QAYTA KIRITILMASIN.** Ilgari ish topshirish modali
+  aynan shundan `blob:` havola yasardi: u faqat o'sha ochiq sahifada
+  yashaydi — sahifa yangilansa o'ladi, xaridor esa (boshqa sessiya/qurilma)
+  faylni UMUMAN ocha olmasdi. Ish "topshirilgan" ko'rinar, natija hech
+  kimga bormasdi; backend'ga ham `blob:` yuborib bo'lmaydi.
+- **Yuklab olish havolasida `target="_blank"` YO'Q.** Biriktirma `data:` URL
+  bo'lgani uchun brauzer yangi oynaga o'tishni bloklaydi va tugma jimgina
+  ishlamaydi; `download` atributi bir xil oynada saqlaydi.
+- `sanitizeAttachments()` (mock-api) yozishdan oldin sonini cheklaydi va
+  faqat `data:`/`http:` havolalarni o'tkazadi.
+- Ish topshirilganda chatga yoziladigan xabar fayllarni HAQIQIY biriktirma
+  sifatida oladi (ilgari faqat fayl NOMLARI matn qatoriga yozilardi va
+  chatdan faylni ochib bo'lmasdi).
+
+## Namoyish ma'lumoti — `NEXT_PUBLIC_DEMO_WORKSPACE`
+`lib/mock-api/index.ts` dagi `ensureUserData()` HAR BIR yangi hisobga tayyor
+ish maydoni quyadi (3 shartnoma, 7 bosqich, 2 karta, 3 xizmat, 4.9 reyting ·
+12 sharh · "top mutaxassis" belgisi). U endi **ataylab o'chiq** va faqat
+`NEXT_PUBLIC_DEMO_WORKSPACE=1` bilan yoqiladi. Yoqilmasa yangi hisob BO'SH
+bo'ladi va profil wizardi haqiqatan o'tiladi. Sabab: aks holda ro'yxatdan
+o'tgan odam birinchi ekranda o'zi ishlamagan ~9,5 mln so'm "yechish mumkin"
+summasini va o'zi olmagan ishonch belgisini ko'radi.
 
 ## Xavfsizlik (mock doirasida)
 - **Kirish validatsiyasi**: `lib/validate.ts` — `amount()` (chekli/musbat/

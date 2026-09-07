@@ -23,7 +23,9 @@ import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
-import { authService, contractsService, messagesService, milestonesService, reviewsService, servicesService } from "@/lib/api";
+import { authService, contractsService, filesService, messagesService, milestonesService, reviewsService, servicesService } from "@/lib/api";
+import { ApiError } from "@/lib/api/errors";
+import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS } from "@/lib/attachments";
 import type { Contract, DeliverableFile, Message, Milestone, Review, Service } from "@/lib/types";
 import { formatDate, formatFileSize, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -44,6 +46,8 @@ export default function ShartnomaWorkroomPage() {
   const [workLink, setWorkLink] = useState("");
   const [workNote, setWorkNote] = useState("");
   const [deliverableFiles, setDeliverableFiles] = useState<DeliverableFile[]>([]);
+  const [filesUploading, setFilesUploading] = useState(false);
+  const [fileError, setFileError] = useState("");
   const [isAgreed, setIsAgreed] = useState(true);
   const [linkError, setLinkError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -110,20 +114,44 @@ export default function ShartnomaWorkroomPage() {
     setDeliverableFiles(milestone.deliverableFiles ? [...milestone.deliverableFiles] : []);
     setIsAgreed(true);
     setLinkError("");
+    setFileError("");
   }
 
-  function handleAddFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const newFiles: DeliverableFile[] = Array.from(files).map((file) => ({
-      id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name: file.name,
-      size: file.size,
-      type: file.type || "application/octet-stream",
-      url: URL.createObjectURL(file),
-    }));
-    setDeliverableFiles((prev) => [...prev, ...newFiles].slice(0, 5));
+  /* Fayl API chegarasidan o'tadi (`filesService.upload`) — u turni va
+     hajmni tekshiradi hamda SAQLANADIGAN havola qaytaradi.
+     Ilgari bu yerda `URL.createObjectURL(file)` ishlatilardi: hosil
+     bo'lgan `blob:` havola faqat o'sha ochiq sahifada yashaydi, sahifa
+     yangilangan zahoti o'ladi va xaridor (boshqa qurilma, boshqa sessiya)
+     faylni UMUMAN ocha olmasdi — ish "topshirilgan" ko'rinardi, lekin
+     natija hech kimga yetib bormasdi. */
+  async function handleAddFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = "";
+    if (picked.length === 0) return;
+
+    const room = MAX_ATTACHMENTS - deliverableFiles.length;
+    const accepted = picked.slice(0, Math.max(0, room));
+    setFileError(picked.length > accepted.length ? t("upload.tooMany") : "");
+    if (accepted.length === 0) return;
+
+    setFilesUploading(true);
+    const uploaded: DeliverableFile[] = [];
+    let problem = "";
+    for (const file of accepted) {
+      try {
+        uploaded.push(await filesService.upload(file));
+      } catch (error) {
+        const code = error instanceof ApiError ? error.message : "";
+        problem =
+          code === "FILE_TOO_LARGE" ? t("upload.tooLarge") : t("upload.rejected");
+      }
+    }
+    if (uploaded.length > 0) {
+      setDeliverableFiles((prev) => [...prev, ...uploaded].slice(0, MAX_ATTACHMENTS));
+      setLinkError("");
+    }
+    if (problem) setFileError(problem);
+    setFilesUploading(false);
   }
 
   function handleRemoveFile(index: number) {
@@ -156,13 +184,19 @@ export default function ShartnomaWorkroomPage() {
     }
     setSubmitting(false);
 
-    /* Havola/izoh chatga yozilishi — ikkilamchi */
+    /* Havola/izoh chatga yozilishi — ikkilamchi.
+       Fayllar chatga HAQIQIY biriktirma sifatida qo'shiladi: ilgari bu yerda
+       faqat fayl NOMLARI matn qatoriga yozilardi, shuning uchun suhbatda
+       "📎 Fayllar (1): dizayn.zip" ko'rinar, lekin uni bosib bo'lmasdi —
+       foydalanuvchi faylni chatdan ololmasdi. */
     try {
-      const fileNames = deliverableFiles.length > 0
-        ? `\n📎 Fayllar (${deliverableFiles.length}): ${deliverableFiles.map((f) => f.name).join(", ")}`
-        : "";
-      const chatText = `📦 Ish topshirildi: "${submitTarget.title}"\n${workNote.trim() ? `${workNote.trim()}\n` : ""}${workLink.trim() ? `${workLink.trim()}\n` : ""}${fileNames}`.trim();
-      const message = await messagesService.send(contract.id, chatText);
+      const chatText = `📦 ${t("sm.chatSubmitted")}: "${submitTarget.title}"\n${workNote.trim() ? `${workNote.trim()}\n` : ""}${workLink.trim() ? `${workLink.trim()}\n` : ""}`.trim();
+      const message = await messagesService.send(
+        contract.id,
+        chatText,
+        undefined,
+        deliverableFiles.length > 0 ? { files: deliverableFiles } : undefined
+      );
       setMessages((prev) => [...prev, message]);
     } catch {
       toast(t("sm.chatFailed"), "error");
@@ -609,6 +643,7 @@ export default function ShartnomaWorkroomPage() {
             onAddImages={(imgs) => setDraftImages((prev) => [...prev, ...imgs])}
             onAddFiles={(fls) => setDraftFiles((prev) => [...prev, ...fls])}
             attachedCount={draftImages.length + draftFiles.length}
+            onError={(message) => toast(message, "error")}
           />
           <div className="flex-1">
             <Input
@@ -678,7 +713,11 @@ export default function ShartnomaWorkroomPage() {
             <Button
               loading={submitting}
               onClick={(e) => handleSubmitWork(e as unknown as FormEvent)}
-              disabled={(!workLink.trim() && deliverableFiles.length === 0) || !isAgreed}
+              disabled={
+                (!workLink.trim() && deliverableFiles.length === 0) ||
+                !isAgreed ||
+                filesUploading
+              }
             >
               {t("sm.title")}
             </Button>
@@ -746,17 +785,31 @@ export default function ShartnomaWorkroomPage() {
                 {t("sm.filesUpload")}
               </span>
               <span className="text-[11px] text-faint">
-                ZIP, PDF, DOCX, PNG, JPG, MP4 (max 50MB)
+                {t("sm.filesTypes")}
               </span>
               <input
                 id="deliverable-file-input"
                 type="file"
                 multiple
+                accept={ATTACHMENT_ACCEPT}
                 className="sr-only"
                 onChange={handleAddFiles}
-                disabled={submitting || deliverableFiles.length >= 5}
+                disabled={
+                  submitting ||
+                  filesUploading ||
+                  deliverableFiles.length >= MAX_ATTACHMENTS
+                }
               />
             </label>
+
+            {filesUploading && (
+              <p className="text-[11px] text-muted">{t("sm.filesUploading")}</p>
+            )}
+            {fileError && (
+              <p className="text-[11px] font-medium text-danger" role="alert">
+                {fileError}
+              </p>
+            )}
 
             {/* Yuklangan fayllar ro'yxati */}
             {deliverableFiles.length > 0 && (

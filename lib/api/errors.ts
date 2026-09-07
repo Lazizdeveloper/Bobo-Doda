@@ -86,6 +86,12 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   /* Yechish summasi admin belgilagan eng kichik chegaradan past */
   BELOW_MIN_PAYOUT: { code: "BELOW_MINIMUM", status: 422, retryable: false },
 
+  /* Biriktirma fayl chegaralari — foydalanuvchi faylni almashtirishi kerak,
+     qayta urinish yordam bermaydi. */
+  FILE_TOO_LARGE: { code: "VALIDATION", status: 422, retryable: false },
+  FILE_TYPE_NOT_ALLOWED: { code: "VALIDATION", status: 422, retryable: false },
+  FILE_READ_FAILED: { code: "VALIDATION", status: 422, retryable: false },
+
   /* --- Kill-switch / imkoniyat o'chirilgan (503) --- */
   PAYMENTS_PAUSED: { code: "PAYMENTS_PAUSED", status: 503, retryable: true },
   /* Admin kill-switch bilan o'chirilgan imkoniyat (masalan to'g'ridan-to'g'ri
