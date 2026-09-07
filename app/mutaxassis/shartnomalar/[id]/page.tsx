@@ -324,13 +324,16 @@ export default function ShartnomaWorkroomPage() {
               <Button
                 variant="secondary"
                 onClick={() => setCloseModalOpen(true)}
-                className="shadow-sm font-bold border-primary/40 text-primary hover:bg-primary/10"
+                className="shadow-sm font-bold border-primary/40 text-primary hover:bg-primary/10 w-full sm:w-auto min-h-[44px] sm:min-h-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Shartnomani yakunlash va ishni yopish so'rovi"
               >
                 🏁 {t("contract.closeAction")}
               </Button>
             )}
             {contract.status === "faol" && contract.closeRequested && (
-              <Badge tone="warning">⏳ {t("contract.closeRequested")}</Badge>
+              <Badge tone="warning" className="py-1 px-2.5 text-xs font-semibold">
+                ⏳ {t("contract.closeRequested")}
+              </Badge>
             )}
           </div>
         </div>
@@ -576,12 +579,13 @@ export default function ShartnomaWorkroomPage() {
                             type="button"
                             key={file.id}
                             onClick={() => triggerFileDownload(file)}
-                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors text-left w-full cursor-pointer ${
+                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors text-left w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] ${
                               mine
                                 ? "bg-white/15 text-white hover:bg-white/25"
                                 : "bg-card border border-line text-ink hover:bg-surface"
                             }`}
                             title={t("sm.downloadFile")}
+                            aria-label={`${file.name} (${formatFileSize(file.size)}) — ${t("sm.downloadFile")}`}
                           >
                             <span className="text-base">📎</span>
                             <div className="min-w-0 flex-1">
@@ -894,10 +898,21 @@ export default function ShartnomaWorkroomPage() {
       >
         <div className="flex flex-col gap-4">
           <div className="rounded-input border border-primary/20 bg-primary/5 p-3.5 text-xs text-muted">
-            <p className="font-semibold text-ink mb-1">
-              🏁 {t("contract.closeTitle")}
+            <p className="font-semibold text-ink mb-1.5 flex items-center gap-1.5">
+              <span>🏁</span> {t("contract.closeTitle")}
             </p>
-            <p>{t("contract.closeDesc")}</p>
+            <p className="mb-2.5">{t("contract.closeDesc")}</p>
+            <div className="space-y-1.5 text-2xs text-ink/85 border-t border-primary/15 pt-2">
+              <p className="flex items-center gap-2">
+                <span className="text-success font-bold text-xs">✓</span> Barcha bosqichlar to'liq topshirilgan deb belgilanadi
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-success font-bold text-xs">✓</span> Escrow'dagi to'lov balansingizga o'tkaziladi
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="text-success font-bold text-xs">✓</span> Shartnoma rasman yopiladi va tomonlar sharh qoldiradi
+              </p>
+            </div>
           </div>
 
           <Textarea

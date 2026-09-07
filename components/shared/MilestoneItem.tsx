@@ -205,8 +205,9 @@ export function MilestoneItem({
                     <button
                       type="button"
                       onClick={() => triggerFileDownload(file)}
-                      className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line cursor-pointer"
+                      className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2.5 py-1 text-[11px] font-medium text-primary border border-line cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary min-h-[32px] sm:min-h-0"
                       title={t("sm.downloadFile")}
+                      aria-label={`${file.name} (${formatFileSize(file.size)}) — ${t("sm.downloadFile")}`}
                     >
                       {t("sm.downloadFile")}
                     </button>

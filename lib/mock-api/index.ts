@@ -1861,11 +1861,14 @@ export async function requestCloseContract(
   if (idx < 0) throw new Error("NOT_FOUND");
   const contract = contracts[idx];
   if (contract.status !== "faol") throw new Error("BAD_STATE");
+  if (contract.closeRequested) return contract; // Takroriy so'rov bloklanadi
+
+  const cleanNote = note ? text(note, LIMITS.description) : undefined;
 
   contracts[idx] = {
     ...contract,
     closeRequested: true,
-    closeRequestNote: note?.trim() || undefined,
+    closeRequestNote: cleanNote,
     closeRequestedAt: new Date().toISOString(),
   };
   write(KEYS.contracts, contracts);
@@ -1873,7 +1876,7 @@ export async function requestCloseContract(
   // Chatga xabar yuborish
   try {
     const chatMsg = `🏁 Mutaxassis ishni to'liq yakunladi va shartnomani yopishni so'radi.${
-      note?.trim() ? `\nIzoh: ${note.trim()}` : ""
+      cleanNote ? `\nIzoh: ${cleanNote}` : ""
     }`;
     await sendMessage(contract.id, chatMsg);
   } catch {}
@@ -1899,6 +1902,7 @@ export async function approveCloseContract(id: string): Promise<Contract> {
   if (idx < 0) throw new Error("NOT_FOUND");
   const contract = contracts[idx];
   if (contract.status !== "faol") throw new Error("BAD_STATE");
+  assertTransition(contractMachine, contract.status, "yakunlangan", "buyer");
 
   // Barcha tugallanmagan bosqichlarni qabul qilish
   const milestones = read<Milestone[]>(KEYS.milestones, []);

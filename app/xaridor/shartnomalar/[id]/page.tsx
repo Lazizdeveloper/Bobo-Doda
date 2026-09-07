@@ -546,8 +546,12 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-              <Button onClick={() => setApproveCloseOpen(true)}>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center w-full sm:w-auto">
+              <Button
+                onClick={() => setApproveCloseOpen(true)}
+                className="w-full sm:w-auto min-h-[44px] sm:min-h-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 font-bold"
+                aria-label="Mutaxassis topshirgan ishlarni qabul qilish va shartnomani yopish"
+              >
                 ✅ {t("contract.approveClose")}
               </Button>
             </div>
@@ -917,12 +921,13 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                             type="button"
                             key={file.id}
                             onClick={() => triggerFileDownload(file)}
-                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors text-left w-full cursor-pointer ${
+                            className={`flex items-center gap-2.5 rounded-input px-3 py-2 text-xs transition-colors text-left w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] ${
                               mine
                                 ? "bg-white/15 text-white hover:bg-white/25"
                                 : "bg-card border border-line text-ink hover:bg-surface"
                             }`}
                             title={t("sm.downloadFile")}
+                            aria-label={`${file.name} (${formatFileSize(file.size)}) — ${t("sm.downloadFile")}`}
                           >
                             <span className="text-base">📎</span>
                             <div className="min-w-0 flex-1">
@@ -1052,7 +1057,7 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
       <ConfirmDialog
         open={approveCloseOpen}
         title={t("contract.approveClose")}
-        description="Shartnoma bo'yicha topshirilgan barcha ishlarni to'liq qabul qilib, shartnomani yopasizmi? Tasdiqlasangiz, barcha bosqichlar qabul qilinadi, escrow'dagi mablag' mutaxassisga to'lanadi va shartnoma yakunlanadi."
+        description={`Shartnoma bo'yicha topshirilgan barcha ishlarni to'liq qabul qilib, shartnomani yopasizmi? Tasdiqlasangiz, barcha bosqichlar qabul qilinadi, escrow'dagi jami ${contract?.totalAmount.toLocaleString("ru-RU")} so'm mablag' mutaxassisga to'lab beriladi va shartnoma yakunlanadi.`}
         confirmLabel={t("contract.approveClose")}
         cancelLabel={t("common.cancel")}
         variant="primary"
