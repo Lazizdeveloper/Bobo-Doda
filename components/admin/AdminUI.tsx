@@ -1,18 +1,28 @@
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/Card";
+import { BackButton } from "@/components/ui/BackButton";
 
 export function AdminPageHeader({
   title,
   description,
   action,
+  backHref,
+  showBack,
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  backHref?: string;
+  showBack?: boolean;
 }) {
   return (
     <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
       <div>
+        {(showBack || backHref) && (
+          <div className="mb-2">
+            <BackButton href={backHref} />
+          </div>
+        )}
         <p className="text-2xs font-bold uppercase tracking-[.18em] text-primary">Bobo&amp;Doda Control</p>
         <h1 className="mt-1 font-heading text-2xl font-extrabold text-ink">{title}</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">{description}</p>

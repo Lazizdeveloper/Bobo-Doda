@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -73,6 +74,12 @@ export default function TaklifTafsilotiPage() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.proposals"), href: "/mutaxassis/takliflarim" },
+          { label: t("prop.detailTitle") },
+        ]}
+      />
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <ProposalStatusBadge status={proposal.status} />

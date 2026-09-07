@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 import { LangSwitch } from "@/components/shared/LangSwitch";
+import { BackButton } from "@/components/ui/BackButton";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Button } from "@/components/ui/Button";
 import { useSupportModal } from "@/components/shared/SupportModalProvider";
@@ -40,6 +41,9 @@ export default function HelpCenterPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+        <div className="mb-4">
+          <BackButton href="/" label={t("nav.home") || "Bosh sahifa"} />
+        </div>
         <h1 className="font-heading text-2xl font-extrabold text-ink sm:text-3xl">
           {t("hc.title")}
         </h1>

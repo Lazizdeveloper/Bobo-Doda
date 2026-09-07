@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { BackButton } from "@/components/ui/BackButton";
 import { useToast } from "@/components/ui/Toast";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
@@ -81,6 +82,9 @@ export default function RolTanlashPage() {
 
   return (
     <div>
+      <div className="mb-4">
+        <BackButton href="/kirish" label={t("auth.backToLogin")} />
+      </div>
       <h1 className="text-center font-heading text-xl font-bold text-ink">
         {t("auth.roleTitle")}
       </h1>

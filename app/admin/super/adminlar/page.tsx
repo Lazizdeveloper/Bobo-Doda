@@ -83,7 +83,12 @@ export default function AdminsPage() {
 
   return (
     <>
-      <AdminPageHeader title="Adminlar boshqaruvi" description="CEO yangi operatsion admin yaratadi yoki uning kirishini to‘xtatadi. Super Admin vakolati delegatsiya qilinmaydi." action={<Button onClick={() => setOpen(true)}>Admin qo‘shish</Button>} />
+      <AdminPageHeader
+        title="Adminlar boshqaruvi"
+        description="CEO yangi operatsion admin yaratadi yoki uning kirishini to‘xtatadi. Super Admin vakolati delegatsiya qilinmaydi."
+        action={<Button onClick={() => setOpen(true)}>Admin qo‘shish</Button>}
+        backHref="/admin"
+      />
       {error && <p role="alert" className="mb-4 rounded-input bg-danger/10 p-3 text-xs text-danger-deep">{error}</p>}
       <Table columns={columns} rows={admins} rowKey={(row) => row.id} renderMobileCard={(row) => (
         <Card padding="none" className="border-0"><div className="flex justify-between gap-3"><div><p className="font-medium">{row.fullName}</p><p className="text-xs text-muted">{row.email}</p></div><Badge tone={row.role === "super_admin" ? "danger" : "primary"}>{row.role === "super_admin" ? "Super Admin" : "Admin"}</Badge></div><Button className="mt-4 w-full" variant={row.active ? "danger" : "secondary"} size="sm" onClick={() => toggle(row)}>{row.active ? "Bloklash" : "Faollashtirish"}</Button></Card>

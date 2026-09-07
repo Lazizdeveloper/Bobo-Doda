@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -135,6 +136,13 @@ export default function YollashPage() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.myJobs"), href: "/xaridor/elonlarim" },
+          { label: job.title, href: `/xaridor/elonlarim/${job.id}` },
+          { label: t("hire.title") },
+        ]}
+      />
       <div>
         <p className="text-xs text-muted">{job.title}</p>
         <h1 className="mt-1 font-heading text-2xl font-extrabold text-ink">

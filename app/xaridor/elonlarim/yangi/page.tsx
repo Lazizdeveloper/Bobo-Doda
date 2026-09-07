@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FileUpload } from "@/components/ui/FileUpload";
@@ -150,6 +151,10 @@ export default function YangiElonPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <BackButton href="/xaridor/elonlarim" label={t("nav.myJobs")} />
+      </div>
+
       <h1 className="font-heading text-2xl font-extrabold text-ink">
         {t("jwiz.title")}
       </h1>

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -73,18 +74,14 @@ export default function MutaxassisProfiliPage() {
 
   return (
     <div className="flex flex-col gap-8 pb-12">
-      {/* Top Breadcrumb Navigation */}
-      <nav aria-label={t("a11y.breadcrumb")} className="flex items-center gap-2 text-xs text-muted">
-        <Link href="/xaridor/bozor" className="hover:text-primary transition-colors">
-          {t("nav.market")}
-        </Link>
-        <span>/</span>
-        <Link href="/xaridor/bozor?tab=specialists" className="hover:text-primary transition-colors">
-          {t("market.tabSpecialists")}
-        </Link>
-        <span>/</span>
-        <span className="font-medium text-ink truncate max-w-xs">{user.fullName}</span>
-      </nav>
+      {/* Top Breadcrumb Navigation with Back Button */}
+      <Breadcrumb
+        items={[
+          { label: t("nav.market"), href: "/xaridor/bozor" },
+          { label: t("market.tabSpecialists"), href: "/xaridor/bozor?tab=specialists" },
+          { label: user.fullName },
+        ]}
+      />
 
       {/* Main Grid: Left Details + Right Sticky Conversion Sidebar */}
       <div className="grid items-start gap-8 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">

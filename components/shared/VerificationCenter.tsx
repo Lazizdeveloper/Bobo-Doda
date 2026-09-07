@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BackButton } from "@/components/ui/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -79,6 +80,9 @@ export function VerificationCenter() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <BackButton label={t("common.back")} />
+      </div>
       <div>
         <h1 className="font-heading text-2xl font-extrabold text-ink">
           {t("verify.title")}

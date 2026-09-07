@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
+import { BackButton } from "@/components/ui/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -357,6 +358,9 @@ export default function SozlamalarPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12">
+      <div className="flex items-center justify-between">
+        <BackButton href="/mutaxassis" label={t("nav.dashboard")} />
+      </div>
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

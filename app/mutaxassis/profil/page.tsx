@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
+import { BackButton } from "@/components/ui/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -107,6 +108,9 @@ export default function ProfilPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <BackButton href="/mutaxassis" label={t("nav.dashboard")} />
+      </div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-heading text-2xl font-extrabold text-ink">

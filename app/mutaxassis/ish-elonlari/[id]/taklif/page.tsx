@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -114,6 +115,13 @@ export default function TaklifYuborishPage() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
+      <Breadcrumb
+        items={[
+          { label: t("nav.jobs"), href: "/mutaxassis/ish-elonlari" },
+          { label: job.title, href: `/mutaxassis/ish-elonlari/${job.id}` },
+          { label: t("prop.formTitle") },
+        ]}
+      />
       <div>
         <p className="text-xs text-muted">{job.title}</p>
         <h1 className="mt-1 font-heading text-2xl font-extrabold text-ink">

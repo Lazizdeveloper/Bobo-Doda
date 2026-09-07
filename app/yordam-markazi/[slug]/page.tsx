@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Logo } from "@/components/shared/Logo";
 import { LangSwitch } from "@/components/shared/LangSwitch";
+import { BackButton } from "@/components/ui/BackButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -38,9 +39,9 @@ export default function HelpArticlePage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
-        <Link href="/yordam-markazi" className="text-xs text-primary hover:text-ink">
-          ← {t("hc.back")}
-        </Link>
+        <div className="mb-4">
+          <BackButton href="/yordam-markazi" label={t("hc.back")} />
+        </div>
 
         {!article ? (
           <div className="mt-8">

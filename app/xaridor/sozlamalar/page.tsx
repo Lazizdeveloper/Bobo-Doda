@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -353,6 +354,9 @@ export default function XaridorSozlamalarPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-16">
+      <div className="flex items-center justify-between">
+        <BackButton href="/xaridor" label={t("nav.dashboard")} />
+      </div>
       {/* Top Header Card with Quick Stats & Badges */}
       <div className="rounded-2xl border border-line/60 bg-gradient-to-r from-card via-card to-surface p-5 sm:p-6 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-4">

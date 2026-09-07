@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
@@ -150,6 +151,9 @@ export default function ParolniTiklashPage() {
 
   return (
     <div className="rounded-3xl sm:rounded-[32px] border border-line/80 bg-card p-7 sm:p-12 lg:p-14 shadow-2xl shadow-black/5 transition-all duration-300">
+      <div className="mb-6">
+        <BackButton href="/kirish?tab=kirish" label={t("auth.backToLogin")} />
+      </div>
       <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl xl:text-[38px] font-black text-ink tracking-tight leading-tight">
         {t("auth.resetTitle")}
       </h1>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { authService } from "@/lib/api";
@@ -83,6 +84,9 @@ export default function TasdiqlashPage() {
 
   return (
     <div className="rounded-3xl sm:rounded-[32px] border border-line/80 bg-card p-7 sm:p-12 lg:p-14 shadow-2xl shadow-black/5 transition-all duration-300">
+      <div className="mb-5">
+        <BackButton href="/kirish?tab=kirish" label={t("auth.backToLogin")} />
+      </div>
       <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-primary">
         <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
         {t("auth.finalStep")}
