@@ -112,7 +112,7 @@ export function PageFeedbackWidget() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="feedback-title"
-            className="relative z-10 w-full max-w-2xl rounded-t-3xl border-t border-line/80 bg-card p-5 pb-8 shadow-2xl transition-all duration-300 sm:p-7 sm:pb-9 animate-in slide-in-from-bottom"
+            className="relative z-10 w-full max-w-4xl lg:max-w-5xl rounded-t-3xl border-t border-line/80 bg-card p-5 pb-8 shadow-2xl transition-all duration-300 sm:p-7 sm:pb-9 animate-in slide-in-from-bottom"
           >
             {/* Tutqich / Drag bar */}
             <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-line/80" />
@@ -184,7 +184,7 @@ export function PageFeedbackWidget() {
 
               {/* Avto-aniqlangan sahifa ma'lumoti */}
               <div className="flex items-center justify-between text-2xs text-muted">
-                <span className="truncate max-w-[300px] sm:max-w-md">
+                <span className="truncate max-w-[300px] sm:max-w-xl">
                   📍 Sahifa: <span className="font-mono text-ink font-semibold">{pathname}</span>
                 </span>
                 <span className="flex items-center gap-1 text-primary">
