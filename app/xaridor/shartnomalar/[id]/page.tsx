@@ -28,7 +28,7 @@ import {
   ContractStatusBadge,
   MilestoneStatusBadge,
 } from "@/components/shared/StatusBadge";
-import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService } from "@/lib/api";
+import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Contract, DeliverableFile, Message, Milestone, PaymentCard, Review, Service } from "@/lib/types";
 import { formatDate, formatFileSize, formatMoney, formatTime, triggerFileDownload } from "@/lib/format";
@@ -118,6 +118,39 @@ export default function XaridorWorkroomPage() {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  /* Jonli chat yangilanishi: yangi xabar kelganda F5 talab qilinmasin */
+  useEffect(() => {
+    if (!params.id) return;
+    async function checkMessages() {
+      try {
+        const next = await messagesService.list(params.id);
+        setMessages((prev) => {
+          if (prev.length !== next.length || next.some((m, idx) => m.id !== prev[idx]?.id)) {
+            return next;
+          }
+          return prev;
+        });
+        void messagesService.markRead(params.id);
+      } catch {
+        // ignore background poll error
+      }
+    }
+    const interval = setInterval(checkMessages, 4000);
+    const handleEvent = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail || detail.key === "sb_messages" || !detail.key) {
+        void checkMessages();
+      }
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleEvent);
+    window.addEventListener("storage", handleEvent);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(DATA_CHANGED_EVENT, handleEvent);
+      window.removeEventListener("storage", handleEvent);
+    };
+  }, [params.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: "end" });

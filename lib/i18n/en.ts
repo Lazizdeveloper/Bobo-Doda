@@ -1581,4 +1581,14 @@ export const en: Record<string, string> = {
   "receipt.download": "Receipt",
   "receipt.statusPaid": "Paid & Secured in Escrow",
   "receipt.print": "Print / Save PDF",
+
+  "contract.closeAction": "Close contract",
+  "contract.closeTitle": "Complete & Close Contract",
+  "contract.closeDesc": "Are all tasks fully completed? A contract closure and escrow release request will be sent to the buyer.",
+  "contract.closeNote": "Final note (optional)",
+  "contract.closeRequested": "Contract closure requested. Awaiting buyer confirmation.",
+  "contract.closeBuyerPrompt": "The specialist has completed all work and requested to close the contract.",
+  "contract.approveClose": "Accept Work and Close Contract",
+  "contract.closed": "Contract successfully closed",
+  "ntf.closeRequested": "Specialist requested to close contract \"{title}\"",
 };

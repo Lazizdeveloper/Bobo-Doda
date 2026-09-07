@@ -231,7 +231,7 @@ export default function TaklifYuborishPage() {
             )}
           </div>
 
-          <FileUpload value={uploadedImages} onChange={setUploadedImages} max={5} />
+          <FileUpload value={uploadedImages} onChange={setUploadedImages} max={5} acceptDocs />
         </Card>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

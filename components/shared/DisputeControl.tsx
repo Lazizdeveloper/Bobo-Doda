@@ -106,6 +106,7 @@ export function DisputeControl({
             value={evidence}
             onChange={setEvidence}
             max={5}
+            acceptDocs
           />
         </div>
       </Modal>

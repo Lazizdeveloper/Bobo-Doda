@@ -23,7 +23,7 @@ import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
-import { authService, contractsService, filesService, messagesService, milestonesService, reviewsService, servicesService } from "@/lib/api";
+import { authService, contractsService, filesService, messagesService, milestonesService, reviewsService, servicesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS } from "@/lib/attachments";
 import type { Contract, DeliverableFile, Message, Milestone, Review, Service } from "@/lib/types";
@@ -108,6 +108,39 @@ export default function ShartnomaWorkroomPage() {
     }
   }
 
+  /* Jonli chat yangilanishi: yangi xabar kelganda F5 talab qilinmasin */
+  useEffect(() => {
+    if (!params.id) return;
+    async function checkMessages() {
+      try {
+        const next = await messagesService.list(params.id);
+        setMessages((prev) => {
+          if (prev.length !== next.length || next.some((m, idx) => m.id !== prev[idx]?.id)) {
+            return next;
+          }
+          return prev;
+        });
+        void messagesService.markRead(params.id);
+      } catch {
+        // ignore background poll error
+      }
+    }
+    const interval = setInterval(checkMessages, 4000);
+    const handleEvent = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail || detail.key === "sb_messages" || !detail.key) {
+        void checkMessages();
+      }
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleEvent);
+    window.addEventListener("storage", handleEvent);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(DATA_CHANGED_EVENT, handleEvent);
+      window.removeEventListener("storage", handleEvent);
+    };
+  }, [params.id]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
@@ -177,8 +210,11 @@ export default function ShartnomaWorkroomPage() {
       setMilestones(await milestonesService.list(contract.id));
       toast(t("sm.done"));
       setSubmitTarget(null);
-    } catch {
-      toast(t("common.error"), "error");
+    } catch (err) {
+      const isFull =
+        err instanceof Error &&
+        (err.message === "STORAGE_FULL" || err.message.includes("quota"));
+      toast(isFull ? t("err.storageFull") : t("common.error"), "error");
       setSubmitting(false);
       return;
     }
@@ -194,8 +230,11 @@ export default function ShartnomaWorkroomPage() {
         deliverableFiles.length > 0 ? { files: deliverableFiles } : undefined
       );
       setMessages((prev) => [...prev, message]);
-    } catch {
-      toast(t("sm.chatFailed"), "error");
+    } catch (err) {
+      const isFull =
+        err instanceof Error &&
+        (err.message === "STORAGE_FULL" || err.message.includes("quota"));
+      toast(isFull ? t("err.storageFull") : t("sm.chatFailed"), "error");
     }
   }
 

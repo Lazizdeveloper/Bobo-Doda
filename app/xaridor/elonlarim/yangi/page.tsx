@@ -217,6 +217,7 @@ export default function YangiElonPage() {
               value={attachedImages}
               onChange={setAttachedImages}
               max={5}
+              acceptDocs
             />
             <p className="-mt-3 text-2xs text-faint">{t("jwiz.attachmentsHint")}</p>
           </div>

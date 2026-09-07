@@ -73,11 +73,13 @@ export default function XaridorXabarlarPage() {
 
         /* Taklif suhbatlari (qabul qilinganlari shartnomaga ko'chgan) */
         const openOffers = offers.filter((o) => o.status !== "qabul_qilindi");
-        const offerThreads = await Promise.all(
+        const offerThreads = await Promise.allSettled(
           openOffers.map((o) => messagesService.list(o.id))
         );
         openOffers.forEach((offer, i) => {
-          const msgs = offerThreads[i];
+          const settled = offerThreads[i];
+          if (settled.status !== "fulfilled") return;
+          const msgs = settled.value;
           if (msgs.length === 0) return;
           const last = msgs[msgs.length - 1];
           list.push({

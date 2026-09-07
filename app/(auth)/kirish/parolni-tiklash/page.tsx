@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
@@ -71,6 +71,13 @@ export default function ParolniTiklashPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   function handleSendCode(e: FormEvent) {
     e.preventDefault();
@@ -90,6 +97,7 @@ export default function ParolniTiklashPage() {
     setTimeout(() => {
       setSending(false);
       setPhase("reset");
+      setCooldown(60);
       toast(
         method === "telegram"
           ? "Telegram orqali 6 xonali tiklash kodi yuborildi"
@@ -99,9 +107,11 @@ export default function ParolniTiklashPage() {
   }
 
   function handleSwitchMethod(newMethod: RecoveryMethod) {
+    if (cooldown > 0) return;
     setMethod(newMethod);
     setCode("");
     setErrors({});
+    setCooldown(60);
     toast(
       newMethod === "telegram"
         ? "Telegram orqali yangi tiklash kodi yuborildi"
@@ -268,10 +278,15 @@ export default function ParolniTiklashPage() {
                   <button
                     type="button"
                     onClick={() => handleSwitchMethod("google")}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline cursor-pointer"
+                    disabled={cooldown > 0}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${
+                      cooldown > 0
+                        ? "text-muted cursor-not-allowed opacity-60"
+                        : "text-primary hover:underline cursor-pointer"
+                    }`}
                   >
                     <GoogleSmallIcon />
-                    <span>Google Email orqali olish</span>
+                    <span>{cooldown > 0 ? `Qayta yuborish (${cooldown}s)` : "Google Email orqali olish"}</span>
                   </button>
                 </div>
               </div>
@@ -298,10 +313,15 @@ export default function ParolniTiklashPage() {
                   <button
                     type="button"
                     onClick={() => handleSwitchMethod("telegram")}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#229ED9] hover:underline cursor-pointer"
+                    disabled={cooldown > 0}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${
+                      cooldown > 0
+                        ? "text-muted cursor-not-allowed opacity-60"
+                        : "text-[#229ED9] hover:underline cursor-pointer"
+                    }`}
                   >
                     <TelegramSmallIcon />
-                    <span>Telegram orqali olish</span>
+                    <span>{cooldown > 0 ? `Qayta yuborish (${cooldown}s)` : "Telegram orqali olish"}</span>
                   </button>
                 </div>
               </div>

@@ -63,6 +63,66 @@ export default function BozorPage() {
   const debouncedSearch = useDebouncedValue(search, 250);
   const PER_PAGE = 12;
 
+  /* Sahifaga qaytishda (masalan xizmatni ko'rib "Orqaga" bosganda) barcha filtrlarni tiklash */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("q");
+    const cat = sp.get("cat");
+    const s = sp.get("sort");
+    const t = sp.get("tab");
+    const minP = sp.get("minPrice");
+    const maxP = sp.get("maxPrice");
+    const deliv = sp.get("delivery");
+    const rate = sp.get("rating");
+    const loc = sp.get("loc");
+    const avail = sp.get("avail");
+    const saved = sp.get("saved");
+    if (q) setSearch(q);
+    if (cat) setCategory(cat);
+    if (s && ["new", "cheap", "expensive", "rating"].includes(s)) setSort(s as Sort);
+    if (t && ["services", "specialists"].includes(t)) setTab(t as Tab);
+    if (minP) setMinPrice(minP);
+    if (maxP) setMaxPrice(maxP);
+    if (deliv) setDeliveryFilter(deliv);
+    if (rate) setRatingFilter(rate);
+    if (loc) setLocationFilter(loc);
+    if (avail === "true") setAvailableOnly(true);
+    if (saved === "true") setSavedOnly(true);
+  }, []);
+
+  /* Filtrlarni URL query parametrlariga yozish (Back tugmasi xotirasi) */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams();
+    if (search.trim()) sp.set("q", search.trim());
+    if (category !== "all") sp.set("cat", category);
+    if (sort !== "new") sp.set("sort", sort);
+    if (tab !== "services") sp.set("tab", tab);
+    if (minPrice) sp.set("minPrice", minPrice);
+    if (maxPrice) sp.set("maxPrice", maxPrice);
+    if (deliveryFilter !== "all") sp.set("delivery", deliveryFilter);
+    if (ratingFilter !== "all") sp.set("rating", ratingFilter);
+    if (locationFilter !== "all") sp.set("loc", locationFilter);
+    if (availableOnly) sp.set("avail", "true");
+    if (savedOnly) sp.set("saved", "true");
+    const qs = sp.toString();
+    const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, "", nextUrl);
+  }, [
+    search,
+    category,
+    sort,
+    tab,
+    minPrice,
+    maxPrice,
+    deliveryFilter,
+    ratingFilter,
+    locationFilter,
+    availableOnly,
+    savedOnly,
+  ]);
+
   /* Reset page on any filter change */
   useEffect(() => {
     setPage(1);

@@ -66,15 +66,30 @@ export function TagInput({
             </button>
           </span>
         ))}
-        <input
-          id={inputId}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={addTag}
-          placeholder={value.length ? "" : placeholder}
-          className="min-w-24 flex-1 rounded-sm bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-        />
+        <div className="flex flex-1 items-center gap-1.5 min-w-32">
+          <input
+            id={inputId}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={addTag}
+            placeholder={value.length ? "" : placeholder}
+            className="w-full flex-1 rounded-sm bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          />
+          {draft.trim().length > 0 && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                addTag();
+              }}
+              aria-label="Tegni qo'shish"
+              className="inline-flex h-6 shrink-0 items-center gap-1 rounded bg-primary px-2 text-2xs font-semibold text-white shadow-xs transition-transform active:scale-95"
+            >
+              +
+            </button>
+          )}
+        </div>
       </div>
       {error && (
         <p className="text-2xs text-danger" role="alert">

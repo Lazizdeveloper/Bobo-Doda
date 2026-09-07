@@ -68,6 +68,36 @@ export default function IshElonlariPage() {
 
   useEffect(load, [load]);
 
+  /* Sahifaga qaytishda (masalan e'lonni ko'rib "Orqaga" bosganda) filtrlarni tiklash */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("q");
+    const cat = sp.get("cat");
+    const b = sp.get("budget");
+    const s = sp.get("sort");
+    const t = sp.get("tab");
+    if (q) setSearch(q);
+    if (cat) setCategory(cat);
+    if (b && ["all", "small", "medium", "large"].includes(b)) setBudget(b as BudgetFilter);
+    if (s && ["new", "budget_desc"].includes(s)) setSort(s as Sort);
+    if (t && ["all", "saved", "matching"].includes(t)) setTab(t as Tab);
+  }, []);
+
+  /* Tanlangan filtrlarni URL query parametrlariga yozish (Back tugmasi xotirasi) */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams();
+    if (search.trim()) sp.set("q", search.trim());
+    if (category !== "all") sp.set("cat", category);
+    if (budget !== "all") sp.set("budget", budget);
+    if (sort !== "new") sp.set("sort", sort);
+    if (tab !== "all") sp.set("tab", tab);
+    const qs = sp.toString();
+    const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, "", nextUrl);
+  }, [tab, category, budget, sort, search]);
+
   /* Filtr/tab/qidiruv o'zgarsa — birinchi sahifaga */
   useEffect(() => {
     setPage(1);

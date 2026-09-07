@@ -26,6 +26,7 @@ import { AccountSecurity } from "@/components/shared/AccountSecurity";
 import { CATEGORIES } from "@/lib/category-fields";
 import { authService, paymentsService, servicesService, usersService } from "@/lib/api";
 import type {
+  AccountPreferences,
   LanguageLevel,
   PaymentCard,
   PortfolioItem,
@@ -99,8 +100,18 @@ export default function SozlamalarPage() {
     bio?: string;
     location?: string;
   }>({});
+const DEFAULT_PREFERENCES: AccountPreferences = {
+  proposals: true,
+  contracts: true,
+  messages: true,
+  payments: true,
+  marketing: false,
+};
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [preferences, setPreferences] = useState<AccountPreferences>(DEFAULT_PREFERENCES);
+  const [savingNotif, setSavingNotif] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
 
@@ -111,8 +122,9 @@ export default function SozlamalarPage() {
       usersService.getSellerProfile(),
       paymentsService.getCards(),
       servicesService.listMine(),
+      usersService.getPreferences(),
     ])
-      .then(([user, profile, cardList, services]) => {
+      .then(([user, profile, cardList, services, pref]) => {
         if (user) {
           setCurrentUser(user);
           setFullName(user.fullName);
@@ -127,6 +139,7 @@ export default function SozlamalarPage() {
         setAvailable(profile.available ?? true);
         setCards(cardList || []);
         setActiveServices((services || []).filter((s) => s.status === "active"));
+        if (pref) setPreferences(pref);
         setPersisted({
           fullName: user?.fullName ?? "",
           headline: profile.headline || "",
@@ -139,6 +152,18 @@ export default function SozlamalarPage() {
   }, []);
 
   useEffect(load, [load]);
+
+  async function handleSaveNotifications() {
+    setSavingNotif(true);
+    try {
+      await usersService.savePreferences(preferences);
+      toast(t("bset.notifSaved") || "Bildirishnoma sozlamalari saqlandi");
+    } catch {
+      toast(t("common.error"), "error");
+    } finally {
+      setSavingNotif(false);
+    }
+  }
 
   /* Boshqaruvdagi "Profilni to'ldirish" havolasi ?tab=... bilan keladi —
      foydalanuvchi kerakli bo'limni qo'lda qidirmasin. (useSearchParams
@@ -949,22 +974,63 @@ export default function SozlamalarPage() {
                     <p className="text-sm font-medium text-ink">Yangi to&apos;g&apos;ridan-to&apos;g&apos;ri takliflar (Offers)</p>
                     <p className="text-2xs text-muted">Xaridor sizga loyiha yuborganda</p>
                   </div>
-                  <Checkbox label="Yangi to'g'ridan-to'g'ri takliflar" checked={true} onChange={() => {}} />
+                  <Checkbox
+                    id="ntf-seller-proposals"
+                    label="Yangi to'g'ridan-to'g'ri takliflar"
+                    checked={preferences.proposals ?? true}
+                    onChange={(e) =>
+                      setPreferences((p) => ({ ...p, proposals: e.target.checked }))
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
                     <p className="text-sm font-medium text-ink">Shartnoma va to&apos;lov holatlari</p>
                     <p className="text-2xs text-muted">Escrow mablag&apos;lanishi, topshirish va qabul xabarlari</p>
                   </div>
-                  <Checkbox label="Shartnoma va to'lov holatlari" checked={true} onChange={() => {}} />
+                  <Checkbox
+                    id="ntf-seller-contracts"
+                    label="Shartnoma va to'lov holatlari"
+                    checked={preferences.contracts}
+                    onChange={(e) =>
+                      setPreferences((p) => ({ ...p, contracts: e.target.checked }))
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
                     <p className="text-sm font-medium text-ink">Muloqot chat xabarlari</p>
                     <p className="text-2xs text-muted">Buyurtmachi yangi xabar yozganda</p>
                   </div>
-                  <Checkbox label="Muloqot chat xabarlari" checked={true} onChange={() => {}} />
+                  <Checkbox
+                    id="ntf-seller-messages"
+                    label="Muloqot chat xabarlari"
+                    checked={preferences.messages}
+                    onChange={(e) =>
+                      setPreferences((p) => ({ ...p, messages: e.target.checked }))
+                    }
+                  />
                 </div>
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium text-ink">To&apos;lov va hisob-kitoblar</p>
+                    <p className="text-2xs text-muted">Mablag&apos; yechish va tranzaksiya bildirishnomalari</p>
+                  </div>
+                  <Checkbox
+                    id="ntf-seller-payments"
+                    label="To'lov va hisob-kitoblar"
+                    checked={preferences.payments}
+                    onChange={(e) =>
+                      setPreferences((p) => ({ ...p, payments: e.target.checked }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button loading={savingNotif} onClick={handleSaveNotifications}>
+                  {t("common.save")}
+                </Button>
               </div>
             </Card>
           )}

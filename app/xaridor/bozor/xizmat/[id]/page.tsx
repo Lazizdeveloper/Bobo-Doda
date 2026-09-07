@@ -484,6 +484,7 @@ export default function XizmatTafsilotiPage() {
         sellerId={service.sellerId}
         service={service}
         initialBudget={orderTotal}
+        selectedExtras={extras.filter((_, i) => selectedExtras.has(i))}
       />
     </div>
   );

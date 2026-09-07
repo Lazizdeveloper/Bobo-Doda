@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-import { authService, messagesService } from "@/lib/api";
+import { authService, messagesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import type { Message } from "@/lib/types";
 import { formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -43,18 +43,44 @@ export function ProposalChat({
   const myId = authService.getSession()?.userId ?? null;
 
   const load = useCallback(() => {
-    setLoadError(null);
     messagesService
       .list(proposalId)
       .then((list) => {
-        setMessages(list);
+        setMessages((prev) => {
+          if (!prev || prev.length !== list.length || list.some((m, i) => m.id !== prev[i]?.id)) {
+            return list;
+          }
+          return prev;
+        });
         void messagesService.markRead(proposalId);
       })
-      /* Yuklash xatosi bo'sh suhbat EMAS */
-      .catch(setLoadError);
+      .catch((err) => {
+        if (!messages) setLoadError(err);
+      });
+  }, [proposalId, messages]);
+
+  useEffect(() => {
+    load();
   }, [proposalId]);
 
-  useEffect(load, [load]);
+  /* Jonli suhbat: yangi xabarlar kelganda yoki tablararo yozishmada F5 shart emas */
+  useEffect(() => {
+    if (!proposalId) return;
+    const interval = setInterval(load, 4000);
+    const handleEvent = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail || detail.key === "sb_messages" || !detail.key) {
+        load();
+      }
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleEvent);
+    window.addEventListener("storage", handleEvent);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(DATA_CHANGED_EVENT, handleEvent);
+      window.removeEventListener("storage", handleEvent);
+    };
+  }, [proposalId, load]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: "end" });

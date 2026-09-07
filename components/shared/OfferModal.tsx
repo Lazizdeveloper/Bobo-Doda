@@ -20,10 +20,12 @@ export interface OfferModalProps {
   /** Tanlangan ixtiyoriy qo'shimchalar bilan hisoblangan boshlang'ich byudjet
       (service.price o'rniga) — masalan bazaviy narx + tanlangan extras */
   initialBudget?: number;
+  /** Tanlangan qo'shimchalar ro'yxati */
+  selectedExtras?: { label: string; price: number }[];
 }
 
 /** To'lovsiz taklif yuborish modali (xizmat yoki mutaxassis profili sahifasidan) */
-export function OfferModal({ open, onClose, sellerId, service, initialBudget }: OfferModalProps) {
+export function OfferModal({ open, onClose, sellerId, service, initialBudget, selectedExtras }: OfferModalProps) {
   const { t } = useT();
   const router = useRouter();
   const { toast } = useToast();
@@ -55,11 +57,15 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget }: 
 
     setSending(true);
     try {
+      let finalMessage = message.trim();
+      if (selectedExtras && selectedExtras.length > 0) {
+        finalMessage += `\n\n📌 Tanlangan qo'shimcha xizmatlar:\n` + selectedExtras.map((e) => `• ${e.label}`).join("\n");
+      }
       const offer = await offersService.create({
         sellerId,
         serviceId: service?.id,
         title: service?.title ?? subject,
-        message,
+        message: finalMessage,
         budget: Number(budget),
       });
       toast(t("offer.sent"));
@@ -92,9 +98,18 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget }: 
     >
       <div className="flex flex-col gap-4">
         {service ? (
-          <p className="rounded-input border border-line bg-surface p-3 text-xs">
-            <span className="font-medium text-ink">{service.title}</span>
-          </p>
+          <div className="flex flex-col gap-2 rounded-input border border-line bg-surface p-3 text-xs">
+            <span className="font-semibold text-ink">{service.title}</span>
+            {selectedExtras && selectedExtras.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-line/60">
+                {selectedExtras.map((ex, i) => (
+                  <span key={i} className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
+                    + {ex.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <Input
             label={t("offer.subject")}

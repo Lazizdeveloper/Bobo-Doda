@@ -311,7 +311,11 @@ export function pushNotification(
     read: false,
     createdAt: new Date().toISOString(),
   });
-  write(KEYS.notifications, notifications);
+  /* Xotira va kvota himoyasi: localStorage to'lib ketmasligi (STORAGE_FULL)
+     uchun oxirgi 150 ta bildirishnomani saqlab, eskilari avtomatik rotatsiya qilinadi. */
+  const trimmed =
+    notifications.length > 150 ? notifications.slice(-150) : notifications;
+  write(KEYS.notifications, trimmed);
 }
 
 function delay(ms = 250): Promise<void> {
