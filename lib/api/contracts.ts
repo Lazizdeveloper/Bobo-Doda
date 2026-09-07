@@ -245,10 +245,16 @@ export interface PaymentsService {
   removeCard(id: string): Promise<void>;
   /* Yechish ADMIN TASDIG'IGA so'rov yuboradi — pul darhol yechilmaydi.
      Ilgari ikkalasi ham darhol yechar va admin navbatiga umuman tushmasdi. */
-  /** Mutaxassis daromadini yechish so'rovi (ixtiyoriy qisman summa bilan) */
-  withdrawEarnings(cardId: string, amount?: number): Promise<Model.WithdrawalRequest>;
+  /** Mutaxassis daromadini yechish so'rovi (karta yoki bank hisob-raqamiga) */
+  withdrawEarnings(
+    destination: string | { type: "card"; cardId: string } | { type: "bank_account"; bankAccount: Model.BankAccountDetails },
+    amount?: number
+  ): Promise<Model.WithdrawalRequest>;
   /** Xaridor balansidagi (qaytgan escrow) mablag'ni yechish so'rovi */
-  withdrawBalance(cardId: string, amount?: number): Promise<Model.WithdrawalRequest>;
+  withdrawBalance(
+    destination: string | { type: "card"; cardId: string } | { type: "bank_account"; bankAccount: Model.BankAccountDetails },
+    amount?: number
+  ): Promise<Model.WithdrawalRequest>;
   getWithdrawnTotal(): Promise<number>;
   /** Kutilayotgan so'rovlar summasi — mavjud mablag'dan ayiriladi */
   getPendingWithdrawalTotal(): Promise<number>;

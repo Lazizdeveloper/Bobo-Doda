@@ -42,10 +42,16 @@ export function WithdrawalRequests({ requests }: { requests: WithdrawalRequest[]
                     <p className="font-heading text-base font-bold text-ink">
                       {formatMoney(r.amount, lang)}
                     </p>
-                    <p className="mt-0.5 text-2xs text-faint">
-                      <span className="font-mono">{r.cardDetails}</span>
-                      {" · "}
-                      {formatDate(r.createdAt, lang)}
+                    <p className="mt-0.5 text-2xs text-faint flex flex-wrap items-center gap-1.5">
+                      {r.payoutMethod === "bank_account" && r.bankAccount ? (
+                        <span className="font-mono text-ink font-medium">
+                          🏦 H/r: {r.bankAccount.accountNumber} ({r.bankAccount.bankName})
+                        </span>
+                      ) : (
+                        <span className="font-mono">{r.cardDetails || "Plastik karta"}</span>
+                      )}
+                      <span>·</span>
+                      <span>{formatDate(r.createdAt, lang)}</span>
                     </p>
                   </div>
                   <Badge tone={status.tone}>{t(status.key)}</Badge>

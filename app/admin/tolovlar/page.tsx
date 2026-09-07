@@ -321,8 +321,18 @@ export default function PaymentsPage() {
     },
     {
       key: "card",
-      header: "Karta ma'lumotlari",
-      render: (w) => <span className="text-xs text-ink font-mono">{w.cardDetails}</span>,
+      header: "To'lov vositasi",
+      render: (w) => (
+        w.payoutMethod === "bank_account" && w.bankAccount ? (
+          <div className="text-2xs">
+            <span className="font-mono font-bold text-ink block">🏦 {w.bankAccount.accountNumber}</span>
+            <span className="text-muted block">MFO: {w.bankAccount.mfo} · {w.bankAccount.bankName}</span>
+            <span className="text-muted block font-medium truncate max-w-[160px]">{w.bankAccount.recipientName}</span>
+          </div>
+        ) : (
+          <span className="text-xs text-ink font-mono">💳 {w.cardDetails || "Plastik karta"}</span>
+        )
+      ),
     },
     {
       key: "status",
@@ -843,9 +853,38 @@ export default function PaymentsPage() {
               </span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-muted">Karta</span>
-              <span className="font-mono text-xs text-ink">{selectedReq?.cardDetails}</span>
+              <span className="text-muted">To&apos;lov usuli</span>
+              <span className="font-medium text-ink">
+                {selectedReq?.payoutMethod === "bank_account" ? "Bank hisob-raqami (B2B Wire)" : "Plastik karta (B2C Payout)"}
+              </span>
             </div>
+            {selectedReq?.payoutMethod === "bank_account" && selectedReq.bankAccount ? (
+              <>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted">Hisob-raqam</span>
+                  <span className="font-mono text-xs font-bold text-ink">{selectedReq.bankAccount.accountNumber}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted">Bank / MFO</span>
+                  <span className="text-xs text-ink">{selectedReq.bankAccount.bankName} (MFO: {selectedReq.bankAccount.mfo})</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted">Qabul qiluvchi</span>
+                  <span className="text-xs font-medium text-ink">{selectedReq.bankAccount.recipientName}</span>
+                </div>
+                {selectedReq.bankAccount.innOrPinfl && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted">STIR / JSHSHIR</span>
+                    <span className="font-mono text-xs text-ink">{selectedReq.bankAccount.innOrPinfl}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Karta</span>
+                <span className="font-mono text-xs text-ink">{selectedReq?.cardDetails}</span>
+              </div>
+            )}
             <div className="flex justify-between gap-3">
               <span className="text-muted">Manba</span>
               <span className="text-ink">

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
@@ -34,6 +35,13 @@ export default function XarajatlarPage() {
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [cards, setCards] = useState<PaymentCard[]>([]);
   const [cardId, setCardId] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState<"card" | "bank_account">("card");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankMfo, setBankMfo] = useState("");
+  const [bankInnPinfl, setBankInnPinfl] = useState("");
+  const [bankRecipient, setBankRecipient] = useState("");
+  const [bankError, setBankError] = useState("");
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [amountError, setAmountError] = useState("");
@@ -72,6 +80,7 @@ export default function XarajatlarPage() {
   function openWithdrawModal() {
     setWithdrawAmount(String(withdrawableBalance));
     setAmountError("");
+    setBankError("");
     setWithdrawOpen(true);
   }
 
@@ -82,7 +91,6 @@ export default function XarajatlarPage() {
   }
 
   async function handleWithdraw() {
-    if (!cardId) return;
     const num = Number(withdrawAmount.replace(/\s/g, ""));
     if (isNaN(num) || num <= 0) {
       setAmountError(t("wd.amountLabel"));
@@ -97,9 +105,47 @@ export default function XarajatlarPage() {
       return;
     }
 
+    if (payoutMethod === "card") {
+      if (!cardId) {
+        setAmountError(t("pay.pickCard"));
+        return;
+      }
+    } else {
+      const cleanAcc = bankAccountNumber.replace(/\s/g, "");
+      if (!cleanAcc || cleanAcc.length < 20) {
+        setBankError("20 xonali to'liq bank hisob-raqamini kiriting (masalan: 20208000...)");
+        return;
+      }
+      if (!bankMfo.trim() || bankMfo.length !== 5) {
+        setBankError("5 xonali bank MFO kodini kiriting (masalan: 01088)");
+        return;
+      }
+      if (!bankRecipient.trim()) {
+        setBankError("Qabul qiluvchi korxona yoki shaxs nomini kiriting");
+        return;
+      }
+      setBankError("");
+    }
+
     setWithdrawing(true);
     try {
-      await paymentsService.withdrawBalance(cardId, num);
+      if (payoutMethod === "card") {
+        await paymentsService.withdrawBalance({ type: "card", cardId }, num);
+      } else {
+        await paymentsService.withdrawBalance(
+          {
+            type: "bank_account",
+            bankAccount: {
+              accountNumber: bankAccountNumber.replace(/\s/g, ""),
+              bankName: bankName.trim() || "ATB Kapitalbank",
+              mfo: bankMfo.trim(),
+              innOrPinfl: bankInnPinfl.trim(),
+              recipientName: bankRecipient.trim(),
+            },
+          },
+          num
+        );
+      }
       /* Pul darhol yechilmaydi — admin tasdig'iga so'rov ketadi. Balans
          joyida qoladi, lekin so'ralgan summa "band" bo'ladi. */
       setPendingWithdrawal(await paymentsService.getPendingWithdrawalTotal());
@@ -148,6 +194,36 @@ export default function XarajatlarPage() {
       <h1 className="font-heading text-2xl font-extrabold text-ink">
         {t("spend.title")}
       </h1>
+
+      {/* Platformada To'lov & Escrow mexanizmi tushuntirishi */}
+      <Card padding="md" className="border-accent/25 bg-accent/5">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-ink font-heading font-bold text-sm">
+            <span className="text-lg">🛡️</span>
+            <span>Kafolatlangan To&apos;lov (Escrow) va Mablag&apos; qaytarish tartibi</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-muted mt-1">
+            <div className="rounded-input border border-line/60 bg-card p-3">
+              <p className="font-semibold text-ink mb-1 flex items-center gap-1.5">
+                <span>1️⃣</span> Shartnoma to&apos;lovi (Escrow)
+              </p>
+              <p>Har bir loyiha uchun to&apos;lov karta (ekvayring) yoki bank to&apos;lov topshirig&apos;i (B2B wire) orqali amalga oshiriladi va platforma hisobida muzlatiladi.</p>
+            </div>
+            <div className="rounded-input border border-line/60 bg-card p-3">
+              <p className="font-semibold text-ink mb-1 flex items-center gap-1.5">
+                <span>2️⃣</span> Qaytarilgan mablag&apos; (Refund)
+              </p>
+              <p>Agar shartnoma bekor qilinsa yoki nizo xaridor foydasiga yechilsa, mablag&apos; bir zumda sizning Bobo&Doda balansingizga qaytariladi.</p>
+            </div>
+            <div className="rounded-input border border-line/60 bg-card p-3">
+              <p className="font-semibold text-ink mb-1 flex items-center gap-1.5">
+                <span>3️⃣</span> Qayta ishlatish yoki Yechish
+              </p>
+              <p>Qaytarilgan mablag&apos;ni yangi shartnomalarni 1 click&apos;da to&apos;lashga ishlatishingiz yoki kartangizga / bank hisob-raqamingizga yechib olishingiz mumkin.</p>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Statistika */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -353,7 +429,7 @@ export default function XarajatlarPage() {
             <Button
               loading={withdrawing}
               onClick={handleWithdraw}
-              disabled={!cardId}
+              disabled={payoutMethod === "card" ? !cardId : !bankAccountNumber || !bankRecipient}
             >
               {t("spend.withdraw")}
             </Button>
@@ -421,19 +497,117 @@ export default function XarajatlarPage() {
             </div>
           </div>
 
-          <p className="text-xs text-muted">{t("spend.withdrawDesc")}</p>
-          <p className="text-2xs text-faint">{t("wd.pendingHint")}</p>
+          {/* Usul tanlash: Karta yoki Bank hisob-raqami */}
           <div>
-            <p className="mb-2 text-xs font-medium text-muted">
-              {t("card.selectTitle")}
-            </p>
-            <CardPicker
-              cards={cards}
-              value={cardId}
-              onChange={setCardId}
-              onCardAdded={(card) => setCards((prev) => [card, ...prev])}
+            <p className="mb-2 text-xs font-medium text-muted">Mablag&apos;ni qabul qilish usuli</p>
+            <RadioGroup
+              options={[
+                {
+                  value: "card",
+                  label: "Plastik karta (Uzcard / Humo / Visa)",
+                  description: "Tezkor B2C Payout — admin tasdiqlagach kartangizga o'tkaziladi",
+                },
+                {
+                  value: "bank_account",
+                  label: "Bank hisob-raqami (B2B Wire / Korporativ)",
+                  description: "Kompaniya yoki shaxsiy 20-xonali bank hisob-raqamingizga to'lov topshirig'i bilan o'tkaziladi",
+                },
+              ]}
+              value={payoutMethod}
+              onChange={(val) => {
+                setPayoutMethod(val as "card" | "bank_account");
+                setBankError("");
+              }}
             />
           </div>
+
+          <p className="text-2xs text-faint">{t("wd.pendingHint")}</p>
+
+          {payoutMethod === "card" ? (
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted">
+                {t("card.selectTitle")}
+              </p>
+              <CardPicker
+                cards={cards}
+                value={cardId}
+                onChange={setCardId}
+                onCardAdded={(card) => setCards((prev) => [card, ...prev])}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-input border border-line bg-surface/60 p-3 text-xs">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-ink">
+                <span>🏦</span> Bank hisob-raqami rekvizitlari
+              </div>
+              <div>
+                <label className="text-2xs font-medium text-muted mb-1 block">Hisob-raqam (20 xonali H/r)</label>
+                <Input
+                  value={bankAccountNumber}
+                  onChange={(e) => {
+                    setBankAccountNumber(e.target.value.replace(/[^\d]/g, "").slice(0, 20));
+                    setBankError("");
+                  }}
+                  placeholder="2020 8000 ... yoki 2021 6000 ..."
+                  className="font-mono text-sm"
+                  maxLength={20}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-2xs font-medium text-muted mb-1 block">Bank MFO (5 xona)</label>
+                  <Input
+                    value={bankMfo}
+                    onChange={(e) => {
+                      setBankMfo(e.target.value.replace(/[^\d]/g, "").slice(0, 5));
+                      setBankError("");
+                    }}
+                    placeholder="01088"
+                    className="font-mono text-sm"
+                    maxLength={5}
+                  />
+                </div>
+                <div>
+                  <label className="text-2xs font-medium text-muted mb-1 block">STIR (INN) yoki JShShIR</label>
+                  <Input
+                    value={bankInnPinfl}
+                    onChange={(e) => {
+                      setBankInnPinfl(e.target.value.replace(/[^\d]/g, "").slice(0, 14));
+                      setBankError("");
+                    }}
+                    placeholder="309876543"
+                    className="font-mono text-sm"
+                    maxLength={14}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-2xs font-medium text-muted mb-1 block">Bank filiali nomi</label>
+                <Input
+                  value={bankName}
+                  onChange={(e) => {
+                    setBankName(e.target.value);
+                    setBankError("");
+                  }}
+                  placeholder='ATB "Kapitalbank" Toshkent sh.'
+                />
+              </div>
+              <div>
+                <label className="text-2xs font-medium text-muted mb-1 block">Qabul qiluvchi (F.I.O. yoki MChJ/YaTT)</label>
+                <Input
+                  value={bankRecipient}
+                  onChange={(e) => {
+                    setBankRecipient(e.target.value);
+                    setBankError("");
+                  }}
+                  placeholder='OOO "Tech Ventures" yoki Sardor Rahimov'
+                />
+              </div>
+              {bankError && (
+                <p className="text-2xs text-danger font-medium">{bankError}</p>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
 

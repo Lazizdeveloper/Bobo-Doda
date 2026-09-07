@@ -24,6 +24,7 @@ import type {
   VerificationRecord,
   Dispute,
   WithdrawalRequest,
+  BankAccountDetails,
   DeliverableFile,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
@@ -2563,13 +2564,28 @@ function sellerWithdrawable(userId: string): number {
    Ilgari bu funksiya pulni DARHOL yechilgan deb belgilardi va admin
    navbatiga umuman tushmasdi — admin paneldagi "To'lovlar" navbati esa
    faqat seed'dagi soxta qatorlarni ko'rsatardi. */
+export type WithdrawalDestination =
+  | string
+  | { type: "card"; cardId: string }
+  | { type: "bank_account"; bankAccount: BankAccountDetails };
+
 async function createWithdrawalRequest(
-  cardId: string,
+  destination: WithdrawalDestination,
   source: "earnings" | "balance",
   customAmount?: number
 ): Promise<WithdrawalRequest> {
   const uid2 = currentUserId();
-  assertOwnCard(cardId, uid2);
+  const isBankAccount = typeof destination === "object" && destination.type === "bank_account";
+  const cardId = typeof destination === "string" ? destination : destination.type === "card" ? destination.cardId : undefined;
+
+  if (cardId) {
+    assertOwnCard(cardId, uid2);
+  } else if (isBankAccount) {
+    if (!destination.bankAccount.accountNumber || !destination.bankAccount.mfo) {
+      throw new Error("INVALID_BANK_ACCOUNT");
+    }
+  }
+
   const maxAvailable =
     source === "earnings"
       ? sellerWithdrawable(uid2)
@@ -2587,7 +2603,7 @@ async function createWithdrawalRequest(
 
   const users = read<User[]>(KEYS.users, []);
   const user = users.find((u) => u.id === uid2);
-  const card = read<PaymentCard[]>(KEYS.cards, []).find((c) => c.id === cardId);
+  const card = cardId ? read<PaymentCard[]>(KEYS.cards, []).find((c) => c.id === cardId) : null;
 
   const request: WithdrawalRequest = {
     id: uid("wd"),
@@ -2597,9 +2613,12 @@ async function createWithdrawalRequest(
     source,
     amount,
     currency: "UZS",
-    /* To'liq karta raqami hech qachon saqlanmaydi — faqat tur + oxirgi 4 raqam */
-    cardDetails: card ? `${card.type.toUpperCase()} •••• ${card.last4}` : "—",
-    cardId,
+    payoutMethod: isBankAccount ? "bank_account" : "card",
+    cardDetails: isBankAccount
+      ? undefined
+      : card ? `${card.type.toUpperCase()} •••• ${card.last4}` : "—",
+    cardId: cardId ?? "",
+    bankAccount: isBankAccount ? destination.bankAccount : undefined,
     status: "kutilmoqda",
     createdAt: new Date().toISOString(),
   };
@@ -2608,9 +2627,12 @@ async function createWithdrawalRequest(
   return request;
 }
 
-export async function withdrawFunds(cardId: string, customAmount?: number): Promise<WithdrawalRequest> {
+export async function withdrawFunds(
+  destination: WithdrawalDestination,
+  customAmount?: number
+): Promise<WithdrawalRequest> {
   await delay(700);
-  return createWithdrawalRequest(cardId, "earnings", customAmount);
+  return createWithdrawalRequest(destination, "earnings", customAmount);
 }
 
 /** Foydalanuvchining o'z yechish so'rovlari (holatini kuzatish uchun) */
@@ -3404,12 +3426,14 @@ export async function getBalance(): Promise<number> {
   return readBalances()[currentUserId()] ?? 0;
 }
 
-/** Balansni bog'langan kartaga yechish (mock). cardId — o'z kartasi bo'lishi shart. */
-/** Xaridor balansini kartaga yechish — admin tasdig'iga so'rov yuboradi.
+/** Xaridor balansini kartaga yoki bank hisob-raqamiga yechish — admin tasdig'iga so'rov yuboradi.
    Balans tasdiqlangunga qadar joyida qoladi (lekin "band" bo'ladi). */
-export async function withdrawBalance(cardId: string, customAmount?: number): Promise<WithdrawalRequest> {
+export async function withdrawBalance(
+  destination: WithdrawalDestination,
+  customAmount?: number
+): Promise<WithdrawalRequest> {
   await delay(700);
-  return createWithdrawalRequest(cardId, "balance", customAmount);
+  return createWithdrawalRequest(destination, "balance", customAmount);
 }
 
 /* ---------------- Bank kartalari (Uzcard / Humo) ---------------- */

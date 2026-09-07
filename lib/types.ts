@@ -330,6 +330,16 @@ export type WithdrawalStatus =
   | "tasdiqlangan"
   | "rad_etilgan";
 
+export type WithdrawalPayoutMethod = "card" | "bank_account";
+
+export interface BankAccountDetails {
+  accountNumber: string;
+  bankName: string;
+  mfo: string;
+  innOrPinfl: string;
+  recipientName: string;
+}
+
 export interface WithdrawalRequest {
   id: string;
   userId: string;
@@ -339,9 +349,12 @@ export interface WithdrawalRequest {
   source: "earnings" | "balance";
   amount: number;
   currency: "UZS";
-  /** Faqat oxirgi 4 raqam ko'rinadigan niqob — to'liq raqam saqlanmaydi */
-  cardDetails: string;
-  cardId: string;
+  payoutMethod?: WithdrawalPayoutMethod;
+  /** Faqat oxirgi 4 raqam ko'rinadigan niqob — to'liq raqam saqlanmaydi (karta bo'lsa) */
+  cardDetails?: string;
+  cardId?: string;
+  /** Bank hisob raqamiga o'tkazma ma'lumotlari (YaTT / O'z-o'zini band qilgan shaxslar uchun) */
+  bankAccount?: BankAccountDetails;
   status: WithdrawalStatus;
   createdAt: string;
   processedAt?: string;

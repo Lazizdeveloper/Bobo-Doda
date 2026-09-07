@@ -957,7 +957,10 @@ export function approveWithdrawal(requestId: string) {
     amount: req.amount,
     currency: "UZS",
     referenceId: req.id,
-    description: `${req.cardDetails} kartasiga mablag' yechib olindi`,
+    description:
+      req.payoutMethod === "bank_account" && req.bankAccount
+        ? `Bank hisob-raqamiga (${req.bankAccount.accountNumber}) to'lov topshirig'i (B2B wire) orqali o'tkazildi`
+        : `${req.cardDetails || "Plastik karta"}ga B2C Card Payout orqali mablag' yechib olindi`,
     status: "muvaffaqiyatli",
     createdAt: new Date().toISOString(),
   };
