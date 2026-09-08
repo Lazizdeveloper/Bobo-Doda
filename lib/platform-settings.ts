@@ -16,6 +16,7 @@
 export const PLATFORM_SETTINGS_KEY = "sb2_platform_settings";
 
 export const SETTING_KEYS = {
+  platformCommissionPercent: "platform_commission_percent",
   escrowAutoReleaseDays: "escrow_auto_release_days",
   minPayoutAmount: "min_payout_amount",
   instantOffersEnabled: "marketplace_instant_offer_enabled",
@@ -24,6 +25,8 @@ export const SETTING_KEYS = {
 } as const;
 
 export interface PlatformSettingsValues {
+  /** Platforma komissiya stavkasi foizda (0-50%) */
+  platformCommissionPercent: number;
   /** Topshirilgan bosqich necha kundan keyin avtomatik qabul qilinadi */
   escrowAutoReleaseDays: number;
   /** Bir marta yechish mumkin bo'lgan eng kichik summa (UZS) */
@@ -37,6 +40,7 @@ export interface PlatformSettingsValues {
 }
 
 export const PLATFORM_SETTING_DEFAULTS: PlatformSettingsValues = {
+  platformCommissionPercent: 10,
   escrowAutoReleaseDays: 3,
   minPayoutAmount: 50_000,
   instantOffersEnabled: true,
@@ -73,6 +77,12 @@ export function getPlatformSettings(): PlatformSettingsValues {
     return typeof v === "boolean" ? v : fallback;
   };
   return {
+    platformCommissionPercent: num(
+      byKey.get(SETTING_KEYS.platformCommissionPercent),
+      PLATFORM_SETTING_DEFAULTS.platformCommissionPercent,
+      0,
+      50
+    ),
     escrowAutoReleaseDays: num(
       byKey.get(SETTING_KEYS.escrowAutoReleaseDays),
       PLATFORM_SETTING_DEFAULTS.escrowAutoReleaseDays,

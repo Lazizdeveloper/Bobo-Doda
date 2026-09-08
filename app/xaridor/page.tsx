@@ -149,9 +149,9 @@ export default function XaridorDashboardPage() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-w-0">
         {/* Left Column: Action Center */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
           <section>
             <h2 className="font-heading text-xl font-bold text-ink mb-4 flex items-center gap-2">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
@@ -256,7 +256,7 @@ export default function XaridorDashboardPage() {
         </div>
 
         {/* Right Column: Active Projects */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 min-w-0">
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-heading text-xl font-bold text-ink">{t("bdash.recentContracts")}</h2>

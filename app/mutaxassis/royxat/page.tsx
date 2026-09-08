@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { TagInput } from "@/components/ui/TagInput";
+import { LocationPicker } from "@/components/ui/LocationPicker";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
 import { getSelectableCategories } from "@/lib/categories";
@@ -160,12 +161,15 @@ export default function RoyxatPage() {
           )}
         </div>
 
-        <Input
+        <LocationPicker
           label={t("onboard.location")}
           value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder={t("onboard.locationPh")}
+          onChange={(val) => {
+            setLocation(val);
+            if (errors.location) setErrors((prev) => ({ ...prev, location: undefined }));
+          }}
           error={errors.location}
+          required
         />
 
         <Button type="submit" size="lg" loading={loading} className="mt-2 w-full">

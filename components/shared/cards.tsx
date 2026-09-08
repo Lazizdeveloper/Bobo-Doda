@@ -23,6 +23,7 @@ const CARD_LABELS: Record<CardType, string> = {
   mastercard: "Mastercard",
   uzcard: "Uzcard",
   humo: "Humo",
+  mir: "Mir",
 };
 
 const CARD_TONES: Record<CardType, BadgeTone> = {
@@ -30,6 +31,7 @@ const CARD_TONES: Record<CardType, BadgeTone> = {
   mastercard: "warning",
   uzcard: "accent",
   humo: "success",
+  mir: "neutral",
 };
 
 function cardTone(type: CardType): ReactNode {

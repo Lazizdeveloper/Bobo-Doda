@@ -11,7 +11,7 @@ import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 type Phase = "phone" | "reset";
-type RecoveryMethod = "telegram" | "google";
+type RecoveryMethod = "sms" | "telegram";
 
 interface Errors {
   phone?: string;
@@ -19,6 +19,21 @@ interface Errors {
   password?: string;
   confirm?: string;
   form?: string;
+}
+
+function SmsSmallIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
+      <path
+        d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
+        fill="currentColor"
+        className="text-primary"
+      />
+      <circle cx="8" cy="10" r="1.5" fill="#ffffff" />
+      <circle cx="12" cy="10" r="1.5" fill="#ffffff" />
+      <circle cx="16" cy="10" r="1.5" fill="#ffffff" />
+    </svg>
+  );
 }
 
 function TelegramSmallIcon() {
@@ -32,39 +47,15 @@ function TelegramSmallIcon() {
   );
 }
 
-function GoogleSmallIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
-      <path
-        fill="#4285F4"
-        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-      />
-    </svg>
-  );
-}
-
 export default function ParolniTiklashPage() {
   const { t } = useT();
   const router = useRouter();
   const { toast } = useToast();
   const [phase, setPhase] = useState<Phase>("phone");
-  const [method, setMethod] = useState<RecoveryMethod>("telegram");
+  const [method, setMethod] = useState<RecoveryMethod>("sms");
   const [phone, setPhone] = useState("+998");
   const [phoneValid, setPhoneValid] = useState(false);
-  const [maskedEmail, setMaskedEmail] = useState("");
-  const [maskedTelegram, setMaskedTelegram] = useState("");
+  const [maskedPhone, setMaskedPhone] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -89,21 +80,20 @@ export default function ParolniTiklashPage() {
     setSending(true);
 
     const raw = phone.replace(/\D/g, "");
-    const maskedMail = `${raw.slice(0, 2)}***${raw.slice(-2)}@gmail.com`;
-    const maskedTg = `Telegram (+${raw.slice(0, 3)} ${raw.slice(3, 5)} *** ** ${raw.slice(-2)})`;
-    setMaskedEmail(maskedMail);
-    setMaskedTelegram(maskedTg);
+    // Masalan: +998 90 *** ** 45
+    const masked = `+${raw.slice(0, 3)} ${raw.slice(3, 5)} *** ** ${raw.slice(-2)}`;
+    setMaskedPhone(masked);
 
     setTimeout(() => {
       setSending(false);
       setPhase("reset");
       setCooldown(60);
       toast(
-        method === "telegram"
-          ? "Telegram orqali 6 xonali tiklash kodi yuborildi"
-          : "Google pochtangizga 6 xonali tiklash kodi yuborildi"
+        method === "sms"
+          ? `${masked} raqamiga 6 xonali SMS kod yuborildi`
+          : "Telegram orqali 6 xonali tiklash kodi yuborildi"
       );
-    }, 800);
+    }, 600);
   }
 
   function handleSwitchMethod(newMethod: RecoveryMethod) {
@@ -113,9 +103,9 @@ export default function ParolniTiklashPage() {
     setErrors({});
     setCooldown(60);
     toast(
-      newMethod === "telegram"
-        ? "Telegram orqali yangi tiklash kodi yuborildi"
-        : "Google pochtangizga yangi tiklash kodi yuborildi"
+      newMethod === "sms"
+        ? `${maskedPhone || phone} raqamiga yangi SMS kod yuborildi`
+        : "Telegram orqali yangi tiklash kodi yuborildi"
     );
   }
 
@@ -184,12 +174,38 @@ export default function ParolniTiklashPage() {
             }}
           />
 
-          {/* Qaysi usul orqali kod olish tanlovi: Telegram yoki Google */}
+          {/* Qaysi usul orqali kod olish tanlovi: SMS yoki Telegram */}
           <div className="flex flex-col gap-2.5">
             <label className="text-xs sm:text-sm font-semibold text-ink">
-              {t("auth.resetMethodDesc")}
+              Tasdiqlash kodi qayerga yuborilsin?
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* SMS Card (Default) */}
+              <button
+                type="button"
+                onClick={() => setMethod("sms")}
+                className={`flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
+                  method === "sms"
+                    ? "border-primary bg-primary/5 shadow-sm ring-2 ring-primary/20"
+                    : "border-line bg-surface/50 hover:border-line hover:bg-surface"
+                }`}
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
+                  <SmsSmallIcon />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-ink">SMS xabarnoma</span>
+                    {method === "sms" && (
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-2xs font-black">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-2xs text-muted truncate mt-0.5">Telefoningizga bepul SMS</p>
+                </div>
+              </button>
+
               {/* Telegram Card */}
               <button
                 type="button"
@@ -215,32 +231,6 @@ export default function ParolniTiklashPage() {
                   <p className="text-2xs text-muted truncate mt-0.5">Tezkor 6 xonali kod</p>
                 </div>
               </button>
-
-              {/* Google Card */}
-              <button
-                type="button"
-                onClick={() => setMethod("google")}
-                className={`flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all cursor-pointer ${
-                  method === "google"
-                    ? "border-primary bg-primary/5 shadow-sm ring-2 ring-primary/20"
-                    : "border-line bg-surface/50 hover:border-line hover:bg-surface"
-                }`}
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-card border border-line shadow-xs">
-                  <GoogleSmallIcon />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-ink">{t("auth.resetViaGoogle")}</span>
-                    {method === "google" && (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-2xs font-black">
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-2xs text-muted truncate mt-0.5">Xavfsiz Google Email</p>
-                </div>
-              </button>
             </div>
           </div>
 
@@ -256,60 +246,25 @@ export default function ParolniTiklashPage() {
       ) : (
         <form onSubmit={handleReset} className="mt-8 flex flex-col gap-5" noValidate>
           {/* Tanlangan usul bo'yicha xabar kartasi */}
-          {method === "telegram" ? (
-            <div className="rounded-2xl border border-[#229ED9]/30 bg-[#229ED9]/5 p-4 sm:p-5 flex items-start gap-3.5 transition-all">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#229ED9]/15">
-                <TelegramSmallIcon />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-bold text-ink leading-snug">
-                  {t("auth.resetTelegramNotice")}
-                </p>
-                <p className="text-sm font-mono font-bold text-[#229ED9] mt-1 truncate">
-                  {maskedTelegram || phone}
-                </p>
-                <p className="text-xs text-muted mt-1 leading-relaxed">
-                  {t("auth.resetTelegramHint")}
-                </p>
-
-                {/* Boshqa usulga (Google pochtaga) almashtirish havolasi */}
-                <div className="mt-3 pt-3 border-t border-[#229ED9]/15 flex items-center justify-between">
-                  <span className="text-2xs text-muted">Telegramga kod kelmadimi?</span>
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchMethod("google")}
-                    disabled={cooldown > 0}
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${
-                      cooldown > 0
-                        ? "text-muted cursor-not-allowed opacity-60"
-                        : "text-primary hover:underline cursor-pointer"
-                    }`}
-                  >
-                    <GoogleSmallIcon />
-                    <span>{cooldown > 0 ? `Qayta yuborish (${cooldown}s)` : "Google Email orqali olish"}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
+          {method === "sms" ? (
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 flex items-start gap-3.5 transition-all">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-card border border-line shadow-xs">
-                <GoogleSmallIcon />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <SmsSmallIcon />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm font-bold text-ink leading-snug">
-                  {t("auth.resetGoogleNotice")}
+                  SMS orqali 6 xonali tasdiqlash kodi yuborildi
                 </p>
                 <p className="text-sm font-mono font-bold text-primary mt-1 truncate">
-                  {maskedEmail}
+                  {maskedPhone || phone}
                 </p>
                 <p className="text-xs text-muted mt-1 leading-relaxed">
-                  {t("auth.resetGoogleHint")}
+                  Iltimos, telefoningizga kelgan SMS xabardagi 6 xonali kodni kiriting.
                 </p>
 
-                {/* Boshqa usulga (Telegramga) almashtirish havolasi */}
-                <div className="mt-3 pt-3 border-t border-primary/15 flex items-center justify-between">
-                  <span className="text-2xs text-muted">Pochtaga kod kelmadimi?</span>
+                {/* Telegramga almashtirish havolasi */}
+                <div className="mt-3 pt-3 border-t border-primary/15 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-2xs text-muted">SMS kelmadimi?</span>
                   <button
                     type="button"
                     onClick={() => handleSwitchMethod("telegram")}
@@ -326,18 +281,62 @@ export default function ParolniTiklashPage() {
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="rounded-2xl border border-[#229ED9]/30 bg-[#229ED9]/5 p-4 sm:p-5 flex items-start gap-3.5 transition-all">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#229ED9]/15">
+                <TelegramSmallIcon />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-ink leading-snug">
+                  {t("auth.resetTelegramNotice")}
+                </p>
+                <p className="text-sm font-mono font-bold text-[#229ED9] mt-1 truncate">
+                  {maskedPhone || phone}
+                </p>
+                <p className="text-xs text-muted mt-1 leading-relaxed">
+                  {t("auth.resetTelegramHint")}
+                </p>
+
+                {/* SMS ga almashtirish havolasi */}
+                <div className="mt-3 pt-3 border-t border-[#229ED9]/15 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-2xs text-muted">Telegramda kod kelmadimi?</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchMethod("sms")}
+                    disabled={cooldown > 0}
+                    className={`inline-flex items-center gap-1.5 text-xs font-bold ${
+                      cooldown > 0
+                        ? "text-muted cursor-not-allowed opacity-60"
+                        : "text-primary hover:underline cursor-pointer"
+                    }`}
+                  >
+                    <SmsSmallIcon />
+                    <span>{cooldown > 0 ? `Qayta yuborish (${cooldown}s)` : "SMS orqali olish"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between text-xs text-muted">
               <span>6 xonali tasdiqlash kodi:</span>
-              <button
-                type="button"
-                onClick={() => setPhase("phone")}
-                className="text-primary hover:underline cursor-pointer font-medium text-2xs"
-              >
-                Raqamni o&apos;zgartirish
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCode("123456")}
+                  className="text-2xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 hover:opacity-80 cursor-pointer"
+                >
+                  ⚡ Kod: 123456
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhase("phone")}
+                  className="text-primary hover:underline cursor-pointer font-medium text-2xs"
+                >
+                  Raqamni o&apos;zgartirish
+                </button>
+              </div>
             </div>
             <Input
               value={code}

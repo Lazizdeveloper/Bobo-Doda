@@ -143,21 +143,21 @@ export default function PlatformSettingsPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 w-full">
-                  {/* Ko'rinadigan sarlavha `<h3>` — u maydon bilan
-                      bog'lanmagan, shuning uchun nom `aria-label` orqali
-                      beriladi (WCAG 4.1.2). */}
                   <Input
-                    type={setting.type === "number" ? "number" : "text"}
+                    type={setting.type === "number" || setting.type === "percent" ? "number" : "text"}
                     aria-label={setting.label}
                     defaultValue={String(setting.value)}
                     onBlur={(e) => {
-                      const val = setting.type === "number" ? Number(e.target.value) : e.target.value;
+                      const val = (setting.type === "number" || setting.type === "percent") ? Number(e.target.value) : e.target.value;
                       if (val !== setting.value) {
                         handleSave(setting.key, val);
                       }
                     }}
                     className="text-xs"
                   />
+                  {setting.type === "percent" && (
+                    <span className="shrink-0 text-xs font-bold text-muted">%</span>
+                  )}
                   {savingKey === setting.key && (
                     <span className="shrink-0 text-2xs text-muted">Saqlanmoqda…</span>
                   )}

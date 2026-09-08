@@ -75,6 +75,7 @@ export const adminLogin = guardAsync(adminMock.adminLogin);
 export const getAdminAccounts = asyncGuard(adminMock.getAdminAccounts);
 export const setAdminActive = asyncGuard(adminMock.setAdminActive);
 export const addAdmin = asyncGuard(adminMock.addAdmin);
+export const updateAdminAccount = asyncGuard(adminMock.updateAdminAccount);
 
 /* ---------------- O'qish ---------------- */
 /**
@@ -164,6 +165,7 @@ export const reviewWithdrawal = asyncGuard(adminMock.reviewWithdrawal);
 export const listB2bPendingContracts = asyncGuard(adminMock.listB2bPendingContracts);
 export const approveB2bPayment = asyncGuard(adminMock.approveB2bPayment);
 export const rejectB2bPayment = asyncGuard(adminMock.rejectB2bPayment);
+export const reverseTransaction = asyncGuard(adminMock.reverseTransaction);
 
 /* ---------------- Tizim ---------------- */
 export const saveCategory = asyncGuard(adminMock.saveCategory);

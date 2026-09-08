@@ -7,7 +7,7 @@ import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { usersService, DATA_CHANGED_EVENT } from "@/lib/api";
+import { authService, usersService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export interface TopNavProps {
@@ -68,7 +68,7 @@ export function TopNav({ base }: TopNavProps) {
           <Logo href={base} />
           
           {/* Desktop Nav */}
-          <nav className="hidden md:flex gap-1">
+          <nav className="hidden lg:flex gap-1">
             {items.map((item) => {
               const active = item.exact
                 ? pathname === item.href
@@ -95,7 +95,7 @@ export function TopNav({ base }: TopNavProps) {
           {/* Mobile menu button */}
           <button
             type="button"
-            className="md:hidden p-2 text-muted"
+            className="lg:hidden p-2 text-muted"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? t("a11y.closeMenu") : t("a11y.openMenu")}
             aria-expanded={menuOpen}
@@ -106,7 +106,19 @@ export function TopNav({ base }: TopNavProps) {
             </svg>
           </button>
 
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                await authService.login({ phone: "+998901234567", password: "demo123" });
+                window.location.href = "/mutaxassis";
+              }}
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-[11px] font-bold text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer"
+              title="Mutaxassis (Rustam Qosimov) profiliga tezkor o'tish"
+            >
+              <span>⇄</span>
+              <span>Mutaxassis rejimiga</span>
+            </button>
             <Link href="/xaridor/xarajatlar" className="text-xs font-medium text-muted hover:text-ink">
               {t("nav.spending")}
             </Link>
@@ -133,7 +145,7 @@ export function TopNav({ base }: TopNavProps) {
           role="dialog"
           aria-modal="true"
           aria-label={t("a11y.openMenu")}
-          className="border-t border-line bg-surface px-4 py-3 md:hidden"
+          className="border-t border-line bg-surface px-4 py-3 lg:hidden"
         >
           <nav className="flex flex-col gap-2">
             {items.map((item) => (

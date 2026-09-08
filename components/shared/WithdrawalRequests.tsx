@@ -39,9 +39,16 @@ export function WithdrawalRequests({ requests }: { requests: WithdrawalRequest[]
                 <Card padding="md">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-heading text-base font-bold text-ink">
-                      {formatMoney(r.amount, lang)}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-heading text-base font-bold text-ink">
+                        {formatMoney(r.amount, lang)}
+                      </p>
+                      {r.payoutReference && (
+                        <span className="font-mono text-3xs font-semibold px-2 py-0.5 rounded bg-surface border border-line text-muted">
+                          {r.payoutReference}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 text-2xs text-faint flex flex-wrap items-center gap-1.5">
                       {r.payoutMethod === "bank_account" && r.bankAccount ? (
                         <span className="font-mono text-ink font-medium">
@@ -54,7 +61,25 @@ export function WithdrawalRequests({ requests }: { requests: WithdrawalRequest[]
                       <span>{formatDate(r.createdAt, lang)}</span>
                     </p>
                   </div>
-                  <Badge tone={status.tone}>{t(status.key)}</Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge tone={
+                      r.payoutStatus === "paid" || r.status === "tasdiqlangan"
+                        ? "success"
+                        : r.payoutStatus === "payout_failed" || r.status === "rad_etilgan"
+                          ? "danger"
+                          : r.payoutStatus === "payout_processing" || r.status === "korib_chiqilmoqda"
+                            ? "neutral"
+                            : "warning"
+                    }>
+                      {r.payoutStatus === "paid" || r.status === "tasdiqlangan"
+                        ? "Paid (To'langan)"
+                        : r.payoutStatus === "payout_failed" || r.status === "rad_etilgan"
+                          ? "Payout Failed"
+                          : r.payoutStatus === "payout_processing" || r.status === "korib_chiqilmoqda"
+                            ? "Payout Processing"
+                            : "Payout Pending"}
+                    </Badge>
+                  </div>
                 </div>
                 {r.status === "rad_etilgan" && r.rejectionReason && (
                   <p className="mt-2 rounded-input bg-danger/10 p-2 text-2xs text-danger-deep">

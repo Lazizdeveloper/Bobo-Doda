@@ -23,14 +23,18 @@ import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
 import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
-import { CardPicker } from "@/components/shared/cards";
+import { ContractDocumentModal } from "@/components/shared/ContractDocumentModal";
+import { BankTransferPaymentModal } from "@/components/shared/BankTransferPaymentModal";
+import { B2BInvoiceModal } from "@/components/shared/B2BInvoiceModal";
+import { AntiCircumventionModal } from "@/components/shared/AntiCircumventionModal";
+import { checkCircumvention, reportCircumventionViolation, type CircumventionCheckResult } from "@/lib/chat-filter";
 import {
   ContractStatusBadge,
   MilestoneStatusBadge,
 } from "@/components/shared/StatusBadge";
 import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService, filesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
-import type { Contract, DeliverableFile, Message, Milestone, PaymentCard, Review, Service } from "@/lib/types";
+import type { Contract, DeliverableFile, Message, Milestone, Review, Service } from "@/lib/types";
 import { formatDate, formatFileSize, formatMoney, formatTime, triggerFileDownload } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -49,23 +53,6 @@ export default function XaridorWorkroomPage() {
 
   /* Modallar */
   const [fundOpen, setFundOpen] = useState(false);
-  const [payMethod, setPayMethod] = useState<"karta" | "click" | "payme" | "b2b" | "balans">("karta");
-  const [buyerBalance, setBuyerBalance] = useState(0);
-  const [b2bFile, setB2bFile] = useState<DeliverableFile | null>(null);
-  const [b2bUploading, setB2bUploading] = useState(false);
-  const [b2bFileError, setB2bFileError] = useState("");
-  /* To'lov 2 bosqichli: usul tanlash → SMS (3DS) tasdiqlash yoki B2B Invoys */
-  const [payPhase, setPayPhase] = useState<"method" | "sms">("method");
-  const [smsCode, setSmsCode] = useState("");
-  const [smsError, setSmsError] = useState("");
-  const [b2bCopied, setB2bCopied] = useState(false);
-  /* To'lov kartasi — ilgari "Bank kartasi" tanlansa ham QAYSI karta ekani
-     hech qachon so'ralmasdi: 3DS kodi so'raladigan, lekin instrumenti yo'q
-     to'lov edi. Chiqim oqimi (Daromad/Xarajatlar) allaqachon karta
-     tanlatardi; kirim oqimi ham shunday bo'lishi kerak, aks holda real
-     gateway ulanganda yuboriladigan ma'lumot yetishmaydi. */
-  const [cards, setCards] = useState<PaymentCard[]>([]);
-  const [payCardId, setPayCardId] = useState("");
   const [receiptMilestone, setReceiptMilestone] = useState<Milestone | null>(null);
   const [acceptTarget, setAcceptTarget] = useState<Milestone | null>(null);
   const [revisionTarget, setRevisionTarget] = useState<Milestone | null>(null);
@@ -74,6 +61,13 @@ export default function XaridorWorkroomPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [approveCloseOpen, setApproveCloseOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  /* Rasmiy shartnoma hujjati, to'lov hisobi va imzolash */
+  const [documentOpen, setDocumentOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [signingContract, setSigningContract] = useState(false);
+  const [circumventionResult, setCircumventionResult] = useState<CircumventionCheckResult | null>(null);
+  const [circumventionModalOpen, setCircumventionModalOpen] = useState(false);
 
   /* Sharh formasi */
   const [rating, setRating] = useState(5);
@@ -100,12 +94,11 @@ export default function XaridorWorkroomPage() {
         setContract(null);
         return;
       }
-      const [nextMilestones, nextMessages, nextReview, nextService, balanceValue] = await Promise.all([
+      const [nextMilestones, nextMessages, nextReview, nextService] = await Promise.all([
         milestonesService.list(found.id),
         messagesService.list(found.id),
         reviewsService.getForContract(found.id),
         found.serviceId ? servicesService.get(found.serviceId) : Promise.resolve(null),
-        paymentsService.getBalance(),
       ]);
       if (version !== loadVersionRef.current) return;
       setContract(found);
@@ -113,7 +106,6 @@ export default function XaridorWorkroomPage() {
       setMessages(nextMessages);
       setReview(nextReview);
       setService(nextService);
-      setBuyerBalance(balanceValue);
       void messagesService.markRead(found.id);
     } catch (error) {
       /* Yuklash xatosi "topilmadi" EMAS — alohida holat ko'rsatiladi */
@@ -163,110 +155,7 @@ export default function XaridorWorkroomPage() {
   }, [messages.length]);
 
   function openFund() {
-    setPayPhase("method");
-    setSmsCode("");
-    setSmsError("");
     setFundOpen(true);
-    void paymentsService
-      .getCards()
-      .then((list) => {
-        setCards(list);
-        setPayCardId((current) => current || list[0]?.id || "");
-      })
-      .catch(() => setCards([]));
-  }
-
-  /* 1-bosqich: usul tanlab, SMS (3DS) tasdiqlashga o'tish */
-  function handlePayNext() {
-    if (payMethod === "karta" && !payCardId) {
-      setSmsError(t("pay.pickCard"));
-      return;
-    }
-    if (payMethod === "balans" && contract && buyerBalance < contract.totalAmount) {
-      setSmsError("Hisobingizda to'liq shartnoma summasi uchun mablag' yetarli emas");
-      return;
-    }
-    setSmsError("");
-    setPayPhase("sms");
-  }
-
-  async function handleB2bFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setB2bFileError("");
-    setB2bUploading(true);
-    try {
-      const uploaded = await filesService.upload(file);
-      setB2bFile({
-        id: uploaded.id,
-        name: uploaded.name,
-        size: uploaded.size,
-        url: uploaded.url,
-      });
-      toast("To'lov topshirig'i (kvitansiya) biriktirildi", "success");
-    } catch {
-      setB2bFileError("Faylni yuklashda xatolik yuz berdi");
-    } finally {
-      setB2bUploading(false);
-    }
-  }
-
-  function handleCopyB2bDetails() {
-    if (!contract) return;
-    const details = `BOBO & DODA PLATFORM B2B INVOYS
-Invoys: INV-${contract.id.toUpperCase()}-${new Date().getFullYear()}
-Qabul qiluvchi: "BOBO DODA PLATFORM" MChJ
-Hisob-raqam (H/r): 2020 8000 7055 1234 5001
-Bank: ATB "Kapitalbank" Toshkent sh. filiali
-MFO: 01088
-STIR (INN): 309 876 543
-To'lov maqsadi: Shartnoma #${contract.id} bo'yicha kafolatlangan to'lov (Escrow). QQSsiz.
-Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
-
-    void navigator.clipboard.writeText(details);
-    setB2bCopied(true);
-    toast(t("b2b.copied"));
-    setTimeout(() => setB2bCopied(false), 2000);
-  }
-
-  /* 2-bosqich: SMS-kod yoki B2B to'lov topshirig'i bilan to'lovni yakunlash */
-  async function handleFund() {
-    if (!contract) return;
-    if (payMethod === "karta" && !/^\d{6}$/.test(smsCode)) {
-      setSmsError(t("pay.smsError"));
-      return;
-    }
-    setBusy(true);
-    try {
-      await paymentsService.fundContract(contract.id, {
-        method: payMethod,
-        cardId: payMethod === "karta" ? payCardId : undefined,
-        receiptUrl: b2bFile?.url,
-        receiptName: b2bFile?.name,
-      });
-      setFundOpen(false);
-      /* Click/Payme — qayta yo'naltirishga asoslangan usullar */
-      if (payMethod === "click" || payMethod === "payme") {
-        router.push(
-          `/tolov/natija?status=success&reference=${encodeURIComponent(contract.id)}`
-        );
-        return;
-      }
-      if (payMethod === "b2b") {
-        toast("To'lov topshirig'i qabul qilindi! Bank tushumi tekshirilmoqda.", "success");
-      } else {
-        toast(t("cfund.done"));
-      }
-      reload();
-    } catch (err) {
-      if (err instanceof Error && err.message === "INSUFFICIENT_FUNDS") {
-        toast("Hisobingizda to'liq summa uchun mablag' yetarli emas", "error");
-      } else {
-        toast(t("common.error"), "error");
-      }
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function handleAccept() {
@@ -325,6 +214,21 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
     }
   }
 
+  async function handleSignContract() {
+    if (!contract) return;
+    setSigningContract(true);
+    try {
+      const updated = await contractsService.sign(contract.id);
+      setContract(updated);
+      toast(t("contract.signedSuccess"));
+      reload();
+    } catch {
+      toast(t("common.error"), "error");
+    } finally {
+      setSigningContract(false);
+    }
+  }
+
   async function handleApproveClose() {
     if (!contract) return;
     setBusy(true);
@@ -364,6 +268,27 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
     const text = draft.trim();
     const hasAttachments = draftImages.length > 0 || draftFiles.length > 0;
     if ((!text && !hasAttachments) || !contract) return;
+
+    // To'lov amalga oshirilmagan bo'lsa platformadan tashqi kontaktlar taqiqlanadi
+    if (contract.status !== "faol" && contract.status !== "yakunlangan") {
+      const check = checkCircumvention(text);
+      if (check.hasViolation) {
+        setCircumventionResult(check);
+        setCircumventionModalOpen(true);
+        reportCircumventionViolation({
+          senderId: contract.buyerId,
+          senderName: contract.buyerName,
+          targetType: "message",
+          targetId: contract.id,
+          targetTitle: `Shartnoma chati: ${contract.title}`,
+          matchedText: check.matchedText,
+          violationType: check.type,
+          fullContent: text,
+        });
+        return;
+      }
+    }
+
     setSending(true);
     try {
       const message = await messagesService.send(
@@ -426,80 +351,211 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <ContractStatusBadge status={contract.status} />
                 <Badge>{t(`contract.source_${contract.sourceType}`)}</Badge>
+                {contract.contractNumber && (
+                  <Badge tone="neutral" className="font-mono">
+                    {contract.contractNumber}
+                  </Badge>
+                )}
+                {contract.buyerAcceptedAt && (
+                  <Badge tone="success" className="font-semibold text-3xs gap-1">
+                    ✓ Elektron imzolangan
+                  </Badge>
+                )}
                 <span className="text-2xs text-faint">
                   {formatDate(contract.createdAt, lang)}
                 </span>
               </div>
             </div>
           </div>
-          <div className="text-left sm:text-right">
-            <p className="text-2xs font-medium uppercase tracking-wide text-faint">
-              {t("contract.total")}
-            </p>
-            <p className="mt-1 font-heading text-lg font-bold text-ink">
-              {formatMoney(contract.totalAmount, lang)}
-            </p>
+          <div className="flex flex-col sm:items-end gap-3 text-left sm:text-right">
+            <div>
+              <p className="text-2xs font-medium uppercase tracking-wide text-faint">
+                {t("contract.total")}
+              </p>
+              <p className="mt-1 font-heading text-lg font-bold text-ink">
+                {formatMoney(contract.totalAmount, lang)}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setInvoiceOpen(true)}
+                className="gap-1.5 font-medium"
+              >
+                📄 To&apos;lov hisobi (Invoice)
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setDocumentOpen(true)}
+                className="gap-1.5 font-medium"
+              >
+                📄 {t("contract.viewDocument")}
+              </Button>
+            </div>
           </div>
         </div>
 
+        {/* Shartnomani elektron imzolash banneri (agar buyurtmachi hali tasdiqlamagan bo'lsa va faol bo'lmasa) */}
+        {!contract.buyerAcceptedAt && contract.status !== "faol" && contract.status !== "yakunlangan" && (
+          <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-4 text-xs">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning text-white font-bold text-sm shadow-sm">
+                  ✍️
+                </span>
+                <div>
+                  <h3 className="font-heading text-sm font-bold text-ink">
+                    {t("contract.signPromptTitle")}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {t("contract.signPromptDesc")}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setDocumentOpen(true)}
+                className="shrink-0 font-bold shadow-sm"
+              >
+                ✍️ {t("contract.signAction")}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* ESCROW TO'LOV KAFOLATI BLOKI — Xaridor uchun xavfsizlik kafolati */}
         {contract.status === "faol" && (
-          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-sm shadow-sm">
+          <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-emerald-500">
+            <div className="flex items-start gap-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800 text-lg shadow-2xs">
                 🛡️
               </span>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-heading text-sm font-bold text-emerald-950 dark:text-emerald-300">
-                    XAVFSIZ ESCROW KAFOLATI FAOL
-                  </h3>
-                  <Badge tone="success" className="font-mono text-xs font-bold">
-                    Muzlatilgan: {formatMoney(contract.totalAmount, lang)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-heading text-sm sm:text-base font-black text-ink tracking-tight">
+                      XAVFSIZ ESCROW KAFOLATI FAOL
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-3xs font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      ✓ Himoyalangan
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-line shadow-2xs">
+                    <span className="text-3xs uppercase font-bold text-muted">Muzlatilgan:</span>
+                    <span className="font-mono text-xs sm:text-sm font-black text-ink">
+                      {formatMoney(contract.totalAmount, lang)}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-1 text-emerald-900/90 dark:text-emerald-200/90 leading-relaxed">
-                  Pulingiz Bobo-Doda xavfsiz kafolat hisobida muzlatilgan. Mutaxassis (<strong className="text-ink">{contract.sellerName}</strong>) ishni to&apos;liq bajarib, siz tekshirib tasdiqlamaguningizcha mablag&apos; unga o&apos;tkazilmaydi. Agar ish bajarilmasa yoki sifat talabiga javob bermasa, nizo ochib mablag&apos;ingizni to&apos;liq qaytarib olishingiz kafolatlanadi.
+                <p className="mt-2 text-xs sm:text-sm text-ink/90 leading-relaxed font-normal">
+                  Pulingiz Bobo-Doda xavfsiz kafolat hisobida muzlatilgan. Mutaxassis (<strong className="font-bold text-ink underline decoration-line decoration-2">{contract.sellerName}</strong>) ishni to&apos;liq bajarib, siz tekshirib tasdiqlamaguningizcha mablag&apos; unga o&apos;tkazilmaydi. Agar ish bajarilmasa yoki sifat talabiga javob bermasa, nizo ochib mablag&apos;ingizni to&apos;liq qaytarib olishingiz kafolatlanadi.
                 </p>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs text-muted border-t border-emerald-500/20 pt-1.5">
-                  <span>🔒 Kafolat kodi: <strong className="font-mono text-ink">{contract.escrowReference || `ESC-${contract.id.toUpperCase()}`}</strong></span>
-                  <span>💳 To&apos;lov usuli: <strong className="text-ink uppercase">{contract.paymentMethod || "Karta/Escrow"}</strong></span>
-                  {contract.fundedAt && <span>📅 Depozit sanasi: <strong className="text-ink">{formatDate(contract.fundedAt, lang)}</strong></span>}
+                <div className="mt-3.5 pt-3 border-t border-line flex flex-wrap items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                    <span>🔒</span>
+                    <span className="text-2xs font-semibold">Kafolat kodi:</span>
+                    <strong className="font-mono text-2xs font-bold text-ink">{contract.escrowReference || `ESC-${contract.id.toUpperCase()}`}</strong>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                    <span>💳</span>
+                    <span className="text-2xs font-semibold">To&apos;lov usuli:</span>
+                    <strong className="text-2xs font-bold text-ink uppercase">{contract.paymentMethod || "KARTA"}</strong>
+                  </div>
+                  {contract.fundedAt && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                      <span>📅</span>
+                      <span className="text-2xs font-semibold">Depozit sanasi:</span>
+                      <strong className="text-2xs font-bold text-ink">{formatDate(contract.fundedAt, lang)}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {contract.b2bPending && (
-          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-sm shadow-sm">
+        {/* Bank to'lovi holat bannerlari */}
+        {(contract.paymentStatus === "pending_verification" || contract.b2bPending) && (
+          <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-amber-500">
+            <div className="flex items-start gap-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800 text-lg shadow-2xs">
                 🏦
               </span>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
-                    BANK O&apos;TKAZMASI TEKSHIRILMOQDA
-                  </h3>
-                  <Badge tone="warning" className="font-mono text-xs font-bold">
-                    Kutilmoqda: {formatMoney(contract.totalAmount, lang)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-heading text-sm sm:text-base font-black text-ink tracking-tight">
+                      BANK TO&apos;LOVI TEKSHIRILMOQDA (PENDING VERIFICATION)
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-3xs font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      ⏳ Tekshiruvda
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-line shadow-2xs">
+                    <span className="text-3xs uppercase font-bold text-muted">Summa:</span>
+                    <span className="font-mono text-xs sm:text-sm font-black text-ink">
+                      {formatMoney(contract.totalAmount, lang)}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                <p className="mt-2 text-xs sm:text-sm text-ink/90 leading-relaxed font-normal">
                   Bank orqali to&apos;lov topshirig&apos;ingiz qabul qilindi. Operatorlarimiz Kapitalbank hisobimizga mablag&apos; tushishini tasdiqlashi bilan shartnoma faollashadi (odatda 15-60 daqiqa). Shundan so&apos;ng mutaxassis ishga kirishadi.
                 </p>
-                {contract.b2bReceiptName && (
-                  <p className="mt-1 text-2xs text-muted">
-                    Yuklangan to&apos;lov topshirig&apos;i: <span className="font-mono text-ink font-semibold">{contract.b2bReceiptName}</span>
-                  </p>
-                )}
+                <div className="mt-3.5 pt-3 border-t border-line flex flex-wrap items-center gap-2 text-xs">
+                  {contract.paymentReference && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                      <span>🏷️</span>
+                      <span className="text-2xs font-semibold">Kod:</span>
+                      <strong className="font-mono text-2xs font-bold text-ink">{contract.paymentReference}</strong>
+                    </div>
+                  )}
+                  {(contract.paymentReceiptName || contract.b2bReceiptName) && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                      <span>📎</span>
+                      <span className="text-2xs font-semibold">Yuklangan chek:</span>
+                      <strong className="font-mono text-2xs font-bold text-ink">{contract.paymentReceiptName || contract.b2bReceiptName}</strong>
+                    </div>
+                  )}
+                  <Button size="sm" variant="secondary" onClick={() => setFundOpen(true)} className="text-2xs h-7 ml-auto">
+                    Rekvizitlar va ma&apos;lumotlar
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {contract.status === "imzolangan" && !contract.b2bPending && (
+        {contract.paymentStatus === "payment_rejected" && (
+          <div className="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger text-white font-bold text-sm shadow-sm">
+                  ⚠️
+                </span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-heading text-sm font-bold text-danger">
+                      TO&apos;LOV RAD ETILDI (PAYMENT REJECTED)
+                    </h3>
+                    <Badge tone="danger" className="text-2xs font-bold">Rad etilgan</Badge>
+                  </div>
+                  <p className="mt-1 text-danger-deep leading-relaxed">
+                    Sabab: {contract.paymentRejectReason || "Mablag' bank hisobimizga kelib tushmadi yoki kvitansiya ma'lumotlari mos kelmadi."}
+                  </p>
+                  <p className="mt-1 text-muted text-2xs">
+                    Iltimos, to&apos;lovni qayta tekshirib, to&apos;g&apos;ri chek yoki kvitansiyani qayta yuklang.
+                  </p>
+                </div>
+              </div>
+              <Button onClick={() => setFundOpen(true)} className="shrink-0 font-bold bg-danger hover:bg-danger/90 text-white">
+                Qayta to&apos;lash / Chek yuklash
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {contract.status === "imzolangan" && !contract.b2bPending && contract.paymentStatus !== "pending_verification" && contract.paymentStatus !== "payment_rejected" && (
           <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="flex items-start gap-3">
@@ -508,15 +564,15 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                 </span>
                 <div>
                   <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
-                    SHARTNOMA KAFOLATLANMAGAN (TO&apos;LOV KUTILMOQDA)
+                    SHARTNOMA KAFOLATLANMAGAN (TO&apos;LOV KUTILMOQDA - AWAITING PAYMENT)
                   </h3>
                   <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
-                    Mutaxassis ishni boshlashi uchun to&apos;lovni Bobo-Doda kafolat hisobiga kiritishingiz kerak. Mablag&apos; siz ishni qabul qilguningizcha platformada xavfsiz saqlanadi.
+                    Mutaxassis ishni boshlashi uchun to&apos;lovni amalga oshiring: O&apos;zbekiston milliy kartalari (Uzcard / Humo) orqali bir zumda avtomatik to&apos;lashingiz yoki xorijdan rasmiy bank hisobimizga o&apos;tkazishingiz mumkin. Mablag&apos; Escrow xavfsizligida saqlanadi.
                   </p>
                 </div>
               </div>
               <Button onClick={() => setFundOpen(true)} className="shrink-0 font-bold">
-                💳 {t("cfund.pay")}
+                💳 Shartnomani to&apos;lash
               </Button>
             </div>
           </div>
@@ -913,18 +969,16 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                     </span>
                   </div>
                   {(() => {
-                    const limit = service?.revisionsIncluded;
+                    const limit = service?.revisionsIncluded ?? milestone.revisionsIncluded ?? contract.revisionsIncluded ?? 3;
                     const used = milestone.revisionCount ?? 0;
-                    const atLimit = limit !== undefined && used >= limit;
+                    const atLimit = used >= limit;
                     return (
                       <>
-                        {limit !== undefined && (
-                          <span className="text-2xs text-faint">
-                            {t("bms.revisionsUsed")
-                              .replace("{used}", String(used))
-                              .replace("{limit}", String(limit))}
-                          </span>
-                        )}
+                        <span className="text-2xs text-faint">
+                          {t("bms.revisionsUsed")
+                            .replace("{used}", String(used))
+                            .replace("{limit}", String(limit))}
+                        </span>
                         {actionable && (
                           <div className="flex flex-wrap gap-2">
                             <Button size="sm" onClick={() => setAcceptTarget(milestone)}>
@@ -946,9 +1000,18 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
                           </div>
                         )}
                         {atLimit && (
-                          <p className="text-2xs text-warning-deep">
-                            {t("bms.revisionLimitReached")}
-                          </p>
+                          <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs text-warning-deep space-y-1.5">
+                            <p className="font-bold flex items-center gap-1.5 text-ink">
+                              <span>⚠️</span>
+                              <span>{t("bms.revisionLimitReached")} ({limit} marta)</span>
+                            </p>
+                            <p className="text-2xs text-muted leading-relaxed">
+                              Mutaxassis ushbu bosqich bo&apos;yicha belgilangan bepul qayta ishlashlar limitini to&apos;liq bajardi. Ishni qabul qiling yoki jiddiy e&apos;tiroz bo&apos;lsa, dalillar bilan Nizo (Arbitraj) qo&apos;mitasiga murojaat qiling.
+                            </p>
+                            <div className="pt-1">
+                              <DisputeControl contractId={contract.id} onOpened={reload} />
+                            </div>
+                          </div>
                         )}
                       </>
                     );
@@ -1161,6 +1224,17 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
           </div>
         )}
 
+        {contract.status !== "faol" && contract.status !== "yakunlangan" && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-t border-line text-2xs text-muted">
+            <span>🛡️</span>
+            <span>
+              {lang === "ru"
+                ? "Безопасная сделка: обмен личными контактами до оплаты контракта ограничен."
+                : "Xavfsizlik kafolati: To'lov Escrow hisobiga kiritilgunga qadar shaxsiy kontaktlarni almashish taqiqlanadi."}
+            </span>
+          </div>
+        )}
+
         <form
           onSubmit={handleSendMessage}
           className="flex items-end gap-2 border-t border-line p-3"
@@ -1235,286 +1309,13 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
         onCancel={() => setApproveCloseOpen(false)}
       />
 
-      {/* Shartnomani faollashtirish (to'liq oldindan to'lov) — 2 bosqich */}
-      <Modal
+      {/* MVP Bank o'tkazmasi orqali to'lov modali */}
+      <BankTransferPaymentModal
         open={fundOpen}
         onClose={() => setFundOpen(false)}
-        title={
-          payPhase === "method"
-            ? t("cfund.title")
-            : payMethod === "b2b"
-              ? t("b2b.invoiceTitle")
-              : t("pay.confirmTitle")
-        }
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() =>
-                payPhase === "sms" ? setPayPhase("method") : setFundOpen(false)
-              }
-              disabled={busy}
-            >
-              {payPhase === "sms" ? t("common.back") : t("common.cancel")}
-            </Button>
-            {payPhase === "method" ? (
-              <Button onClick={handlePayNext}>{t("cfund.pay")}</Button>
-            ) : (
-              <Button loading={busy} onClick={handleFund}>
-                {payMethod === "b2b" ? "To'lov topshirig'ini yuborish" : t("common.confirm")}
-              </Button>
-            )}
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
-            <span className="text-xs text-muted">{t("cfund.total")}</span>
-            <span className="font-heading text-base font-bold text-ink">
-              {formatMoney(contract.totalAmount, lang)}
-            </span>
-          </div>
-
-          {payPhase === "method" ? (
-            <>
-              <div>
-                <p className="mb-2 text-xs font-medium text-muted">{t("pay.method")}</p>
-                <RadioGroup
-                  options={[
-                    ...(buyerBalance > 0
-                      ? [
-                          {
-                            value: "balans",
-                            label: "Bobo&Doda balansi",
-                            description: `Mavjud: ${formatMoney(buyerBalance, lang)}${
-                              buyerBalance < contract.totalAmount
-                                ? " (Yetarli emas)"
-                                : " (Yetarli)"
-                            }`,
-                          },
-                        ]
-                      : []),
-                    { value: "karta", label: t("pay.cardOption"), description: "Visa · Mastercard · Uzcard · Humo · 3D Secure" },
-                    { value: "click", label: "Click", description: t("pay.clickHint") },
-                    { value: "payme", label: "Payme", description: t("pay.paymeHint") },
-                    { value: "b2b", label: t("b2b.method"), description: t("b2b.methodDesc") },
-                  ]}
-                  value={payMethod}
-                  onChange={(value) => setPayMethod(value as "karta" | "click" | "payme" | "b2b" | "balans")}
-                />
-                {smsError && payPhase === "method" && payMethod === "balans" && (
-                  <p className="mt-2 text-2xs font-medium text-danger" role="alert">
-                    {smsError}
-                  </p>
-                )}
-              </div>
-              {payMethod === "karta" && (
-                <div>
-                  <p className="mb-2 text-xs font-medium text-muted">
-                    {t("pay.pickCard")}
-                  </p>
-                  <CardPicker
-                    cards={cards}
-                    value={payCardId}
-                    onChange={setPayCardId}
-                    onCardAdded={(card) => setCards((prev) => [card, ...prev])}
-                  />
-                  {smsError && payPhase === "method" && (
-                    <p className="mt-1.5 text-2xs font-medium text-danger" role="alert">
-                      {smsError}
-                    </p>
-                  )}
-                </div>
-              )}
-              <p className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
-                {t("cfund.modalDesc")}
-              </p>
-            </>
-          ) : (
-            <>
-              {payMethod === "b2b" ? (
-                <div className="flex flex-col gap-3 text-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-input border border-line bg-surface p-3">
-                    <div>
-                      <span className="text-2xs font-semibold uppercase tracking-wider text-muted">
-                        {t("b2b.invoiceTitle")}
-                      </span>
-                      <p className="font-mono font-bold text-ink text-sm mt-0.5">
-                        INV-{contract.id.toUpperCase()}-{new Date().getFullYear()}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={handleCopyB2bDetails}
-                        className="text-xs"
-                      >
-                        {b2bCopied ? t("b2b.copied") : t("b2b.copyDetails")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => window.print()}
-                        className="text-xs"
-                      >
-                        {t("b2b.downloadInvoice")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-input border border-line bg-card p-3">
-                    <div>
-                      <span className="text-2xs text-muted">{t("b2b.recipient")}:</span>
-                      <p className="font-semibold text-ink">&quot;BOBO DODA PLATFORM&quot; MChJ</p>
-                    </div>
-                    <div>
-                      <span className="text-2xs text-muted">{t("b2b.account")}:</span>
-                      <p className="font-mono font-semibold text-ink">2020 8000 7055 1234 5001</p>
-                    </div>
-                    <div>
-                      <span className="text-2xs text-muted">{t("b2b.bank")}:</span>
-                      <p className="font-medium text-ink">ATB &quot;Kapitalbank&quot; Toshkent sh. filiali</p>
-                    </div>
-                    <div>
-                      <span className="text-2xs text-muted">{t("b2b.mfo")} / {t("b2b.inn")}:</span>
-                      <p className="font-mono font-medium text-ink">MFO: 01088 · STIR: 309 876 543</p>
-                    </div>
-                    <div className="sm:col-span-2 pt-1 border-t border-line">
-                      <span className="text-2xs text-muted">{t("b2b.paymentPurpose")}:</span>
-                      <p className="font-medium text-ink">
-                        Shartnoma #{contract.id} bo&apos;yicha kafolatlangan to&apos;lov (Escrow). QQSsiz.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* To'lov topshirig'i (Kvitansiya) biriktirish */}
-                  <div className="rounded-input border border-line bg-card p-3 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-ink flex items-center gap-1.5">
-                        <span>📄</span> To&apos;lov topshirig&apos;i / Kvitansiya (ixtiyoriy, tavsiya etiladi)
-                      </label>
-                      {b2bUploading && <span className="text-2xs text-primary animate-pulse">Yuklanmoqda...</span>}
-                    </div>
-                    <p className="text-2xs text-muted">
-                      Bank ilovasi yoki filiali orqali to&apos;lov qilganingizdan so&apos;ng, to&apos;lov topshirig&apos;i nusxasini (.PDF yoki rasm) yuklang. Bu admin tekshiruvini sezilarli darajada tezlashtiradi.
-                    </p>
-                    {b2bFile ? (
-                      <div className="flex items-center justify-between gap-2 rounded-md border border-line bg-surface px-3 py-2 text-xs">
-                        <div className="flex items-center gap-2 truncate">
-                          <span>📎</span>
-                          <span className="font-medium truncate max-w-[220px]">{b2bFile.name}</span>
-                          <span className="text-2xs text-muted">({formatFileSize(b2bFile.size)})</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setB2bFile(null)}
-                          className="text-muted hover:text-danger text-xs font-semibold"
-                        >
-                          O&apos;chirish
-                        </button>
-                      </div>
-                    ) : (
-                      <div>
-                        <input
-                          type="file"
-                          id="b2b-receipt-file"
-                          accept=".pdf,image/*"
-                          className="hidden"
-                          onChange={handleB2bFileUpload}
-                          disabled={b2bUploading}
-                        />
-                        <label
-                          htmlFor="b2b-receipt-file"
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-btn border border-line bg-surface hover:bg-surface-hover px-3 py-1.5 text-xs font-medium text-ink transition-colors"
-                        >
-                          <span>📤</span> Kvitansiya faylini tanlash (.PDF, .JPG, .PNG)
-                        </label>
-                        {b2bFileError && (
-                          <p className="text-2xs text-danger mt-1">{b2bFileError}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
-                    {t("b2b.awaitingNotice")}
-                  </div>
-                </div>
-              ) : payMethod === "balans" ? (
-                <div className="flex flex-col gap-3 rounded-input border border-primary/20 bg-primary/5 p-4 text-xs">
-                  <div className="flex items-center gap-2 text-primary">
-                    <span className="text-xl">💰</span>
-                    <p className="text-sm font-semibold">Bobo&Doda hisobingizdan to&apos;lash</p>
-                  </div>
-                  <div className="space-y-1.5 text-ink">
-                    <div className="flex justify-between">
-                      <span className="text-muted">Mavjud balans:</span>
-                      <span className="font-medium">{formatMoney(buyerBalance, lang)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted">Shartnoma to&apos;lovi:</span>
-                      <span className="font-semibold text-danger">-{formatMoney(contract.totalAmount, lang)}</span>
-                    </div>
-                    <div className="flex justify-between border-t border-line pt-1 font-bold">
-                      <span className="text-muted">To&apos;lovdan keyin qoladigan:</span>
-                      <span className="text-success">{formatMoney(Math.max(0, buyerBalance - contract.totalAmount), lang)}</span>
-                    </div>
-                  </div>
-                  <p className="text-2xs text-muted">
-                    Mablag&apos; shartnoma uchun xavfsiz Escrow depozitiga o&apos;tkaziladi va mutaxassis ishni to&apos;liq topshirib, siz tasdiqlamaguningizcha platformada kafolatlangan holda saqlanadi.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-muted">
-                    {payMethod === "karta"
-                      ? t("pay.smsHint")
-                      : t("pay.redirectNote").replace(
-                          "{app}",
-                          payMethod === "click" ? "Click" : "Payme"
-                        )}
-                  </p>
-                  {payMethod === "karta" ? (
-                    <Input
-                      value={smsCode}
-                      onChange={(e) => {
-                        setSmsCode(e.target.value.replace(/\D/g, "").slice(0, 6));
-                        setSmsError("");
-                      }}
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      placeholder="••••••"
-                      aria-label={t("pay.confirmTitle")}
-                      error={smsError}
-                      className="text-center text-lg tracking-[0.5em]"
-                      autoFocus
-                    />
-                  ) : (
-                    <div className="flex items-center gap-3 rounded-input border border-primary/25 bg-primary/5 p-4">
-                      {/* Brend nomi yonida turibdi — bu belgi faqat bezak,
-                          shuning uchun skrinriderdan yashiriladi (ilgari mazmunsiz
-                          "CL"/"PM" tokeni o'qilardi). */}
-                      <span
-                        aria-hidden="true"
-                        className="flex h-9 w-9 items-center justify-center rounded-btn bg-primary/10 font-heading text-sm font-bold text-primary-deep"
-                      >
-                        {(payMethod === "click" ? "Click" : "Payme").charAt(0)}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-ink">
-                          {payMethod === "click" ? "Click" : "Payme"}
-                        </p>
-                        <p className="text-2xs text-muted">{t("pay.secureRedirect")}</p>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </Modal>
+        contract={contract}
+        onSuccess={reload}
+      />
 
       {/* Qabul qilish modali */}
       <Modal
@@ -1604,6 +1405,32 @@ Summa: ${contract.totalAmount.toLocaleString("ru-RU")} so'm`;
         contractId={contract?.id}
         buyerName={contract?.buyerName}
         sellerName={contract?.sellerName}
+      />
+
+      {/* Rasmiy elektron shartnoma hujjati modali */}
+      <ContractDocumentModal
+        open={documentOpen}
+        onClose={() => setDocumentOpen(false)}
+        contract={contract}
+        milestones={milestones}
+        currentUserId={myId}
+        onSign={handleSignContract}
+        signing={signingContract}
+      />
+
+      {/* Rasmiy B2B hisob-faktura (Invoice) modali */}
+      <B2BInvoiceModal
+        open={invoiceOpen}
+        onClose={() => setInvoiceOpen(false)}
+        contract={contract}
+        milestones={milestones}
+      />
+
+      {/* Platformadan tashqariga chaqirishni ogohlantirish modali */}
+      <AntiCircumventionModal
+        open={circumventionModalOpen}
+        onClose={() => setCircumventionModalOpen(false)}
+        result={circumventionResult}
       />
     </div>
   );

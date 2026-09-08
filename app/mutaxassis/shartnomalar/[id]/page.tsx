@@ -23,6 +23,9 @@ import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
+import { ContractDocumentModal } from "@/components/shared/ContractDocumentModal";
+import { AntiCircumventionModal } from "@/components/shared/AntiCircumventionModal";
+import { checkCircumvention, reportCircumventionViolation, type CircumventionCheckResult } from "@/lib/chat-filter";
 import { authService, contractsService, filesService, messagesService, milestonesService, reviewsService, servicesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENTS } from "@/lib/attachments";
@@ -61,6 +64,12 @@ export default function ShartnomaWorkroomPage() {
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [closeNote, setCloseNote] = useState("");
   const [closingContract, setClosingContract] = useState(false);
+
+  /* Rasmiy shartnoma hujjati va imzolash */
+  const [documentOpen, setDocumentOpen] = useState(false);
+  const [signingContract, setSigningContract] = useState(false);
+  const [circumventionResult, setCircumventionResult] = useState<CircumventionCheckResult | null>(null);
+  const [circumventionModalOpen, setCircumventionModalOpen] = useState(false);
 
   /* Chat */
   const [draft, setDraft] = useState("");
@@ -254,6 +263,21 @@ export default function ShartnomaWorkroomPage() {
     }
   }
 
+  async function handleSignContract() {
+    if (!contract) return;
+    setSigningContract(true);
+    try {
+      const updated = await contractsService.sign(contract.id);
+      setContract(updated);
+      toast(t("contract.signedSuccess"));
+      reload();
+    } catch {
+      toast(t("common.error"), "error");
+    } finally {
+      setSigningContract(false);
+    }
+  }
+
   async function handleCancel() {
     if (!contract) return;
     setCancelling(true);
@@ -274,6 +298,27 @@ export default function ShartnomaWorkroomPage() {
     const text = draft.trim();
     const hasAttachments = draftImages.length > 0 || draftFiles.length > 0;
     if ((!text && !hasAttachments) || !contract) return;
+
+    // To'lov amalga oshirilmagan bo'lsa platformadan tashqi kontaktlar taqiqlanadi
+    if (contract.status !== "faol" && contract.status !== "yakunlangan") {
+      const check = checkCircumvention(text);
+      if (check.hasViolation) {
+        setCircumventionResult(check);
+        setCircumventionModalOpen(true);
+        reportCircumventionViolation({
+          senderId: contract.sellerId,
+          senderName: contract.sellerName,
+          targetType: "message",
+          targetId: contract.id,
+          targetTitle: `Shartnoma chati: ${contract.title}`,
+          matchedText: check.matchedText,
+          violationType: check.type,
+          fullContent: text,
+        });
+        return;
+      }
+    }
+
     setSending(true);
     try {
       const message = await messagesService.send(
@@ -344,6 +389,16 @@ export default function ShartnomaWorkroomPage() {
                 <Badge>
                   {t(`contract.source_${contract.sourceType}`)}
                 </Badge>
+                {contract.contractNumber && (
+                  <Badge tone="neutral" className="font-mono">
+                    {contract.contractNumber}
+                  </Badge>
+                )}
+                {contract.sellerAcceptedAt && (
+                  <Badge tone="success" className="font-semibold text-3xs gap-1">
+                    ✓ Elektron imzolangan
+                  </Badge>
+                )}
                 <span className="text-2xs text-faint">
                   {formatDate(contract.createdAt, lang)}
                 </span>
@@ -359,82 +414,178 @@ export default function ShartnomaWorkroomPage() {
                 {formatMoney(contract.totalAmount, lang)}
               </p>
             </div>
-            {contract.status === "faol" && !contract.closeRequested && (
+            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
               <Button
                 variant="secondary"
-                onClick={() => setCloseModalOpen(true)}
-                className="shadow-sm font-bold border-primary/40 text-primary hover:bg-primary/10 w-full sm:w-auto min-h-[44px] sm:min-h-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                aria-label="Shartnomani yakunlash va ishni yopish so'rovi"
+                size="sm"
+                onClick={() => setDocumentOpen(true)}
+                className="gap-1.5 font-medium"
               >
-                🏁 {t("contract.closeAction")}
+                📄 {t("contract.viewDocument")}
               </Button>
-            )}
-            {contract.status === "faol" && contract.closeRequested && (
-              <Badge tone="warning" className="py-1 px-2.5 text-xs font-semibold">
-                ⏳ {t("contract.closeRequested")}
-              </Badge>
-            )}
+              {contract.status === "faol" && !contract.closeRequested && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setCloseModalOpen(true)}
+                  className="shadow-sm font-bold border-primary/40 text-primary hover:bg-primary/10 min-h-[38px] sm:min-h-0 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  aria-label="Shartnomani yakunlash va ishni yopish so'rovi"
+                >
+                  🏁 {t("contract.closeAction")}
+                </Button>
+              )}
+              {contract.status === "faol" && contract.closeRequested && (
+                <Badge tone="warning" className="py-1 px-2.5 text-xs font-semibold">
+                  ⏳ {t("contract.closeRequested")}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* Shartnomani elektron imzolash banneri (agar mutaxassis hali imzolamagan bo'lsa va faol bo'lmasa) */}
+        {!contract.sellerAcceptedAt && contract.status !== "faol" && contract.status !== "yakunlangan" && contract.status !== "bekor_qilingan" && (
+          <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-4 text-xs">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning text-white font-bold text-sm shadow-sm">
+                  ✍️
+                </span>
+                <div>
+                  <h3 className="font-heading text-sm font-bold text-ink">
+                    {t("contract.signPromptTitle")}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {t("contract.signPromptDesc")}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setDocumentOpen(true)}
+                className="shrink-0 font-bold shadow-sm"
+              >
+                ✍️ {t("contract.signAction")}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* ESCROW TO'LOV KAFOLATI BLOKI — Mutaxassis uchun shaffof ko'rinish */}
         {contract.status === "faol" && (
-          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-sm shadow-sm">
+          <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-emerald-500">
+            <div className="flex items-start gap-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800 text-lg shadow-2xs">
                 🛡️
               </span>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-heading text-sm font-bold text-emerald-950 dark:text-emerald-300">
-                    TO&apos;LOV KAFOLATLANGAN (BOBO-DODA ESCROW)
-                  </h3>
-                  <Badge tone="success" className="font-mono text-xs font-bold">
-                    Muzlatilgan: {formatMoney(contract.totalAmount, lang)}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <h3 className="font-heading text-xs sm:text-base font-black text-ink tracking-tight break-words">
+                      TO&apos;LOV KAFOLATLANGAN (BOBO-DODA ESCROW)
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-3xs font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                      ✓ Muzlatilgan
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-line shadow-2xs">
+                    <span className="text-3xs uppercase font-bold text-muted">Kafolatlangan:</span>
+                    <span className="font-mono text-xs sm:text-sm font-black text-ink">
+                      {formatMoney(contract.totalAmount, lang)}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-1 text-emerald-900/90 dark:text-emerald-200/90 leading-relaxed">
-                  Xaridor (<strong className="text-ink">{contract.buyerName}</strong>) ushbu ish uchun mablag&apos;ni Bobo-Doda kafolat hisob raqamiga to&apos;liq o&apos;tkazgan va summa xavfsiz muzlatilgan. Ishni bexavotir va xotirjam topshirishingiz mumkin. Ish tasdiqlangach, mablag&apos; avtomatik balansingizga o&apos;tadi.
+                <p className="mt-2 text-xs sm:text-sm text-ink/90 leading-relaxed font-normal">
+                  Xaridor (<strong className="font-bold text-ink underline decoration-line decoration-2">{contract.buyerName}</strong>) ushbu ish uchun mablag&apos;ni Bobo-Doda kafolat hisob raqamiga to&apos;liq o&apos;tkazgan va summa xavfsiz muzlatilgan. Ishni bexavotir va xotirjam topshirishingiz mumkin. Ish tasdiqlangach, mablag&apos; avtomatik balansingizga o&apos;tadi.
                 </p>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs text-muted border-t border-emerald-500/20 pt-1.5">
-                  <span>🔒 Kafolat kodi: <strong className="font-mono text-ink">{contract.escrowReference || `ESC-${contract.id.toUpperCase()}`}</strong></span>
-                  <span>💳 To&apos;lov usuli: <strong className="text-ink uppercase">{contract.paymentMethod || "Karta/Escrow"}</strong></span>
-                  {contract.fundedAt && <span>📅 Depozit vaqti: <strong className="text-ink">{formatDate(contract.fundedAt, lang)}</strong></span>}
+                <div className="mt-3.5 pt-3 border-t border-line flex flex-wrap items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                    <span>🔒</span>
+                    <span className="text-2xs font-semibold">Kafolat kodi:</span>
+                    <strong className="font-mono text-2xs font-bold text-ink">{contract.escrowReference || `ESC-${contract.id.toUpperCase()}`}</strong>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                    <span>💳</span>
+                    <span className="text-2xs font-semibold">To&apos;lov usuli:</span>
+                    <strong className="text-2xs font-bold text-ink uppercase">{contract.paymentMethod || "KARTA"}</strong>
+                  </div>
+                  {contract.fundedAt && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                      <span>📅</span>
+                      <span className="text-2xs font-semibold">Depozit vaqti:</span>
+                      <strong className="text-2xs font-bold text-ink">{formatDate(contract.fundedAt, lang)}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {contract.b2bPending && (
-          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-sm shadow-sm">
+        {/* Bank to'lovi holati (Mutaxassis uchun) */}
+        {(contract.paymentStatus === "pending_verification" || contract.b2bPending) && (
+          <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-amber-500">
+            <div className="flex items-start gap-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800 text-lg shadow-2xs">
                 🏦
               </span>
               <div className="flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
-                    XARIDORNING BANK O&apos;TKAZMASI TEKSHIRILMOQDA
-                  </h3>
-                  <Badge tone="warning" className="font-mono text-xs font-bold">
-                    Kutilmoqda: {formatMoney(contract.totalAmount, lang)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-heading text-sm sm:text-base font-black text-ink tracking-tight">
+                      XARIDORNING BANK TO&apos;LOVI TEKSHIRILMOQDA (PENDING VERIFICATION)
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-3xs font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      ⏳ Tekshiruvda
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface border border-line shadow-2xs">
+                    <span className="text-3xs uppercase font-bold text-muted">Kutilmoqda:</span>
+                    <span className="font-mono text-xs sm:text-sm font-black text-ink">
+                      {formatMoney(contract.totalAmount, lang)}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
-                  Xaridor (<strong className="text-ink">{contract.buyerName}</strong>) bank o&apos;tkazmasi orqali to&apos;lov topshirig&apos;ini yuborgan. Operatorlarimiz Kapitalbank hisob raqamimizga mablag&apos; tushishini tekshirmoqda (odatda 15-60 daqiqa). Pul hisobga kelib tushishi bilan shartnoma faollashadi va sizga darhol xabarnoma yuboriladi.
+                <p className="mt-2 text-xs sm:text-sm text-ink/90 leading-relaxed font-normal">
+                  Xaridor (<strong className="font-bold text-ink underline decoration-line decoration-2">{contract.buyerName}</strong>) bank o&apos;tkazmasi orqali to&apos;lov topshirig&apos;ini yuborgan. Operatorlarimiz bank hisob raqamimizga mablag&apos; tushishini tekshirmoqda (odatda 15-60 daqiqa). Pul hisobga kelib tushib, tasdiqlangach shartnoma faollashadi va sizga darhol xabarnoma yuboriladi.
                 </p>
-                {contract.b2bReceiptName && (
-                  <p className="mt-1 text-2xs text-muted">
-                    Yuklangan kvitansiya: <span className="font-mono text-ink">{contract.b2bReceiptName}</span>
-                  </p>
+                {(contract.paymentReceiptName || contract.b2bReceiptName) && (
+                  <div className="mt-3.5 pt-3 border-t border-line flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-line text-muted">
+                      <span>📎</span>
+                      <span className="text-2xs font-semibold">Yuklangan kvitansiya:</span>
+                      <strong className="font-mono text-2xs font-bold text-ink">{contract.paymentReceiptName || contract.b2bReceiptName}</strong>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {contract.status === "imzolangan" && !contract.b2bPending && (
+        {contract.paymentStatus === "payment_rejected" && (
+          <div className="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-4 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger text-white font-bold text-sm shadow-sm">
+                ⚠️
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-heading text-sm font-bold text-danger">
+                    XARIDORNING TO&apos;LOVI RAD ETILDI (PAYMENT REJECTED)
+                  </h3>
+                  <Badge tone="danger" className="text-xs font-bold">
+                    Rad etildi
+                  </Badge>
+                </div>
+                <p className="mt-1 text-danger-deep leading-relaxed">
+                  Xaridor yuborgan to&apos;lov bank hisobiga tushmagan yoki rad etilgan. Xaridorga qayta to&apos;lash so&apos;rovi yuborilgan. To&apos;lov tasdiqlanmaguncha ishni boshlamang.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {contract.status === "imzolangan" && !contract.b2bPending && contract.paymentStatus !== "pending_verification" && contract.paymentStatus !== "payment_rejected" && (
           <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-sm shadow-sm">
@@ -443,14 +594,14 @@ export default function ShartnomaWorkroomPage() {
               <div className="flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-heading text-sm font-bold text-amber-950 dark:text-amber-300">
-                    DIQQAT: XARIDOR HALI TO&apos;LOVNI AMALGA OSHIRMAGAN
+                    DIQQAT: XARIDOR HALI TO&apos;LOVNI AMALGA OSHIRMAGAN (AWAITING PAYMENT)
                   </h3>
                   <Badge tone="warning" className="text-xs font-bold">
                     To&apos;lov kutilmoqda
                   </Badge>
                 </div>
                 <p className="mt-1 text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
-                  Ushbu shartnoma tomonlar o&apos;rtasida tuzilgan, ammo xaridor hali Bobo-Doda kafolat hisobiga to&apos;lovni o&apos;tkazmagan. Qoidalarimizga ko&apos;ra, to&apos;lov platforma kafolat hisobida muzlatilmaguncha ishni topshirmang va ehtiyot bo&apos;ling. Xaridor to&apos;lovni amalga oshirgach, sizga bildirishnoma yuboriladi.
+                  Ushbu shartnoma tomonlar o&apos;rtasida tuzilgan, ammo xaridor hali Bobo-Doda bank kafolat hisobiga to&apos;lovni o&apos;tkazmagan. Qoidalarimizga ko&apos;ra, to&apos;lov platforma kafolat hisobida muzlatilmaguncha ishni topshirmang va ehtiyot bo&apos;ling. Xaridor to&apos;lovni amalga oshirgach, sizga bildirishnoma yuboriladi.
                 </p>
               </div>
             </div>
@@ -792,6 +943,17 @@ export default function ShartnomaWorkroomPage() {
           </div>
         )}
 
+        {contract.status !== "faol" && contract.status !== "yakunlangan" && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-t border-line text-2xs text-muted">
+            <span>🛡️</span>
+            <span>
+              {lang === "ru"
+                ? "Безопасная сделка: передача контактов до оплаты контракта запрещена правилами платформы."
+                : "Xavfsizlik kafolati: To'lov Escrow hisobiga kiritilgunga qadar shaxsiy kontaktlarni almashish taqiqlanadi."}
+            </span>
+          </div>
+        )}
+
         <form
           onSubmit={handleSendMessage}
           className="flex items-end gap-2 border-t border-line p-3"
@@ -1080,6 +1242,24 @@ export default function ShartnomaWorkroomPage() {
         contractId={contract?.id}
         buyerName={contract?.buyerName}
         sellerName={contract?.sellerName}
+      />
+
+      {/* Rasmiy elektron shartnoma hujjati modali */}
+      <ContractDocumentModal
+        open={documentOpen}
+        onClose={() => setDocumentOpen(false)}
+        contract={contract}
+        milestones={milestones}
+        currentUserId={myId}
+        onSign={handleSignContract}
+        signing={signingContract}
+      />
+
+      {/* Platformadan tashqariga chaqirishni ogohlantirish modali */}
+      <AntiCircumventionModal
+        open={circumventionModalOpen}
+        onClose={() => setCircumventionModalOpen(false)}
+        result={circumventionResult}
       />
     </div>
   );

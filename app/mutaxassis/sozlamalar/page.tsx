@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { FileUpload } from "@/components/ui/FileUpload";
 import { Input } from "@/components/ui/Input";
+import { LocationPicker } from "@/components/ui/LocationPicker";
 import { Modal } from "@/components/ui/Modal";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { Select } from "@/components/ui/Select";
@@ -594,11 +595,13 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                     onChange={(e) => setFullName(e.target.value)}
                     error={errors.fullName}
                   />
-                  <Input
+                  <LocationPicker
                     label={t("onboard.location")}
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder={t("onboard.locationPh")}
+                    onChange={(val) => {
+                      setLocation(val);
+                      if (errors.location) setErrors((prev) => ({ ...prev, location: undefined }));
+                    }}
                     error={errors.location}
                   />
                 </div>

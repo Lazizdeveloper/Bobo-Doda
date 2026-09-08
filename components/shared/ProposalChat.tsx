@@ -12,6 +12,8 @@ import { authService, messagesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import type { Message } from "@/lib/types";
 import { formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
+import { checkCircumvention, reportCircumventionViolation, type CircumventionCheckResult } from "@/lib/chat-filter";
+import { AntiCircumventionModal } from "@/components/shared/AntiCircumventionModal";
 
 export interface ProposalChatProps {
   /** Taklif (Proposal) id'si — suhbat shu id bo'yicha saqlanadi */
@@ -38,6 +40,8 @@ export function ProposalChat({
   const [draftImage, setDraftImage] = useState<string | undefined>(undefined);
   const [sending, setSending] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [circumventionResult, setCircumventionResult] = useState<CircumventionCheckResult | null>(null);
+  const [circumventionModalOpen, setCircumventionModalOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const myId = authService.getSession()?.userId ?? null;
@@ -90,6 +94,25 @@ export function ProposalChat({
     e.preventDefault();
     const text = draft.trim();
     if (!text && !draftImage) return;
+
+    // Platformadan tashqarida kelishish (circumvention) tekshiruvi
+    const check = checkCircumvention(text);
+    if (check.hasViolation) {
+      setCircumventionResult(check);
+      setCircumventionModalOpen(true);
+      const current = authService.getSession();
+      reportCircumventionViolation({
+        senderId: current?.userId,
+        targetType: "proposal",
+        targetId: proposalId,
+        targetTitle: `Taklif chati (#${proposalId})`,
+        matchedText: check.matchedText,
+        violationType: check.type,
+        fullContent: text,
+      });
+      return;
+    }
+
     setSending(true);
     try {
       const message = await messagesService.send(proposalId, text, draftImage);
@@ -106,12 +129,23 @@ export function ProposalChat({
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
 
   return (
-    <Card padding="none" className="flex flex-col">
+    <>
+      <Card padding="none" className="flex flex-col">
       <div className="border-b border-line px-4 py-3">
         <h2 className="font-heading text-sm font-bold text-ink">
           {t("pchat.title")}
         </h2>
         <p className="mt-0.5 text-2xs text-faint">{t("pchat.hint")}</p>
+      </div>
+
+      {/* Escrow Anti-circumvention ogohlantirish paneli */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-line text-2xs text-muted">
+        <span>🛡️</span>
+        <span className="leading-tight">
+          {lang === "ru"
+            ? "Безопасная сделка: передача контактов (телефон, Telegram) до оплаты контракта запрещена."
+            : "Xavfsizlik kafolati: To'lov Escrow hisobiga o'tkazilgunga qadar telefon va Telegram almashish taqiqlanadi."}
+        </span>
       </div>
 
       <div className="flex max-h-96 min-h-40 flex-1 flex-col gap-3 overflow-y-auto p-4">
@@ -192,5 +226,12 @@ export function ProposalChat({
         </p>
       )}
     </Card>
+
+      <AntiCircumventionModal
+        open={circumventionModalOpen}
+        onClose={() => setCircumventionModalOpen(false)}
+        result={circumventionResult}
+      />
+    </>
   );
 }

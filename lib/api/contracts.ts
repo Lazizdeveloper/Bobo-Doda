@@ -52,7 +52,7 @@ export interface AuthService {
     phone: string;
     code: string;
     newPassword: string;
-    method?: "telegram" | "google";
+    method?: "sms" | "telegram" | "google";
   }): Promise<void>;
   /**
    * Access token'ni yangilaydi (`POST /auth/refresh`).
@@ -195,6 +195,7 @@ export interface ContractsService {
   cancel(id: string): Promise<Model.Contract>;
   requestClose(id: string, note?: string): Promise<Model.Contract>;
   approveClose(id: string): Promise<Model.Contract>;
+  sign(id: string): Promise<Model.Contract>;
 }
 
 export interface MilestonesService {
@@ -229,12 +230,19 @@ export interface PaymentsService {
   fundContract(
     id: string,
     input?: {
-      method: Model.PaymentMethod;
+      method?: Model.PaymentMethod;
       cardId?: string;
       receiptUrl?: string;
       receiptName?: string;
+      receiptSize?: number;
+      notes?: string;
     }
   ): Promise<Model.Contract>;
+  fundMilestone(
+    contractId: string,
+    milestoneId: string,
+    method?: Model.PaymentMethod
+  ): Promise<{ contract: Model.Contract; milestone: Model.Milestone }>;
   getBalance(): Promise<number>;
   getCards(): Promise<Model.PaymentCard[]>;
   addCard(input: {

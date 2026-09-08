@@ -575,6 +575,12 @@ export const en: Record<string, string> = {
   "contract.cancelTitle": "Cancel contract?",
   "contract.cancelDesc": "Accepted milestones stay paid, escrow funds return to the client. This action can't be undone.",
   "contract.cancelled": "Contract cancelled",
+  "contract.viewDocument": "Official contract (PDF)",
+  "contract.signAction": "Sign contract",
+  "contract.signPromptTitle": "Awaiting contract agreement signature",
+  "contract.signPromptDesc": "Before starting work, review the official two-party contract terms and sign with digital signature. This protects both parties.",
+  "contract.signedSuccess": "Contract successfully signed!",
+  "ntf.contractSigned": "Official contract signed by {role}: {title}",
 
   /* Milestones */
   "ms.kutilmoqda": "Pending",
@@ -846,13 +852,13 @@ export const en: Record<string, string> = {
 
   /* File upload */
   "upload.cta": "Upload image",
-  "upload.hint": "PNG or JPG, up to 2 MB",
+  "upload.hint": "PNG, JPG, PDF or ZIP, up to 15 MB",
   "upload.remove": "Remove",
   "upload.limit": "Image limit reached",
-  "upload.tooLarge": "File is too large — 2 MB maximum",
+  "upload.tooLarge": "File is too large — 15 MB maximum",
   "upload.tooMany": "Up to 5 files per message",
   "upload.fileRejected": "This file type is not supported",
-  "upload.rejected": "Some files were rejected: only PNG/JPG/WebP, up to 2 MB",
+  "upload.rejected": "Some files were rejected: supported formats, up to 15 MB",
 
   /* ============ CLIENT side ============ */
 
@@ -1594,4 +1600,19 @@ export const en: Record<string, string> = {
   "contract.approveClose": "Accept Work and Close Contract",
   "contract.closed": "Contract successfully closed",
   "ntf.closeRequested": "Specialist requested to close contract \"{title}\"",
+
+  "feedback.widgetButton": "Found an issue on this page?",
+  "feedback.title": "What issue did you notice?",
+  "feedback.description": "Tell us about this page. We automatically know which page you are on.",
+  "feedback.issue": "Issue",
+  "feedback.suggestion": "Suggestion",
+  "feedback.issuePlaceholder": "For example: files not attaching or filters not working in search...",
+  "feedback.suggestionPlaceholder": "For example: it would be great to add full-size portfolio preview or Telegram notifications...",
+  "feedback.page": "Page",
+  "feedback.sentToAdmin": "Will be delivered to admin panel",
+  "feedback.submit": "Submit",
+  "feedback.submitting": "Submitting...",
+  "feedback.success": "Thank you! Your feedback has been received and forwarded to administration.",
+  "feedback.error": "An error occurred. Please try again.",
 };
+

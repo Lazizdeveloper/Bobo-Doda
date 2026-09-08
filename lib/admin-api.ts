@@ -31,6 +31,7 @@ import { formatAmount } from "@/lib/format";
 import { PLATFORM_SETTINGS_KEY } from "@/lib/platform-settings";
 import type {
   AdminAccount,
+  AdminRole,
   AdminPermission,
   AdminSession,
   AuditEvent,
@@ -343,6 +344,57 @@ export function addAdmin(
   addAudit("Yangi admin yaratildi", account.email, `Lavozim: ${account.title}`);
   return account;
 }
+
+export function updateAdminAccount(
+  id: string,
+  input: {
+    fullName?: string;
+    title?: string;
+    permissions?: AdminPermission[];
+    role?: AdminRole;
+    active?: boolean;
+  }
+) {
+  const current = requireSuperAdmin();
+  const list = accounts();
+  const target = list.find((item) => item.id === id);
+  if (!target) throw new Error("NOT_FOUND");
+  if (target.id === current.id && input.active === false) {
+    throw new Error("SELF_LOCK");
+  }
+
+  const allowed = input.permissions
+    ? Array.from(
+        new Set([
+          "dashboard" as const,
+          ...input.permissions.filter(
+            (p) => p !== "admins" || (input.role || target.role) === "super_admin"
+          ),
+        ])
+      )
+    : target.permissions;
+
+  const next = list.map((item) => {
+    if (item.id !== id) return item;
+    return {
+      ...item,
+      fullName: input.fullName !== undefined ? input.fullName.trim().slice(0, 100) : item.fullName,
+      title: input.title !== undefined ? input.title.trim().slice(0, 100) : item.title,
+      role: input.role !== undefined ? input.role : item.role,
+      permissions: allowed,
+      active: input.active !== undefined ? input.active : item.active,
+    };
+  });
+
+  write(ADMINS, next);
+  addAudit(
+    "Admin hisobi tahrirlandi",
+    target.email,
+    `${target.fullName} (${target.email}) ma'lumotlari va huquqlari yangilandi`
+  );
+  return next;
+}
+
 
 function requireSuperAdmin() {
   const current = getCurrentAdmin();
@@ -932,6 +984,7 @@ export function approveWithdrawal(requestId: string) {
   withdrawals[reqIndex] = {
     ...req,
     status: "tasdiqlangan",
+    payoutStatus: "paid",
     processedAt: new Date().toISOString(),
     processedBy: actor.fullName,
   };
@@ -989,6 +1042,7 @@ export function rejectWithdrawal(requestId: string, reason: string) {
   withdrawals[reqIndex] = {
     ...req,
     status: "rad_etilgan",
+    payoutStatus: "payout_failed",
     processedAt: new Date().toISOString(),
     processedBy: actor.fullName,
     rejectionReason: reason.trim(),
@@ -1025,6 +1079,7 @@ export function reviewWithdrawal(requestId: string) {
   withdrawals[reqIndex] = {
     ...withdrawals[reqIndex],
     status: "korib_chiqilmoqda",
+    payoutStatus: "payout_processing",
   };
   write("sb2_withdrawal_requests", withdrawals);
 
@@ -1039,7 +1094,9 @@ export function approveB2bPayment(contractId: string) {
   const idx = contracts.findIndex((c) => c.id === contractId);
   if (idx === -1) throw new Error("NOT_FOUND");
   const contract = contracts[idx];
-  if (!contract.b2bPending) throw new Error("NOT_PENDING");
+  if (!contract.b2bPending && contract.paymentStatus !== "pending_verification") {
+    throw new Error("NOT_PENDING");
+  }
 
   const milestones = read<Milestone[]>("sb2_milestones", seedMilestones);
   const updatedMilestones = milestones.map((m) =>
@@ -1053,8 +1110,11 @@ export function approveB2bPayment(contractId: string) {
     ...contract,
     status: "faol",
     b2bPending: false,
+    paymentStatus: "payment_confirmed",
+    paymentVerifiedAt: new Date().toISOString(),
+    paymentVerifiedBy: actor.fullName,
     fundedAt: new Date().toISOString(),
-    escrowReference: `ESC-B2B-${contract.id.toUpperCase()}`,
+    escrowReference: `ESC-BANK-${contract.id.toUpperCase()}`,
     paymentMethod: "b2b",
   };
   write("sb2_contracts", contracts);
@@ -1068,7 +1128,7 @@ export function approveB2bPayment(contractId: string) {
     amount: contract.totalAmount,
     currency: "UZS",
     referenceId: contract.id,
-    description: `Shartnoma #${contract.id} uchun B2B bank to'lovi tasdiqlandi (Kapitalbank)`,
+    description: `Shartnoma #${contract.id} (${contract.paymentReference || "BD-PAY"}) uchun bank to'lovi tasdiqlandi (Kapitalbank)`,
     status: "muvaffaqiyatli",
     createdAt: new Date().toISOString(),
   };
@@ -1090,9 +1150,9 @@ export function approveB2bPayment(contractId: string) {
   );
 
   addAudit(
-    "B2B bank to'lovi tasdiqlandi",
+    "Bank to'lovi tasdiqlandi",
     contractId,
-    `Shartnoma #${contract.id} bo'yicha ${formatAmount(contract.totalAmount)} UZS bank to'lovi tasdiqlandi va Escrow'ga qabul qilindi. Operator: ${actor.fullName}`
+    `Shartnoma #${contract.id} (${contract.paymentReference || "BD-PAY"}) bo'yicha ${formatAmount(contract.totalAmount)} UZS bank to'lovi tasdiqlandi va Escrow'ga qabul qilindi. Operator: ${actor.fullName}`
   );
 
   return contracts[idx];
@@ -1110,6 +1170,8 @@ export function rejectB2bPayment(contractId: string, reason: string) {
   contracts[idx] = {
     ...contract,
     b2bPending: false,
+    paymentStatus: "payment_rejected",
+    paymentRejectReason: reason.trim() || "To'lov tushumi tasdiqlanmadi",
   };
   write("sb2_contracts", contracts);
 
@@ -1122,13 +1184,54 @@ export function rejectB2bPayment(contractId: string, reason: string) {
   );
 
   addAudit(
-    "B2B bank to'lovi rad etildi",
+    "Bank to'lovi rad etildi",
     contractId,
     `Shartnoma #${contract.id} bank to'lovi rad etildi. Sabab: ${reason}. Operator: ${actor.fullName}`
   );
 
   return contracts[idx];
 }
+
+export function reverseTransaction(txId: string, reason: string) {
+  const actor = requireSuperAdmin();
+  if (!reason.trim()) throw new Error("REASON_REQUIRED");
+
+  const transactions = read<TransactionRecord[]>("sb2_transactions", seedTransactions);
+  const targetIdx = transactions.findIndex((t) => t.id === txId);
+  if (targetIdx === -1) throw new Error("NOT_FOUND");
+
+  const target = transactions[targetIdx];
+  if (target.status === "bekor_qilingan") throw new Error("ALREADY_CANCELLED");
+
+  transactions[targetIdx] = {
+    ...target,
+    status: "bekor_qilingan",
+  };
+
+  const reversalTx: TransactionRecord = {
+    id: `tx-rev-${uid()}`,
+    type: "refund",
+    userId: target.userId,
+    userName: target.userName,
+    amount: target.amount,
+    currency: "UZS",
+    referenceId: target.id,
+    description: `Tranzaksiya #${target.id} Super Admin (${actor.fullName}) tomonidan bekor qilindi. Sabab: ${reason.trim()}`,
+    status: "muvaffaqiyatli",
+    createdAt: new Date().toISOString(),
+  };
+
+  write("sb2_transactions", [reversalTx, ...transactions]);
+
+  addAudit(
+    "Tranzaksiya majburiy bekor qilindi",
+    target.id,
+    `Foydalanuvchi: ${target.userName} (${target.userId}), Summa: ${formatAmount(target.amount)} UZS. Sabab: ${reason.trim()}`
+  );
+
+  return { original: transactions[targetIdx], reversal: reversalTx };
+}
+
 
 export function adminModerate(
   kind: "users" | "kyc" | "disputes" | "support",
@@ -1678,11 +1781,33 @@ export function listContractsQueue(query: AdminQueueQuery = {}): AdminPage<Contr
 
 export function listB2bPendingContracts(query: AdminQueueQuery = {}): AdminPage<Contract> {
   requirePermission("payments");
-  const pending = getAdminData().contracts.filter((c) => c.b2bPending);
-  return buildQueue(pending, query, {
-    search: (c) => matches(query.search, c.title, c.buyerName, c.sellerName, c.id),
-    status: (c) => (c.b2bPending ? "kutilmoqda" : "tasdiqlangan"),
-    date: (c) => c.b2bSubmittedAt || c.createdAt,
+  const bankContracts = getAdminData().contracts.filter(
+    (c) =>
+      c.b2bPending ||
+      c.paymentMethod === "b2b" ||
+      c.paymentStatus === "pending_verification" ||
+      c.paymentStatus === "receipt_uploaded" ||
+      c.paymentStatus === "payment_confirmed" ||
+      c.paymentStatus === "payment_rejected" ||
+      Boolean(c.b2bReceiptUrl) ||
+      Boolean(c.paymentReceiptUrl)
+  );
+
+  bankContracts.sort((a, b) => {
+    const aPending = a.b2bPending || a.paymentStatus === "pending_verification" ? 1 : 0;
+    const bPending = b.b2bPending || b.paymentStatus === "pending_verification" ? 1 : 0;
+    if (aPending !== bPending) return bPending - aPending;
+    const aDate = a.paymentSubmittedAt || a.b2bSubmittedAt || a.createdAt;
+    const bDate = b.paymentSubmittedAt || b.b2bSubmittedAt || b.createdAt;
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
+  });
+
+  return buildQueue(bankContracts, query, {
+    search: (c) => matches(query.search, c.title, c.buyerName, c.sellerName, c.id, c.paymentReference),
+    status: (c) =>
+      c.paymentStatus ||
+      (c.b2bPending ? "pending_verification" : c.status === "faol" ? "payment_confirmed" : "awaiting_payment"),
+    date: (c) => c.paymentSubmittedAt || c.b2bSubmittedAt || c.createdAt,
     extraFacets: (rows) => ({
       amountSum: rows.reduce((sum, c) => sum + c.totalAmount, 0),
     }),

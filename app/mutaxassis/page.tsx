@@ -148,8 +148,8 @@ export default function MutaxassisDashboardPage() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 flex flex-col gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-w-0">
+        <div className="lg:col-span-2 flex flex-col gap-8 min-w-0">
           {/* Direct Offers */}
           {!loading && pendingOffers.length > 0 && (
             <section>
@@ -207,8 +207,8 @@ export default function MutaxassisDashboardPage() {
                         {t(`cat.${job.category}`)} • {job.proposalsCount} {t("dash.proposalsSuffix")}
                       </p>
                     </div>
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3">
-                      <span className="font-bold text-ink whitespace-nowrap">
+                    <div className="flex flex-wrap sm:flex-col items-start sm:items-end justify-between sm:justify-center gap-2 sm:gap-3 min-w-0">
+                      <span className="font-bold text-ink whitespace-nowrap text-sm sm:text-base">
                         {formatMoney(job.budgetMin, lang)} - {formatMoney(job.budgetMax, lang)}
                       </span>
                       <span className="text-xs text-primary font-semibold">{t("dash.viewApply")}</span>
@@ -221,7 +221,7 @@ export default function MutaxassisDashboardPage() {
         </div>
 
         {/* Right Sidebar */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 min-w-0">
           {/* Profile Completeness */}
           {!loading && completeness < 100 && (
             <Card className="bg-primary/5 border-primary/20">

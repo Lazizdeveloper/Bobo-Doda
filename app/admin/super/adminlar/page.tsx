@@ -9,10 +9,9 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Table, type TableColumn } from "@/components/ui/Table";
-import { addAdmin, getAdminAccounts, setAdminActive } from "@/lib/api/admin";
+import { addAdmin, getAdminAccounts, setAdminActive, updateAdminAccount } from "@/lib/api/admin";
 import { adminErrorText } from "@/lib/admin-error-text";
-import type { AdminAccount } from "@/lib/admin-types";
-import type { AdminPermission } from "@/lib/admin-types";
+import type { AdminAccount, AdminPermission, AdminRole } from "@/lib/admin-types";
 
 const operationalPermissions: { value: AdminPermission; label: string }[] = [
   { value: "users", label: "Foydalanuvchilar" },
@@ -25,6 +24,18 @@ const operationalPermissions: { value: AdminPermission; label: string }[] = [
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminAccount[]>([]);
   const [open, setOpen] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<AdminAccount | null>(null);
+  const [editForm, setEditForm] = useState<{
+    fullName: string;
+    title: string;
+    role: AdminRole;
+    permissions: AdminPermission[];
+  }>({
+    fullName: "",
+    title: "",
+    role: "admin",
+    permissions: [],
+  });
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     fullName: "", email: "", title: "", password: "",
@@ -64,12 +75,48 @@ export default function AdminsPage() {
     }
   }
 
+  function openEdit(item: AdminAccount) {
+    setEditingAdmin(item);
+    setEditForm({
+      fullName: item.fullName,
+      title: item.title,
+      role: item.role,
+      permissions: [...item.permissions],
+    });
+  }
+
+  async function saveEdit(event: FormEvent) {
+    event.preventDefault();
+    if (!editingAdmin) return;
+    setError("");
+    try {
+      await updateAdminAccount(editingAdmin.id, editForm);
+      setAdmins(await getAdminAccounts());
+      setEditingAdmin(null);
+    } catch (err) {
+      setError(adminErrorText(err));
+    }
+  }
+
   const columns: TableColumn<AdminAccount>[] = [
     { key: "name", header: "Administrator", render: (row) => <div><p className="font-medium">{row.fullName}</p><p className="text-2xs text-faint">{row.email}</p></div> },
     { key: "role", header: "Rol", render: (row) => <Badge tone={row.role === "super_admin" ? "danger" : "primary"}>{row.role === "super_admin" ? "Super Admin" : "Admin"}</Badge> },
     { key: "status", header: "Holat", render: (row) => <Badge tone={row.active ? "success" : "danger"}>{row.active ? "Faol" : "Bloklangan"}</Badge> },
     { key: "created", header: "Ruxsatlar", render: (row) => <span className="text-xs text-muted">{row.role === "super_admin" ? "Barchasi" : `${row.permissions.length} modul`}</span> },
-    { key: "action", header: "Amal", render: (row) => <Button variant={row.active ? "danger" : "secondary"} size="sm" onClick={() => toggle(row)}>{row.active ? "Bloklash" : "Faollashtirish"}</Button> },
+    {
+      key: "action",
+      header: "Amallar",
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
+            Tahrirlash
+          </Button>
+          <Button variant={row.active ? "danger" : "secondary"} size="sm" onClick={() => toggle(row)}>
+            {row.active ? "Bloklash" : "Faollashtirish"}
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   if (loadError) {
@@ -91,7 +138,25 @@ export default function AdminsPage() {
       />
       {error && <p role="alert" className="mb-4 rounded-input bg-danger/10 p-3 text-xs text-danger-deep">{error}</p>}
       <Table columns={columns} rows={admins} rowKey={(row) => row.id} renderMobileCard={(row) => (
-        <Card padding="none" className="border-0"><div className="flex justify-between gap-3"><div><p className="font-medium">{row.fullName}</p><p className="text-xs text-muted">{row.email}</p></div><Badge tone={row.role === "super_admin" ? "danger" : "primary"}>{row.role === "super_admin" ? "Super Admin" : "Admin"}</Badge></div><Button className="mt-4 w-full" variant={row.active ? "danger" : "secondary"} size="sm" onClick={() => toggle(row)}>{row.active ? "Bloklash" : "Faollashtirish"}</Button></Card>
+        <Card padding="none" className="border-0">
+          <div className="flex justify-between gap-3">
+            <div>
+              <p className="font-medium">{row.fullName}</p>
+              <p className="text-xs text-muted">{row.email}</p>
+            </div>
+            <Badge tone={row.role === "super_admin" ? "danger" : "primary"}>
+              {row.role === "super_admin" ? "Super Admin" : "Admin"}
+            </Badge>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button className="flex-1" variant="secondary" size="sm" onClick={() => openEdit(row)}>
+              Tahrirlash
+            </Button>
+            <Button className="flex-1" variant={row.active ? "danger" : "secondary"} size="sm" onClick={() => toggle(row)}>
+              {row.active ? "Bloklash" : "Faollashtirish"}
+            </Button>
+          </div>
+        </Card>
       )} />
       <Modal open={open} onClose={() => setOpen(false)} title="Yangi operatsion admin">
         <form onSubmit={create} className="flex flex-col gap-4">
@@ -122,6 +187,80 @@ export default function AdminsPage() {
           <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Bekor qilish</Button><Button type="submit">Yaratish</Button></div>
         </form>
       </Modal>
+
+      <Modal
+        open={Boolean(editingAdmin)}
+        onClose={() => setEditingAdmin(null)}
+        title={`Adminni tahrirlash — ${editingAdmin?.email || ""}`}
+      >
+        <form onSubmit={saveEdit} className="flex flex-col gap-4">
+          <Input
+            label="To‘liq ism"
+            value={editForm.fullName}
+            onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+            required
+            maxLength={100}
+          />
+          <Input
+            label="Lavozim"
+            value={editForm.title}
+            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+            required
+            maxLength={100}
+          />
+          {editingAdmin?.role !== "super_admin" && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">Admin roli</label>
+              <select
+                value={editForm.role}
+                onChange={(e) => setEditForm({ ...editForm, role: e.target.value as AdminRole })}
+                className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+              >
+                <option value="admin">Operatsion Admin</option>
+                <option value="finance">Moliya Admin (Finance)</option>
+                <option value="support">Qo'llab-quvvatlash (Support)</option>
+                <option value="kyc_reviewer">KYC Tekshiruvchi</option>
+                <option value="trust_safety">Xavfsizlik (Trust & Safety)</option>
+              </select>
+            </div>
+          )}
+          <fieldset>
+            <legend className="mb-2 text-xs font-medium text-muted">Modul ruxsatlari</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {operationalPermissions.map((permission) => (
+                <label key={permission.value} className="flex items-center gap-2 text-xs text-ink">
+                  <input
+                    type="checkbox"
+                    checked={editForm.permissions.includes(permission.value)}
+                    disabled={editingAdmin?.role === "super_admin"}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        permissions: e.target.checked
+                          ? [...editForm.permissions, permission.value]
+                          : editForm.permissions.filter((item) => item !== permission.value),
+                      })
+                    }
+                  />
+                  {permission.label}
+                </label>
+              ))}
+            </div>
+            {editingAdmin?.role === "super_admin" && (
+              <p className="mt-2 text-2xs text-muted">Super Admin barcha modullarga avtomatik to'liq huquqqa ega.</p>
+            )}
+          </fieldset>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setEditingAdmin(null)}>
+              Bekor qilish
+            </Button>
+            <Button type="submit">
+              Saqlash
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
     </>
   );
 }

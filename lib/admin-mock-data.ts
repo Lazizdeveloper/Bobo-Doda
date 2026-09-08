@@ -491,10 +491,10 @@ export const seedPlatformSettings: PlatformSettingItem[] = [
     group: "finance",
     label: "Platforma Komissiyasi",
     description:
-      "Bajarilgan shartnomalardan olinadigan xizmat haqi ulushi. Bu qiymat build vaqtida `lib/fees.ts` dan keladi va landing sahifasi hamda yordam matnlariga ham import qilinadi — shuning uchun uni ish vaqtida o'zgartirish backend ishi (frontend'da faqat ko'rsatiladi).",
+      "Bajarilgan shartnomalardan olinadigan xizmat haqi ulushi. Super Admin tomonidan o'zgartiriladi va real vaqtda platformaning barcha hisob-kitoblariga tatbiq etiladi.",
     value: PLATFORM_FEE_PERCENT,
     type: "percent",
-    readOnly: true,
+    readOnly: false,
   },
   {
     key: "registration_enabled",

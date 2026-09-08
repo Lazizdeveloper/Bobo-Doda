@@ -109,6 +109,7 @@ export const contractsService: ContractsService = {
   cancel: (id) => call(() => mock.cancelContract(id)),
   requestClose: (id, note) => call(() => mock.requestCloseContract(id, note)),
   approveClose: (id) => call(() => mock.approveCloseContract(id)),
+  sign: (id) => call(() => mock.signContract(id)),
 };
 
 export const milestonesService: MilestonesService = {
@@ -125,6 +126,8 @@ export const filesService: FilesService = {
 
 export const paymentsService: PaymentsService = {
   fundContract: (id, input) => call(() => mock.fundContract(id, input)),
+  fundMilestone: (contractId, milestoneId, method) =>
+    call(() => mock.fundMilestone(contractId, milestoneId, method)),
   getBalance: () => call(mock.getBalance),
   getCards: () => call(mock.getCards),
   addCard: (input) => call(() => mock.addCard(input)),
@@ -199,3 +202,4 @@ export const supportRequestService: SupportRequestService = {
  * websocket/SSE push yoki kesh invalidatsiyasi bilan almashtiriladi.
  */
 export const DATA_CHANGED_EVENT = mock.DATA_CHANGED_EVENT;
+export const resetDemoData = mock.resetDemoData;

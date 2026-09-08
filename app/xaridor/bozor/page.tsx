@@ -200,7 +200,8 @@ export default function BozorPage() {
     })
     .filter((s) => {
       if (locationFilter === "all") return true;
-      return sellerById.get(s.sellerId)?.profile.location === locationFilter;
+      const loc = sellerById.get(s.sellerId)?.profile.location;
+      return !!loc && loc.toLowerCase().includes(locationFilter.toLowerCase());
     })
     .filter(
       (s) =>
@@ -227,7 +228,10 @@ export default function BozorPage() {
     )
     .filter((s) => minRating === null || s.profile.rating >= minRating)
     .filter((s) => !availableOnly || s.profile.available)
-    .filter((s) => locationFilter === "all" || s.profile.location === locationFilter)
+    .filter((s) => {
+      if (locationFilter === "all") return true;
+      return !!s.profile.location && s.profile.location.toLowerCase().includes(locationFilter.toLowerCase());
+    })
     .filter(
       (s) =>
         !query ||
@@ -273,11 +277,15 @@ export default function BozorPage() {
   ];
   const locationOptions = [
     { value: "all", label: t("market.locationAny") },
+    { value: "O'zbekiston", label: "🇺🇿 O'zbekiston" },
+    { value: "Rossiya", label: "🇷🇺 Rossiya" },
+    { value: "Qozog'iston", label: "🇰🇿 Qozog'iston" },
     ...Array.from(
       new Set((specialists ?? []).map((s) => s.profile.location).filter(Boolean))
     )
+      .filter((loc) => !["O'zbekiston", "Rossiya", "Qozog'iston"].includes(loc))
       .sort((a, b) => a.localeCompare(b))
-      .map((loc) => ({ value: loc, label: loc })),
+      .map((loc) => ({ value: loc, label: `📍 ${loc}` })),
   ];
 
   /* Active Filter Pills */

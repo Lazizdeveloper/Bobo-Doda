@@ -22,15 +22,18 @@ import {
   approveWithdrawal,
   rejectWithdrawal,
   reviewWithdrawal,
+  reverseTransaction,
+  getCurrentAdmin,
   type AdminPage,
   type AdminCounters,
 } from "@/lib/api/admin";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { adminErrorText } from "@/lib/admin-error-text";
 import { formatDate, formatMoney } from "@/lib/format";
-import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
-import type { WithdrawalRequest, TransactionRecord } from "@/lib/admin-types";
-import type { Contract } from "@/lib/types";
+import { PLATFORM_FEE_PERCENT, platformFee, sellerNet } from "@/lib/fees";
+import { COMPANY_BANK_DETAILS, generatePaymentReference } from "@/lib/company-bank-details";
+import type { WithdrawalRequest, TransactionRecord, AdminAccount } from "@/lib/admin-types";
+import type { Contract, ContractPaymentStatus, PayoutStatus } from "@/lib/types";
 
 export default function PaymentsPage() {
   const { toast } = useToast();
@@ -62,6 +65,41 @@ export default function PaymentsPage() {
 
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Super Admin Reversal Action
+  const [currentAdmin, setCurrentAdmin] = useState<AdminAccount | null>(null);
+  const [selectedTx, setSelectedTx] = useState<TransactionRecord | null>(null);
+  const [reverseModalOpen, setReverseModalOpen] = useState(false);
+  const [reverseReason, setReverseReason] = useState("");
+  const [reverseLoading, setReverseLoading] = useState(false);
+  const [reverseError, setReverseError] = useState("");
+
+  useEffect(() => {
+    setCurrentAdmin(getCurrentAdmin());
+  }, []);
+
+  const handleReverseTx = async () => {
+    if (!selectedTx) return;
+    if (reverseReason.trim().length < 5) {
+      setReverseError("Bekor qilish sababi kamida 5 ta belgidan iborat bo'lishi shart.");
+      return;
+    }
+    setReverseLoading(true);
+    setReverseError("");
+    try {
+      await reverseTransaction(selectedTx.id, reverseReason.trim());
+      setReverseModalOpen(false);
+      setSelectedTx(null);
+      setReverseReason("");
+      toast("Tranzaksiya bekor qilindi va kompensatsiya qayd etildi");
+      load();
+    } catch (err) {
+      setReverseError(adminErrorText(err));
+    } finally {
+      setReverseLoading(false);
+    }
+  };
+
 
   /* Qidiruv debounce bilan */
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -195,14 +233,30 @@ export default function PaymentsPage() {
     }
   };
 
+  const getContractPaymentStatusLabel = (c: Contract): { label: string; tone: BadgeTone } => {
+    const status = c.paymentStatus || (c.b2bPending ? "pending_verification" : c.status === "faol" ? "payment_confirmed" : "awaiting_payment");
+    const map: Record<ContractPaymentStatus, { label: string; tone: BadgeTone }> = {
+      awaiting_payment: { label: "To'lov kutilmoqda (Awaiting Payment)", tone: "warning" },
+      receipt_uploaded: { label: "Kvitansiya yuklandi (Receipt Uploaded)", tone: "info" },
+      pending_verification: { label: "Tekshirilmoqda (Pending Verification)", tone: "warning" },
+      payment_confirmed: { label: "Tasdiqlangan (Payment Confirmed)", tone: "success" },
+      payment_rejected: { label: "Rad etilgan (Payment Rejected)", tone: "danger" },
+      refund_pending: { label: "Qaytarish kutilmoqda (Refund Pending)", tone: "warning" },
+      refunded: { label: "Qaytarildi (Refunded)", tone: "neutral" },
+    };
+    return map[status as ContractPaymentStatus] || { label: status, tone: "neutral" };
+  };
+
   const b2bColumns: TableColumn<Contract>[] = [
     {
       key: "id",
-      header: "Shartnoma / Invoys",
+      header: "Shartnoma / Order ID",
       render: (c) => (
         <div>
           <span className="font-mono font-bold text-xs text-ink block">#{c.id}</span>
-          <span className="font-mono text-2xs text-muted">INV-{c.id.toUpperCase()}-{new Date().getFullYear()}</span>
+          <span className="font-mono text-2xs font-semibold text-primary block">
+            {c.paymentReference || generatePaymentReference(c.id)}
+          </span>
         </div>
       ),
     },
@@ -218,93 +272,146 @@ export default function PaymentsPage() {
     },
     {
       key: "totalAmount",
-      header: "Kutilayotgan summa",
+      header: "Summa & Komissiya",
       render: (c) => (
         <div>
           <span className="font-mono font-bold text-ink text-sm block">{formatMoney(c.totalAmount)}</span>
-          <span className="text-3xs text-muted">Bank H/r orqali</span>
+          <span className="text-3xs text-muted block">
+            {PLATFORM_FEE_PERCENT}% komissiya ({formatMoney(platformFee(c.totalAmount))})
+          </span>
+          <span className="text-3xs font-medium text-success block">
+            Sof mutaxassis: {formatMoney(sellerNet(c.totalAmount))}
+          </span>
         </div>
       ),
     },
     {
       key: "receipt",
-      header: "To'lov topshirig'i",
-      render: (c) => (
-        c.b2bReceiptUrl ? (
+      header: "To'lov cheki / Kvitansiya",
+      render: (c) => {
+        const receiptUrl = c.paymentReceiptUrl || c.b2bReceiptUrl;
+        const receiptName = c.paymentReceiptName || c.b2bReceiptName;
+        return receiptUrl ? (
           <a
-            href={c.b2bReceiptUrl}
+            href={receiptUrl}
             target="_blank"
             rel="noopener noreferrer"
-            download={c.b2bReceiptName || `kvitansiya_${c.id}.pdf`}
+            download={receiptName || `kvitansiya_${c.id}.pdf`}
             className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface hover:bg-surface-hover px-2 py-1 text-xs text-primary font-medium transition-colors"
           >
             <span>📎</span>
-            <span className="truncate max-w-[130px]">{c.b2bReceiptName || "Kvitansiya fayli"}</span>
+            <span className="truncate max-w-[130px]">{receiptName || "Kvitansiya fayli"}</span>
           </a>
         ) : (
           <span className="text-2xs text-muted italic">Biriktirilmagan</span>
-        )
-      ),
+        );
+      },
+    },
+    {
+      key: "status",
+      header: "To'lov holati",
+      render: (c) => {
+        const info = getContractPaymentStatusLabel(c);
+        return <Badge tone={info.tone}>{info.label}</Badge>;
+      },
     },
     {
       key: "date",
       header: "Yuborilgan sana",
-      render: (c) => <span className="text-xs text-muted">{formatDate(c.b2bSubmittedAt || c.createdAt)}</span>,
+      render: (c) => (
+        <span className="text-xs text-muted">
+          {formatDate(c.paymentSubmittedAt || c.b2bSubmittedAt || c.createdAt)}
+        </span>
+      ),
     },
     {
       key: "action",
       header: "Amallar",
-      render: (c) => (
-        <div className="flex gap-1.5">
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => {
-              setSelectedB2bContract(c);
-              setB2bApproveModalOpen(true);
-            }}
-            disabled={actionLoading}
-          >
-            Tasdiqlash
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="text-danger border-danger/20 hover:bg-danger/10"
-            onClick={() => {
-              setSelectedB2bContract(c);
-              setB2bRejectReason("");
-              setActionError("");
-              setB2bRejectModalOpen(true);
-            }}
-            disabled={actionLoading}
-          >
-            Rad etish
-          </Button>
-        </div>
-      ),
+      render: (c) => {
+        const isPending =
+          c.paymentStatus === "pending_verification" ||
+          c.b2bPending ||
+          (c.status === "imzolangan" && Boolean(c.paymentReceiptUrl || c.b2bReceiptUrl));
+        if (isPending) {
+          return (
+            <div className="flex gap-1.5">
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  setSelectedB2bContract(c);
+                  setB2bApproveModalOpen(true);
+                }}
+                disabled={actionLoading}
+              >
+                Tasdiqlash
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="text-danger border-danger/20 hover:bg-danger/10"
+                onClick={() => {
+                  setSelectedB2bContract(c);
+                  setB2bRejectReason("");
+                  setActionError("");
+                  setB2bRejectModalOpen(true);
+                }}
+                disabled={actionLoading}
+              >
+                Rad etish
+              </Button>
+            </div>
+          );
+        }
+        if (c.paymentStatus === "payment_confirmed" || c.status === "faol") {
+          return (
+            <div className="text-3xs text-muted">
+              <span className="text-success font-medium">✓ Tasdiqlangan</span>
+              {c.paymentVerifiedBy && <p>Operator: {c.paymentVerifiedBy}</p>}
+            </div>
+          );
+        }
+        if (c.paymentStatus === "payment_rejected") {
+          return (
+            <div className="text-3xs text-danger truncate max-w-[140px]" title={c.paymentRejectReason}>
+              Rad sababi: {c.paymentRejectReason || "Tasdiqlanmadi"}
+            </div>
+          );
+        }
+        return <span className="text-2xs text-muted">—</span>;
+      },
     },
   ];
 
-  const getWithdrawalStatusLabel = (status: string) => {
-    const map: Record<string, { label: string; tone: BadgeTone }> = {
-      kutilmoqda: { label: "Kutilmoqda", tone: "warning" },
-      korib_chiqilmoqda: { label: "Ko'rilmoqda", tone: "neutral" },
-      tasdiqlangan: { label: "Tasdiqlangan", tone: "success" },
-      rad_etilgan: { label: "Rad etilgan", tone: "danger" },
-    };
-    return map[status] || { label: status, tone: "neutral" };
+  const getWithdrawalStatusLabel = (w: WithdrawalRequest) => {
+    if (w.payoutStatus === "paid" || w.status === "tasdiqlangan") {
+      return { label: "To'langan (Paid)", tone: "success" as BadgeTone };
+    }
+    if (w.payoutStatus === "payout_failed" || w.status === "rad_etilgan") {
+      return { label: "Rad etilgan (Payout Failed)", tone: "danger" as BadgeTone };
+    }
+    if (w.payoutStatus === "payout_processing" || w.status === "korib_chiqilmoqda") {
+      return { label: "Jarayonda (Payout Processing)", tone: "neutral" as BadgeTone };
+    }
+    return { label: "Kutilmoqda (Payout Pending)", tone: "warning" as BadgeTone };
   };
 
   const withdrawalColumns: TableColumn<WithdrawalRequest>[] = [
     {
       key: "id",
-      header: "So'rov ID",
-      render: (w) => <span className="font-mono text-2xs text-ink">{w.id}</span>,
+      header: "So'rov ID / Payout Ref",
+      render: (w) => (
+        <div>
+          <span className="font-mono text-2xs text-ink font-bold block">{w.id}</span>
+          <span className="font-mono text-3xs text-muted block">
+            {w.payoutReference || `PAYOUT-${w.id.toUpperCase()}`}
+          </span>
+        </div>
+      ),
     },
     {
       key: "userName",
-      header: "Foydalanuvchi",
+      header: "Mutaxassis",
       render: (w) => (
         <div>
           <p className="font-semibold text-ink">{w.userName}</p>
@@ -316,12 +423,12 @@ export default function PaymentsPage() {
     },
     {
       key: "amount",
-      header: "Miqdor",
-      render: (w) => <span className="font-mono font-semibold text-ink">{formatMoney(w.amount)}</span>,
+      header: "Yechiladigan summa",
+      render: (w) => <span className="font-mono font-bold text-ink text-sm">{formatMoney(w.amount)}</span>,
     },
     {
       key: "card",
-      header: "To'lov vositasi",
+      header: "To'lov vositasi (Rekvizitlar)",
       render: (w) => (
         w.payoutMethod === "bank_account" && w.bankAccount ? (
           <div className="text-2xs">
@@ -336,9 +443,9 @@ export default function PaymentsPage() {
     },
     {
       key: "status",
-      header: "Holati",
+      header: "Payout holati",
       render: (w) => {
-        const info = getWithdrawalStatusLabel(w.status);
+        const info = getWithdrawalStatusLabel(w);
         return <Badge tone={info.tone}>{info.label}</Badge>;
       },
     },
@@ -360,7 +467,7 @@ export default function PaymentsPage() {
                 </Button>
               )}
               <Button size="sm" variant="primary" onClick={() => { setSelectedReq(w); setApproveModalOpen(true); }} disabled={actionLoading}>
-                Tasdiqlash
+                To&apos;lash (Paid)
               </Button>
               <Button size="sm" variant="secondary" className="text-danger border-danger/20 hover:bg-danger/10" onClick={() => {
                 setSelectedReq(w);
@@ -469,6 +576,34 @@ export default function PaymentsPage() {
       header: "Sana",
       render: (t) => <span className="text-xs text-muted">{formatDate(t.createdAt)}</span>,
     },
+    {
+      key: "action",
+      header: "Amal",
+      render: (t) => {
+        const isSuperAdmin = currentAdmin?.role === "super_admin";
+        const isCancelled = t.status === "bekor_qilingan";
+        if (isCancelled) {
+          return <Badge tone="danger">Bekor qilingan</Badge>;
+        }
+        if (!isSuperAdmin) {
+          return <span className="text-2xs text-muted">Tasdiqlangan</span>;
+        }
+        return (
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => {
+              setSelectedTx(t);
+              setReverseReason("");
+              setReverseError("");
+              setReverseModalOpen(true);
+            }}
+          >
+            Bekor qilish
+          </Button>
+        );
+      },
+    },
   ];
 
   /* XATO HOLATI YUKLANISH HOLATIDAN OLDIN tekshiriladi. Ilgari tartib
@@ -509,8 +644,8 @@ export default function PaymentsPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex border-b border-line overflow-x-auto max-w-full pb-0.5">
             {[
-              { id: "withdrawals", label: "Yechish so'rovlari" },
-              { id: "b2b", label: "Bank o'tkazmalari (B2B)" },
+              { id: "withdrawals", label: "Mutaxassis to'lovlari (Payouts)" },
+              { id: "b2b", label: "Bank to'lovlari tekshiruvi (MVP)" },
               { id: "payments", label: "Loyihalar to'lovlari" },
               { id: "transactions", label: "Ledger tranzaksiyalari" },
             ].map((t) => (
@@ -560,7 +695,7 @@ export default function PaymentsPage() {
                 rows={withdrawalPage?.items ?? []}
                 rowKey={(w) => w.id}
                 renderMobileCard={(w) => {
-                  const info = getWithdrawalStatusLabel(w.status);
+                  const info = getWithdrawalStatusLabel(w);
                   return (
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between items-start">
@@ -767,6 +902,21 @@ export default function PaymentsPage() {
                         <span className="text-muted">{formatDate(t.createdAt)}</span>
                         <strong className="font-mono text-ink text-sm">{formatMoney(t.amount)}</strong>
                       </div>
+                      {currentAdmin?.role === "super_admin" && t.status !== "bekor_qilingan" && (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          className="mt-2 w-full"
+                          onClick={() => {
+                            setSelectedTx(t);
+                            setReverseReason("");
+                            setReverseError("");
+                            setReverseModalOpen(true);
+                          }}
+                        >
+                          Tranzaksiyani bekor qilish
+                        </Button>
+                      )}
                     </div>
                   );
                 }}
@@ -819,58 +969,68 @@ export default function PaymentsPage() {
         </div>
       </Modal>
 
-      {/* Tasdiqlash — pul harakati qaytarib bo'lmaydi, shuning uchun
-          summa va karta oynada ko'rsatiladi */}
+      {/* Tasdiqlash — Mutaxassis Payout o'tkazmasi (Manual Transfer) */}
       <Modal
         open={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
-        title="Yechib olish so'rovini tasdiqlash"
+        title="Mutaxassis to'lovini tasdiqlash (Manual Payout)"
         footer={
           <>
             <Button variant="ghost" onClick={() => setApproveModalOpen(false)} disabled={actionLoading}>
               Bekor qilish
             </Button>
-            <Button onClick={handleApprove} loading={actionLoading}>
-              Tasdiqlash va yechish
+            <Button onClick={handleApprove} loading={actionLoading} variant="primary">
+              To&apos;lov o&apos;tkazildi va &quot;Paid&quot; deb belgilash
             </Button>
           </>
         }
       >
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted">
-            Tasdiqlangach summa foydalanuvchi hisobidan yechiladi va bu amalni
-            qaytarib bo&apos;lmaydi.
-          </p>
+          <div className="rounded-input border border-primary/20 bg-primary/5 p-3 text-xs text-ink leading-relaxed">
+            <p className="font-bold flex items-center gap-1.5 text-primary mb-1">
+              <span>💳</span> Manual Bank / Karta Payout tartibi:
+            </p>
+            <p className="text-muted">
+              Mutaxassisning ko&apos;rsatilgan bank hisob-raqamiga yoki kartasiga kompaniya bank ilovasi (Kapitalbank Business) orqali to&apos;lovni qo&apos;lda o&apos;tkazing. Pul o&apos;tkazilgach, ushbu tugmani bosish orqali so&apos;rov holatini <strong>&quot;Paid (To&apos;langan)&quot;</strong> ga o&apos;tkazing.
+            </p>
+          </div>
+
           <div className="flex flex-col gap-2 rounded-input border border-line bg-surface p-3 text-sm">
             <div className="flex justify-between gap-3">
-              <span className="text-muted">Foydalanuvchi</span>
-              <span className="font-medium text-ink">{selectedReq?.userName}</span>
+              <span className="text-muted">Payout Ref ID</span>
+              <span className="font-mono font-bold text-ink">
+                {selectedReq?.payoutReference || (selectedReq ? `PAYOUT-${selectedReq.id.toUpperCase()}` : "—")}
+              </span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-muted">Summa</span>
-              <span className="font-heading font-bold text-ink">
+              <span className="text-muted">Mutaxassis</span>
+              <span className="font-semibold text-ink">{selectedReq?.userName}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted">Sof yechiladigan summa</span>
+              <span className="font-heading font-bold text-success text-base">
                 {selectedReq ? formatMoney(selectedReq.amount) : "—"}
               </span>
             </div>
             <div className="flex justify-between gap-3">
               <span className="text-muted">To&apos;lov usuli</span>
               <span className="font-medium text-ink">
-                {selectedReq?.payoutMethod === "bank_account" ? "Bank hisob-raqami (B2B Wire)" : "Plastik karta (B2C Payout)"}
+                {selectedReq?.payoutMethod === "bank_account" ? "Bank hisob-raqami (B2B Wire)" : "Plastik karta (Card Payout)"}
               </span>
             </div>
             {selectedReq?.payoutMethod === "bank_account" && selectedReq.bankAccount ? (
               <>
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted">Hisob-raqam</span>
-                  <span className="font-mono text-xs font-bold text-ink">{selectedReq.bankAccount.accountNumber}</span>
+                <div className="flex justify-between gap-3 pt-1 border-t border-line/50">
+                  <span className="text-muted">Hisob-raqam (H/r)</span>
+                  <span className="font-mono text-xs font-bold text-primary">{selectedReq.bankAccount.accountNumber}</span>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <span className="text-muted">Bank / MFO</span>
+                  <span className="text-muted">Bank va MFO</span>
                   <span className="text-xs text-ink">{selectedReq.bankAccount.bankName} (MFO: {selectedReq.bankAccount.mfo})</span>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-muted">Qabul qiluvchi</span>
-                  <span className="text-xs font-medium text-ink">{selectedReq.bankAccount.recipientName}</span>
+                  <span className="text-xs font-semibold text-ink">{selectedReq.bankAccount.recipientName}</span>
                 </div>
                 {selectedReq.bankAccount.innOrPinfl && (
                   <div className="flex justify-between gap-3">
@@ -880,35 +1040,50 @@ export default function PaymentsPage() {
                 )}
               </>
             ) : (
-              <div className="flex justify-between gap-3">
-                <span className="text-muted">Karta</span>
-                <span className="font-mono text-xs text-ink">{selectedReq?.cardDetails}</span>
+              <div className="flex justify-between gap-3 pt-1 border-t border-line/50">
+                <span className="text-muted">Karta raqami</span>
+                <span className="font-mono text-xs font-bold text-ink">{selectedReq?.cardDetails || "Karta"}</span>
               </div>
             )}
-            <div className="flex justify-between gap-3">
-              <span className="text-muted">Manba</span>
-              <span className="text-ink">
-                {selectedReq?.source === "balance" ? "Xaridor balansi" : "Mutaxassis daromadi"}
-              </span>
-            </div>
           </div>
         </div>
       </Modal>
 
-      {/* B2B Bank to'lovini rad etish modali */}
+      {/* Reject B2B Payment Modal */}
       <Modal
         open={b2bRejectModalOpen}
         onClose={() => setB2bRejectModalOpen(false)}
-        title="Bank to'lovini rad etish"
+        title="Bank to'lovini rad etish (Payment Rejected)"
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted">
             <strong className="text-ink">{selectedB2bContract?.buyerName}</strong> tomonidan{" "}
-            <strong className="text-ink">#{selectedB2bContract?.id}</strong> shartnoma bo&apos;yicha yuborilgan bank to&apos;lovini rad etish sababini yozing.
+            <strong className="text-ink">#{selectedB2bContract?.id}</strong> shartnoma bo&apos;yicha yuborilgan bank to&apos;lovini rad etish sababini tanlang yoki yozing.
           </p>
 
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              "Bank hisobiga mablag' kelib tushmadi",
+              "Kvitansiyadagi summa yoki rekvizitlar mos kelmadi",
+              "To'lov topshirig'i nusxasi o'qib bo'lmaydigan holatda",
+              "Bank to'lovi bekor qilingan yoki qaytarilgan",
+            ].map((reason) => (
+              <button
+                key={reason}
+                type="button"
+                onClick={() => {
+                  setB2bRejectReason(reason);
+                  setActionError("");
+                }}
+                className="text-3xs px-2 py-1 rounded bg-surface hover:bg-card-hover border border-line text-ink transition-colors"
+              >
+                + {reason}
+              </button>
+            ))}
+          </div>
+
           <Textarea
-            label="Rad etish sababi (Xaridorga xabarnoma orqali yuboriladi)"
+            label="Rad etish sababi (Xaridorga darhol ko'rsatiladi)"
             placeholder="Masalan: Bank hisob raqamimizga ko'rsatilgan summa kelib tushmadi yoki kvitansiya rekvizitlari mos kelmadi..."
             value={b2bRejectReason}
             onChange={(e) => {
@@ -923,65 +1098,164 @@ export default function PaymentsPage() {
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="ghost" onClick={() => setB2bRejectModalOpen(false)}>Bekor qilish</Button>
             <Button variant="danger" onClick={handleRejectB2b} disabled={!b2bRejectReason.trim() || actionLoading}>
-              Rad etishni tasdiqlash
+              To&apos;lovni rad etish
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* B2B Bank to'lovini tasdiqlash modali */}
+      {/* B2B Bank to'lovini tasdiqlash modali (MVP Escrow) */}
       <Modal
         open={b2bApproveModalOpen}
         onClose={() => setB2bApproveModalOpen(false)}
-        title="Bank to'lovini tasdiqlash va Escrow'ga o'tkazish"
+        title="Bank to'lovini tekshirish va tasdiqlash (MVP Escrow)"
         footer={
           <>
             <Button variant="ghost" onClick={() => setB2bApproveModalOpen(false)} disabled={actionLoading}>
               Bekor qilish
             </Button>
-            <Button onClick={handleApproveB2b} loading={actionLoading}>
-              Bank tushumini tasdiqlash
+            <Button onClick={handleApproveB2b} loading={actionLoading} variant="primary" className="font-bold">
+              Bank tushumini tasdiqlash (Confirm Payment)
             </Button>
           </>
         }
       >
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-muted">
-            Bank hisobingizga (Kapitalbank H/r 2020 8000 7055 1234 5001) ushbu to&apos;lov kelib tushganini tasdiqlaysizmi? Tasdiqlangach shartnoma faollashadi, barcha bosqichlar mablag&apos;lantiriladi va mutaxassisga ishni boshlashga ruxsat beriladi.
+          <p className="text-xs text-muted leading-relaxed">
+            Kompaniyamiz hisob-raqamiga (<strong className="text-ink">{COMPANY_BANK_DETAILS.bankName}</strong>, H/r <strong className="font-mono text-ink">{COMPANY_BANK_DETAILS.accountNumber}</strong>, MFO <strong className="font-mono text-ink">{COMPANY_BANK_DETAILS.mfo}</strong>) ushbu summa tushganini tasdiqlaysizmi?
           </p>
-          <div className="flex flex-col gap-2 rounded-input border border-line bg-surface p-3 text-sm">
+
+          <div className="flex flex-col gap-2.5 rounded-input border border-line bg-surface p-3 text-xs">
             <div className="flex justify-between gap-3">
-              <span className="text-muted">Shartnoma / Invoys</span>
-              <span className="font-mono font-medium text-ink">#{selectedB2bContract?.id} (INV-{selectedB2bContract?.id.toUpperCase()})</span>
+              <span className="text-muted">Order ID / Reference</span>
+              <span className="font-mono font-bold text-primary text-sm">
+                {selectedB2bContract?.paymentReference || (selectedB2bContract ? generatePaymentReference(selectedB2bContract.id) : "—")}
+              </span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-muted">Xaridor</span>
-              <span className="font-medium text-ink">{selectedB2bContract?.buyerName}</span>
+              <span className="text-muted">Shartnoma ID</span>
+              <span className="font-mono font-semibold text-ink">#{selectedB2bContract?.id}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-muted">Mutaxassis</span>
-              <span className="font-medium text-ink">{selectedB2bContract?.sellerName}</span>
+              <span className="text-muted">Xaridor (To&apos;lovchi)</span>
+              <span className="font-semibold text-ink">{selectedB2bContract?.buyerName}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-muted">Kelib tushishi kerak bo&apos;lgan summa</span>
-              <span className="font-heading font-bold text-success text-base">
+              <span className="text-muted">Mutaxassis (Ijrochi)</span>
+              <span className="font-semibold text-ink">{selectedB2bContract?.sellerName}</span>
+            </div>
+            <div className="flex justify-between gap-3 pt-1 border-t border-line/60">
+              <span className="text-muted font-medium">Kutilayotgan summa (Gross)</span>
+              <span className="font-heading font-bold text-ink text-sm">
                 {selectedB2bContract ? formatMoney(selectedB2bContract.totalAmount) : "—"}
               </span>
             </div>
-            {selectedB2bContract?.b2bReceiptUrl && (
-              <div className="flex justify-between gap-3 pt-1 border-t border-line">
-                <span className="text-muted">Kvitansiya</span>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted">Platforma komissiyasi ({PLATFORM_FEE_PERCENT}%)</span>
+              <span className="font-mono text-muted">
+                {selectedB2bContract ? formatMoney(platformFee(selectedB2bContract.totalAmount)) : "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted font-medium">Mutaxassisning sof ulushi (Net)</span>
+              <span className="font-heading font-bold text-success text-sm">
+                {selectedB2bContract ? formatMoney(sellerNet(selectedB2bContract.totalAmount)) : "—"}
+              </span>
+            </div>
+            {(selectedB2bContract?.paymentReceiptUrl || selectedB2bContract?.b2bReceiptUrl) && (
+              <div className="flex justify-between items-center gap-3 pt-1.5 border-t border-line/60">
+                <span className="text-muted font-medium">To&apos;lov cheki / Kvitansiya</span>
                 <a
-                  href={selectedB2bContract.b2bReceiptUrl}
+                  href={selectedB2bContract.paymentReceiptUrl || selectedB2bContract.b2bReceiptUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  download={selectedB2bContract.b2bReceiptName || `kvitansiya_${selectedB2bContract.id}.pdf`}
-                  className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                  download={selectedB2bContract.paymentReceiptName || selectedB2bContract.b2bReceiptName || `kvitansiya_${selectedB2bContract.id}.pdf`}
+                  className="text-xs text-primary font-bold hover:underline flex items-center gap-1.5 bg-card px-2.5 py-1 rounded border border-line"
                 >
-                  <span>📎</span> {selectedB2bContract.b2bReceiptName || "Faylni ko'rish"}
+                  <span>📎</span> {selectedB2bContract.paymentReceiptName || selectedB2bContract.b2bReceiptName || "Chekni ko'rish"}
                 </a>
               </div>
             )}
+            {selectedB2bContract?.paymentNotes && (
+              <div className="pt-1.5 border-t border-line/60">
+                <span className="text-muted block text-3xs uppercase tracking-wider font-semibold">Xaridor izohi / Tranzaksiya ma&apos;lumoti:</span>
+                <p className="mt-0.5 text-ink bg-card p-2 rounded border border-line/50 text-2xs">
+                  {selectedB2bContract.paymentNotes}
+                </p>
+              </div>
+            )}
+            <div className="flex justify-between gap-3 pt-1 border-t border-line/60 text-3xs text-muted">
+              <span>Yuborilgan sana:</span>
+              <span>{formatDate(selectedB2bContract?.paymentSubmittedAt || selectedB2bContract?.b2bSubmittedAt || selectedB2bContract?.createdAt || new Date().toISOString())}</span>
+            </div>
+          </div>
+
+          <div className="rounded-input bg-success/10 border border-success/30 p-2.5 text-2xs text-success-deep flex items-start gap-2">
+            <span>✅</span>
+            <p>
+              Tasdiqlangach, to&apos;lov holati <strong>&quot;Payment Confirmed&quot;</strong> ga o&apos;tadi, shartnoma <strong>faollashadi</strong> va mutaxassis ishga kirishishi mumkin bo&apos;ladi.
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Super Admin Tranzaksiyani bekor qilish modali */}
+      <Modal
+        open={reverseModalOpen}
+        onClose={() => {
+          if (!reverseLoading) {
+            setReverseModalOpen(false);
+            setSelectedTx(null);
+          }
+        }}
+        title="Tranzaksiyani majburiy bekor qilish (Super Admin)"
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger-deep">
+            <strong>DIQQAT:</strong> Ushbu amal tranzaksiyani bekor qiladi va foydalanuvchi hisobiga
+            kompensatsiya tranzaksiyasini yozadi. Amal bevosita audit logiga muhrlanadi.
+          </div>
+          {selectedTx && (
+            <div className="rounded-lg border border-line bg-surface p-3 text-xs space-y-1">
+              <div><span className="text-muted">ID:</span> <span className="font-mono">{selectedTx.id}</span></div>
+              <div><span className="text-muted">Foydalanuvchi:</span> <span className="font-semibold">{selectedTx.userName}</span></div>
+              <div><span className="text-muted">Summa:</span> <span className="font-mono font-bold text-ink">{formatMoney(selectedTx.amount)}</span></div>
+              <div><span className="text-muted">Turi:</span> <span>{selectedTx.type}</span></div>
+              <div><span className="text-muted">Tavsif:</span> <span>{selectedTx.description}</span></div>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-1">
+              Bekor qilish sababi (majburiy, audit uchun):
+            </label>
+            <Textarea
+              rows={3}
+              value={reverseReason}
+              onChange={(e) => setReverseReason(e.target.value)}
+              placeholder="Masalan: Bank xatosi, firibgarlik shubhasi, foydalanuvchi roziligi bilan manual refund..."
+            />
+            {reverseError && (
+              <p className="mt-1 text-2xs font-semibold text-danger-deep">{reverseError}</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              disabled={reverseLoading}
+              onClick={() => {
+                setReverseModalOpen(false);
+                setSelectedTx(null);
+              }}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              variant="danger"
+              disabled={reverseLoading || !reverseReason.trim()}
+              onClick={handleReverseTx}
+            >
+              {reverseLoading ? "Bajarilmoqda..." : "Tasdiqlash & Bekor qilish"}
+            </Button>
           </div>
         </div>
       </Modal>

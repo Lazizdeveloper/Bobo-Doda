@@ -977,6 +977,26 @@ export const dictionary: Record<string, Entry> = {
     ru: "Принятые этапы остаются оплаченными, средства из эскроу возвращаются заказчику. Это действие нельзя отменить.",
   },
   "contract.cancelled": { uz: "Shartnoma bekor qilindi", ru: "Контракт отменён" },
+  "contract.viewDocument": {
+    uz: "Rasmiy shartnoma (PDF)",
+    ru: "Официальный контракт (PDF)",
+  },
+  "contract.signAction": {
+    uz: "Shartnomani imzolash",
+    ru: "Подписать контракт",
+  },
+  "contract.signPromptTitle": {
+    uz: "Shartnoma shartlarini tasdiqlash kutilmoqda",
+    ru: "Ожидается подписание условий контракта",
+  },
+  "contract.signPromptDesc": {
+    uz: "Ishni boshlashdan oldin ikki tomonlama rasmiy shartnoma shartlarini ko'rib chiqing va elektron imzolang. Bu har ikki tomonni to'liq himoya qiladi.",
+    ru: "Перед началом работы ознакомьтесь с условиями официального двустороннего контракта и подпишите его электронной подписью. Это защищает обе стороны.",
+  },
+  "contract.signedSuccess": {
+    uz: "Shartnoma muvaffaqiyatli imzolandi!",
+    ru: "Контракт успешно подписан!",
+  },
   "contract.closeAction": { uz: "Ishni yopish", ru: "Завершить работу" },
   "contract.closeTitle": { uz: "Ishni yakunlash (yopish)", ru: "Завершение контракта" },
   "contract.closeDesc": {
@@ -1412,12 +1432,12 @@ export const dictionary: Record<string, Entry> = {
 
   /* Fayl yuklash */
   "upload.cta": { uz: "Rasm yuklash", ru: "Загрузить изображение" },
-  "upload.hint": { uz: "PNG yoki JPG, 2 MB gacha", ru: "PNG или JPG, до 2 МБ" },
+  "upload.hint": { uz: "PNG, JPG, PDF yoki ZIP, 15 MB gacha", ru: "PNG, JPG, PDF или ZIP, до 15 МБ" },
   "upload.remove": { uz: "O'chirish", ru: "Удалить" },
   "upload.limit": { uz: "Rasmlar soni chegaraga yetdi", ru: "Достигнут лимит изображений" },
   "upload.tooLarge": {
-    uz: "Fayl juda katta — 2 MB gacha bo'lishi kerak",
-    ru: "Файл слишком большой — не более 2 МБ",
+    uz: "Fayl juda katta — 15 MB gacha bo'lishi kerak",
+    ru: "Файл слишком большой — не более 15 МБ",
   },
   "upload.tooMany": {
     uz: "Bir xabarga 5 tagacha fayl biriktirish mumkin",
@@ -2023,6 +2043,10 @@ export const dictionary: Record<string, Entry> = {
     uz: "To'lov escrow'ga tushdi — ishni boshlashingiz mumkin: {title}",
     ru: "Оплата поступила в эскроу — можно начинать работу: {title}",
   },
+  "ntf.contractSigned": {
+    uz: "Rasmiy shartnoma {role} tomonidan imzolandi: {title}",
+    ru: "Официальный контракт подписан ({role}): {title}",
+  },
   "ntf.b2bPending": {
     uz: "\"{title}\" bo'yicha xaridor bank to'lov topshirig'ini yubordi. Bank tasdig'i kutilmoqda.",
     ru: "По контракту \"{title}\" клиент отправил платёжное поручение. Ожидается подтверждение банка.",
@@ -2527,4 +2551,43 @@ export const dictionary: Record<string, Entry> = {
   "receipt.download": { uz: "Kvitansiya (Chek)", ru: "Квитанция (Чек)" },
   "receipt.statusPaid": { uz: "To'langan va tasdiqlangan (Escrow)", ru: "Оплачено и подтверждено (Эскроу)" },
   "receipt.print": { uz: "Chop etish / PDF saqlash", ru: "Печать / Сохранить в PDF" },
+
+  "feedback.widgetButton": {
+    uz: "Shu sahifada nima kamchilik ko'rdingiz?",
+    ru: "Заметили ошибку на этой странице?",
+  },
+  "feedback.title": {
+    uz: "Nima kamchilik ko'rdingiz?",
+    ru: "Что пошло не так?",
+  },
+  "feedback.description": {
+    uz: "Shu sahifa haqida yozing. Qaysi sahifada ekaningizni o'zimiz bilamiz.",
+    ru: "Напишите о текущей странице. Мы автоматически определим, где вы находитесь.",
+  },
+  "feedback.issue": { uz: "Kamchilik", ru: "Проблема" },
+  "feedback.suggestion": { uz: "Taklif", ru: "Предложение" },
+  "feedback.issuePlaceholder": {
+    uz: "Masalan: taklif yuborishda fayl birikmayapti yoki mutaxassis qidiruvida filtrlar ishlamayapti...",
+    ru: "Например: не прикрепляется файл при отправке или не работают фильтры при поиске...",
+  },
+  "feedback.suggestionPlaceholder": {
+    uz: "Masalan: mutaxassis portfolio rasmlarini to'liq hajmda ko'rish yoki buyurtma bo'yicha Telegram xabarnoma qo'shilsa yaxshi bo'lardi...",
+    ru: "Например: было бы здорово добавить просмотр портфолио в полном размере или уведомления в Telegram...",
+  },
+  "feedback.page": { uz: "Sahifa", ru: "Страница" },
+  "feedback.sentToAdmin": {
+    uz: "Admin panelga yetkaziladi",
+    ru: "Будет передано в панель администратора",
+  },
+  "feedback.submit": { uz: "Yuborish", ru: "Отправить" },
+  "feedback.submitting": { uz: "Yuborilmoqda...", ru: "Отправка..." },
+  "feedback.success": {
+    uz: "Rahmat! Xabaringiz qabul qilindi va ma'muriyatga yetkazildi.",
+    ru: "Спасибо! Ваше сообщение принято и передано администрации.",
+  },
+  "feedback.error": {
+    uz: "Xatolik yuz berdi. Qayta urinib ko'ring.",
+    ru: "Произошла ошибка. Попробуйте ещё раз.",
+  },
 };
+

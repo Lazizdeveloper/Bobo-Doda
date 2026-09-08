@@ -235,7 +235,36 @@ export interface Contract {
   b2bReceiptUrl?: string;
   b2bReceiptName?: string;
   b2bSubmittedAt?: string;
+  contractNumber?: string;
+  buyerAcceptedAt?: string;
+  buyerAcceptedName?: string;
+  buyerAcceptedPhone?: string;
+  sellerAcceptedAt?: string;
+  sellerAcceptedName?: string;
+  sellerAcceptedPhone?: string;
+  cancelReason?: string;
+  paymentStatus?: ContractPaymentStatus;
+  paymentReference?: string;
+  paymentReceiptUrl?: string;
+  paymentReceiptName?: string;
+  paymentReceiptSize?: number;
+  paymentSubmittedAt?: string;
+  paymentVerifiedAt?: string;
+  paymentVerifiedBy?: string;
+  paymentRejectReason?: string;
+  paymentNotes?: string;
+  revisionsIncluded?: number;
 }
+
+/** Shartnoma to'lovi holatlari (MVP Manual Bank Transfer) */
+export type ContractPaymentStatus =
+  | "awaiting_payment"      // Awaiting Payment (To'lov kutilmoqda)
+  | "receipt_uploaded"      // Receipt Uploaded (Kvitansiya yuklandi)
+  | "pending_verification"  // Pending Verification (Tekshirilmoqda)
+  | "payment_confirmed"     // Payment Confirmed / Funds Secured (To'lov tasdiqlandi)
+  | "payment_rejected"      // Payment Rejected (To'lov rad etildi)
+  | "refund_pending"        // Refund Pending (Qaytarish kutilmoqda)
+  | "refunded";             // Refunded (Qaytarildi)
 
 export type MilestoneStatus =
   | "kutilmoqda" // hali mablag'lanmagan
@@ -267,6 +296,8 @@ export interface Milestone {
   revisionComment?: string;
   /** Ushbu bosqichda nechta marta o'zgartirish so'ralgani */
   revisionCount?: number;
+  /** Ushbu bosqichga kiritilgan maksimal bepul qayta ishlashlar soni (sukut: 3) */
+  revisionsIncluded?: number;
   /** Topshirilgan ish havolasi (Figma, GitHub, Google Drive va h.k.) */
   deliverableLink?: string;
   /** Topshirilgan ish bo'yicha mutaxassis izohi */
@@ -305,9 +336,17 @@ export interface Review {
    Xavfsizlik: to'liq raqam saqlanmaydi, faqat oxirgi 4 raqam + niqoblangan. */
 /** Escrow'ga pul kiritish usuli. Mock'da faqat yozib qo'yiladi; real
     integratsiyada gateway tanlovi shu qiymatdan kelib chiqadi. */
-export type PaymentMethod = "karta" | "click" | "payme" | "b2b" | "balans";
+export type PaymentMethod =
+  | "karta"
+  | "click"
+  | "payme"
+  | "rossiya_karta"
+  | "kaspi_kz"
+  | "visa_mastercard_intl"
+  | "b2b"
+  | "balans";
 
-export type CardType = "visa" | "mastercard" | "uzcard" | "humo";
+export type CardType = "visa" | "mastercard" | "uzcard" | "humo" | "mir";
 
 export interface PaymentCard {
   id: string;
@@ -330,7 +369,19 @@ export type WithdrawalStatus =
   | "tasdiqlangan"
   | "rad_etilgan";
 
-export type WithdrawalPayoutMethod = "card" | "bank_account";
+/** Mutaxassisga to'lov (Freelancer Payout) holatlari */
+export type PayoutStatus =
+  | "payout_pending"     // Payout Pending (Kutilmoqda)
+  | "payout_processing"  // Payout Processing (Jarayonda)
+  | "paid"               // Paid (To'landi)
+  | "payout_failed";     // Payout Failed (Xatolik / Bekor qilingan)
+
+export type WithdrawalPayoutMethod =
+  | "card"
+  | "bank_account"
+  | "rossiya_karta"
+  | "kaspi_kz"
+  | "intl_card";
 
 export interface BankAccountDetails {
   accountNumber: string;
@@ -356,6 +407,10 @@ export interface WithdrawalRequest {
   /** Bank hisob raqamiga o'tkazma ma'lumotlari (YaTT / O'z-o'zini band qilgan shaxslar uchun) */
   bankAccount?: BankAccountDetails;
   status: WithdrawalStatus;
+  payoutStatus?: PayoutStatus;
+  payoutReference?: string;
+  payoutReceiptUrl?: string;
+  payoutReceiptName?: string;
   createdAt: string;
   processedAt?: string;
   processedBy?: string;
@@ -399,11 +454,30 @@ export type VerificationStatus =
   | "tasdiqlangan"
   | "rad_etilgan";
 
+export type VerificationCountry =
+  | "UZ"
+  | "RU"
+  | "KZ"
+  | "KG"
+  | "TJ"
+  | "TR"
+  | "AE"
+  | "US"
+  | "GLOBAL"
+  | (string & {});
+
+export type VerificationDocumentType =
+  | "passport"
+  | "id_card"
+  | "internal_passport"
+  | "driver_license"
+  | (string & {});
+
 export interface VerificationRecord {
   userId: string;
   status: VerificationStatus;
-  country: "UZ" | "KZ" | "KG" | "TJ" | "TM";
-  documentType: "passport" | "id_card";
+  country: VerificationCountry;
+  documentType: VerificationDocumentType;
   legalName: string;
   birthDate: string;
   documents: string[];

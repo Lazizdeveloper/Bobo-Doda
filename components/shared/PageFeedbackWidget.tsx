@@ -4,10 +4,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { usePathname } from "next/navigation";
 import { feedbackService, type FeedbackType } from "@/lib/feedback";
 import { useToast } from "@/components/ui/Toast";
+import { useT } from "@/lib/i18n";
 
 export function PageFeedbackWidget() {
   const pathname = usePathname();
   const { toast } = useToast();
+  const { t } = useT();
 
   const [isOpen, setIsOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("kamchilik");
@@ -61,11 +63,11 @@ export function PageFeedbackWidget() {
         pageTitle: pageTitle || pathname,
       });
 
-      toast("Rahmat! Xabaringiz qabul qilindi va ma'muriyatga yetkazildi.", "success");
+      toast(t("feedback.success"), "success");
       setMessage("");
       setIsOpen(false);
     } catch {
-      toast("Xatolik yuz berdi. Qayta urinib ko'ring.", "error");
+      toast(t("feedback.error"), "error");
     } finally {
       setSending(false);
     }
@@ -79,7 +81,7 @@ export function PageFeedbackWidget() {
           type="button"
           onClick={() => setIsOpen(true)}
           className="group flex items-center gap-2 rounded-full border border-primary/40 bg-card/95 px-4 py-2 text-xs font-semibold text-ink shadow-md backdrop-blur-md transition-all duration-200 hover:border-primary hover:bg-primary/5 hover:shadow-lg active:scale-95 sm:text-sm cursor-pointer"
-          aria-label="Shu sahifada nima kamchilik ko'rdingiz?"
+          aria-label={t("feedback.widgetButton")}
         >
           {/* Piktogramma: chat bubble + plus */}
           <span className="flex h-5 w-5 items-center justify-center text-primary transition-transform duration-200 group-hover:scale-110">
@@ -98,7 +100,7 @@ export function PageFeedbackWidget() {
               <line x1="9" y1="11" x2="15" y2="11" />
             </svg>
           </span>
-          <span>Shu sahifada nima kamchilik ko&apos;rdingiz?</span>
+          <span>{t("feedback.widgetButton")}</span>
         </button>
       </div>
 
@@ -121,17 +123,17 @@ export function PageFeedbackWidget() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 id="feedback-title" className="font-heading text-base font-extrabold text-ink sm:text-lg">
-                  Nima kamchilik ko&apos;rdingiz?
+                  {t("feedback.title")}
                 </h3>
                 <p className="mt-1 text-xs text-muted">
-                  Shu sahifa haqida yozing. Qaysi sahifada ekaningizni o&apos;zimiz bilamiz.
+                  {t("feedback.description")}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-ink transition cursor-pointer"
-                aria-label="Yopish"
+                aria-label={t("common.close")}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 6 6 18M6 6l12 12" />
@@ -151,7 +153,7 @@ export function PageFeedbackWidget() {
                       : "border-line bg-surface/50 text-muted hover:bg-surface hover:text-ink"
                   }`}
                 >
-                  Kamchilik
+                  {t("feedback.issue")}
                 </button>
                 <button
                   type="button"
@@ -162,7 +164,7 @@ export function PageFeedbackWidget() {
                       : "border-line bg-surface/50 text-muted hover:bg-surface hover:text-ink"
                   }`}
                 >
-                  Taklif
+                  {t("feedback.suggestion")}
                 </button>
               </div>
 
@@ -175,8 +177,8 @@ export function PageFeedbackWidget() {
                   rows={4}
                   placeholder={
                     type === "kamchilik"
-                      ? "Masalan: taklif yuborishda fayl birikmayapti yoki mutaxassis qidiruvida filtrlar ishlamayapti..."
-                      : "Masalan: mutaxassis portfolio rasmlarini to'liq hajmda ko'rish yoki buyurtma bo'yicha Telegram xabarnoma qo'shilsa yaxshi bo'lardi..."
+                      ? t("feedback.issuePlaceholder")
+                      : t("feedback.suggestionPlaceholder")
                   }
                   className="w-full resize-none rounded-xl border border-line bg-surface/40 p-3.5 text-sm text-ink placeholder:text-muted/60 focus:border-primary focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
                 />
@@ -185,13 +187,13 @@ export function PageFeedbackWidget() {
               {/* Avto-aniqlangan sahifa ma'lumoti */}
               <div className="flex items-center justify-between text-2xs text-muted">
                 <span className="truncate max-w-[300px] sm:max-w-xl">
-                  📍 Sahifa: <span className="font-mono text-ink font-semibold">{pathname}</span>
+                  📍 {t("feedback.page")}: <span className="font-mono text-ink font-semibold">{pathname}</span>
                 </span>
                 <span className="flex items-center gap-1 text-primary">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
-                  Admin panelga yetkaziladi
+                  {t("feedback.sentToAdmin")}
                 </span>
               </div>
 
@@ -201,7 +203,7 @@ export function PageFeedbackWidget() {
                 disabled={sending || !message.trim()}
                 className="mt-1 flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-bold text-white shadow-md shadow-primary/25 transition-all duration-200 hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none sm:text-base cursor-pointer"
               >
-                {sending ? "Yuborilmoqda..." : "Yuborish"}
+                {sending ? t("feedback.submitting") : t("feedback.submit")}
               </button>
             </form>
           </div>

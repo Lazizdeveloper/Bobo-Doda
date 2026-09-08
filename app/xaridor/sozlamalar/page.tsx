@@ -7,6 +7,7 @@ import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { LocationPicker } from "@/components/ui/LocationPicker";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -716,11 +717,10 @@ export default function XaridorSozlamalarPage() {
                     placeholder="https://company.uz yoki @username"
                   />
 
-                  <Input
+                  <LocationPicker
                     label={t("bset.location")}
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Masalan: Toshkent, O'zbekiston"
+                    onChange={setLocation}
                   />
                 </div>
 

@@ -24,8 +24,8 @@
  * uchun, xavfsizlik emas.
  */
 
-/** Bitta biriktirma uchun eng katta hajm (base64 ~1.33x shishadi). */
-export const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+/** Bitta biriktirma uchun eng katta hajm (15 MB). */
+export const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 
 /** Bitta xabar/topshiriqqa biriktiriladigan fayllar soni. */
 export const MAX_ATTACHMENTS = 5;
@@ -58,6 +58,7 @@ const ALLOWED_EXT = new Set([
   "png", "jpg", "jpeg", "webp", "gif", "svg",
   "pdf", "zip", "rar", "doc", "docx", "xls", "xlsx",
   "ppt", "pptx", "txt", "csv", "json", "fig",
+  "ai", "psd", "sketch", "mp4", "mov",
 ]);
 
 /** `<input type="file" accept>` uchun — dialogda ortiqcha fayl ko'rinmasin. */
@@ -84,8 +85,19 @@ export function attachmentProblem(file: {
   return "FILE_TYPE_NOT_ALLOWED";
 }
 
-/** Faylni data-URL ga o'qiydi (mock saqlash uchun yagona shakl). */
+/** Faylni data-URL ga o'qiydi (mock saqlash uchun yagona shakl).
+ *
+ *  KVOTA HIMOYA: Brauzer localStorage hajmi 5-10 MB bilan cheklangan.
+ *  Katta fayllar (1.5 MB dan yuqori, 15 MB gacha) uchun xavfsiz mock URL
+ *  ishlatiladi, kichik fayllar (rasmlar, matnlar) to'liq base64 DataURL
+ *  sifatida o'qiladi. Bu localStorage kvotasi to'lib dastur qulashini oldini oladi.
+ */
 export function readAsDataUrl(file: Blob): Promise<string> {
+  const fileName = (file as File).name || "fayl";
+  if (file.size > 1.5 * 1024 * 1024) {
+    const safeName = encodeURIComponent(fileName);
+    return Promise.resolve(`https://storage.bobododa.uz/deliverables/${Date.now()}-${safeName}`);
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () =>

@@ -22,7 +22,8 @@ import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { useAdminDeepLink } from "@/lib/hooks/useAdminDeepLink";
 import { adminErrorText } from "@/lib/admin-error-text";
 import { formatDate, formatMoney } from "@/lib/format";
-import type { Contract, Milestone } from "@/lib/types";
+import type { Contract, Milestone, Message } from "@/lib/types";
+import { messagesService } from "@/lib/api/messages";
 import { InternalNotesWidget } from "@/components/admin/InternalNotesWidget";
 
 export default function DisputesCenterPage() {
@@ -87,9 +88,13 @@ export default function DisputesCenterPage() {
     activeEscrow: number;
   } | null>(null);
 
+  const [disputeMessages, setDisputeMessages] = useState<Message[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+
   useEffect(() => {
     if (!selectedDispute) {
       setDisputeContractData(null);
+      setDisputeMessages([]);
       return;
     }
     let cancelled = false;
@@ -115,6 +120,20 @@ export default function DisputesCenterPage() {
       .catch(() => {
         if (!cancelled) setDisputeContractData(null);
       });
+
+    setMessagesLoading(true);
+    messagesService
+      .list(selectedDispute.contractId)
+      .then((msgs) => {
+        if (!cancelled) setDisputeMessages(msgs || []);
+      })
+      .catch(() => {
+        if (!cancelled) setDisputeMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setMessagesLoading(false);
+      });
+
     return () => {
       cancelled = true;
     };
@@ -418,23 +437,139 @@ export default function DisputesCenterPage() {
               )}
             </div>
 
-            {/* Milestones Breakdown */}
+            {/* Milestones & Deliverables Breakdown */}
             <div className="border-b border-line pb-3">
-              <p className="text-2xs text-muted font-semibold uppercase mb-1.5">Bosqichlar (Milestones) holati</p>
-              <div className="max-h-32 overflow-y-auto divide-y divide-line border border-line rounded bg-card">
+              <p className="text-2xs text-muted font-semibold uppercase mb-1.5">
+                Bosqichlar va Topshirilgan Natijalar ({disputeContractData.milestones.length} ta)
+              </p>
+              <div className="max-h-56 overflow-y-auto space-y-2">
                 {disputeContractData.milestones.map((m) => (
-                  <div key={m.id} className="p-2 flex items-center justify-between text-2xs">
-                    <span className="font-medium text-ink truncate max-w-[150px]">{m.title}</span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="font-mono text-ink">{formatMoney(m.amount)}</span>
-                      <Badge tone={m.status === "qabul_qilindi" ? "neutral" : m.status === "mablaglangan" ? "success" : "warning"}>
-                        {m.status}
-                      </Badge>
+                  <div key={m.id} className="p-2.5 rounded border border-line bg-card text-2xs space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-ink truncate max-w-[220px]">{m.title}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-mono font-semibold text-ink">{formatMoney(m.amount)}</span>
+                        <Badge tone={m.status === "qabul_qilindi" ? "neutral" : m.status === "mablaglangan" ? "success" : "warning"}>
+                          {m.status}
+                        </Badge>
+                      </div>
                     </div>
+
+                    {/* Deliverable link / notes if present */}
+                    {m.deliverableLink && (
+                      <div className="bg-surface p-1.5 rounded border border-line flex items-center gap-2">
+                        <span className="text-muted font-medium">Havola:</span>
+                        <a
+                          href={m.deliverableLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-mono truncate"
+                        >
+                          🔗 {m.deliverableLink}
+                        </a>
+                      </div>
+                    )}
+
+                    {m.deliverableNote && (
+                      <div className="bg-surface p-1.5 rounded border border-line text-muted">
+                        <span className="font-semibold text-ink">Mutaxassis izohi:</span> {m.deliverableNote}
+                      </div>
+                    )}
+
+                    {m.deliverableFiles && m.deliverableFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {m.deliverableFiles.map((f) => (
+                          <a
+                            key={f.id}
+                            href={f.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={f.name}
+                            className="bg-card-hover px-2 py-0.5 rounded border border-line text-primary font-mono text-3xs flex items-center gap-1"
+                          >
+                            📎 {f.name} ({Math.round(f.size / 1024)} KB)
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Revision comment if present */}
+                    {m.revisionComment && (
+                      <div className="bg-warning/10 p-1.5 rounded border border-warning/30 text-warning-deep">
+                        <span className="font-semibold">O&apos;zgartirish talabi (#{m.revisionCount ?? 1}):</span> {m.revisionComment}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Chat History between Parties */}
+            <div className="border-b border-line pb-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-2xs text-muted font-semibold uppercase">
+                  Tomonlar Yozishmalari (Chat Tarixi — {disputeMessages.length} ta xabar)
+                </p>
+                {messagesLoading && <span className="text-3xs text-muted animate-pulse">Yuklanmoqda...</span>}
+              </div>
+
+              <div className="max-h-48 overflow-y-auto rounded border border-line bg-surface/50 p-2.5 space-y-2">
+                {disputeMessages.length === 0 ? (
+                  <p className="text-2xs text-muted italic text-center py-2">
+                    {messagesLoading ? "Xabarlar yuklanmoqda..." : "Ushbu shartnoma bo'yicha yozishmalar mavjud emas."}
+                  </p>
+                ) : (
+                  disputeMessages.map((msg) => {
+                    const isBuyer = msg.senderId === disputeContractData.contract.buyerId;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`rounded-lg p-2 text-2xs border ${
+                          isBuyer
+                            ? "bg-primary/5 border-primary/20 mr-4"
+                            : "bg-card border-line ml-4"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span
+                            className={`font-semibold text-3xs px-1.5 py-0.5 rounded ${
+                              isBuyer
+                                ? "bg-primary/10 text-primary"
+                                : "bg-accent/10 text-accent"
+                            }`}
+                          >
+                            {isBuyer ? `Xaridor (${disputeContractData.contract.buyerName})` : `Mutaxassis (${disputeContractData.contract.sellerName})`}
+                          </span>
+                          <span className="text-3xs text-muted">{formatDate(msg.createdAt)}</span>
+                        </div>
+                        <p className="text-ink leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        {msg.image && (
+                          <div className="mt-1.5">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={msg.image} alt="Attachment" className="max-h-24 rounded border border-line" />
+                          </div>
+                        )}
+                        {msg.files && msg.files.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {msg.files.map((file) => (
+                              <a
+                                key={file.id}
+                                href={file.url}
+                                download={file.name}
+                                className="text-3xs text-primary underline bg-card px-1.5 py-0.5 rounded border border-line"
+                              >
+                                📎 {file.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
 
             {/* Private Operator Notes */}
             <InternalNotesWidget targetId={selectedDispute.id} targetType="dispute" />

@@ -121,6 +121,25 @@ export default function VerificationQueuePage() {
     }
   };
 
+  const docTypeLabels: Record<string, string> = {
+    passport: "Pasport",
+    id_card: "ID Karta",
+    internal_passport: "Ichki pasport (RF)",
+    driver_license: "Haydovchilik guvohnomasi",
+  };
+
+  const countryLabels: Record<string, string> = {
+    UZ: "🇺🇿 UZ",
+    RU: "🇷🇺 RU",
+    KZ: "🇰🇿 KZ",
+    KG: "🇰🇬 KG",
+    TJ: "🇹🇯 TJ",
+    TR: "🇹🇷 TR",
+    AE: "🇦🇪 AE",
+    US: "🇺🇸 US",
+    GLOBAL: "🌍 Xalqaro",
+  };
+
   const columns: TableColumn<AdminVerificationRow>[] = [
     {
       key: "user",
@@ -144,7 +163,7 @@ export default function VerificationQueuePage() {
       header: "Mamlakat / Hujjat",
       render: (v) => (
         <span className="text-xs text-ink font-medium">
-          {v.country} · {v.documentType === "passport" ? "Pasport" : "ID Karta"}
+          {countryLabels[v.country] || v.country} · {docTypeLabels[v.documentType] || v.documentType}
         </span>
       ),
     },
@@ -320,12 +339,14 @@ export default function VerificationQueuePage() {
               </div>
               <div>
                 <dt className="text-2xs text-muted font-semibold uppercase">Mamlakat</dt>
-                <dd className="mt-0.5 text-ink font-medium">{selectedRecord.country}</dd>
+                <dd className="mt-0.5 text-ink font-medium">
+                  {countryLabels[selectedRecord.country] || selectedRecord.country}
+                </dd>
               </div>
               <div>
                 <dt className="text-2xs text-muted font-semibold uppercase">Hujjat turi</dt>
                 <dd className="mt-0.5 text-ink font-medium">
-                  {selectedRecord.documentType === "passport" ? "Pasport (Xalqaro)" : "ID Karta"}
+                  {docTypeLabels[selectedRecord.documentType] || selectedRecord.documentType}
                 </dd>
               </div>
               <div>

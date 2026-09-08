@@ -18,6 +18,7 @@ import type { ServiceCategory } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useFormDraft } from "@/lib/hooks/useFormDraft";
+import { checkCircumvention, reportCircumventionViolation } from "@/lib/chat-filter";
 
 const MAX_QUESTIONS = 3;
 
@@ -90,8 +91,41 @@ export default function YangiElonPage() {
     const next: Record<string, string> = {};
     if (current === 0 && !category) next.category = t("wizard.errCategory");
     if (current === 1) {
-      if (title.trim().length < 10) next.title = t("wizard.errTitle");
-      if (description.trim().length < 30) next.description = t("wizard.errDesc");
+      if (title.trim().length < 10) {
+        next.title = t("wizard.errTitle");
+      } else {
+        const checkTitle = checkCircumvention(title);
+        if (checkTitle.hasViolation) {
+          next.title = lang === "ru"
+            ? "В названии запрещено указывать контакты (телефон, Telegram). Используйте безопасный Escrow."
+            : "Sarlavhada shaxsiy kontaktlar (telefon, Telegram) ko'rsatish taqiqlanadi. Escrow kafolatidan foydalaning.";
+          reportCircumventionViolation({
+            targetType: "job",
+            targetTitle: title,
+            matchedText: checkTitle.matchedText,
+            violationType: checkTitle.type,
+            fullContent: title,
+          });
+        }
+      }
+
+      if (description.trim().length < 30) {
+        next.description = t("wizard.errDesc");
+      } else {
+        const checkDesc = checkCircumvention(description);
+        if (checkDesc.hasViolation) {
+          next.description = lang === "ru"
+            ? "В описании проекта запрещено указывать прямые контакты (Telegram, телефон, почту). Все обсуждения ведутся на платформе."
+            : "Loyiha tavsifida to'g'ridan-to'g'ri kontaktlar (Telegram, telefon, email) ko'rsatish taqiqlanadi. Barcha muloqot platformada olib borilishi shart.";
+          reportCircumventionViolation({
+            targetType: "job",
+            targetTitle: title,
+            matchedText: checkDesc.matchedText,
+            violationType: checkDesc.type,
+            fullContent: description,
+          });
+        }
+      }
     }
     if (current === 2 && skills.length === 0)
       next.skills = t("onboard.errSkills");

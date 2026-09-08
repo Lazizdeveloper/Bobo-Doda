@@ -5,6 +5,7 @@ import type {
   Job,
   Message,
   Milestone,
+  MilestoneStatus,
   NotificationKind,
   Offer,
   PaymentCard,
@@ -28,10 +29,11 @@ import type {
   DeliverableFile,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
-import { sellerNet } from "@/lib/fees";
+import { sellerNet, platformFee } from "@/lib/fees";
 import { formatAmount } from "@/lib/format";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { getDisabledCategories } from "@/lib/categories";
+import { generatePaymentReference } from "@/lib/company-bank-details";
 export type { AccountPreferences, Specialist } from "@/lib/types";
 import {
   amount,
@@ -47,6 +49,7 @@ import {
   MAX_ATTACHMENTS,
   readAsDataUrl,
 } from "@/lib/attachments";
+import { checkCircumvention, reportCircumventionViolation } from "@/lib/chat-filter";
 import {
   assertTransition,
   contractMachine,
@@ -148,8 +151,8 @@ function write<T>(key: string, value: T): void {
   }
 }
 
-/* v7: Complete multi-role end-to-end testing demo data */
-const SEED_VERSION = "17";
+/* v8: Rich full-flow demo data for all platform capabilities */
+const SEED_VERSION = "18";
 
 /** To'liq ISO sana-vaqt satri ("2026-03-05T16:00:00.000Z").
     Faqat shu shakl siljitiladi — "1994-05-12" kabi tug'ilgan sanalar tegilmaydi. */
@@ -394,12 +397,22 @@ function currentUserId(): string {
  *  `NEXT_PUBLIC_DEMO_WORKSPACE=1` bilan yoqiladi. Backend ulanganda bu
  *  funksiya butunlay olib tashlanadi — server hech qachon foydalanuvchiga
  *  yo'q shartnomani ko'rsatmaydi. */
-const DEMO_WORKSPACE_ENABLED =
-  process.env.NEXT_PUBLIC_DEMO_WORKSPACE === "1";
+/** Barcha demo ma'lumotlarni tozalab, yangi holatda qayta tiklash */
+export function resetDemoData(): void {
+  if (typeof window === "undefined") return;
+  for (const key of Object.values(KEYS)) {
+    window.localStorage.removeItem(key);
+  }
+  ensureSeed();
+  window.dispatchEvent(
+    new CustomEvent(DATA_CHANGED_EVENT, { detail: { key: "all" } })
+  );
+}
 
-/** Namoyish rejimida yangi hisobni tayyor ish maydoni bilan to'ldiradi.
-    Odatiy holatda (flag berilmagan) hech narsa qilmaydi — yangi hisob
-    BO'SH bo'ladi. */
+const DEMO_WORKSPACE_ENABLED =
+  process.env.NEXT_PUBLIC_DEMO_WORKSPACE !== "0";
+
+/** Namoyish rejimida yangi hisobni tayyor ish maydoni bilan to'ldiradi. */
 export function ensureUserData(userId: string): void {
   if (!DEMO_WORKSPACE_ENABLED) return;
   if (typeof window === "undefined") return;
@@ -441,6 +454,13 @@ export function ensureUserData(userId: string): void {
       totalAmount: 5000000,
       status: "faol",
       createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+      contractNumber: `BD-2026-0741`,
+      buyerAcceptedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+      buyerAcceptedName: "ArtSoft Studios (Dilshod Rahimov)",
+      buyerAcceptedPhone: "+998 91 876 54 32",
+      sellerAcceptedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+      sellerAcceptedName: userName,
+      sellerAcceptedPhone: "+998 90 123 45 67",
     },
     {
       id: completedContractId,
@@ -453,6 +473,13 @@ export function ensureUserData(userId: string): void {
       totalAmount: 3000000,
       status: "yakunlangan",
       createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString(),
+      contractNumber: `BD-2026-0620`,
+      buyerAcceptedAt: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString(),
+      buyerAcceptedName: "FinTech Group MChJ (Alisher)",
+      buyerAcceptedPhone: "+998 91 876 54 32",
+      sellerAcceptedAt: new Date(Date.now() - 15 * 24 * 3600 * 1000).toISOString(),
+      sellerAcceptedName: userName,
+      sellerAcceptedPhone: "+998 90 123 45 67",
     },
     {
       id: buyerContractId,
@@ -465,6 +492,13 @@ export function ensureUserData(userId: string): void {
       totalAmount: 4500000,
       status: "faol",
       createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+      contractNumber: `BD-2026-0815`,
+      buyerAcceptedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+      buyerAcceptedName: userName,
+      buyerAcceptedPhone: "+998 91 876 54 32",
+      sellerAcceptedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+      sellerAcceptedName: "Rustam Qosimov",
+      sellerAcceptedPhone: "+998 90 123 45 67",
     },
   ];
 
@@ -958,7 +992,7 @@ export async function resetPassword(input: {
   phone: string;
   code: string;
   newPassword: string;
-  method?: "telegram" | "google";
+  method?: "sms" | "telegram" | "google";
 }): Promise<void> {
   ensureSeed();
   await delay(800);
@@ -2002,6 +2036,74 @@ export async function rejectCloseContract(
   return contracts[idx];
 }
 
+/** Ikki tomonlama shartnomani elektron imzolash va tasdiqlash */
+export async function signContract(id: string): Promise<Contract> {
+  ensureSeed();
+  await delay(400);
+  const uid = currentUserId();
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const idx = contracts.findIndex(
+    (c) => c.id === id && (c.buyerId === uid || c.sellerId === uid)
+  );
+  if (idx < 0) throw new Error("NOT_FOUND");
+  const contract = contracts[idx];
+  const users = read<User[]>(KEYS.users, []);
+  const me = users.find((u) => u.id === uid);
+  const now = new Date().toISOString();
+
+  const isSeller = contract.sellerId === uid;
+  const isBuyer = contract.buyerId === uid;
+
+  const num =
+    contract.contractNumber ||
+    `BD-${new Date(contract.createdAt).getFullYear()}-${(contract.id || "1").replace(/\D/g, "").padStart(4, "0") || "0108"}`;
+
+  const updated: Contract = {
+    ...contract,
+    contractNumber: num,
+    sellerAcceptedAt: isSeller
+      ? now
+      : (contract.sellerAcceptedAt || (contract.status === "faol" ? contract.createdAt : undefined)),
+    sellerAcceptedName: isSeller
+      ? (me?.fullName || contract.sellerName)
+      : (contract.sellerAcceptedName || contract.sellerName),
+    sellerAcceptedPhone: isSeller
+      ? (me?.phone || "+998 90 123 45 67")
+      : (contract.sellerAcceptedPhone || "+998 90 123 45 67"),
+    buyerAcceptedAt: isBuyer
+      ? now
+      : (contract.buyerAcceptedAt || contract.createdAt),
+    buyerAcceptedName: isBuyer
+      ? (me?.fullName || contract.buyerName)
+      : (contract.buyerAcceptedName || contract.buyerName),
+    buyerAcceptedPhone: isBuyer
+      ? (me?.phone || "+998 91 876 54 32")
+      : (contract.buyerAcceptedPhone || "+998 91 876 54 32"),
+  };
+
+  contracts[idx] = updated;
+  write(KEYS.contracts, contracts);
+
+  const roleTitle = isSeller ? "Mutaxassis" : "Buyurtmachi";
+  try {
+    await sendMessage(
+      contract.id,
+      `📑 Rasmiy elektron shartnoma (${num}) ${roleTitle} tomonidan ko'rib chiqildi va elektron imzolandi.\nSana: ${now.slice(0, 10)}`
+    );
+  } catch {}
+
+  const otherId = isSeller ? contract.buyerId : contract.sellerId;
+  pushNotification(
+    otherId,
+    "bosqich",
+    "ntf.contractSigned",
+    `${isSeller ? "/xaridor" : "/mutaxassis"}/shartnomalar/${contract.id}`,
+    { title: contract.title, role: roleTitle }
+  );
+
+  return updated;
+}
+
 /* ---------------- Sharhlar ---------------- */
 
 export async function getReviews(): Promise<Review[]> {
@@ -2634,6 +2736,8 @@ async function createWithdrawalRequest(
     cardId: cardId ?? "",
     bankAccount: isBankAccount ? destination.bankAccount : undefined,
     status: "kutilmoqda",
+    payoutStatus: "payout_pending",
+    payoutReference: `PAYOUT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
     createdAt: new Date().toISOString(),
   };
   const all = read<WithdrawalRequest[]>(KEYS.withdrawalRequests, []);
@@ -2848,6 +2952,22 @@ export async function createJob(data: {
   assertCategoryOpen(data.category);
   const users = read<User[]>(KEYS.users, []);
   const user = users.find((u) => u.id === session.userId);
+
+  const titleCheck = checkCircumvention(data.title);
+  const descCheck = checkCircumvention(data.description);
+  if (titleCheck.hasViolation || descCheck.hasViolation) {
+    reportCircumventionViolation({
+      senderId: session.userId,
+      senderName: user?.fullName,
+      targetType: "job",
+      targetTitle: data.title,
+      matchedText: titleCheck.matchedText || descCheck.matchedText,
+      violationType: titleCheck.type || descCheck.type,
+      fullContent: `${data.title}\n${data.description}`,
+    });
+    throw new Error("CIRCUMVENTION_DETECTED");
+  }
+
   const jobs = read<Job[]>(KEYS.jobs, []);
   /* Xaridor reytingi: avvalgi e'lonidan olinadi, bo'lmasa 0 (yangi xaridor) */
   const prevRating =
@@ -3328,10 +3448,12 @@ function findOwnMilestone(
 export async function fundContract(
   id: string,
   input?: {
-    method: PaymentMethod;
+    method?: PaymentMethod;
     cardId?: string;
     receiptUrl?: string;
     receiptName?: string;
+    receiptSize?: number;
+    notes?: string;
   }
 ): Promise<Contract> {
   await delay(700);
@@ -3345,15 +3467,45 @@ export async function fundContract(
   if (idx < 0) throw new Error("NOT_FOUND");
   const contract = contracts[idx];
 
-  /* 1. B2B bank o'tkazmasi: to'lov topshirig'i yuklanadi, admin tasdig'iga o'tadi */
-  if (input?.method === "b2b") {
+  /* Manual Bank Transfer (MVP):
+     Employer uploads receipt and submits for verification.
+     Contract stays in 'imzolangan', paymentStatus becomes 'pending_verification'.
+     Milestones remain unfunded ('kutilmoqda') until Admin verifies bank deposit. */
+  const reference = contract.paymentReference || generatePaymentReference(contract.id);
+  const isBankTransfer = input?.method === "b2b" || input?.receiptUrl;
+
+  const users = read<User[]>(KEYS.users, []);
+  const buyerUser = users.find((u) => u.id === contract.buyerId);
+  const sellerUser = users.find((u) => u.id === contract.sellerId);
+  const now = new Date().toISOString();
+  const contractNumber =
+    contract.contractNumber ||
+    `BD-${new Date(contract.createdAt).getFullYear()}-${(contract.id || "1").replace(/\D/g, "").padStart(4, "0") || "0108"}`;
+
+  if (isBankTransfer) {
+    /* 🌍 Xorij va qo'shni davlatlar (Manual Bank Transfer):
+       Xaridor kvitansiya yuklaydi, admin bank tushumini tekshiradi.
+       Shartnoma 'imzolangan' holatda qoladi, to'lov 'pending_verification'.
+       Admin tasdiqlamaguncha bosqichlar 'kutilmoqda' holatida turadi. */
     contracts[idx] = {
       ...contract,
+      status: "imzolangan",
+      contractNumber,
+      buyerAcceptedAt: contract.buyerAcceptedAt || now,
+      buyerAcceptedName: contract.buyerAcceptedName || buyerUser?.fullName || contract.buyerName,
+      buyerAcceptedPhone: contract.buyerAcceptedPhone || buyerUser?.phone || "+998 90 123 45 67",
       b2bPending: true,
-      b2bReceiptUrl: input.receiptUrl || "",
-      b2bReceiptName: input.receiptName || "tolov_topshirigi.pdf",
-      b2bSubmittedAt: new Date().toISOString(),
+      b2bReceiptUrl: input?.receiptUrl || contract.b2bReceiptUrl || "",
+      b2bReceiptName: input?.receiptName || contract.b2bReceiptName || "tolov_cheki.pdf",
+      b2bSubmittedAt: now,
       paymentMethod: "b2b",
+      paymentStatus: "pending_verification",
+      paymentReference: reference,
+      paymentReceiptUrl: input?.receiptUrl || contract.paymentReceiptUrl || "",
+      paymentReceiptName: input?.receiptName || contract.paymentReceiptName || "tolov_cheki.pdf",
+      paymentReceiptSize: input?.receiptSize || contract.paymentReceiptSize,
+      paymentSubmittedAt: now,
+      paymentNotes: input?.notes || contract.paymentNotes || "",
     };
     write(KEYS.contracts, contracts);
 
@@ -3365,60 +3517,116 @@ export async function fundContract(
       { title: contract.title }
     );
     return contracts[idx];
-  }
+  } else {
+    /* 🇺🇿 O'zbekiston ichki kartalari (Uzcard / Humo — Yagona milliy provayder):
+       Avtomatlashtirilgan tezkor to'lov! Escrow bloklanadi, shartnoma faollashadi,
+       barcha bosqichlar 'mablaglangan' bo'ladi va mutaxassis ishga kirishadi. */
+    const escrowRef = `ESC-CARD-${contract.id.replace(/^cnt-/, "").toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    contracts[idx] = {
+      ...contract,
+      status: "faol",
+      contractNumber,
+      buyerAcceptedAt: contract.buyerAcceptedAt || now,
+      buyerAcceptedName: contract.buyerAcceptedName || buyerUser?.fullName || contract.buyerName,
+      buyerAcceptedPhone: contract.buyerAcceptedPhone || buyerUser?.phone || "+998 90 123 45 67",
+      sellerAcceptedAt: contract.sellerAcceptedAt || now,
+      sellerAcceptedName: contract.sellerAcceptedName || sellerUser?.fullName || contract.sellerName,
+      sellerAcceptedPhone: contract.sellerAcceptedPhone || sellerUser?.phone || "+998 91 876 54 32",
+      b2bPending: false,
+      paymentMethod: "karta",
+      paymentStatus: "payment_confirmed",
+      paymentReference: reference,
+      escrowReference: escrowRef,
+      fundedAt: now,
+    };
+    write(KEYS.contracts, contracts);
 
-  /* 2. Karta bilan to'lov */
-  if (input?.method === "karta" && input.cardId) {
-    const own = read<PaymentCard[]>(KEYS.cards, []).find(
-      (c) => c.id === input.cardId && c.userId === uid2
+    // Shartnoma bosqichlarini mablag'langan holatga o'tkazamiz
+    const milestones = read<Milestone[]>(KEYS.milestones, []);
+    const updatedMilestones = milestones.map((m) =>
+      m.contractId === id ? { ...m, status: "mablaglangan" as MilestoneStatus } : m
     );
-    if (!own) throw new Error("CARD_NOT_FOUND");
-  }
+    write(KEYS.milestones, updatedMilestones);
 
-  /* 3. Bobo&Doda hisob balansi bilan to'lov */
-  if (input?.method === "balans") {
-    const balances = readBalances();
-    const currentBal = balances[uid2] ?? 0;
-    if (currentBal < contract.totalAmount) {
-      throw new Error("INSUFFICIENT_FUNDS");
-    }
-    balances[uid2] = currentBal - contract.totalAmount;
-    write(KEYS.balances, balances);
-  }
+    // Tranzaksiyalar jurnaliga yozamiz
+    const transactions = read<any[]>("sb2_transactions", []);
+    const tx = {
+      id: uid("tx"),
+      type: "escrow_mablaglash",
+      userId: contract.buyerId,
+      userName: contract.buyerName,
+      amount: contract.totalAmount,
+      currency: "UZS",
+      referenceId: contract.id,
+      description: `Shartnoma #${contract.id} (${escrowRef}) uchun karta orqali to'lov (Escrow bloklandi)`,
+      status: "muvaffaqiyatli",
+      createdAt: now,
+    };
+    write("sb2_transactions", [tx, ...transactions]);
 
-  assertTransition(contractMachine, contract.status, "faol", "buyer");
-
-  /* Barcha kutilayotgan bosqichlar bir to'lovda mablag'lanadi */
-  const milestones = read<Milestone[]>(KEYS.milestones, []);
-  if (!milestones.some((milestone) => milestone.contractId === id && milestone.status === "kutilmoqda")) {
-    throw new Error("BAD_STATE");
+    pushNotification(
+      contract.sellerId,
+      "tolov",
+      "ntf.milestoneFunded",
+      `/mutaxassis/shartnomalar/${id}`,
+      { title: contract.title }
+    );
+    return contracts[idx];
   }
-  const updated = milestones.map((m) =>
-    m.contractId === id && m.status === "kutilmoqda"
-      ? { ...m, status: "mablaglangan" as const }
-      : m
+}
+
+export async function fundMilestone(
+  contractId: string,
+  milestoneId: string,
+  method: PaymentMethod = "karta"
+): Promise<{ contract: Contract; milestone: Milestone }> {
+  await delay(600);
+  if (getPlatformSettings().paymentsPaused) throw new Error("PAYMENTS_PAUSED");
+  const uid2 = currentUserId();
+
+  const contracts = read<Contract[]>(KEYS.contracts, []);
+  const contractIdx = contracts.findIndex(
+    (c) => c.id === contractId && c.buyerId === uid2
   );
-  write(KEYS.milestones, updated);
+  if (contractIdx < 0) throw new Error("NOT_FOUND");
+  const contract = contracts[contractIdx];
 
-  contracts[idx] = {
-    ...contract,
-    status: "faol",
-    b2bPending: false,
-    paymentMethod: input?.method || "karta",
-    fundedAt: new Date().toISOString(),
-    escrowReference: `ESC-${(input?.method || "karta").toUpperCase()}-${id.toUpperCase()}`,
+  const milestones = read<Milestone[]>(KEYS.milestones, []);
+  const mIdx = milestones.findIndex(
+    (m) => m.id === milestoneId && m.contractId === contractId
+  );
+  if (mIdx < 0) throw new Error("NOT_FOUND");
+  const milestone = milestones[mIdx];
+  if (milestone.status !== "kutilmoqda") {
+    throw new Error("ALREADY_FUNDED");
+  }
+
+  milestones[mIdx] = {
+    ...milestone,
+    status: "mablaglangan",
   };
-  write(KEYS.contracts, contracts);
+  write(KEYS.milestones, milestones);
+
+  if (contract.status === "imzolangan") {
+    contracts[contractIdx] = {
+      ...contract,
+      status: "faol",
+      paymentStatus: "payment_confirmed",
+    };
+    write(KEYS.contracts, contracts);
+  }
 
   pushNotification(
     contract.sellerId,
-    "bosqich",
-    "ntf.contractFunded",
-    `/mutaxassis/shartnomalar/${id}`,
-    { title: contract.title }
+    "tolov",
+    "ntf.milestoneFunded",
+    `/mutaxassis/shartnomalar/${contractId}`,
+    { title: milestone.title }
   );
-  return contracts[idx];
+
+  return { contract: contracts[contractIdx], milestone: milestones[mIdx] };
 }
+
 
 /* ---------------- Xaridor hisobi (balans / qaytarilgan mablag') ---------------- */
 
@@ -3544,6 +3752,35 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     incrementCompletedContracts(contract.sellerId);
   }
 
+  const transactions = read<any[]>("sb2_transactions", []);
+  const fee = platformFee(milestones[idx].amount);
+  const net = sellerNet(milestones[idx].amount);
+  const outTx = {
+    id: uid("tx"),
+    type: "milestone_tolov",
+    userId: contract.sellerId,
+    userName: contract.sellerName,
+    amount: net,
+    currency: "UZS",
+    referenceId: milestones[idx].id,
+    description: `Bosqich: "${milestones[idx].title}" qabul qilindi va mutaxassisga to'landi (Sof summa)`,
+    status: "muvaffaqiyatli",
+    createdAt: new Date().toISOString(),
+  };
+  const feeTx = {
+    id: uid("tx"),
+    type: "commission",
+    userId: contract.sellerId,
+    userName: contract.sellerName,
+    amount: fee,
+    currency: "UZS",
+    referenceId: milestones[idx].id,
+    description: `Platforma komissiyasi (${milestones[idx].title})`,
+    status: "muvaffaqiyatli",
+    createdAt: new Date().toISOString(),
+  };
+  write("sb2_transactions", [outTx, feeTx, ...transactions]);
+
   pushNotification(
     contract.sellerId,
     "tolov",
@@ -3576,17 +3813,23 @@ export async function requestRevision(
     "buyer"
   );
   const usedRevisions = milestones[idx].revisionCount ?? 0;
+  let maxRevisions = 3;
   if (contract.serviceId) {
     const service = read<Service[]>(KEYS.services, []).find(
       (s) => s.id === contract.serviceId
     );
-    if (
-      service?.revisionsIncluded !== undefined &&
-      usedRevisions >= service.revisionsIncluded
-    ) {
-      throw new Error("REVISION_LIMIT_REACHED");
+    if (service?.revisionsIncluded !== undefined) {
+      maxRevisions = service.revisionsIncluded;
     }
+  } else if (milestones[idx].revisionsIncluded !== undefined) {
+    maxRevisions = milestones[idx].revisionsIncluded;
+  } else if (contract.revisionsIncluded !== undefined) {
+    maxRevisions = contract.revisionsIncluded;
   }
+  if (usedRevisions >= maxRevisions) {
+    throw new Error("REVISION_LIMIT_REACHED");
+  }
+
   milestones[idx] = {
     ...milestones[idx],
     status: "ozgartirish_soraldi",

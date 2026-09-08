@@ -19,6 +19,8 @@ import { authService, messagesService, offersService } from "@/lib/api";
 import type { Message, Offer } from "@/lib/types";
 import { formatDate, formatMoney, formatTime } from "@/lib/format";
 import { useT } from "@/lib/i18n";
+import { checkCircumvention, type CircumventionCheckResult } from "@/lib/chat-filter";
+import { AntiCircumventionModal } from "@/components/shared/AntiCircumventionModal";
 
 export default function TaklifTafsilotiXaridorPage() {
   const { t, lang } = useT();
@@ -32,8 +34,10 @@ export default function TaklifTafsilotiXaridorPage() {
   const [sending, setSending] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [circumventionResult, setCircumventionResult] = useState<CircumventionCheckResult | null>(null);
+  const [circumventionModalOpen, setCircumventionModalOpen] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -74,6 +78,14 @@ export default function TaklifTafsilotiXaridorPage() {
     e.preventDefault();
     const text = draft.trim();
     if ((!text && !draftImage) || !offer) return;
+
+    const check = checkCircumvention(text);
+    if (check.hasViolation) {
+      setCircumventionResult(check);
+      setCircumventionModalOpen(true);
+      return;
+    }
+
     setSending(true);
     try {
       const message = await messagesService.send(offer.id, text, draftImage);
@@ -238,21 +250,31 @@ export default function TaklifTafsilotiXaridorPage() {
             <div ref={chatEndRef} />
           </div>
           {pending ? (
-            <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-line p-3">
-              <ChatImageAttach value={draftImage} onChange={setDraftImage} />
-              <div className="flex-1">
-                <Input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder={t("chat.placeholder")}
-                  aria-label={t("chat.placeholder")}
-                  maxLength={5000}
-                />
+            <>
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-t border-line text-2xs text-muted">
+                <span>🛡️</span>
+                <span>
+                  {lang === "ru"
+                    ? "Безопасная сделка: обмен личными контактами до оформления контракта запрещён."
+                    : "Xavfsizlik kafolati: Shartnoma rasmiylashtirilgunga qadar telefon va Telegram almashish taqiqlanadi."}
+                </span>
               </div>
-              <Button type="submit" loading={sending} disabled={!draft.trim() && !draftImage}>
-                {t("chat.send")}
-              </Button>
-            </form>
+              <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-line p-3">
+                <ChatImageAttach value={draftImage} onChange={setDraftImage} />
+                <div className="flex-1">
+                  <Input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder={t("chat.placeholder")}
+                    aria-label={t("chat.placeholder")}
+                    maxLength={5000}
+                  />
+                </div>
+                <Button type="submit" loading={sending} disabled={!draft.trim() && !draftImage}>
+                  {t("chat.send")}
+                </Button>
+              </form>
+            </>
           ) : (
             <p className="border-t border-line p-3 text-center text-2xs text-faint">
               {t("soffer.chatClosed")}
@@ -272,6 +294,13 @@ export default function TaklifTafsilotiXaridorPage() {
         loading={withdrawing}
         onConfirm={handleWithdraw}
         onCancel={() => setWithdrawOpen(false)}
+      />
+
+      {/* Platformadan tashqariga chaqirishni ogohlantirish modali */}
+      <AntiCircumventionModal
+        open={circumventionModalOpen}
+        onClose={() => setCircumventionModalOpen(false)}
+        result={circumventionResult}
       />
     </div>
   );

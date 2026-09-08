@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { authService } from "@/lib/api";
+import { authService, resetDemoData } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { LangSwitch } from "@/components/shared/LangSwitch";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
@@ -97,9 +97,9 @@ function KirishForm() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  /* Boshlang'ich holat ?tab=kirish yoki ro'yxatdan o'tish */
+  /* Boshlang'ich holat: /kirish sahifasida odatiy holat login */
   const [mode, setMode] = useState<Mode>(
-    searchParams.get("tab") === "kirish" ? "login" : "register"
+    searchParams.get("tab") === "register" ? "register" : "login"
   );
 
   /* Ro'yxatdan o'tish holati */
@@ -121,6 +121,7 @@ function KirishForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<"telegram" | "google" | null>(null);
+  const [resetFeedback, setResetFeedback] = useState(false);
 
   /* Sessiya tekshiruvi: tasdiqlangan foydalanuvchi kabinetga yo'naltiriladi */
   useEffect(() => {
@@ -259,6 +260,35 @@ function KirishForm() {
       else setErrors({ form: t("common.error") });
       setLoading(false);
     }
+  }
+
+  /* ⚡ 1-bosishda tezkor demo hisob bilan kirish */
+  async function handleDemoLogin(phone: string, targetRole: "mutaxassis" | "xaridor") {
+    setLoading(true);
+    setErrors({});
+    try {
+      const session = await authService.login({
+        phone: phone.trim(),
+        password: "demo123",
+      });
+      if (session.role === "xaridor") {
+        router.push("/xaridor");
+      } else if (session.role === "mutaxassis") {
+        router.push("/mutaxassis");
+      } else {
+        router.push("/rol-tanlash");
+      }
+    } catch {
+      setErrors({ form: t("auth.errCredentials") });
+      setLoading(false);
+    }
+  }
+
+  /* 🔄 Barcha demo ma'lumotlarni qayta tiklash */
+  function handleResetDemo() {
+    resetDemoData();
+    setResetFeedback(true);
+    setTimeout(() => setResetFeedback(false), 3500);
   }
 
   const isLogin = mode === "login";
@@ -473,6 +503,120 @@ function KirishForm() {
                 )}
               </button>
             </form>
+
+            {/* ⚡ Tezkor Demo Hisoblar (1-bosishda sinab ko'rish) */}
+            <div className="mt-7 rounded-2xl border border-primary/25 bg-primary/[0.03] p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-black">
+                    ⚡
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-ink">
+                    {lang === "ru" ? "Тестовые демо-аккаунты (вход в 1 клик):" : "Tezkor demo hisoblar (1-bosishda kiring):"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleResetDemo}
+                  className="text-[11px] font-semibold text-muted hover:text-primary transition-colors underline cursor-pointer"
+                  title={lang === "ru" ? "Сбросить и обновить все демо-данные" : "Barcha demo ma'lumotlarni qayta tiklash"}
+                >
+                  {lang === "ru" ? "Сброс данных" : "Ma'lumotlarni tiklash"}
+                </button>
+              </div>
+
+              {resetFeedback && (
+                <div className="mb-3 rounded-xl bg-success/10 border border-success/20 p-2 text-center text-xs font-semibold text-success animate-fadeIn">
+                  ✓ {lang === "ru" ? "Демо-данные успешно обновлены!" : "Demo ma'lumotlar muvaffaqiyatli tiklandi!"}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {/* 1. Rustam Qosimov — Mutaxassis */}
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin("+998901234567", "mutaxassis")}
+                  disabled={loading}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-line bg-card p-3 text-left transition-all hover:border-primary hover:shadow-sm active:scale-[0.99] cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-black text-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                      RQ
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs sm:text-sm text-ink truncate">Rustam Qosimov</span>
+                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary shrink-0">
+                          Mutaxassis
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted truncate">
+                        Senior Dasturchi • 7.6M so'm yechishga tayyor • Faol shartnomalar
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform">
+                    Kirish →
+                  </span>
+                </button>
+
+                {/* 2. ArtSoft Studios — Xaridor */}
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin("+998918765432", "xaridor")}
+                  disabled={loading}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-line bg-card p-3 text-left transition-all hover:border-accent hover:shadow-sm active:scale-[0.99] cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent font-black text-sm group-hover:bg-accent group-hover:text-white transition-colors">
+                      AS
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs sm:text-sm text-ink truncate">ArtSoft Studios</span>
+                        <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent shrink-0">
+                          Xaridor
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted truncate">
+                        Buyurtmachi • 4.5M so'm balans • Ish qabul qilish, Escrow to'lov
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-xs font-bold text-accent group-hover:translate-x-0.5 transition-transform">
+                    Kirish →
+                  </span>
+                </button>
+
+                {/* 3. Nigora Karimova — Dizayner */}
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin("+998912345678", "mutaxassis")}
+                  disabled={loading}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-line bg-card p-3 text-left transition-all hover:border-emerald-500 hover:shadow-sm active:scale-[0.99] cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 font-black text-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                      NK
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs sm:text-sm text-ink truncate">Nigora Karimova</span>
+                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 shrink-0">
+                          Dizayner
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted truncate">
+                        UI/UX Dizayner • 5.0 reyting • Sharhlar, Bank yechish so'rovi
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-xs font-bold text-emerald-600 group-hover:translate-x-0.5 transition-transform">
+                    Kirish →
+                  </span>
+                </button>
+              </div>
+            </div>
 
             {/* Mobil switch taklifi */}
             <div className="mt-8 text-center text-xs sm:text-sm text-muted md:hidden">
@@ -690,6 +834,22 @@ function KirishForm() {
                 <span>{t("auth.regVerificationNotice")}</span>
               </div>
             </form>
+
+            {/* Tezkor sinab ko'rish taklifi */}
+            <div className="mt-5 rounded-xl border border-line bg-surface/60 p-3 flex items-center justify-between gap-3 text-xs">
+              <span className="text-muted">
+                {lang === "ru"
+                  ? "Хотите сразу протестировать платформу с готовыми данными?"
+                  : "Platformani barcha imkoniyatlari bilan sinab ko'rmoqchimisiz?"}
+              </span>
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className="font-bold text-primary hover:underline shrink-0"
+              >
+                {lang === "ru" ? "Демо-вход →" : "Demo hisoblar →"}
+              </button>
+            </div>
 
             {/* Mobil switch taklifi */}
             <div className="mt-8 text-center text-xs sm:text-sm text-muted md:hidden">

@@ -16,6 +16,7 @@ import { verificationService } from "@/lib/api";
 import type { VerificationRecord } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
+import { COUNTRIES } from "@/lib/geo";
 
 export function VerificationCenter() {
   const { t, lang } = useT();
@@ -46,8 +47,15 @@ export function VerificationCenter() {
   async function submit() {
     const adultCutoff = new Date();
     adultCutoff.setFullYear(adultCutoff.getFullYear() - 18);
+    if (!legalName.trim() || legalName.trim().split(/\s+/).length < 2) {
+      setError(
+        lang === "ru"
+          ? "Пожалуйста, укажите полное имя и фамилию (минимум 2 слова)"
+          : "Iltimos, to'liq ism va familiyangizni kiriting (kamida 2 ta so'z)"
+      );
+      return;
+    }
     if (
-      !legalName.trim() ||
       !birthDate ||
       new Date(birthDate) > adultCutoff ||
       documents.length < 2 ||
@@ -131,16 +139,18 @@ export function VerificationCenter() {
                 <Select
                   label={t("verify.country")}
                   value={country}
-                  onChange={(event) =>
-                    setCountry(event.target.value as VerificationRecord["country"])
-                  }
-                  options={[
-                    { value: "UZ", label: t("country.UZ") },
-                    { value: "KZ", label: t("country.KZ") },
-                    { value: "KG", label: t("country.KG") },
-                    { value: "TJ", label: t("country.TJ") },
-                    { value: "TM", label: t("country.TM") },
-                  ]}
+                  onChange={(event) => {
+                    const newCountry = event.target.value as VerificationRecord["country"];
+                    setCountry(newCountry);
+                    const countryMeta = COUNTRIES.find((c) => c.code === newCountry);
+                    if (countryMeta?.documentTypes.length) {
+                      setDocumentType(countryMeta.documentTypes[0]!.value as VerificationRecord["documentType"]);
+                    }
+                  }}
+                  options={COUNTRIES.map((c) => ({
+                    value: c.code,
+                    label: `${c.flag} ${lang === "ru" ? c.nameRu : c.nameUz}`,
+                  }))}
                 />
                 <Select
                   label={t("verify.documentType")}
@@ -150,14 +160,20 @@ export function VerificationCenter() {
                       event.target.value as VerificationRecord["documentType"]
                     )
                   }
-                  options={[
-                    { value: "passport", label: t("verify.passport") },
-                    { value: "id_card", label: t("verify.idCard") },
-                  ]}
+                  options={(
+                    COUNTRIES.find((c) => c.code === country)?.documentTypes || [
+                      { value: "passport", labelUz: "Pasport", labelRu: "Паспорт", labelEn: "Passport" },
+                      { value: "id_card", labelUz: "ID karta", labelRu: "ID-карта", labelEn: "ID Card" },
+                    ]
+                  ).map((d) => ({
+                    value: d.value,
+                    label: lang === "ru" ? d.labelRu : d.labelUz,
+                  }))}
                 />
                 <Input
                   label={t("verify.legalName")}
                   value={legalName}
+                  placeholder={lang === "ru" ? "Имя и Фамилия" : "Ism va Familiya"}
                   onChange={(event) => {
                     setLegalName(event.target.value);
                     setError("");
@@ -186,7 +202,15 @@ export function VerificationCenter() {
                   maxBytes={750 * 1024}
                   error={error}
                 />
-                <p className="mt-2 text-2xs text-faint">{t("verify.documentsHint")}</p>
+                {(() => {
+                  const countryMeta = COUNTRIES.find((c) => c.code === country);
+                  const docMeta = countryMeta?.documentTypes.find((d) => d.value === documentType);
+                  return (
+                    <p className="mt-2 text-2xs text-faint">
+                      {docMeta ? (lang === "ru" ? docMeta.hintRu : docMeta.hintUz) : t("verify.documentsHint")}
+                    </p>
+                  );
+                })()}
               </div>
               <div className="mt-5 rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
                 {t("verify.privacy")}
