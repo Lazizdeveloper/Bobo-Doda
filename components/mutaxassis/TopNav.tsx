@@ -104,18 +104,6 @@ export function TopNav({ base }: TopNavProps) {
           </button>
 
           <div className="hidden lg:flex items-center gap-3">
-            <button
-              type="button"
-              onClick={async () => {
-                await authService.login({ phone: "+998918765432", password: "demo123" });
-                window.location.href = "/xaridor";
-              }}
-              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-accent/30 bg-accent/5 text-[11px] font-bold text-accent hover:bg-accent hover:text-white transition-colors cursor-pointer"
-              title="Xaridor (ArtSoft Studios) profiliga tezkor o'tish"
-            >
-              <span>⇄</span>
-              <span>Xaridor rejimiga</span>
-            </button>
             <Link href="/mutaxassis/daromad" className="text-xs font-medium text-muted hover:text-ink">
               {t("nav.earnings")}
             </Link>

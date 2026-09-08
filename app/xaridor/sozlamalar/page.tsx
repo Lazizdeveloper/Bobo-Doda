@@ -226,7 +226,7 @@ export default function XaridorSozlamalarPage() {
     try {
       await usersService.updateUserProfile({
         telegramConnected: nextState,
-        telegramUsername: nextState ? "@employer_demo" : undefined,
+        telegramUsername: nextState ? "@user_telegram" : undefined,
       });
       toast(nextState ? "Telegram akkaunti ulandi" : "Telegram akkaunti uzildi");
     } catch {

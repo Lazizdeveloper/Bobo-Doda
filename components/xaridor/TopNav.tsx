@@ -107,18 +107,6 @@ export function TopNav({ base }: TopNavProps) {
           </button>
 
           <div className="hidden lg:flex items-center gap-3">
-            <button
-              type="button"
-              onClick={async () => {
-                await authService.login({ phone: "+998901234567", password: "demo123" });
-                window.location.href = "/mutaxassis";
-              }}
-              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-[11px] font-bold text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer"
-              title="Mutaxassis (Rustam Qosimov) profiliga tezkor o'tish"
-            >
-              <span>⇄</span>
-              <span>Mutaxassis rejimiga</span>
-            </button>
             <Link href="/xaridor/xarajatlar" className="text-xs font-medium text-muted hover:text-ink">
               {t("nav.spending")}
             </Link>

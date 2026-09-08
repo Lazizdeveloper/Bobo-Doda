@@ -112,19 +112,6 @@ export function BankTransferPaymentModal({
     }
   };
 
-  const applyDemoCard = (type: "uzcard" | "humo") => {
-    if (type === "uzcard") {
-      setCardNumber("8600 4912 3456 7890");
-      setCardExpiry("12/28");
-      setCardHolder("DILSHOD RAHIMOV");
-    } else {
-      setCardNumber("9860 3512 8765 4321");
-      setCardExpiry("08/29");
-      setCardHolder("DILSHOD RAHIMOV");
-    }
-    setCardError("");
-  };
-
   const copyToClipboard = async (textToCopy: string, fieldKey: string) => {
     try {
       if (navigator?.clipboard?.writeText) {
@@ -602,29 +589,6 @@ export function BankTransferPaymentModal({
                 {cardError && (
                   <p className="text-xs text-danger font-medium">{cardError}</p>
                 )}
-
-                {/* Demo 1-Click Card Fill */}
-                <div className="mt-1 pt-3 border-t border-line/60 flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-3xs font-semibold text-muted">
-                    {lang === "ru" ? "⚡ Быстрое демо-заполнение:" : "⚡ Tezkor sinov kartalari:"}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => applyDemoCard("uzcard")}
-                      className="text-3xs font-bold px-2.5 py-1 rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition cursor-pointer"
-                    >
-                      Uzcard (8600)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyDemoCard("humo")}
-                      className="text-3xs font-bold px-2.5 py-1 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 transition cursor-pointer"
-                    >
-                      Humo (9860)
-                    </button>
-                  </div>
-                </div>
               </div>
             ) : (
               /* Step 2: SMS Verification Code */
@@ -693,16 +657,6 @@ export function BankTransferPaymentModal({
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSmsCode("123456");
-                      setSmsError("");
-                    }}
-                    className="text-3xs font-bold px-2.5 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition cursor-pointer"
-                  >
-                    ⚡ {lang === "ru" ? "Вставить демо-код: 123456" : "Demo kodni kiritish: 123456"}
-                  </button>
                 </div>
               </div>
             )}
