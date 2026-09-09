@@ -14,6 +14,7 @@ export default defineConfig([
       "react-hooks/purity": "off",
       // O'zbek tilidagi tutuq belgilari (o', g') va tirnoqlar uchun
       "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
   {
