@@ -12,6 +12,8 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
       // Time-relative profile metrics are snapshots, not render identities.
       "react-hooks/purity": "off",
+      // O'zbek tilidagi tutuq belgilari (o', g') va tirnoqlar uchun
+      "react/no-unescaped-entities": "off",
     },
   },
   {
