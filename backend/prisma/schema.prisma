@@ -1,0 +1,255 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Bobo&Doda backend — Prisma schema
+//
+// Bosqich 1: POYDEVOR. Bu migratsiya faqat identity + auth token infra +
+// cross-cutting (audit / outbox / idempotency) modellarini kiritadi.
+// Domen modellari (Service, Job, Contract, Milestone, Ledger, Dispute …) o'z
+// bosqichlarida qo'shiladi — to'liq loyiha `docs/01-data-model.md` da.
+//
+// Qoidalar (`docs/02-decisions.md`):
+//  • Enum'lar — inglizcha UPPER_SNAKE (ADR-02).
+//  • Pul — BigInt tiyin (ADR-01)  → Bosqich 4.
+//  • `version Int` — holatga ta'sir qiladigan har modelda (optimistic lock).
+//  • Migratsiya faqat `prisma migrate` — qo'lda SQL / `db push` YO'Q.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+/// Marketplace roli. Bitta User bir vaqtda ham SELLER, ham BUYER bo'la oladi
+/// (ADR-04). Faol rol JWT ichidagi `activeRole` da — bu yerda emas.
+enum Role {
+  SELLER
+  BUYER
+}
+
+/// Admin/operator roli — marketplace `Role` dan ATAYLAB ajratilgan (ADR-04).
+enum StaffRole {
+  SUPER_ADMIN
+  OPERATIONS
+  FINANCE
+  SUPPORT
+  TRUST_SAFETY
+  KYC_REVIEWER
+  ADMIN
+}
+
+/// Admin panel huquqlari (RBAC). Har endpoint aniq bittasini talab qiladi;
+/// default = deny.
+enum StaffPermission {
+  DASHBOARD
+  USERS
+  SERVICES
+  JOBS
+  ORDERS
+  KYC
+  DISPUTES
+  PAYMENTS
+  REPORTS
+  APPEALS
+  REVIEWS
+  SUPPORT
+  CATEGORIES
+  SETTINGS
+  AUDIT
+  STAFF
+}
+
+/// Audit yozuvini kim yaratdi.
+enum AuditActorType {
+  USER
+  STAFF
+  SYSTEM
+}
+
+/// Outbox hodisasining yetkazish holati.
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+// ── Identity ─────────────────────────────────────────────────────────────────
+
+/// Marketplace foydalanuvchisi (buyer va/yoki seller).
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  phone        String  @unique
+  passwordHash String
+  fullName     String
+  /// [SELLER], [BUYER], yoki ikkalasi. SELLER qo'shish → KYC talab qilinadi.
+  roles        Role[]
+  /// Avatar S3 obyekt kaliti (presigned URL orqali olinadi).
+  avatarKey    String?
+  email        String?
+
+  // Onboarding holati — login'da sessiya qayerda to'xtagan bo'lsa tiklanadi.
+  roleChosen  Boolean @default(false)
+  profileDone Boolean @default(false)
+  verified    Boolean @default(false)
+
+  // Buyer / kompaniya qo'shimcha maydonlari.
+  companyName String?
+  industry    String?
+  website     String?
+  location    String?
+  bio         String?
+
+  // OAuth bog'lanishlari.
+  telegramUsername String?
+  telegramLinkedAt DateTime? @db.Timestamptz(6)
+  googleLinkedAt   DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
+  deletedAt DateTime? @db.Timestamptz(6)
+  version   Int       @default(0)
+
+  refreshTokens RefreshToken[]
+  staffMember   StaffMember?
+
+  @@index([createdAt])
+  @@map("users")
+}
+
+/// Refresh token — DB'da saqlanadi (revocation uchun). Oilaviy reuse
+/// detection: ishlatilgan token qayta kelsa butun `familyId` bekor qilinadi
+/// (to'liq mantiq — Bosqich 2).
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Argon2/SHA-256 hash — xom token DB'da SAQLANMAYDI.
+  tokenHash    String    @unique
+  familyId     String    @db.Uuid
+  replacedById String?   @db.Uuid
+  revokedAt    DateTime? @db.Timestamptz(6)
+  userAgent    String?
+  ip           String?
+  expiresAt    DateTime  @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+/// Admin/operator hisobi. `userId` ixtiyoriy — staff ham marketplace
+/// foydalanuvchisi bo'lishi mumkin, lekin IDENTITY alohida (ADR-04).
+model StaffMember {
+  id           String            @id @default(uuid()) @db.Uuid
+  userId       String?           @unique @db.Uuid
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fullName     String
+  email        String            @unique
+  passwordHash String
+  role         StaffRole
+  title        String
+  permissions  StaffPermission[]
+  isActive     Boolean           @default(true)
+  mfaEnabled   Boolean           @default(false)
+  lastLoginAt  DateTime?         @db.Timestamptz(6)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime          @updatedAt @db.Timestamptz(6)
+  version      Int               @default(0)
+
+  sessions StaffSession[]
+
+  @@map("staff_members")
+}
+
+/// Admin sessiyasi — 8 soat (frontend `AdminSession`). JWT'dan alohida
+/// server-side yozuv (majburiy logout uchun).
+model StaffSession {
+  id        String      @id @default(uuid()) @db.Uuid
+  staffId   String      @db.Uuid
+  staff     StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  userAgent String?
+  ip        String?
+  expiresAt DateTime    @db.Timestamptz(6)
+  revokedAt DateTime?   @db.Timestamptz(6)
+  createdAt DateTime    @default(now()) @db.Timestamptz(6)
+
+  @@index([staffId])
+  @@index([expiresAt])
+  @@map("staff_sessions")
+}
+
+// ── Cross-cutting infra ──────────────────────────────────────────────────────
+
+/// Audit jurnali — HAR pul harakati va staff qarori bu yerga tushadi
+/// (ADR: Q36). `AuditActorType.STAFF` yozuvlari admin panelidagi `AuditEvent`.
+model AuditLog {
+  id            String         @id @default(uuid()) @db.Uuid
+  actorId       String?        @db.Uuid
+  actorType     AuditActorType
+  actorName     String
+  /// Masalan "MILESTONE_ACCEPTED", "KYC_APPROVED", "PLATFORM_SETTING_CHANGED".
+  action        String
+  resourceType  String
+  resourceId    String
+  /// Bog'liq yozuv (masalan shartnoma id — bosqich audit'i uchun).
+  contextId     String?
+  previousState Json?
+  newState      Json?
+  ip            String?
+  userAgent     String?
+  requestId     String?
+  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
+
+  @@index([resourceType, resourceId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// Outbox pattern — tashqi tizimga yuboriladigan hodisa DB tranzaksiyasi
+/// ICHIDA yoziladi, alohida worker jo'natadi. Tranzaksiya ichida HTTP call
+/// QILINMAYDI.
+model OutboxEvent {
+  id            String       @id @default(uuid()) @db.Uuid
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  lastError     String?
+  availableAt   DateTime     @default(now()) @db.Timestamptz(6)
+  processedAt   DateTime?    @db.Timestamptz(6)
+  createdAt     DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@index([status, availableAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+
+/// Idempotentlik kaliti — pul harakati qiladigan HAR endpoint
+/// `Idempotency-Key` header qabul qiladi. Bir xil (key, user, endpoint)
+/// takrorlansa saqlangan javob qaytariladi.
+model IdempotencyKey {
+  id               String   @id @default(uuid()) @db.Uuid
+  key              String
+  userId           String?  @db.Uuid
+  endpoint         String
+  requestHash      String
+  statusCode       Int?
+  responseSnapshot Json?
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  expiresAt        DateTime @db.Timestamptz(6)
+
+  @@unique([key, userId, endpoint])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}

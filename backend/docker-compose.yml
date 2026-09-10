@@ -1,0 +1,130 @@
+# Bobo&Doda backend — lokal infratuzilma + app.
+#
+#   docker compose up            → postgres + redis + minio + migrate + api
+#   docker compose up -d postgres redis minio   → faqat infratuzilma (app'ni
+#                                                 `npm run start:dev` bilan)
+#
+# Bosqich 1 "Definition of Done": `docker compose up` → api xizmati
+# healthcheck'i o'tadi (`/health/ready` 200) va `/docs` ochiladi.
+
+name: bobododa-backend
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bobododa
+      POSTGRES_PASSWORD: bobododa
+      POSTGRES_DB: bobododa
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bobododa -d bobododa']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: bobododa
+      MINIO_ROOT_PASSWORD: bobododa-secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Buckets'ni bir marta yaratadi (uploads + KYC alohida), keyin chiqadi.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 bobododa bobododa-secret &&
+      mc mb --ignore-existing local/bobododa-uploads &&
+      mc mb --ignore-existing local/bobododa-kyc &&
+      mc anonymous set none local/bobododa-kyc &&
+      echo 'buckets tayyor'
+      "
+
+  # Migratsiyani qo'llaydi, keyin chiqadi.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    command: ['npx', 'prisma', 'migrate', 'deploy']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://bobododa:bobododa@postgres:5432/bobododa?schema=public
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      # Bu LOKAL dev compose — Swagger yoqilgan bo'lishi kerak ("/docs ochiladi"
+      # Bosqich 1 DoD). Haqiqiy prod deploy o'z env'ini beradi (NODE_ENV=production,
+      # SWAGGER_ENABLED=false — env schema buni majburlaydi).
+      NODE_ENV: development
+      PORT: '4000'
+      LOG_LEVEL: info
+      SWAGGER_ENABLED: 'true'
+      CORS_ORIGINS: http://localhost:3000
+      DATABASE_URL: postgresql://bobododa:bobododa@postgres:5432/bobododa?schema=public
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: bobododa
+      S3_SECRET_KEY: bobododa-secret
+      JWT_ACCESS_SECRET: docker-compose-access-secret-min-32-characters
+      JWT_REFRESH_SECRET: docker-compose-refresh-secret-min-32-characters
+    ports:
+      - '4000:4000'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "node -e \"fetch('http://127.0.0.1:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

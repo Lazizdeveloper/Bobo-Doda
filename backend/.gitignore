@@ -1,0 +1,21 @@
+# dependencies
+/node_modules
+
+# build output
+/dist
+
+# tests / coverage
+/coverage
+*.tsbuildinfo
+
+# local env (never commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# prisma — generated client lives in node_modules; keep migrations tracked
+/prisma/*.db
+
+# logs / editor
+*.log
+.DS_Store

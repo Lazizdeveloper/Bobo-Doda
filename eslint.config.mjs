@@ -35,5 +35,8 @@ export default defineConfig([
     "node_modules/**",
     "next-env.d.ts",
     "public/sw.js",
+    // Backend (NestJS) — alohida repo-ichi loyiha, o'z eslint/tsconfig'i bilan
+    // (backend/eslint.config.mjs). Frontend `eslint .` uni tekshirmasin.
+    "backend/**",
   ]),
 ]);
