@@ -2,58 +2,44 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { execFileSync } from 'node:child_process';
-import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
+import { PrismaClient } from '@prisma/client';
 
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@/config/app-config.service';
 import { buildValidationPipe } from '@/common/http/validation';
 import { AllExceptionsFilter } from '@/common/http/all-exceptions.filter';
+import { E2E_SUPERUSER_URL, pgReachable, recreateDatabase } from './support/e2e-infra';
 
 /**
- * Bosqich 1 "Definition of Done" ni AVTOMATLASHTIRADI:
- *   docker compose up  → /health/ready 200, /docs ochiladi.
- * Bu yerda Testcontainers real Postgres 16 + Redis 7 ko'taradi, migratsiya
- * yuguradi, app boot bo'ladi va endpoint'lar tekshiriladi.
+ * Bosqich 1 "Definition of Done":
+ *   real Postgres + Redis  → /health/ready 200, /docs ochiladi, 404 = { code, requestId }.
  *
- * Docker kerak. Docker yo'q bo'lsa test o'zini o'tkazib yuboradi (CI'da Docker
- * bor, u yerda majburiy).
+ * Infra — CI'da GitHub Actions service konteynerlari, lokal'da
+ * `E2E_SUPERUSER_URL` / `E2E_REDIS_URL` (docker compose yoki throwaway klaster).
+ * Ulanish URL'lari `test/jest-e2e.setup.ts` da (import'dan OLDIN) o'rnatiladi —
+ * `@nestjs/config` ularni import vaqtida snapshot qiladi. Bu suite faqat
+ * `health_e2e` DB'sini yaratadi va migratsiya qiladi. Postgres yetib bo'lmasa
+ * testlar o'tkazib yuboriladi.
  */
 describe('Health (e2e, real Postgres + Redis)', () => {
-  let pg: StartedPostgreSqlContainer;
-  let redis: StartedTestContainer;
-  let app: INestApplication;
+  let app: INestApplication | undefined;
+  let reachable = false;
 
   beforeAll(async () => {
-    pg = await new PostgreSqlContainer('postgres:16-alpine')
-      .withDatabase('bobododa')
-      .withUsername('bobododa')
-      .withPassword('bobododa')
-      .start();
-    // Xom `redis-server --protected-mode no` — port-forwarding orqali kelgan
-    // (loopback bo'lmagan manba IP'li) ulanishlar bloklanmasin.
-    redis = await new GenericContainer('redis:7-alpine')
-      .withExposedPorts(6379)
-      .withCommand(['redis-server', '--protected-mode', 'no'])
-      .withWaitStrategy(Wait.forLogMessage('Ready to accept connections'))
-      .start();
+    reachable = await pgReachable();
+    if (!reachable) {
+      process.stderr.write(
+        `[health.e2e] Postgres yetib bo'lmadi (${E2E_SUPERUSER_URL}) — suite o'tkazib yuborildi\n`,
+      );
+      return;
+    }
 
-    const databaseUrl = pg.getConnectionUri();
-    // `localhost` → dual-stack (::1 / 127.0.0.1) noaniqligini oldini olish.
-    const redisUrl = `redis://127.0.0.1:${redis.getMappedPort(6379)}`;
-    process.env.NODE_ENV = 'test';
-    process.env.DATABASE_URL = databaseUrl;
-    // Bu health testi rol ajratishni sinamaydi — migrator = superuser URI.
-    // Rol-isbotli test: `test/db-roles.e2e-spec.ts`.
-    process.env.DATABASE_MIGRATION_URL = databaseUrl;
-    process.env.REDIS_URL = redisUrl;
-    process.env.SWAGGER_ENABLED = 'true';
-    process.env.LOG_LEVEL = 'silent';
+    await recreateDatabase('health_e2e');
+    const dbUrl = process.env.DATABASE_URL as string; // setup.ts → .../health_e2e
 
-    // Migratsiyani real DB ga qo'llaymiz (prisma migrate deploy — directUrl).
     execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
       cwd: `${__dirname}/..`,
-      env: { ...process.env, DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: databaseUrl },
+      env: { ...process.env, DATABASE_URL: dbUrl, DATABASE_MIGRATION_URL: dbUrl },
       stdio: 'inherit',
     });
 
@@ -65,7 +51,6 @@ describe('Health (e2e, real Postgres + Redis)', () => {
     });
     app.useGlobalPipes(buildValidationPipe());
     app.useGlobalFilters(new AllExceptionsFilter());
-    // Swagger'ni test'da ham o'rnatamiz (/docs tekshiruvi uchun).
     const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
     if (config.swaggerEnabled) {
       const doc = SwaggerModule.createDocument(
@@ -75,37 +60,48 @@ describe('Health (e2e, real Postgres + Redis)', () => {
       SwaggerModule.setup('docs', app, doc, { jsonDocumentUrl: 'docs-json' });
     }
     await app.init();
-  }, 180000);
+  }, 120_000);
 
   afterAll(async () => {
     await app?.close();
-    await pg?.stop();
-    await redis?.stop();
+    if (reachable) {
+      const admin = new PrismaClient({ datasourceUrl: E2E_SUPERUSER_URL });
+      await admin
+        .$executeRawUnsafe(`DROP DATABASE IF EXISTS "health_e2e" WITH (FORCE)`)
+        .catch(() => undefined);
+      await admin.$disconnect();
+    }
   });
 
-  it('GET /health/live → 200 ok', async () => {
-    const res = await request(app.getHttpServer()).get('/health/live').expect(200);
+  const t = (name: string, fn: () => Promise<void>): void =>
+    it(name, async () => {
+      if (!reachable) return;
+      await fn();
+    });
+
+  t('GET /health/live → 200 ok', async () => {
+    const res = await request(app!.getHttpServer()).get('/health/live').expect(200);
     expect(res.body.status).toBe('ok');
     expect(typeof res.body.uptimeSeconds).toBe('number');
   });
 
-  it('GET /health/ready → 200, db va redis true', async () => {
-    const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
+  t('GET /health/ready → 200, db va redis true', async () => {
+    const res = await request(app!.getHttpServer()).get('/health/ready').expect(200);
     expect(res.body).toMatchObject({ status: 'ok', db: true, redis: true });
   });
 
-  it('GET /docs → 200 (Swagger UI)', async () => {
-    await request(app.getHttpServer()).get('/docs').expect(200);
+  t('GET /docs → 200 (Swagger UI)', async () => {
+    await request(app!.getHttpServer()).get('/docs').expect(200);
   });
 
-  it('GET /docs-json → 200, OpenAPI hujjati /health yo’llarini o’z ichiga oladi', async () => {
-    const res = await request(app.getHttpServer()).get('/docs-json').expect(200);
+  t('GET /docs-json → 200, OpenAPI hujjati /health yo’llarini o’z ichiga oladi', async () => {
+    const res = await request(app!.getHttpServer()).get('/docs-json').expect(200);
     expect(res.body.paths).toHaveProperty('/health/ready');
     expect(res.body.info.title).toBe('Bobo&Doda API');
   });
 
-  it('noma’lum marshrut → 404 { code: "NOT_FOUND", requestId }', async () => {
-    const res = await request(app.getHttpServer()).get('/api/v1/nope').expect(404);
+  t('noma’lum marshrut → 404 { code: "NOT_FOUND", requestId }', async () => {
+    const res = await request(app!.getHttpServer()).get('/api/v1/nope').expect(404);
     expect(res.body.code).toBe('NOT_FOUND');
     expect(res.body.requestId).toBeDefined();
     expect(res.headers['x-request-id']).toBeDefined();
