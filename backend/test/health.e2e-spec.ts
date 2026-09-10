@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { execFileSync } from 'node:child_process';
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
+import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@/config/app-config.service';
@@ -21,7 +21,7 @@ import { AllExceptionsFilter } from '@/common/http/all-exceptions.filter';
  */
 describe('Health (e2e, real Postgres + Redis)', () => {
   let pg: StartedPostgreSqlContainer;
-  let redis: StartedRedisContainer;
+  let redis: StartedTestContainer;
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -30,15 +30,23 @@ describe('Health (e2e, real Postgres + Redis)', () => {
       .withUsername('bobododa')
       .withPassword('bobododa')
       .start();
-    redis = await new RedisContainer('redis:7-alpine').start();
+    // Xom `redis-server --protected-mode no` — port-forwarding orqali kelgan
+    // (loopback bo'lmagan manba IP'li) ulanishlar bloklanmasin.
+    redis = await new GenericContainer('redis:7-alpine')
+      .withExposedPorts(6379)
+      .withCommand(['redis-server', '--protected-mode', 'no'])
+      .withWaitStrategy(Wait.forLogMessage('Ready to accept connections'))
+      .start();
 
     const databaseUrl = pg.getConnectionUri();
+    // `localhost` → dual-stack (::1 / 127.0.0.1) noaniqligini oldini olish.
+    const redisUrl = `redis://127.0.0.1:${redis.getMappedPort(6379)}`;
     process.env.NODE_ENV = 'test';
     process.env.DATABASE_URL = databaseUrl;
     // Bu health testi rol ajratishni sinamaydi — migrator = superuser URI.
     // Rol-isbotli test: `test/db-roles.e2e-spec.ts`.
     process.env.DATABASE_MIGRATION_URL = databaseUrl;
-    process.env.REDIS_URL = redis.getConnectionUrl();
+    process.env.REDIS_URL = redisUrl;
     process.env.SWAGGER_ENABLED = 'true';
     process.env.LOG_LEVEL = 'silent';
 

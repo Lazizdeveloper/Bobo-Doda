@@ -87,6 +87,10 @@ d('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => {
     await appDb?.$disconnect();
     await suDb?.$disconnect();
     await pg?.stop();
+    // Keyingi suite (health) o'z env'ini o'rnatadi, lekin to'xtagan
+    // konteyner URL'i qolib ketmasin.
+    delete process.env.DATABASE_URL;
+    delete process.env.DATABASE_MIGRATION_URL;
   });
 
   it('A2 — kengaytmalar migrator tomonidan o‘rnatilgan', async () => {
