@@ -35,8 +35,10 @@ git push -u origin feat/stage-2-auth      # → PR: feat/stage-2-auth → develo
 - **NixOS:** `nix-shell backend/shell.nix` — Prisma engine binary'lari
   (`linux-nixos` uchun precompiled yo'q) va `postgresql_16` shu yerdan.
   Boshqa distributsiya / Docker / CI'da kerak emas.
-- Docker (ixtiyoriy) — `docker compose` va Testcontainers `test:e2e` uchun.
-  Docker bo'lmasa: lokal Postgres/Redis binary'lari + `scripts/prove-append-only.sh`.
+- Postgres + Redis (`test:e2e` uchun) — CI'da service konteyner, lokal'da
+  `docker compose up -d postgres redis` yoki nix throwaway klaster
+  (`E2E_SUPERUSER_URL` / `E2E_REDIS_URL` bilan). Yo'q bo'lsa e2e suite'lar
+  o'zini o'tkazib yuboradi; A4 isboti Docker'siz `scripts/prove-append-only.sh`.
 
 ### Monorepo (npm workspaces)
 
@@ -196,12 +198,21 @@ Backend'ning o'z skriptlari (`npm run <x> --workspace backend`):
 
 | Workflow | Trigger | Ish |
 |---|---|---|
-| `.github/workflows/backend-ci.yml` | `push`/`PR` → `main`,`develop` (paths: `backend/**`, `packages/**`, root manifest) + `workflow_dispatch` | **quality:** root `npm ci` → prisma validate/generate → backend lint/typecheck/unit/build → `generate:contracts`. **integration:** Testcontainers `test:e2e` (health + `db-roles` A4 append-only isboti). |
+| `.github/workflows/backend-ci.yml` | `push`/`PR` → `main`,`develop` (paths: `backend/**`, `packages/**`, root manifest) + `workflow_dispatch` | **quality:** root `npm ci` → prisma validate/generate → backend lint/typecheck/unit/build → `generate:contracts`. **integration:** `postgres:16-alpine` + `redis:7-alpine` **service konteynerlari** (`localhost:5432/6379`) + `npm run test:e2e` (health + `db-roles` A4 append-only isboti). |
 | `.github/workflows/ci.yml` | `push`/`PR` → `main`,`develop` (backend/docs o'zgarishi bundan tashqari) | Frontend: CSP + `lint:app` + `typecheck:app` + `next build`. |
 | `.github/workflows/codeql.yml` | — | Xavfsizlik skani (o'zgarmagan) |
 
 Qo'lda ishga tushirish: `gh workflow run "Backend CI" --ref develop`.
 Kuzatish: `gh run watch <id>` / `gh run view <id> --log-failed`.
+
+**Nega service konteyner, Testcontainers emas:** `@testcontainers/redis`
+ba'zi runner'larda app-dan ulanishni "Connection is closed" bilan yiqitardi.
+Service konteynerlar — GitHub Actions'ning standart, ishonchli naqshi.
+`db-roles` e2e superuser sifatida o'z `roles_e2e` DB'sini yaratadi + rollarni
+o'rnatadi; `health` e2e o'z `health_e2e` DB'sini. **DIQQAT:** e2e spec'lar
+`AppModule` ni fayl boshida import qiladi — `@nestjs/config` `process.env` ni
+import vaqtida snapshot qiladi, shuning uchun ulanish URL'lari
+`test/jest-e2e.setup.ts` (setupFiles) da, `beforeAll` dan OLDIN o'rnatiladi.
 
 ---
 
@@ -220,6 +231,11 @@ npm run generate:contracts   # packages/contracts to'ldiriladi
 bash backend/scripts/prove-append-only.sh
 #   → "permission denied for table audit_logs" ni ko'rsatadi, exit 0
 
-# Docker bor bo'lsa — CI ekvivalenti
-npm run test:e2e --workspace backend    # Testcontainers: health + db-roles
+# e2e (health + db-roles) — Postgres + Redis kerak. CI'da service konteyner;
+# lokal'da manzilni env bilan bering (docker compose yoki throwaway klaster):
+E2E_SUPERUSER_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+E2E_REDIS_URL=redis://127.0.0.1:6379 \
+  npm run test:e2e --workspace backend
+#   → Test Suites: 2 passed, Tests: 13 passed
+# Infra berilmasa suite'lar o'zini o'tkazib yuboradi (pgReachable() false).
 ```
