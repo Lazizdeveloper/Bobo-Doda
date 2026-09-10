@@ -2,6 +2,7 @@ import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { ConfigModule } from '@/config/config.module';
+import { IdModule } from '@/common/id/id.module';
 import { LoggerModule } from '@/infra/logger/logger.module';
 import { PrismaModule } from '@/infra/prisma/prisma.module';
 import { RedisModule } from '@/infra/redis/redis.module';
@@ -20,6 +21,7 @@ import { HealthModule } from '@/modules/health/health.module';
 @Module({
   imports: [
     ConfigModule,
+    IdModule,
     LoggerModule,
     PrismaModule,
     RedisModule,

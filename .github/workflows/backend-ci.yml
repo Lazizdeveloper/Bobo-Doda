@@ -2,14 +2,20 @@ name: Backend CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/backend-ci.yml'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
@@ -20,13 +26,17 @@ concurrency:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: backend
+# Monorepo (npm workspaces): install va build ILDIZDAN. Dummy DB URL'lar —
+# schema `directUrl` env talab qiladi; `prisma validate/generate` hech narsaga
+# ULANMAYDI.
+env:
+  DATABASE_URL: postgresql://bobododa_app:app@localhost:5432/bobododa?schema=public
+  DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@localhost:5432/bobododa?schema=public
+  REDIS_URL: redis://localhost:6379
 
 jobs:
   quality:
-    name: Lint · Typecheck · Unit
+    name: Lint · Typecheck · Unit · Contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,27 +45,36 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: backend/package-lock.json
 
-      - run: npm ci
+      - name: Install (workspaces, root)
+        run: npm ci
 
       - name: Prisma validate + generate
-        run: npx prisma validate && npx prisma generate
+        run: |
+          npm run prisma:generate --workspace backend
+          npm exec --workspace backend -- prisma validate
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint (backend)
+        run: npm run lint --workspace backend
 
-      - name: Typecheck
-        run: npm run typecheck
+      - name: Typecheck (backend + contracts)
+        run: npm run typecheck --workspace backend && npm run typecheck --workspace @bobododa/contracts
 
-      - name: Unit tests
-        run: npm run test:cov
+      - name: Unit tests (backend)
+        run: npm run test:cov --workspace backend
 
-      - name: Build
-        run: npm run build
+      - name: Build (backend)
+        run: npm run build --workspace backend
+
+      - name: generate:contracts (OpenAPI → TS types + enums)
+        run: |
+          npm run generate:contracts
+          git diff --stat -- packages/contracts || true
+          test -s packages/contracts/openapi.json
+          test -s packages/contracts/src/enums.ts
 
   integration:
-    name: Integration (Testcontainers)
+    name: Integration (Testcontainers — real Postgres 16 + Redis)
     runs-on: ubuntu-latest
     needs: quality
     steps:
@@ -65,12 +84,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: backend/package-lock.json
 
-      - run: npm ci
+      - name: Install (workspaces, root)
+        run: npm ci
 
       - name: Prisma generate
-        run: npx prisma generate
+        run: npm run prisma:generate --workspace backend
 
-      - name: e2e (real Postgres + Redis via Testcontainers)
-        run: npm run test:e2e
+      - name: e2e — health + DB-role append-only (A4)
+        run: npm run test:e2e --workspace backend

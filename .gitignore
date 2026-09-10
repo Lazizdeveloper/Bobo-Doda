@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+# npm workspaces — nested node_modules in backend/ and packages/*
+node_modules/
 /.pnp
 .pnp.js
 .yarn/install-state.gz

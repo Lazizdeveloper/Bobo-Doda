@@ -11,6 +11,13 @@
 //  • Pul — BigInt tiyin (ADR-01)  → Bosqich 4.
 //  • `version Int` — holatga ta'sir qiladigan har modelda (optimistic lock).
 //  • Migratsiya faqat `prisma migrate` — qo'lda SQL / `db push` YO'Q.
+//  • Birlamchi kalitlar — UUIDv7 (A1). Prisma `@default(uuid())` (v4) YO'Q;
+//    ID `src/common/id/id.factory.ts` (`newId()` / `IdFactory`) da yasaladi,
+//    service qatlami `data: { id: ids.next(), ... }` beradi. PG16 da native
+//    `uuidv7()` yo'q — generatsiya ilova darajasida.
+//  • Vaqt — hamma joyda `DateTime @db.Timestamptz(6)` (A3). `timestamp` YO'Q.
+//  • DB rollari (A4): `url` = `bobododa_app` (runtime, kam huquq),
+//    `directUrl` = `bobododa_migrator` (DDL/kengaytma/GRANT — `prisma migrate`).
 // ─────────────────────────────────────────────────────────────────────────────
 
 generator client {
@@ -18,8 +25,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime — kam huquqli `bobododa_app` roli (append-only jadvallarga
+  // UPDATE/DELETE yo'q, DB darajasida majburlangan).
+  url       = env("DATABASE_URL")
+  // `prisma migrate` / `db pull` — `bobododa_migrator` roli (DDL, CREATE
+  // EXTENSION, GRANT). PrismaClient buni ISHLATMAYDI.
+  directUrl = env("DATABASE_MIGRATION_URL")
 }
 
 // ── Enums ────────────────────────────────────────────────────────────────────
@@ -82,7 +94,7 @@ enum OutboxStatus {
 
 /// Marketplace foydalanuvchisi (buyer va/yoki seller).
 model User {
-  id           String  @id @default(uuid()) @db.Uuid
+  id           String  @id @db.Uuid
   phone        String  @unique
   passwordHash String
   fullName     String
@@ -125,7 +137,7 @@ model User {
 /// detection: ishlatilgan token qayta kelsa butun `familyId` bekor qilinadi
 /// (to'liq mantiq — Bosqich 2).
 model RefreshToken {
-  id           String    @id @default(uuid()) @db.Uuid
+  id           String    @id @db.Uuid
   userId       String    @db.Uuid
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Argon2/SHA-256 hash — xom token DB'da SAQLANMAYDI.
@@ -147,7 +159,7 @@ model RefreshToken {
 /// Admin/operator hisobi. `userId` ixtiyoriy — staff ham marketplace
 /// foydalanuvchisi bo'lishi mumkin, lekin IDENTITY alohida (ADR-04).
 model StaffMember {
-  id           String            @id @default(uuid()) @db.Uuid
+  id           String            @id @db.Uuid
   userId       String?           @unique @db.Uuid
   user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   fullName     String
@@ -171,7 +183,7 @@ model StaffMember {
 /// Admin sessiyasi — 8 soat (frontend `AdminSession`). JWT'dan alohida
 /// server-side yozuv (majburiy logout uchun).
 model StaffSession {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String      @id @db.Uuid
   staffId   String      @db.Uuid
   staff     StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
   userAgent String?
@@ -190,7 +202,7 @@ model StaffSession {
 /// Audit jurnali — HAR pul harakati va staff qarori bu yerga tushadi
 /// (ADR: Q36). `AuditActorType.STAFF` yozuvlari admin panelidagi `AuditEvent`.
 model AuditLog {
-  id            String         @id @default(uuid()) @db.Uuid
+  id            String         @id @db.Uuid
   actorId       String?        @db.Uuid
   actorType     AuditActorType
   actorName     String
@@ -218,7 +230,7 @@ model AuditLog {
 /// ICHIDA yoziladi, alohida worker jo'natadi. Tranzaksiya ichida HTTP call
 /// QILINMAYDI.
 model OutboxEvent {
-  id            String       @id @default(uuid()) @db.Uuid
+  id            String       @id @db.Uuid
   aggregateType String
   aggregateId   String
   eventType     String
@@ -239,7 +251,7 @@ model OutboxEvent {
 /// `Idempotency-Key` header qabul qiladi. Bir xil (key, user, endpoint)
 /// takrorlansa saqlangan javob qaytariladi.
 model IdempotencyKey {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String   @id @db.Uuid
   key              String
   userId           String?  @db.Uuid
   endpoint         String

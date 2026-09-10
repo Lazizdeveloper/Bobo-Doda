@@ -35,14 +35,17 @@ describe('Health (e2e, real Postgres + Redis)', () => {
     const databaseUrl = pg.getConnectionUri();
     process.env.NODE_ENV = 'test';
     process.env.DATABASE_URL = databaseUrl;
+    // Bu health testi rol ajratishni sinamaydi — migrator = superuser URI.
+    // Rol-isbotli test: `test/db-roles.e2e-spec.ts`.
+    process.env.DATABASE_MIGRATION_URL = databaseUrl;
     process.env.REDIS_URL = redis.getConnectionUrl();
     process.env.SWAGGER_ENABLED = 'true';
     process.env.LOG_LEVEL = 'silent';
 
-    // Migratsiyani real DB ga qo'llaymiz (prisma migrate deploy).
+    // Migratsiyani real DB ga qo'llaymiz (prisma migrate deploy — directUrl).
     execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
       cwd: `${__dirname}/..`,
-      env: { ...process.env, DATABASE_URL: databaseUrl },
+      env: { ...process.env, DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: databaseUrl },
       stdio: 'inherit',
     });
 

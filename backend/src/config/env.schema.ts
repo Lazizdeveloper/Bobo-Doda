@@ -38,7 +38,15 @@ export const envSchema = z
       .transform(csv),
 
     // ── Datastores (MAJBURIY — Bosqich 1) ────────────────────────────────
+    // A4 — ikki alohida rol, ikki alohida URL:
+    //   DATABASE_URL           → `bobododa_app`      (runtime, kam huquq;
+    //                            append-only jadvallarga UPDATE/DELETE yo'q)
+    //   DATABASE_MIGRATION_URL → `bobododa_migrator` (DDL / CREATE EXTENSION /
+    //                            GRANT — faqat `prisma migrate deploy`)
+    // Ikkalasi ham majburiy: schema `directUrl` uni talab qiladi va
+    // "append-only kodda emas, DB darajasida" faqat rol ajratilganda ishlaydi.
     DATABASE_URL: z.string().min(1, 'DATABASE_URL majburiy').url(),
+    DATABASE_MIGRATION_URL: z.string().min(1, 'DATABASE_MIGRATION_URL majburiy').url(),
     REDIS_URL: z.string().min(1, 'REDIS_URL majburiy').url(),
 
     // ── S3 / MinIO (Bosqich 2+ da majburiy) ─────────────────────────────

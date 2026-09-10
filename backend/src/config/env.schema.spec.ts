@@ -1,7 +1,8 @@
 import { validateEnv } from './env.schema';
 
 const base = {
-  DATABASE_URL: 'postgresql://u:p@localhost:5432/db?schema=public',
+  DATABASE_URL: 'postgresql://bobododa_app:app@localhost:5432/db?schema=public',
+  DATABASE_MIGRATION_URL: 'postgresql://bobododa_migrator:migrator@localhost:5432/db?schema=public',
   REDIS_URL: 'redis://localhost:6379',
 };
 
@@ -21,7 +22,24 @@ describe('validateEnv', () => {
   });
 
   it('REDIS_URL yo’q bo’lsa xato tashlaydi', () => {
-    expect(() => validateEnv({ DATABASE_URL: base.DATABASE_URL })).toThrow(/REDIS_URL/);
+    expect(() =>
+      validateEnv({
+        DATABASE_URL: base.DATABASE_URL,
+        DATABASE_MIGRATION_URL: base.DATABASE_MIGRATION_URL,
+      }),
+    ).toThrow(/REDIS_URL/);
+  });
+
+  it('DATABASE_MIGRATION_URL yo’q bo’lsa xato tashlaydi (A4 — rol ajratish majburiy)', () => {
+    expect(() =>
+      validateEnv({ DATABASE_URL: base.DATABASE_URL, REDIS_URL: base.REDIS_URL }),
+    ).toThrow(/DATABASE_MIGRATION_URL/);
+  });
+
+  it('DATABASE_MIGRATION_URL — DATABASE_URL dan alohida qiymat', () => {
+    const env = validateEnv({ ...base });
+    expect(env.DATABASE_MIGRATION_URL).toBe(base.DATABASE_MIGRATION_URL);
+    expect(env.DATABASE_MIGRATION_URL).not.toBe(env.DATABASE_URL);
   });
 
   it('noto’g’ri PORT rad etiladi', () => {

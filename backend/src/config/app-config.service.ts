@@ -47,6 +47,11 @@ export class AppConfigService {
     return this.get('DATABASE_URL');
   }
 
+  /** `bobododa_migrator` roli — faqat `prisma migrate` CLI ishlatadi. */
+  get databaseMigrationUrl(): string {
+    return this.get('DATABASE_MIGRATION_URL');
+  }
+
   get redisUrl(): string {
     return this.get('REDIS_URL');
   }

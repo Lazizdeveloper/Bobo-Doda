@@ -2,18 +2,31 @@
   "name": "bobo-doda",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "backend",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:app": "next dev",
     "build": "next build --webpack",
+    "build:backend": "npm run build --workspace backend",
     "start": "next start",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "lint": "eslint . && npm run lint --workspaces --if-present",
+    "lint:app": "eslint .",
+    "lint:backend": "npm run lint --workspace backend",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
+    "typecheck:app": "tsc --noEmit",
+    "typecheck:backend": "npm run typecheck --workspace backend",
+    "test": "npm run test --workspaces --if-present",
+    "test:backend": "npm run test --workspace backend",
     "test:e2e": "node scripts/lifecycle-test.cjs && node scripts/stress-test.cjs",
     "test:admin": "node scripts/admin-logic-test.cjs && node scripts/admin-stress-test.cjs",
     "test:a11y": "node scripts/accessibility-test.cjs",
     "check:csp": "node scripts/check-csp.cjs",
-    "verify": "npm run lint && npm run typecheck && npm run check:csp && npm run build"
+    "generate:contracts": "npm run generate --workspace @bobododa/contracts",
+    "verify": "npm run lint && npm run typecheck && npm run check:csp && npm run build",
+    "verify:all": "npm run verify && npm run build:backend"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
@@ -37,6 +50,7 @@
     "typescript": "^5"
   },
   "overrides": {
-    "sharp": "0.35.3"
+    "sharp": "0.35.3",
+    "rxjs": "7.8.2"
   }
 }

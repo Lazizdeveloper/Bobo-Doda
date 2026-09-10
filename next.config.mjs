@@ -11,6 +11,11 @@ const nextConfig = {
      (masalan `NEXT_DIST_DIR=.next-check npm run build`) — aks holda build
      dev serverning ".next" papkasini ustiga yozib, uni buzadi. */
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  /* Monorepo (npm workspaces). `@bobododa/contracts` — OpenAPI'dan
+     generatsiya qilingan TS manbasini (`.ts`, kompilyatsiyalanmagan)
+     eksport qiladi; Next uni o'zi transpil qilishi kerak. Bosqich 2 dan
+     `lib/api/wire-enums.ts` shu paketdan import qiladi. */
+  transpilePackages: ["@bobododa/contracts"],
   /* FAQAT DEV. Next 16 dev serveri `/_next/*` (HMR, chunk'lar) ga
      "cross-origin" so'rovlarni bloklaydi — va u `localhost` bilan
      `127.0.0.1` ni HAR XIL origin deb biladi. Natijada `127.0.0.1:3000`
