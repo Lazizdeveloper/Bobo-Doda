@@ -65,6 +65,7 @@ src/
   common/
     errors/                DomainError + taksonomiya (frontend errors.ts shartnomasi)
     http/                  AllExceptionsFilter, LoggingInterceptor, RequestIdMiddleware, ValidationPipe
+    db/append-only.constants.ts  T2 — append-only jadval/huquq ro'yxati, YAGONA MANBA
   infra/
     prisma/                PrismaService (+ F1 db-role-assertion.ts), redis/  queue/  logger/
   modules/
@@ -91,10 +92,10 @@ test/
 |---|---|---|
 | `npm run typecheck` | ✅ | strict + noUncheckedIndexedAccess |
 | `npm run lint` | ✅ | typescript-eslint type-checked |
-| `npm test` (unit) | ✅ | 39 test / 4 suite (env sxemasi incl. DB_ROLE_ASSERTION, xato taksonomiyasi, exception filter, id.factory UUIDv7) |
+| `npm test` (unit) | ✅ | 42 test / 4 suite (env sxemasi incl. DB_ROLE_ASSERTION/DB_APP_ROLE, xato taksonomiyasi, exception filter, id.factory UUIDv7) |
 | `npm run build` | ✅ | `dist/main.js` |
 | `prisma migrate` (init) | ✅ | `prisma/migrations/2026…_init` real Postgres 16 ga qo'llandi |
-| `npm run test:e2e` | ✅ | 20 test / 3 suite (health 5 + db-roles A4 8 + db-role-assertion F1 7) — CI service konteyner (`CI_REQUIRE_E2E=true`, F2); lokal throwaway PG bilan tekshirilgan |
+| `npm run test:e2e` | ✅ | 23 test / 3 suite (health 5 + db-roles A4 8 + db-role-assertion F1/T1 10) — CI service konteyner (`CI_REQUIRE_E2E=true`, F2); lokal throwaway PG bilan tekshirilgan |
 | `docker compose up` | ⏳ CI/lokal | Docker daemon kerak; `api` xizmati `/health/ready` healthcheck'i bilan |
 
 ## Muhim qoidalar (`docs/02-decisions.md`)

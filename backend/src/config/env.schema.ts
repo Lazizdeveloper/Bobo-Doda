@@ -48,13 +48,25 @@ export const envSchema = z
     DATABASE_URL: z.string().min(1, 'DATABASE_URL majburiy').url(),
     DATABASE_MIGRATION_URL: z.string().min(1, 'DATABASE_MIGRATION_URL majburiy').url(),
     REDIS_URL: z.string().min(1, 'REDIS_URL majburiy').url(),
-    // F1 — boot paytida "current_user = bobododa_app, append-only buzilmagan,
+    // F1 — boot paytida "current_user = DB_APP_ROLE, append-only buzilmagan,
     // kengaytmalar bor" tekshiradi; yiqilsa ilova ko'tarilmaydi (fail closed).
     // "off" faqat dev/test qulayligi uchun — pastda production'da RAD ETILADI.
     DB_ROLE_ASSERTION: z
       .enum(['on', 'off'])
       .default('on')
       .transform((v) => v === 'on'),
+    // T1 — runtime rol nomi QATTIQ YOZILMAGAN: ba'zi managed Postgres
+    // provayderlari rol nomiga cheklov qo'yadi (prefiks, uzunlik, rezervlangan
+    // so'z). Postgres kvotalanmagan identifikator qoidasi: kichik harf/pastki
+    // chiziq bilan boshlanadi, ≤63 belgi. `roles.sql`/migratsiya shu qiymatni
+    // DB darajasidagi GUC (`bobododa.app_role`) orqali oladi.
+    DB_APP_ROLE: z
+      .string()
+      .regex(
+        /^[a-z_][a-z0-9_]{0,62}$/,
+        'DB_APP_ROLE — kvotalanmagan Postgres identifikatori bo\'lishi shart (kichik harf/pastki chiziq bilan boshlanadi, ≤63 belgi)',
+      )
+      .default('bobododa_app'),
 
     // ── S3 / MinIO (Bosqich 2+ da majburiy) ─────────────────────────────
     S3_ENDPOINT: z.string().url().optional(),

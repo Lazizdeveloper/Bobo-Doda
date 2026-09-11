@@ -128,14 +128,32 @@ GRANT  UPDATE (status, attempts, "lastError", "availableAt", "processedAt")
   toza lokal DB da (`prisma migrate dev`) migratsiya yiqilmaydi; append-only
   majburlash faqat rollar sozlangan muhitda faollashadi.
 
+**T2 — yagona manba.** Yuqoridagi jadval/huquq ro'yxati (`audit_logs`,
+`outbox_events`) endi ham F1 tekshiruvida, ham shu migratsiyada QO'LDA
+mustaqil yozilmaydi: `backend/src/common/db/append-only.constants.ts`
+(`APPEND_ONLY_TABLES`) — F1 (`checkDbRoleHardening`) shu obyektni aylanib
+chiqadi. Migratsiya SQL'i statik bo'lgani uchun bu ro'yxatdan avtomatik
+generatsiya qilinmaydi (Prisma migratsiyalari qo'lda yoziladi, ADR) —
+o'rniga `test/db-role-assertion.e2e-spec.ts` dagi happy-path testi REAL DB
+huquqlarini so'rab ikkalasini solishtiradi: Bosqich 4'da `ledger_entries`
+`APPEND_ONLY_TABLES`ga qo'shilib, migratsiyaga REVOKE qo'shilmasa — shu test
+QIZARADI (matn emas, xatti-harakat solishtiriladi — SQL formatlash
+o'zgarsa ham yolg'on qizarmaydi).
+
 ### Rollarni yaratish (bir marta, superuser)
 
 - **docker-compose:** `backend/docker/initdb/10-roles.sh` — postgres
   konteynerining BIRINCHI init'ida avtomatik (bo'sh data-dir).
   Reset: `docker compose down -v`.
 - **CI / prod / test:** `backend/prisma/sql/roles.sql`
-  (`psql -v app_pw=… -v migrator_pw=… -v db_name=bobododa -f prisma/sql/roles.sql`).
-- **Integration test:** `test/db-roles.e2e-spec.ts` superuser bilan yaratadi.
+  (`psql -v app_pw=… -v migrator_pw=… -v db_name=bobododa
+  [-v app_role=… -v migrator_role=…] -f prisma/sql/roles.sql`). Rol
+  nomlari ixtiyoriy (T1, sukut `bobododa_app`/`bobododa_migrator`).
+  Ichida `DO $$...$$` bloklari YO'Q — psql `:'var'`/`:"var"` almashtirishi
+  dollar-quote ICHIDA ishlamaydi (sinab ko'rilgan); o'rniga
+  `SELECT format(...) WHERE NOT EXISTS(...) \gexec` naqshi.
+- **Integration test:** `test/db-roles.e2e-spec.ts` / `db-role-assertion.e2e-spec.ts`
+  superuser bilan (Prisma orqali, `provisionDb()`) yaratadi.
 
 ### Managed Postgres — rollarni QO'LDA yaratish (F1)
 
@@ -150,23 +168,31 @@ psql "$SUPERUSER_URL" \
   -v app_pw="$(openssl rand -base64 24)" \
   -v migrator_pw="$(openssl rand -base64 24)" \
   -v db_name=bobododa \
+  -v app_role=bobododa_app \
+  -v migrator_role=bobododa_migrator \
   -f backend/prisma/sql/roles.sql
+# `app_role`/`migrator_role` — T1: provayder nomga cheklov qo'ysa (prefiks,
+# uzunlik, rezervlangan so'z) shu ikkitasini xohlagan nomga o'zgartiring —
+# qolgani (2, 3-qadam) avtomatik moslashadi. Berilmasa sukut ishlatiladi.
 # Parollarni xavfsiz joyga yozib qo'ying (secret manager) — bu skript
 # ularni faqat o'sha ishga tushirishda ko'rsatadi.
 
 # 2. Migratsiya — MIGRATOR bilan (kengaytma + GRANT/REVOKE shu yerda ishlaydi):
-DATABASE_URL="postgresql://bobododa_app:<app_pw>@<host>:5432/bobododa?schema=public" \
-DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:<migrator_pw>@<host>:5432/bobododa?schema=public" \
+DATABASE_URL="postgresql://<app_role>:<app_pw>@<host>:5432/bobododa?schema=public" \
+DATABASE_MIGRATION_URL="postgresql://<migrator_role>:<migrator_pw>@<host>:5432/bobododa?schema=public" \
   npx prisma migrate deploy
 
-# 3. Runtime .env / secret'da DATABASE_URL — FAQAT bobododa_app bilan.
-#    DATABASE_URL ga bobododa_migrator qo'ymang — F1 boot'da rad etadi.
+# 3. Runtime .env / secret'da DATABASE_URL — FAQAT <app_role> bilan, VA
+#    DB_APP_ROLE=<app_role> (F1 shu ikkisini solishtiradi).
+#    DATABASE_URL ga migrator rolini qo'ymang — F1 boot'da rad etadi.
 ```
 
 Ba'zi managed provayderlar (masalan Cloud SQL, RDS) standart `postgres`
 superuser'ini bermaydi — o'rniga `rds_superuser` kabi teng huquqli rol beriladi.
-`roles.sql` faqat `CREATE ROLE`, `GRANT`, `ALTER DEFAULT PRIVILEGES`
-ishlatadi — bu rollarda odatda yetarli (superuser SHART emas).
+`roles.sql` faqat `CREATE ROLE`, `GRANT`, `ALTER DEFAULT PRIVILEGES`,
+`ALTER DATABASE ... SET` ishlatadi — bu rollarda odatda yetarli (superuser
+SHART emas). Barcha rol nomlari `format('%I', …)`/psql `:"var"` bilan
+kvotalanadi (identifikator-xavfsiz) — string konkatenatsiya yo'q.
 
 ### Boot-vaqtidagi rol tekshiruvi — F1 (fail closed)
 
@@ -194,7 +220,34 @@ bypass production'da imkonsiz.
 Isbot: `test/db-role-assertion.e2e-spec.ts` — to'g'ridan-to'g'ri funksiya
 (happy/fail-closed/bypass) + `scripts/boot-check.ts` orqali **haqiqiy,
 alohida process'da** boot (noto'g'ri rol → process 1 bilan chiqadi, aniq
-xato bilan).
+xato bilan) — jumladan sukutdan **butunlay boshqa** rol nomi bilan (T1,
+`DB_APP_ROLE`, pastga qarang).
+
+**T1 — rol nomi `DB_APP_ROLE` bilan sozlanadi.** Sukut `bobododa_app`, lekin
+migratsiya faylida QATTIQ YOZILMAGAN — DB darajasidagi GUC'dan
+(`bobododa.app_role`, `prisma/sql/roles.sql` o'rnatadi) o'qiladi. Managed
+Postgres provayderi rol nomiga cheklov qo'ysa (prefiks, uzunlik,
+rezervlangan so'z): `roles.sql`ni boshqa `-v app_role=...` bilan qayta
+ishga tushiring va `DB_APP_ROLE`ni shunga moslang — **migratsiyaga tegilmaydi**.
+
+> ⚠️ **Connection pooler (PgBouncer, Yandex/Supabase managed pooler) haqida.**
+> F1'ning birinchi tekshiruvi — `SELECT current_user`. Agar `DATABASE_URL`
+> to'g'ridan-to'g'ri Postgres'ga emas, **transaction/statement-mode pooler**
+> orqali ulansa, pooler CLIENT autentifikatsiyasidan qat'i nazar bir nechta
+> ilova ulanishini bitta (yoki kam sonli) FIZIK Postgres backend'iga
+> multipleksatsiya qilishi mumkin — bunday sozlashda `current_user` F1
+> kutgandan BOSHQACHA (masalan pooler'ning umumiy/administrator roli)
+> qaytishi mumkin, va F1 **yolg'on YIQILISHI** mumkin (ilova aslida to'g'ri
+> huquqlarga ega bo'lsa ham). `session`-mode pooling odatda muammo emas
+> (bitta client — bitta backend, butun sessiya davomida). GUC o'qish
+> (`current_setting('bobododa.app_role', ...)`) o'zi muammo EMAS — bu DB
+> darajasidagi sukut, har yangi FIZIK ulanishda avtomatik qo'llanadi, pooling
+> rejimidan qat'i nazar. **Agar pooler qo'shsangiz:** avval `session`-mode
+> tekshiring (F1 o'zgarishsiz ishlaydi); `transaction`/`statement`-mode
+> shart bo'lsa, F1'ni pooler ORQASIDAGI DIRECT ulanishda ishga tushiring
+> (masalan alohida "admin" port/URL — ko'p pooler shuni beradi) yoki
+> `current_user` tekshiruvini pooler konfiguratsiyasiga moslab qayta ko'ring.
+> Kod o'zgarishi ZARUR EMAS — bu faqat DEPLOY konfiguratsiyasi savoli.
 
 ### Kengaytmalar (A2)
 

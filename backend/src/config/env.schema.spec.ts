@@ -96,6 +96,25 @@ describe('validateEnv', () => {
     expect(env.DB_ROLE_ASSERTION).toBe(true);
   });
 
+  it('DB_APP_ROLE sukut bo’yicha "bobododa_app"', () => {
+    expect(validateEnv({ ...base }).DB_APP_ROLE).toBe('bobododa_app');
+  });
+
+  it('DB_APP_ROLE boshqa kvotalanmagan identifikatorni qabul qiladi', () => {
+    expect(validateEnv({ ...base, DB_APP_ROLE: 'custom_app_role' }).DB_APP_ROLE).toBe(
+      'custom_app_role',
+    );
+  });
+
+  it('DB_APP_ROLE noto‘g‘ri identifikatorlarni rad etadi (T1)', () => {
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: '1bad' })).toThrow(/DB_APP_ROLE/);
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: 'has space' })).toThrow(/DB_APP_ROLE/);
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: "app'; DROP TABLE users; --" })).toThrow(
+      /DB_APP_ROLE/,
+    );
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: 'a'.repeat(64) })).toThrow(/DB_APP_ROLE/);
+  });
+
   it('bir nechta muammoni bitta xabarda sanaydi', () => {
     try {
       validateEnv({ DATABASE_URL: 'not-a-url' });

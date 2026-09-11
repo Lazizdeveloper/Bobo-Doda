@@ -81,42 +81,74 @@ export async function dropDatabase(name: string): Promise<void> {
 export interface ProvisionedDb {
   /** Superuser (`postgres`) — DB'ni yaratish/o'chirish uchun. */
   superuserUrl: string;
-  /** `bobododa_migrator` — faqat `prisma migrate deploy`. */
+  /** Migrator roli — faqat `prisma migrate deploy`. */
   migratorUrl: string;
-  /** `bobododa_app` — runtime, F1 shuni tekshiradi. */
+  /** App roli — runtime, F1 shuni tekshiradi. */
   appUrl: string;
+  appRole: string;
+  migratorRole: string;
+}
+
+export interface ProvisionDbOptions {
+  /** T1 isboti uchun: sukut `bobododa_app`/`bobododa_migrator` dan boshqa nom. */
+  appRole?: string;
+  migratorRole?: string;
+}
+
+/** Postgres kvotalanmagan identifikatori — `env.schema.ts`dagi DB_APP_ROLE bilan bir xil qoida. */
+const SAFE_IDENTIFIER_RE = /^[a-z_][a-z0-9_]{0,62}$/;
+
+function assertSafeIdentifier(value: string, label: string): void {
+  if (!SAFE_IDENTIFIER_RE.test(value)) {
+    throw new Error(`e2e-infra: "${label}" xavfsiz identifikator emas: "${value}"`);
+  }
 }
 
 /**
  * `prisma/sql/roles.sql` ekvivalenti (test uchun) + migratsiya. Toza `name`
- * DB'sini yaratadi, `bobododa_migrator`/`bobododa_app` rollarini (global,
- * mavjud bo'lmasa) sozlaydi va migratorroli bilan `prisma migrate deploy`
- * qiladi — natijada `appUrl` A4 (append-only) va F1 (rol tekshiruvi)
- * ikkalasini ham qondiradi.
+ * DB'sini yaratadi, rollarni (global, mavjud bo'lmasa) sozlaydi, `bobododa.
+ * app_role` GUC'ini o'rnatadi (T1 — migratsiya buni o'qiydi, sukut yo'liga
+ * emas, HAQIQIY GUC yo'liga tayanish uchun) va migrator roli bilan
+ * `prisma migrate deploy` qiladi — natijada `appUrl` A4 (append-only) va F1
+ * (rol tekshiruvi) ikkalasini ham qondiradi.
+ *
+ * `name`/`appRole`/`migratorRole` — bu yerda test kodi konstantalari (hech
+ * qachon tashqi/foydalanuvchi kirishi emas), lekin baribir
+ * `assertSafeIdentifier` bilan tekshiriladi — prod kodidagi (`roles.sql`,
+ * migratsiya) `format('%I', …)` qoidasi bilan bir xil intizom.
  */
-export async function provisionDb(name: string): Promise<ProvisionedDb> {
+export async function provisionDb(name: string, opts: ProvisionDbOptions = {}): Promise<ProvisionedDb> {
+  const appRole = opts.appRole ?? 'bobododa_app';
+  const migratorRole = opts.migratorRole ?? 'bobododa_migrator';
+  assertSafeIdentifier(name, 'name');
+  assertSafeIdentifier(appRole, 'appRole');
+  assertSafeIdentifier(migratorRole, 'migratorRole');
+
   const superuserUrl = await recreateDatabase(name);
   const host = hostOf(superuserUrl);
-  const migratorUrl = `postgresql://bobododa_migrator:migrator@${host}/${name}?schema=public`;
-  const appUrl = `postgresql://bobododa_app:app@${host}/${name}?schema=public`;
+  const migratorUrl = `postgresql://${migratorRole}:migrator@${host}/${name}?schema=public`;
+  const appUrl = `postgresql://${appRole}:app@${host}/${name}?schema=public`;
 
   const su = new PrismaClient({ datasourceUrl: superuserUrl });
   try {
     for (const stmt of [
       `DO $$ BEGIN
-         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bobododa_migrator') THEN
-           CREATE ROLE bobododa_migrator LOGIN PASSWORD 'migrator';
+         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='${migratorRole}') THEN
+           CREATE ROLE ${migratorRole} LOGIN PASSWORD 'migrator';
          END IF;
-         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bobododa_app') THEN
-           CREATE ROLE bobododa_app LOGIN PASSWORD 'app';
+         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='${appRole}') THEN
+           CREATE ROLE ${appRole} LOGIN PASSWORD 'app';
          END IF;
        END $$;`,
-      `GRANT CONNECT ON DATABASE "${name}" TO bobododa_migrator, bobododa_app`,
-      `GRANT CREATE ON DATABASE "${name}" TO bobododa_migrator`,
-      `GRANT CREATE, USAGE ON SCHEMA public TO bobododa_migrator`,
-      `GRANT USAGE ON SCHEMA public TO bobododa_app`,
-      `ALTER DEFAULT PRIVILEGES FOR ROLE bobododa_migrator IN SCHEMA public
-         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bobododa_app`,
+      `GRANT CONNECT ON DATABASE "${name}" TO ${migratorRole}, ${appRole}`,
+      `GRANT CREATE ON DATABASE "${name}" TO ${migratorRole}`,
+      `GRANT CREATE, USAGE ON SCHEMA public TO ${migratorRole}`,
+      `GRANT USAGE ON SCHEMA public TO ${appRole}`,
+      `ALTER DEFAULT PRIVILEGES FOR ROLE ${migratorRole} IN SCHEMA public
+         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${appRole}`,
+      // T1 — migratsiya shu GUC'ni o'qiydi (`current_setting('bobododa.app_role', true)`).
+      // Sukut yo'lga (COALESCE fallback) emas, HAQIQIY GUC yo'liga tayanamiz.
+      `ALTER DATABASE "${name}" SET bobododa.app_role = '${appRole}'`,
     ]) {
       await su.$executeRawUnsafe(stmt);
     }
@@ -130,7 +162,7 @@ export async function provisionDb(name: string): Promise<ProvisionedDb> {
     stdio: 'inherit',
   });
 
-  return { superuserUrl, migratorUrl, appUrl };
+  return { superuserUrl, migratorUrl, appUrl, appRole, migratorRole };
 }
 
 export interface BootCheckResult {

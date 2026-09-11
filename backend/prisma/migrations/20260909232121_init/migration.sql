@@ -221,42 +221,55 @@ ALTER TABLE "staff_members" ADD CONSTRAINT "staff_members_userId_fkey" FOREIGN K
 ALTER TABLE "staff_sessions" ADD CONSTRAINT "staff_sessions_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "staff_members"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- A4 — "append-only" ni DB DARAJASIDA majburlash.
+-- A4/T1 — "append-only" ni DB DARAJASIDA majburlash, sozlanadigan rol nomi
+-- bilan.
 --
--- `bobododa_app` (runtime roli) audit_logs / outbox_events qatorlarini
+-- Runtime roli (sukut `bobododa_app`) audit_logs / outbox_events qatorlarini
 -- O'ZGARTIRA yoki O'CHIRA olmasin. Kod darajasidagi qoidani bir kun kimdir
 -- buzadi (shoshilinch tuzatish, xato `updateMany`, migratsiya skripti); DB
 -- darajasida buzish uchun ONGLI ravishda `bobododa_migrator` ga o'tish kerak.
 -- `LedgerEntry` (Bosqich 4) paydo bo'lganda o'sha migratsiyaga xuddi shunday
--- REVOKE qo'shiladi.
+-- REVOKE qo'shiladi (yagona manba — `src/common/db/append-only.constants.ts`,
+-- F1 tekshiruvi shundan o'qiydi; bu migratsiya QO'LDA shunga mos yoziladi —
+-- `test/db-role-assertion.e2e-spec.ts` ikkalasi orasidagi drift'ni ushlaydi).
+--
+-- T1 — rol NOMI bu faylga QATTIQ YOZILMAGAN: DB darajasidagi maxsus GUC'dan
+-- (`bobododa.app_role`) o'qiladi — buni `prisma/sql/roles.sql`
+-- (`ALTER DATABASE ... SET bobododa.app_role = ...`) o'rnatadi. Hech qanday
+-- kengaytma shart emas — Postgres nuqtali ("namespace.nom") GUC'larni
+-- o'ziga tanish qilmasdan ham qabul qiladi. GUC o'rnatilmagan bo'lsa (masalan
+-- toza lokal `prisma migrate dev`) — sukut `bobododa_app`ga qaytadi.
+-- Barcha identifikatorlar `format('%I', …)` bilan quote qilinadi — string
+-- konkatenatsiya YO'Q.
 --
 -- Rollar mavjud bo'lsagina qo'llanadi: rol bootstrap qilinmagan lokal DB da
 -- (`prisma migrate dev` toza klasterga) migratsiya YIQILMASLIGI kerak.
--- Rollarni yaratish: `prisma/sql/roles.sql` (docker init / CI / test setup).
 -- Prisma jadval nomlarini @@map bilan snake_case qiladi — quyida HAQIQIY
 -- nomlar (audit_logs, outbox_events), ADR matnidagi "AuditLog" emas.
 -- ─────────────────────────────────────────────────────────────────────────────
 DO $$
+DECLARE
+  app_role text := COALESCE(NULLIF(current_setting('bobododa.app_role', true), ''), 'bobododa_app');
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'bobododa_app') THEN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app_role) THEN
 
     -- Bazaviy CRUD (keyingi migratsiyalar yangi jadval qo'shsa ular ham).
-    GRANT USAGE ON SCHEMA public TO bobododa_app;
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO bobododa_app;
-    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO bobododa_app;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public
-      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bobododa_app;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public
-      GRANT USAGE, SELECT ON SEQUENCES TO bobododa_app;
+    EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', app_role);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', app_role);
+    EXECUTE format('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO %I', app_role);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I', app_role);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO %I', app_role);
 
     -- audit_logs — TO'LIQ append-only: INSERT + SELECT bor, UPDATE/DELETE yo'q.
-    REVOKE UPDATE, DELETE ON "audit_logs" FROM bobododa_app;
+    EXECUTE format('REVOKE UPDATE, DELETE ON %I FROM %I', 'audit_logs', app_role);
 
     -- outbox_events — qator o'chirish yoki payload/eventType buzish yo'q, lekin
     -- worker yetkazish holatini yangilaydi → faqat SHU ustunlarga UPDATE.
-    REVOKE UPDATE, DELETE ON "outbox_events" FROM bobododa_app;
-    GRANT UPDATE ("status", "attempts", "lastError", "availableAt", "processedAt")
-      ON "outbox_events" TO bobododa_app;
+    EXECUTE format('REVOKE UPDATE, DELETE ON %I FROM %I', 'outbox_events', app_role);
+    EXECUTE format(
+      'GRANT UPDATE ("status", "attempts", "lastError", "availableAt", "processedAt") ON %I TO %I',
+      'outbox_events', app_role
+    );
 
   END IF;
 END

@@ -57,6 +57,11 @@ export class AppConfigService {
     return this.get('DB_ROLE_ASSERTION');
   }
 
+  /** T1 — runtime uchun kutilgan DB roli (F1 shu bilan solishtiradi). Sukut `bobododa_app`. */
+  get dbAppRole(): string {
+    return this.get('DB_APP_ROLE');
+  }
+
   get redisUrl(): string {
     return this.get('REDIS_URL');
   }

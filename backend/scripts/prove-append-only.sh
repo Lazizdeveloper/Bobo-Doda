@@ -31,19 +31,12 @@ pg_ctl -D "$PGDATA" -w -o "-p $PGPORT -k '' -c listen_addresses=$PGHOST -c timez
 
 psql_su() { psql -X -q -h "$PGHOST" -p "$PGPORT" -U "$SU" -v ON_ERROR_STOP=1 "$@"; }
 
-echo "▶ create database + rollar (bobododa_migrator / bobododa_app)"
+echo "▶ create database + rollar — prisma/sql/roles.sql (T1: yagona manba, ikkinchi joyda yozilmagan)"
 psql_su -d postgres -c "CREATE DATABASE bobododa;"
-psql_su -d bobododa <<'SQL'
-CREATE ROLE bobododa_migrator LOGIN PASSWORD 'migrator';
-CREATE ROLE bobododa_app      LOGIN PASSWORD 'app';
-GRANT CONNECT ON DATABASE bobododa TO bobododa_migrator, bobododa_app;
--- Trusted kengaytma (`pg_trgm` va h.k.) DB ustidan CREATE talab qiladi.
-GRANT CREATE ON DATABASE bobododa TO bobododa_migrator;
-GRANT CREATE, USAGE ON SCHEMA public TO bobododa_migrator;
-GRANT USAGE  ON SCHEMA public TO bobododa_app;
-ALTER DEFAULT PRIVILEGES FOR ROLE bobododa_migrator IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bobododa_app;
-SQL
+psql -X -h "$PGHOST" -p "$PGPORT" -U "$SU" -d bobododa \
+  -v app_pw=app -v migrator_pw=migrator -v db_name=bobododa \
+  -v app_role=bobododa_app -v migrator_role=bobododa_migrator \
+  -f "$BACKEND_DIR/prisma/sql/roles.sql"
 
 MIGRATOR_URL="postgresql://bobododa_migrator:migrator@$PGHOST:$PGPORT/bobododa?schema=public"
 APP_URL="postgresql://bobododa_app:app@$PGHOST:$PGPORT/bobododa?schema=public"

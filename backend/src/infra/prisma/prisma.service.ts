@@ -30,6 +30,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     await assertDbRoleHardening(this, {
       enabled: this.config.dbRoleAssertionEnabled,
+      expectedRole: this.config.dbAppRole,
       logger: this.logger,
     });
   }
