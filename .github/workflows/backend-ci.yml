@@ -101,7 +101,10 @@ jobs:
     env:
       # e2e testlar shu xizmatlarga ulanadi (Testcontainers EMAS — u ba'zi
       # runner'larda Redis'ni "Connection is closed" bilan yiqitardi).
-      E2E_SUPERUSER_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      # F2 ISBOTI (2026-09-11, vaqtinchalik commit — develop'ga tushmaydi):
+      # ATAYLAB buzilgan port. CI_REQUIRE_E2E=true bo'lgani uchun bu SKIP
+      # emas, aniq FAIL bo'lishi kerak. Isbotlangach shu commit revert qilinadi.
+      E2E_SUPERUSER_URL: postgresql://postgres:postgres@localhost:1/postgres
       E2E_REDIS_URL: redis://localhost:6379
       # F2 — infra kutilgan edi lekin topilmadi (masalan env nomi xato
       # yozilsa yoki service konteyner ko'tarilmasa) JIMGINA skip bo'lib,
