@@ -1,6 +1,5 @@
 import type {
   VerificationRecord,
-  Dispute,
   SupportTicket,
 } from "@/lib/types";
 import type {

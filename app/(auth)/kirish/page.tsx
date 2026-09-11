@@ -274,6 +274,8 @@ function KirishForm() {
       <div className="border-b border-line/60 bg-surface/80 p-4 sm:p-6 md:hidden">
         <div className="mb-4 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2.5">
+            {/* next/image emas — statik logotip, bir necha sobit o'lchamda (mobil/desktop/panel) */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-icon.png"
               alt="Bobo&Doda"
@@ -328,6 +330,7 @@ function KirishForm() {
           <div className="w-full max-w-md sm:max-w-lg xl:max-w-[530px] mx-auto">
             {/* Desktop Brand Logo */}
             <Link href="/" className="mb-8 lg:mb-9 hidden md:inline-flex items-center gap-3.5 group">
+              {/* eslint-disable-next-line @next/next/no-img-element -- statik logotip, sobit o'lcham */}
               <img
                 src="/logo-icon.png"
                 alt="Bobo&Doda"
@@ -730,6 +733,7 @@ function KirishForm() {
             }`}
           >
             <Link href="/" className="inline-flex items-center gap-4 group">
+              {/* eslint-disable-next-line @next/next/no-img-element -- statik logotip, sobit o'lcham */}
               <img
                 src="/logo-icon.png"
                 alt="Bobo&Doda"

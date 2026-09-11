@@ -1,3 +1,4 @@
+import { execFileSync, spawnSync } from 'node:child_process';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -13,12 +14,20 @@ export const E2E_SUPERUSER_URL =
   process.env.E2E_SUPERUSER_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
 export const E2E_REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6379';
 
+const BACKEND_ROOT = `${__dirname}/../..`;
+
 const withConnectTimeout = (url: string, seconds: number): string =>
-  url.includes('connect_timeout=') ? url : `${url}${url.includes('?') ? '&' : '?'}connect_timeout=${seconds}`;
+  url.includes('connect_timeout=')
+    ? url
+    : `${url}${url.includes('?') ? '&' : '?'}connect_timeout=${seconds}`;
 
 /** DB nomini almashtiradi: `.../postgres?x` → `.../<name>?x`. */
 export const withDatabase = (url: string, name: string): string =>
   url.replace(/\/[^/?]+(\?|$)/, `/${name}$1`);
+
+/** `postgresql://u:p@host:port/db` → `host:port`. */
+export const hostOf = (url: string): string =>
+  new URL(url.replace(/^[a-z]+:\/\//i, 'http://')).host;
 
 /** Infra yetib bo'lmasa test o'zini o'tkazib yuboradi (lokal, xizmatlarsiz). */
 export async function pgReachable(): Promise<boolean> {
@@ -33,6 +42,24 @@ export async function pgReachable(): Promise<boolean> {
   }
 }
 
+/**
+ * F2 — infra yo'qligini SKIP bilan jimgina yutib yubormaslik uchun: agar
+ * `CI_REQUIRE_E2E=true` bo'lsa (backend-ci.yml integration job'ida
+ * o'rnatiladi) va Postgres yetib bo'lmasa — suite TASHLAYDI (CI qizil
+ * bo'ladi), "infra topilmadi" jimgina yashil belgiga aylanib qolmaydi.
+ * Lokal'da (flag yo'q) — eskicha skip.
+ */
+export async function requireInfraOrSkip(label: string): Promise<boolean> {
+  if (await pgReachable()) return true;
+  if (process.env.CI_REQUIRE_E2E === 'true') {
+    throw new Error(
+      `[${label}] CI_REQUIRE_E2E=true — Postgres infra KUTILGAN edi, topilmadi: ${E2E_SUPERUSER_URL}`,
+    );
+  }
+  process.stderr.write(`[${label}] Postgres yetib bo'lmadi — suite o'tkazib yuborildi\n`);
+  return false;
+}
+
 /** Toza DB yaratadi (qayta ishga tushirishga chidamli). Superuser URL qaytaradi. */
 export async function recreateDatabase(name: string): Promise<string> {
   const admin = new PrismaClient({ datasourceUrl: E2E_SUPERUSER_URL });
@@ -43,4 +70,96 @@ export async function recreateDatabase(name: string): Promise<string> {
     await admin.$disconnect();
   }
   return withDatabase(E2E_SUPERUSER_URL, name);
+}
+
+export async function dropDatabase(name: string): Promise<void> {
+  const admin = new PrismaClient({ datasourceUrl: E2E_SUPERUSER_URL });
+  await admin.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`).catch(() => undefined);
+  await admin.$disconnect();
+}
+
+export interface ProvisionedDb {
+  /** Superuser (`postgres`) — DB'ni yaratish/o'chirish uchun. */
+  superuserUrl: string;
+  /** `bobododa_migrator` — faqat `prisma migrate deploy`. */
+  migratorUrl: string;
+  /** `bobododa_app` — runtime, F1 shuni tekshiradi. */
+  appUrl: string;
+}
+
+/**
+ * `prisma/sql/roles.sql` ekvivalenti (test uchun) + migratsiya. Toza `name`
+ * DB'sini yaratadi, `bobododa_migrator`/`bobododa_app` rollarini (global,
+ * mavjud bo'lmasa) sozlaydi va migratorroli bilan `prisma migrate deploy`
+ * qiladi — natijada `appUrl` A4 (append-only) va F1 (rol tekshiruvi)
+ * ikkalasini ham qondiradi.
+ */
+export async function provisionDb(name: string): Promise<ProvisionedDb> {
+  const superuserUrl = await recreateDatabase(name);
+  const host = hostOf(superuserUrl);
+  const migratorUrl = `postgresql://bobododa_migrator:migrator@${host}/${name}?schema=public`;
+  const appUrl = `postgresql://bobododa_app:app@${host}/${name}?schema=public`;
+
+  const su = new PrismaClient({ datasourceUrl: superuserUrl });
+  try {
+    for (const stmt of [
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bobododa_migrator') THEN
+           CREATE ROLE bobododa_migrator LOGIN PASSWORD 'migrator';
+         END IF;
+         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bobododa_app') THEN
+           CREATE ROLE bobododa_app LOGIN PASSWORD 'app';
+         END IF;
+       END $$;`,
+      `GRANT CONNECT ON DATABASE "${name}" TO bobododa_migrator, bobododa_app`,
+      `GRANT CREATE ON DATABASE "${name}" TO bobododa_migrator`,
+      `GRANT CREATE, USAGE ON SCHEMA public TO bobododa_migrator`,
+      `GRANT USAGE ON SCHEMA public TO bobododa_app`,
+      `ALTER DEFAULT PRIVILEGES FOR ROLE bobododa_migrator IN SCHEMA public
+         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bobododa_app`,
+    ]) {
+      await su.$executeRawUnsafe(stmt);
+    }
+  } finally {
+    await su.$disconnect();
+  }
+
+  execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
+    cwd: BACKEND_ROOT,
+    env: { ...process.env, DATABASE_URL: appUrl, DATABASE_MIGRATION_URL: migratorUrl },
+    stdio: 'inherit',
+  });
+
+  return { superuserUrl, migratorUrl, appUrl };
+}
+
+export interface BootCheckResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+}
+
+/**
+ * `scripts/boot-check.ts` ni ALOHIDA PROCESSDA ishga tushiradi — F1'ning
+ * "noto'g'ri rol bilan ilova ko'tarilmaydi" da'vosini jest module-cache
+ * emas, haqiqiy process-darajasidagi boot bilan isbotlaydi.
+ */
+export function bootCheck(env: NodeJS.ProcessEnv): BootCheckResult {
+  const res = spawnSync(
+    process.execPath,
+    [
+      '--require',
+      'ts-node/register/transpile-only',
+      '--require',
+      'tsconfig-paths/register',
+      'scripts/boot-check.ts',
+    ],
+    {
+      cwd: BACKEND_ROOT,
+      env: { ...process.env, TS_NODE_PROJECT: `${BACKEND_ROOT}/tsconfig.json`, ...env },
+      encoding: 'utf8',
+      timeout: 60_000,
+    },
+  );
+  return { code: res.status ?? -1, stdout: res.stdout ?? '', stderr: res.stderr ?? '' };
 }

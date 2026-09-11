@@ -7,7 +7,7 @@ import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { authService, usersService, DATA_CHANGED_EVENT } from "@/lib/api";
+import { usersService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
 export interface TopNavProps {

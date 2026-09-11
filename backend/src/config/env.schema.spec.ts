@@ -72,6 +72,30 @@ describe('validateEnv', () => {
     expect(env.SWAGGER_ENABLED).toBe(false);
   });
 
+  it('DB_ROLE_ASSERTION sukut bo’yicha "on" (true)', () => {
+    expect(validateEnv({ ...base }).DB_ROLE_ASSERTION).toBe(true);
+  });
+
+  it('DB_ROLE_ASSERTION="off" false qiladi (dev/test)', () => {
+    expect(validateEnv({ ...base, DB_ROLE_ASSERTION: 'off' }).DB_ROLE_ASSERTION).toBe(false);
+  });
+
+  it('production’da DB_ROLE_ASSERTION=off rad etiladi (F1 — fail closed)', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        NODE_ENV: 'production',
+        SWAGGER_ENABLED: 'false',
+        DB_ROLE_ASSERTION: 'off',
+      }),
+    ).toThrow(/DB_ROLE_ASSERTION/);
+  });
+
+  it('production’da DB_ROLE_ASSERTION sukut (on) bilan o’tadi', () => {
+    const env = validateEnv({ ...base, NODE_ENV: 'production', SWAGGER_ENABLED: 'false' });
+    expect(env.DB_ROLE_ASSERTION).toBe(true);
+  });
+
   it('bir nechta muammoni bitta xabarda sanaydi', () => {
     try {
       validateEnv({ DATABASE_URL: 'not-a-url' });

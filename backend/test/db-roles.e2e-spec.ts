@@ -1,6 +1,5 @@
-import { execFileSync } from 'node:child_process';
 import { PrismaClient } from '@prisma/client';
-import { E2E_SUPERUSER_URL, pgReachable, recreateDatabase } from './support/e2e-infra';
+import { dropDatabase, provisionDb, requireInfraOrSkip } from './support/e2e-infra';
 
 /**
  * A4 "Definition of Done" — append-only DB DARAJASIDA majburlanganini ISBOTLAYDI.
@@ -13,75 +12,27 @@ import { E2E_SUPERUSER_URL, pgReachable, recreateDatabase } from './support/e2e-
  *   • outbox_events UPDATE status         — ✅ (worker uchun ustun-GRANT)
  *   • A2 kengaytmalari o'rnatilgan
  *
- * Infra — CI service konteynerlari / lokal `docker compose` / nix throwaway.
- * Yetib bo'lmasa suite o'tkazib yuboriladi. Docker'siz ekvivalent isbot:
- * `scripts/prove-append-only.sh`.
+ * Infra — CI service konteynerlari / lokal `E2E_SUPERUSER_URL`. Yetib
+ * bo'lmasa (va `CI_REQUIRE_E2E` yo'q) suite o'tkazib yuboriladi (F2).
+ * Docker'siz ekvivalent isbot: `scripts/prove-append-only.sh`.
  */
 const DB = 'roles_e2e';
 
 describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => {
   let reachable = false;
   let appDb: PrismaClient | undefined;
-  let suDb: PrismaClient | undefined;
 
   beforeAll(async () => {
-    reachable = await pgReachable();
-    if (!reachable) {
-      process.stderr.write(`[db-roles.e2e] Postgres yetib bo'lmadi — suite o'tkazib yuborildi\n`);
-      return;
-    }
+    reachable = await requireInfraOrSkip('db-roles.e2e');
+    if (!reachable) return;
 
-    const suUrl = await recreateDatabase(DB); // superuser @ roles_e2e
-    const host = new URL(suUrl.replace('postgresql://', 'http://')).host;
-    const migratorUrl = `postgresql://bobododa_migrator:migrator@${host}/${DB}?schema=public`;
-    const appUrl = `postgresql://bobododa_app:app@${host}/${DB}?schema=public`;
-
-    process.env.DATABASE_URL = appUrl;
-    process.env.DATABASE_MIGRATION_URL = migratorUrl;
-
-    // ── Rollar (superuser; prisma/sql/roles.sql ekvivalenti) ───────────────
-    suDb = new PrismaClient({ datasourceUrl: suUrl });
-    for (const stmt of [
-      `DO $$ BEGIN
-         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bobododa_migrator') THEN
-           CREATE ROLE bobododa_migrator LOGIN PASSWORD 'migrator';
-         END IF;
-         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='bobododa_app') THEN
-           CREATE ROLE bobododa_app LOGIN PASSWORD 'app';
-         END IF;
-       END $$;`,
-      `GRANT CONNECT ON DATABASE "${DB}" TO bobododa_migrator, bobododa_app`,
-      `GRANT CREATE ON DATABASE "${DB}" TO bobododa_migrator`,
-      `GRANT CREATE, USAGE ON SCHEMA public TO bobododa_migrator`,
-      `GRANT USAGE ON SCHEMA public TO bobododa_app`,
-      `ALTER DEFAULT PRIVILEGES FOR ROLE bobododa_migrator IN SCHEMA public
-         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bobododa_app`,
-    ]) {
-      await suDb.$executeRawUnsafe(stmt);
-    }
-
-    // ── Migratsiya — MIGRATOR roli bilan (directUrl) ───────────────────────
-    execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
-      cwd: `${__dirname}/..`,
-      env: { ...process.env, DATABASE_URL: appUrl, DATABASE_MIGRATION_URL: migratorUrl },
-      stdio: 'inherit',
-    });
-
+    const { appUrl } = await provisionDb(DB);
     appDb = new PrismaClient({ datasourceUrl: appUrl });
-  }, 180_000);
+  }, 120_000);
 
   afterAll(async () => {
     await appDb?.$disconnect();
-    await suDb?.$disconnect();
-    if (reachable) {
-      const admin = new PrismaClient({ datasourceUrl: E2E_SUPERUSER_URL });
-      await admin
-        .$executeRawUnsafe(`DROP DATABASE IF EXISTS "${DB}" WITH (FORCE)`)
-        .catch(() => undefined);
-      await admin.$disconnect();
-    }
-    delete process.env.DATABASE_URL;
-    delete process.env.DATABASE_MIGRATION_URL;
+    if (reachable) await dropDatabase(DB);
   });
 
   const t = (name: string, fn: () => Promise<void>): void =>

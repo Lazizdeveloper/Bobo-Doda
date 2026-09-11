@@ -52,6 +52,11 @@ export class AppConfigService {
     return this.get('DATABASE_MIGRATION_URL');
   }
 
+  /** F1 — boot paytidagi rol/append-only tekshiruvi yoqilganmi (prod'da doim true). */
+  get dbRoleAssertionEnabled(): boolean {
+    return this.get('DB_ROLE_ASSERTION');
+  }
+
   get redisUrl(): string {
     return this.get('REDIS_URL');
   }

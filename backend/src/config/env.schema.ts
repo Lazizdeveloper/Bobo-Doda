@@ -48,6 +48,13 @@ export const envSchema = z
     DATABASE_URL: z.string().min(1, 'DATABASE_URL majburiy').url(),
     DATABASE_MIGRATION_URL: z.string().min(1, 'DATABASE_MIGRATION_URL majburiy').url(),
     REDIS_URL: z.string().min(1, 'REDIS_URL majburiy').url(),
+    // F1 — boot paytida "current_user = bobododa_app, append-only buzilmagan,
+    // kengaytmalar bor" tekshiradi; yiqilsa ilova ko'tarilmaydi (fail closed).
+    // "off" faqat dev/test qulayligi uchun — pastda production'da RAD ETILADI.
+    DB_ROLE_ASSERTION: z
+      .enum(['on', 'off'])
+      .default('on')
+      .transform((v) => v === 'on'),
 
     // ── S3 / MinIO (Bosqich 2+ da majburiy) ─────────────────────────────
     S3_ENDPOINT: z.string().url().optional(),
@@ -84,6 +91,14 @@ export const envSchema = z
           code: z.ZodIssueCode.custom,
           path: ['SWAGGER_ENABLED'],
           message: "production'da SWAGGER_ENABLED=false bo'lishi shart",
+        });
+      }
+      if (!env.DB_ROLE_ASSERTION) {
+        // F1 — append-only himoyasini prod'da o'chirib qo'yish IMKONSIZ.
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['DB_ROLE_ASSERTION'],
+          message: "production'da DB_ROLE_ASSERTION=off IMKONSIZ (fail closed)",
         });
       }
     }

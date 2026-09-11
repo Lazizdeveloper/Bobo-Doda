@@ -33,7 +33,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { PLATFORM_FEE_PERCENT, platformFee, sellerNet } from "@/lib/fees";
 import { COMPANY_BANK_DETAILS, generatePaymentReference } from "@/lib/company-bank-details";
 import type { WithdrawalRequest, TransactionRecord, AdminAccount } from "@/lib/admin-types";
-import type { Contract, ContractPaymentStatus, PayoutStatus } from "@/lib/types";
+import type { Contract, ContractPaymentStatus } from "@/lib/types";
 
 export default function PaymentsPage() {
   const { toast } = useToast();

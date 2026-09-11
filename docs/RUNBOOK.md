@@ -58,6 +58,20 @@ nix-shell backend/shell.nix --run 'npm install'
 npm install
 ```
 
+**Hoisting tuzog'i — `rxjs`.** Root `overrides.rxjs = "7.8.2"` (`package.json`).
+Backend to'g'ridan-to'g'ri `rxjs` ga bog'liq (`@nestjs/*` orqali ham), root
+esa hech qanday `rxjs` cheklovi qo'ymaydi (frontend uni ishlatmaydi) — shu
+sababli npm ikki xil versiyani (root'da bittasi, `backend/node_modules`da
+boshqasi) hoisting qilib qo'ygan edi, va TypeScript ikkita "boshqa-boshqa"
+`rxjs.Subscriber` tipini bir-biriga mos kelmaydi deb backend `typecheck`ni
+yiqitgan edi (`logging.interceptor.ts`). **Yangi backend dependency
+qo'shsangiz** (ayniqsa `@nestjs/*` oilasidan) — `npm ls <paket>` bilan bitta
+versiya (root'da, `backend/node_modules`da EMAS) qolganini tekshiring; agar
+ikkiga bo'linsa — `overrides`ga qo'shing yoki backend'dagi range'ni
+moslashtiring, keyin `rm -rf node_modules */node_modules package-lock.json
+&& npm install` bilan toza o'rnating (versiya oshirish yetarli emas —
+lockfile'dagi eski nested nusxa qolib ketadi).
+
 ### Variant A — hammasi Docker'da
 ```bash
 cd backend && docker compose up
@@ -123,6 +137,65 @@ GRANT  UPDATE (status, attempts, "lastError", "availableAt", "processedAt")
   (`psql -v app_pw=… -v migrator_pw=… -v db_name=bobododa -f prisma/sql/roles.sql`).
 - **Integration test:** `test/db-roles.e2e-spec.ts` superuser bilan yaratadi.
 
+### Managed Postgres — rollarni QO'LDA yaratish (F1)
+
+`docker/initdb/10-roles.sh` FAQAT yangi konteynerning **birinchi** ko'tarilishida
+ishlaydi (bo'sh data-dir). Managed Postgres'da (Yandex Cloud, RDS, Cloud SQL,
+Supabase va h.k.) bu skript HECH QACHON ishlamaydi — rollarni qo'lda,
+bitta martalik provisioning qadami sifatida yarating:
+
+```bash
+# 1. Superuser (yoki CREATEROLE+CREATEDB huquqli) ulanish bilan:
+psql "$SUPERUSER_URL" \
+  -v app_pw="$(openssl rand -base64 24)" \
+  -v migrator_pw="$(openssl rand -base64 24)" \
+  -v db_name=bobododa \
+  -f backend/prisma/sql/roles.sql
+# Parollarni xavfsiz joyga yozib qo'ying (secret manager) — bu skript
+# ularni faqat o'sha ishga tushirishda ko'rsatadi.
+
+# 2. Migratsiya — MIGRATOR bilan (kengaytma + GRANT/REVOKE shu yerda ishlaydi):
+DATABASE_URL="postgresql://bobododa_app:<app_pw>@<host>:5432/bobododa?schema=public" \
+DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:<migrator_pw>@<host>:5432/bobododa?schema=public" \
+  npx prisma migrate deploy
+
+# 3. Runtime .env / secret'da DATABASE_URL — FAQAT bobododa_app bilan.
+#    DATABASE_URL ga bobododa_migrator qo'ymang — F1 boot'da rad etadi.
+```
+
+Ba'zi managed provayderlar (masalan Cloud SQL, RDS) standart `postgres`
+superuser'ini bermaydi — o'rniga `rds_superuser` kabi teng huquqli rol beriladi.
+`roles.sql` faqat `CREATE ROLE`, `GRANT`, `ALTER DEFAULT PRIVILEGES`
+ishlatadi — bu rollarda odatda yetarli (superuser SHART emas).
+
+### Boot-vaqtidagi rol tekshiruvi — F1 (fail closed)
+
+Append-only DB darajasida majburlangan bo'lishi kifoya emas — buni HECH KIM
+tekshirmasa, "himoya bor" degan noto'g'ri ishonch qoladi (masalan
+`DATABASE_URL`ga xatoan `bobododa_migrator` yozilsa, hammasi "ishlaydi",
+lekin `audit_logs` yana o'zgartirilishi mumkin bo'lib qoladi — signal yo'q).
+
+`PrismaService.onModuleInit` — `$connect()`dan keyin, `/health/ready` javob
+berishidan OLDIN (`src/infra/prisma/db-role-assertion.ts`):
+
+1. `SELECT current_user` = `bobododa_app` bo'lishi shart
+2. `has_table_privilege('audit_logs', 'UPDATE'/'DELETE')` = false
+3. `has_table_privilege('outbox_events', 'DELETE')` = false
+4. Kengaytmalar bor: `pg_trgm`, `unaccent`, `citext`, `btree_gin`
+
+Bittasi ham bajarilmasa — **ilova ko'tarilmaydi**, xato aniq: qaysi
+tekshiruv yiqildi + tuzatish qadamlari (yuqoridagi 3 qadam).
+
+`DB_ROLE_ASSERTION=off` — FAQAT dev/test qulayligi uchun (masalan rollarsiz
+lokal `prisma migrate dev`). `NODE_ENV=production`da Zod uni **rad etadi**
+(`env.schema.ts` — SWAGGER_ENABLED bilan bir xil "fail closed" naqsh) —
+bypass production'da imkonsiz.
+
+Isbot: `test/db-role-assertion.e2e-spec.ts` — to'g'ridan-to'g'ri funksiya
+(happy/fail-closed/bypass) + `scripts/boot-check.ts` orqali **haqiqiy,
+alohida process'da** boot (noto'g'ri rol → process 1 bilan chiqadi, aniq
+xato bilan).
+
 ### Kengaytmalar (A2)
 
 Init migratsiya boshida, migrator roli bilan:
@@ -181,7 +254,7 @@ npm run generate:contracts       # root'dan
 | `npm run dev` | Frontend dev server (:3000) |
 | `npm run build` | **Frontend** (`next build`) — Netlify shuni chaqiradi |
 | `npm run build:backend` | `nest build` |
-| `npm run lint` | Frontend + `--workspaces` (backend eslint) |
+| `npm run lint` | Frontend + `--workspaces` (backend eslint). **`--max-warnings=0`** — ogohlantirish ham qizil (F3: 20 ta ogohlantirish yig'ilib, hech kim qaramaydigan bo'lib qolmasin). |
 | `npm run typecheck` | Frontend `tsc` + `--workspaces` (backend + contracts) |
 | `npm test` | `--workspaces` (backend Jest unit) |
 | `npm run lint:app` / `typecheck:app` | Faqat frontend (CI `ci.yml` shuni ishlatadi) |
@@ -198,7 +271,7 @@ Backend'ning o'z skriptlari (`npm run <x> --workspace backend`):
 
 | Workflow | Trigger | Ish |
 |---|---|---|
-| `.github/workflows/backend-ci.yml` | `push`/`PR` → `main`,`develop` (paths: `backend/**`, `packages/**`, root manifest) + `workflow_dispatch` | **quality:** root `npm ci` → prisma validate/generate → backend lint/typecheck/unit/build → `generate:contracts`. **integration:** `postgres:16-alpine` + `redis:7-alpine` **service konteynerlari** (`localhost:5432/6379`) + `npm run test:e2e` (health + `db-roles` A4 append-only isboti). |
+| `.github/workflows/backend-ci.yml` | `push`/`PR` → `main`,`develop` (paths: `backend/**`, `packages/**`, root manifest) + `workflow_dispatch` | **quality:** root `npm ci` → prisma validate/generate → backend lint/typecheck/unit/build → `generate:contracts`. **integration:** `postgres:16-alpine` + `redis:7-alpine` **service konteynerlari** (`localhost:5432/6379`), `CI_REQUIRE_E2E=true` (F2) + `npm run test:e2e` (`health` + `db-roles` A4 append-only isboti + `db-role-assertion` F1 boot tekshiruvi isboti). |
 | `.github/workflows/ci.yml` | `push`/`PR` → `main`,`develop` (backend/docs o'zgarishi bundan tashqari) | Frontend: CSP + `lint:app` + `typecheck:app` + `next build`. |
 | `.github/workflows/codeql.yml` | — | Xavfsizlik skani (o'zgarmagan) |
 
@@ -213,6 +286,14 @@ o'rnatadi; `health` e2e o'z `health_e2e` DB'sini. **DIQQAT:** e2e spec'lar
 `AppModule` ni fayl boshida import qiladi — `@nestjs/config` `process.env` ni
 import vaqtida snapshot qiladi, shuning uchun ulanish URL'lari
 `test/jest-e2e.setup.ts` (setupFiles) da, `beforeAll` dan OLDIN o'rnatiladi.
+
+**F2 — "infra yo'q" JIMGINA yashil bo'lib qolmasin.** Har uch e2e suite
+`requireInfraOrSkip()` orqali boshlanadi (`test/support/e2e-infra.ts`):
+Postgres yetib bo'lmasa va `CI_REQUIRE_E2E=true` bo'lsa — suite SKIP emas,
+**YIQILADI** ("infra kutilgan edi, topilmadi"). Integration job'da bu flag
+doim yoqilgan — `E2E_SUPERUSER_URL` yoki service konteyner nomi xato
+yozilsa, CI shu yerda qizil bo'ladi, uni hech kim "yashil" deb o'tkazib
+yubormaydi. Lokal ishda flag yo'q — infra bo'lmasa qulay skip.
 
 ---
 
@@ -231,11 +312,15 @@ npm run generate:contracts   # packages/contracts to'ldiriladi
 bash backend/scripts/prove-append-only.sh
 #   → "permission denied for table audit_logs" ni ko'rsatadi, exit 0
 
-# e2e (health + db-roles) — Postgres + Redis kerak. CI'da service konteyner;
-# lokal'da manzilni env bilan bering (docker compose yoki throwaway klaster):
+# e2e (health + db-roles + db-role-assertion/F1) — Postgres + Redis kerak.
+# CI'da service konteyner; lokal'da manzilni env bilan bering:
 E2E_SUPERUSER_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
 E2E_REDIS_URL=redis://127.0.0.1:6379 \
   npm run test:e2e --workspace backend
-#   → Test Suites: 2 passed, Tests: 13 passed
-# Infra berilmasa suite'lar o'zini o'tkazib yuboradi (pgReachable() false).
+#   → Test Suites: 3 passed, Tests: 20 passed
+# Infra berilmasa suite'lar o'zini o'tkazib yuboradi (pgReachable() false) —
+# CI_REQUIRE_E2E=true bersangiz (F2) buning o'rniga YIQILADI:
+CI_REQUIRE_E2E=true E2E_SUPERUSER_URL=postgresql://x:x@127.0.0.1:1/x \
+  npm run test:e2e --workspace backend
+#   → Test Suites: 3 failed (qasddan buzilgan manzil bilan — mexanizm isboti)
 ```

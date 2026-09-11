@@ -1,47 +1,35 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { execFileSync } from 'node:child_process';
-import { PrismaClient } from '@prisma/client';
 
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@/config/app-config.service';
 import { buildValidationPipe } from '@/common/http/validation';
 import { AllExceptionsFilter } from '@/common/http/all-exceptions.filter';
-import { E2E_SUPERUSER_URL, pgReachable, recreateDatabase } from './support/e2e-infra';
+import { dropDatabase, provisionDb, requireInfraOrSkip } from './support/e2e-infra';
 
 /**
  * Bosqich 1 "Definition of Done":
  *   real Postgres + Redis  → /health/ready 200, /docs ochiladi, 404 = { code, requestId }.
  *
  * Infra — CI'da GitHub Actions service konteynerlari, lokal'da
- * `E2E_SUPERUSER_URL` / `E2E_REDIS_URL` (docker compose yoki throwaway klaster).
- * Ulanish URL'lari `test/jest-e2e.setup.ts` da (import'dan OLDIN) o'rnatiladi —
- * `@nestjs/config` ularni import vaqtida snapshot qiladi. Bu suite faqat
- * `health_e2e` DB'sini yaratadi va migratsiya qiladi. Postgres yetib bo'lmasa
- * testlar o'tkazib yuboriladi.
+ * `E2E_SUPERUSER_URL` / `E2E_REDIS_URL`. Ulanish URL'lari
+ * `test/jest-e2e.setup.ts` da (import'dan OLDIN) o'rnatiladi — `@nestjs/config`
+ * ularni import vaqtida snapshot qiladi. `health_e2e` DB'sini `bobododa_app`
+ * roli bilan ishlatadi (F1 boot-tekshiruvi — happy path shu yerda sinaladi;
+ * fail-closed yo'l `db-role-assertion.e2e-spec.ts` da). Postgres yetib
+ * bo'lmasa (va `CI_REQUIRE_E2E` yo'q) testlar o'tkazib yuboriladi.
  */
 describe('Health (e2e, real Postgres + Redis)', () => {
   let app: INestApplication | undefined;
   let reachable = false;
 
   beforeAll(async () => {
-    reachable = await pgReachable();
-    if (!reachable) {
-      process.stderr.write(
-        `[health.e2e] Postgres yetib bo'lmadi (${E2E_SUPERUSER_URL}) — suite o'tkazib yuborildi\n`,
-      );
-      return;
-    }
+    reachable = await requireInfraOrSkip('health.e2e');
+    if (!reachable) return;
 
-    await recreateDatabase('health_e2e');
-    const dbUrl = process.env.DATABASE_URL as string; // setup.ts → .../health_e2e
-
-    execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
-      cwd: `${__dirname}/..`,
-      env: { ...process.env, DATABASE_URL: dbUrl, DATABASE_MIGRATION_URL: dbUrl },
-      stdio: 'inherit',
-    });
+    await provisionDb('health_e2e'); // rollar + GRANT/REVOKE + migrate (bobododa_migrator)
+    // process.env.DATABASE_URL allaqachon bobododa_app@.../health_e2e (setup.ts)
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -59,18 +47,12 @@ describe('Health (e2e, real Postgres + Redis)', () => {
       );
       SwaggerModule.setup('docs', app, doc, { jsonDocumentUrl: 'docs-json' });
     }
-    await app.init();
+    await app.init(); // F1 (assertDbRoleHardening) shu yerda ishlaydi — bobododa_app → happy path
   }, 120_000);
 
   afterAll(async () => {
     await app?.close();
-    if (reachable) {
-      const admin = new PrismaClient({ datasourceUrl: E2E_SUPERUSER_URL });
-      await admin
-        .$executeRawUnsafe(`DROP DATABASE IF EXISTS "health_e2e" WITH (FORCE)`)
-        .catch(() => undefined);
-      await admin.$disconnect();
-    }
+    if (reachable) await dropDatabase('health_e2e');
   });
 
   const t = (name: string, fn: () => Promise<void>): void =>

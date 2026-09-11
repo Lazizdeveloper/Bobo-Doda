@@ -1,17 +1,10 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
-import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
-import type { WithdrawalRequest, WithdrawalStatus } from "@/lib/types";
-
-const STATUS: Record<WithdrawalStatus, { key: string; tone: BadgeTone }> = {
-  kutilmoqda: { key: "wd.statusPending", tone: "warning" },
-  korib_chiqilmoqda: { key: "wd.statusReview", tone: "info" },
-  tasdiqlangan: { key: "wd.statusApproved", tone: "success" },
-  rad_etilgan: { key: "wd.statusRejected", tone: "danger" },
-};
+import type { WithdrawalRequest } from "@/lib/types";
 
 /**
  * Yuborilgan yechish so'rovlari — ikkala rol uchun bir xil.
@@ -33,7 +26,6 @@ export function WithdrawalRequests({ requests }: { requests: WithdrawalRequest[]
       ) : (
         <ul className="flex flex-col gap-2">
           {requests.map((r) => {
-            const status = STATUS[r.status];
             return (
               <li key={r.id}>
                 <Card padding="md">

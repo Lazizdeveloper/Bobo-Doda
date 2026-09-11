@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -14,7 +14,6 @@ import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ChatFileAttach } from "@/components/ui/ChatFileAttach";
-import { RadioGroup } from "@/components/ui/RadioGroup";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
@@ -32,7 +31,7 @@ import {
   ContractStatusBadge,
   MilestoneStatusBadge,
 } from "@/components/shared/StatusBadge";
-import { authService, contractsService, messagesService, milestonesService, paymentsService, reviewsService, servicesService, filesService, DATA_CHANGED_EVENT } from "@/lib/api";
+import { authService, contractsService, messagesService, milestonesService, reviewsService, servicesService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Contract, DeliverableFile, Message, Milestone, Review, Service } from "@/lib/types";
 import { formatDate, formatFileSize, formatMoney, formatTime, triggerFileDownload } from "@/lib/format";
@@ -41,7 +40,6 @@ import { useT } from "@/lib/i18n";
 export default function XaridorWorkroomPage() {
   const { t, lang } = useT();
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const { toast } = useToast();
 
   const [contract, setContract] = useState<Contract | null | undefined>(undefined);

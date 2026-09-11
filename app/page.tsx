@@ -1458,6 +1458,8 @@ export default function LandingPage() {
           <div className="nav-container">
             <nav className="nav-capsule" aria-label="Asosiy navigatsiya">
               <Link href="/" className="nav-brand" aria-label="Bobo&Doda">
+                {/* next/image emas — landing o'z JSX/ranglarini alohida chizadi (CLAUDE.md), statik logotip, sobit o'lcham */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo-icon.png"
                   alt="Bobo&Doda"
@@ -2110,6 +2112,7 @@ export default function LandingPage() {
             <div className="footer-grid-yv">
               <div>
                 <div className="footer-logo-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- landing o'z JSX'ini alohida chizadi, statik logotip */}
                   <img
                     src="/logo-icon.png"
                     alt="Bobo&Doda"

@@ -29,6 +29,7 @@ import type {
   DeliverableFile,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
+import type { TransactionRecord } from "@/lib/admin-types";
 import { sellerNet, platformFee } from "@/lib/fees";
 import { formatAmount } from "@/lib/format";
 import { getPlatformSettings } from "@/lib/platform-settings";
@@ -3549,8 +3550,8 @@ export async function fundContract(
     write(KEYS.milestones, updatedMilestones);
 
     // Tranzaksiyalar jurnaliga yozamiz
-    const transactions = read<any[]>("sb2_transactions", []);
-    const tx = {
+    const transactions = read<TransactionRecord[]>("sb2_transactions", []);
+    const tx: TransactionRecord = {
       id: uid("tx"),
       type: "escrow_mablaglash",
       userId: contract.buyerId,
@@ -3578,6 +3579,9 @@ export async function fundContract(
 export async function fundMilestone(
   contractId: string,
   milestoneId: string,
+  // A5/ADR-03: chegaradan olib tashlanadi (Bosqich 2). Imzo client.ts
+  // chaqiruvi bilan mos qolishi uchun saqlangan, hozircha ishlatilmaydi.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   method: PaymentMethod = "karta"
 ): Promise<{ contract: Contract; milestone: Milestone }> {
   await delay(600);
@@ -3752,10 +3756,10 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     incrementCompletedContracts(contract.sellerId);
   }
 
-  const transactions = read<any[]>("sb2_transactions", []);
+  const transactions = read<TransactionRecord[]>("sb2_transactions", []);
   const fee = platformFee(milestones[idx].amount);
   const net = sellerNet(milestones[idx].amount);
-  const outTx = {
+  const outTx: TransactionRecord = {
     id: uid("tx"),
     type: "milestone_tolov",
     userId: contract.sellerId,
@@ -3767,7 +3771,7 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     status: "muvaffaqiyatli",
     createdAt: new Date().toISOString(),
   };
-  const feeTx = {
+  const feeTx: TransactionRecord = {
     id: uid("tx"),
     type: "commission",
     userId: contract.sellerId,

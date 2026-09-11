@@ -103,6 +103,11 @@ jobs:
       # runner'larda Redis'ni "Connection is closed" bilan yiqitardi).
       E2E_SUPERUSER_URL: postgresql://postgres:postgres@localhost:5432/postgres
       E2E_REDIS_URL: redis://localhost:6379
+      # F2 — infra kutilgan edi lekin topilmadi (masalan env nomi xato
+      # yozilsa yoki service konteyner ko'tarilmasa) JIMGINA skip bo'lib,
+      # CI yashil qolib ketmasin: shu flag yoqilganda testlar SKIP o'rniga
+      # YIQILADI ("infra topilmadi"). Lokal ishda flag yo'q — qulay skip.
+      CI_REQUIRE_E2E: 'true'
     steps:
       - uses: actions/checkout@v4
 
