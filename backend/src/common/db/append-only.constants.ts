@@ -92,6 +92,17 @@ export const APPEND_ONLY_TABLES = {
     revoke: ['UPDATE', 'DELETE'],
     allowUpdateColumns: [],
   },
+  // Bosqich 8 (Dispute) — dalil/tarix jurnali (bo'lim 16/51). Typo tuzatish
+  // uchun YANGI yozuv qo'shiladi, eskisi UPDATE qilinmaydi (`milestone_
+  // submissions` bilan bir xil TO'LIQ append-only siyosat).
+  dispute_evidence: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  dispute_events: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
 } as const satisfies Record<string, AppendOnlyTableRule>;
 
 export type AppendOnlyTableName = keyof typeof APPEND_ONLY_TABLES;

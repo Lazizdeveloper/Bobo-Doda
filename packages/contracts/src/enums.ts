@@ -153,6 +153,35 @@ export const PayoutStatus = {
 export type PayoutStatus = (typeof PayoutStatus)[keyof typeof PayoutStatus];
 export const PayoutStatusValues = ['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED'] as const;
 
+export const DisputeStatus = {
+  OPEN: 'OPEN',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  RESOLVED: 'RESOLVED',
+  REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type DisputeStatus = (typeof DisputeStatus)[keyof typeof DisputeStatus];
+export const DisputeStatusValues = ['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED', 'CANCELLED'] as const;
+
+export const DisputeReason = {
+  SCOPE: 'SCOPE',
+  QUALITY: 'QUALITY',
+  DEADLINE: 'DEADLINE',
+  PAYMENT: 'PAYMENT',
+  COMMUNICATION: 'COMMUNICATION',
+  OTHER: 'OTHER',
+} as const;
+export type DisputeReason = (typeof DisputeReason)[keyof typeof DisputeReason];
+export const DisputeReasonValues = ['SCOPE', 'QUALITY', 'DEADLINE', 'PAYMENT', 'COMMUNICATION', 'OTHER'] as const;
+
+export const DisputeResolutionType = {
+  BUYER_FULL_REFUND: 'BUYER_FULL_REFUND',
+  SELLER_FULL_RELEASE: 'SELLER_FULL_RELEASE',
+  SPLIT: 'SPLIT',
+} as const;
+export type DisputeResolutionType = (typeof DisputeResolutionType)[keyof typeof DisputeResolutionType];
+export const DisputeResolutionTypeValues = ['BUYER_FULL_REFUND', 'SELLER_FULL_RELEASE', 'SPLIT'] as const;
+
 export const LedgerAccountType = {
   PAYMENT_CLEARING: 'PAYMENT_CLEARING',
   ESCROW: 'ESCROW',
@@ -160,9 +189,10 @@ export const LedgerAccountType = {
   PLATFORM_REVENUE: 'PLATFORM_REVENUE',
   REFUND_CLEARING: 'REFUND_CLEARING',
   PAYOUT_CLEARING: 'PAYOUT_CLEARING',
+  DISPUTE_HOLD: 'DISPUTE_HOLD',
 } as const;
 export type LedgerAccountType = (typeof LedgerAccountType)[keyof typeof LedgerAccountType];
-export const LedgerAccountTypeValues = ['PAYMENT_CLEARING', 'ESCROW', 'SELLER_PAYABLE', 'PLATFORM_REVENUE', 'REFUND_CLEARING', 'PAYOUT_CLEARING'] as const;
+export const LedgerAccountTypeValues = ['PAYMENT_CLEARING', 'ESCROW', 'SELLER_PAYABLE', 'PLATFORM_REVENUE', 'REFUND_CLEARING', 'PAYOUT_CLEARING', 'DISPUTE_HOLD'] as const;
 
 export const LedgerAccountOwnerType = {
   PLATFORM: 'PLATFORM',
@@ -177,6 +207,9 @@ export const LedgerTransactionType = {
   REFUND: 'REFUND',
   PAYOUT_RESERVATION: 'PAYOUT_RESERVATION',
   PAYOUT_RELEASE: 'PAYOUT_RELEASE',
+  DISPUTE_HOLD: 'DISPUTE_HOLD',
+  DISPUTE_RESOLUTION: 'DISPUTE_RESOLUTION',
+  DISPUTE_HOLD_RELEASE: 'DISPUTE_HOLD_RELEASE',
 } as const;
 export type LedgerTransactionType = (typeof LedgerTransactionType)[keyof typeof LedgerTransactionType];
-export const LedgerTransactionTypeValues = ['PAYMENT_FUNDING', 'CONTRACT_SETTLEMENT', 'REFUND', 'PAYOUT_RESERVATION', 'PAYOUT_RELEASE'] as const;
+export const LedgerTransactionTypeValues = ['PAYMENT_FUNDING', 'CONTRACT_SETTLEMENT', 'REFUND', 'PAYOUT_RESERVATION', 'PAYOUT_RELEASE', 'DISPUTE_HOLD', 'DISPUTE_RESOLUTION', 'DISPUTE_HOLD_RELEASE'] as const;

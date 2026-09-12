@@ -1156,6 +1156,214 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/contracts/{contractId}/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenDisputeController_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MeDisputeController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/disputes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MeDisputeController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/disputes/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MeDisputeController_listEvidence"];
+        put?: never;
+        post: operations["MeDisputeController_addEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/disputes/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MeDisputeController_listEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/disputes/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MeDisputeController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffDisputeController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/disputes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffDisputeController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/disputes/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffDisputeController_listEvidence"];
+        put?: never;
+        post: operations["StaffDisputeController_addEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/disputes/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffDisputeController_listEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/disputes/{id}/start-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffDisputeController_startReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/disputes/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffDisputeController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/disputes/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffDisputeController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1528,7 +1736,7 @@ export interface components {
             id: string;
             accountId: string;
             /** @enum {string} */
-            accountType: "PAYMENT_CLEARING" | "ESCROW" | "SELLER_PAYABLE" | "PLATFORM_REVENUE" | "REFUND_CLEARING" | "PAYOUT_CLEARING";
+            accountType: "PAYMENT_CLEARING" | "ESCROW" | "SELLER_PAYABLE" | "PLATFORM_REVENUE" | "REFUND_CLEARING" | "PAYOUT_CLEARING" | "DISPUTE_HOLD";
             /** @enum {string} */
             accountOwnerType: "PLATFORM" | "USER";
             accountOwnerId?: Record<string, never>;
@@ -1541,7 +1749,7 @@ export interface components {
         LedgerTransactionResponseDto: {
             id: string;
             /** @enum {string} */
-            type: "PAYMENT_FUNDING" | "CONTRACT_SETTLEMENT" | "REFUND" | "PAYOUT_RESERVATION" | "PAYOUT_RELEASE";
+            type: "PAYMENT_FUNDING" | "CONTRACT_SETTLEMENT" | "REFUND" | "PAYOUT_RESERVATION" | "PAYOUT_RELEASE" | "DISPUTE_HOLD" | "DISPUTE_RESOLUTION" | "DISPUTE_HOLD_RELEASE";
             currency: string;
             /** @description Payment.id yoki Contract.id — `type`ga qarab */
             sourceId: string;
@@ -1637,6 +1845,105 @@ export interface components {
             sellerId: string;
             providerPayoutId?: Record<string, never>;
             provider: string;
+        };
+        OpenDisputeDto: {
+            /** @enum {string} */
+            reason: "SCOPE" | "QUALITY" | "DEADLINE" | "PAYMENT" | "COMMUNICATION" | "OTHER";
+            description: string;
+        };
+        DisputeResponseDto: {
+            id: string;
+            contractId: string;
+            /** @enum {string} */
+            reason: "SCOPE" | "QUALITY" | "DEADLINE" | "PAYMENT" | "COMMUNICATION" | "OTHER";
+            description: string;
+            /** @enum {string} */
+            status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED" | "CANCELLED";
+            preSettlement: boolean;
+            /** @description Butun so‘m */
+            disputedAmount: number;
+            /** @description Butun so‘m */
+            heldAmount: number;
+            currency: string;
+            /** @enum {string} */
+            resolutionType?: "BUYER_FULL_REFUND" | "SELLER_FULL_RELEASE" | "SPLIT";
+            /** @description Butun so‘m */
+            buyerAwardAmount?: Record<string, never>;
+            /** @description Butun so‘m */
+            sellerAwardAmount?: Record<string, never>;
+            resolutionReason?: Record<string, never>;
+            /** Format: date-time */
+            openedAt: string;
+            reviewStartedAt?: Record<string, never>;
+            resolvedAt?: Record<string, never>;
+            rejectedAt?: Record<string, never>;
+            cancelledAt?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AddEvidenceDto: {
+            text?: string;
+            fileReference?: string;
+            milestoneId?: string;
+        };
+        DisputeEvidenceResponseDto: {
+            id: string;
+            disputeId: string;
+            submittedByUserId?: Record<string, never>;
+            submittedByStaffId?: Record<string, never>;
+            type: string;
+            text?: Record<string, never>;
+            fileReference?: Record<string, never>;
+            milestoneId?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        StaffDisputeResponseDto: {
+            id: string;
+            contractId: string;
+            /** @enum {string} */
+            reason: "SCOPE" | "QUALITY" | "DEADLINE" | "PAYMENT" | "COMMUNICATION" | "OTHER";
+            description: string;
+            /** @enum {string} */
+            status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED" | "CANCELLED";
+            preSettlement: boolean;
+            /** @description Butun so‘m */
+            disputedAmount: number;
+            /** @description Butun so‘m */
+            heldAmount: number;
+            currency: string;
+            /** @enum {string} */
+            resolutionType?: "BUYER_FULL_REFUND" | "SELLER_FULL_RELEASE" | "SPLIT";
+            /** @description Butun so‘m */
+            buyerAwardAmount?: Record<string, never>;
+            /** @description Butun so‘m */
+            sellerAwardAmount?: Record<string, never>;
+            resolutionReason?: Record<string, never>;
+            /** Format: date-time */
+            openedAt: string;
+            reviewStartedAt?: Record<string, never>;
+            resolvedAt?: Record<string, never>;
+            rejectedAt?: Record<string, never>;
+            cancelledAt?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            openedByUserId: string;
+            resolvedByStaffId?: Record<string, never>;
+            rejectedByStaffId?: Record<string, never>;
+        };
+        RejectDisputeDto: {
+            resolutionReason: string;
+        };
+        ResolveDisputeDto: {
+            /** @description Butun so‘m */
+            buyerAwardAmount: number;
+            /** @description Butun so‘m */
+            sellerAwardAmount: number;
+            resolutionReason: string;
         };
     };
     responses: never;
@@ -3092,7 +3399,7 @@ export interface operations {
             query?: {
                 page?: number;
                 perPage?: number;
-                type?: "PAYMENT_FUNDING" | "CONTRACT_SETTLEMENT" | "REFUND" | "PAYOUT_RESERVATION" | "PAYOUT_RELEASE";
+                type?: "PAYMENT_FUNDING" | "CONTRACT_SETTLEMENT" | "REFUND" | "PAYOUT_RESERVATION" | "PAYOUT_RELEASE" | "DISPUTE_HOLD" | "DISPUTE_RESOLUTION" | "DISPUTE_HOLD_RELEASE";
                 /** @description Payment.id yoki Contract.id */
                 sourceId?: string;
             };
@@ -3367,6 +3674,340 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffPayoutResponseDto"];
+                };
+            };
+        };
+    };
+    OpenDisputeController_open: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                contractId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenDisputeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponseDto"];
+                };
+            };
+        };
+    };
+    MeDisputeController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED" | "CANCELLED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeDisputeController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponseDto"];
+                };
+            };
+        };
+    };
+    MeDisputeController_listEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeDisputeController_addEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddEvidenceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeEvidenceResponseDto"];
+                };
+            };
+        };
+    };
+    MeDisputeController_listEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeDisputeController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponseDto"];
+                };
+            };
+        };
+    };
+    StaffDisputeController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED" | "CANCELLED";
+                contractId?: string;
+                buyerId?: string;
+                sellerId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffDisputeController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffDisputeResponseDto"];
+                };
+            };
+        };
+    };
+    StaffDisputeController_listEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffDisputeController_addEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddEvidenceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeEvidenceResponseDto"];
+                };
+            };
+        };
+    };
+    StaffDisputeController_listEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffDisputeController_startReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffDisputeResponseDto"];
+                };
+            };
+        };
+    };
+    StaffDisputeController_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectDisputeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffDisputeResponseDto"];
+                };
+            };
+        };
+    };
+    StaffDisputeController_resolve: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveDisputeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffDisputeResponseDto"];
                 };
             };
         };

@@ -59,4 +59,69 @@ export class LedgerIntegrityService {
     `;
     return rows.map((r) => ({ transactionId: r.id, sum: r.sum.toString() }));
   }
+
+  // ── Bosqich 8 — dispute reconciliation (bo'lim 67) ────────────────────
+
+  /** Post-settlement Dispute, `heldAmount > 0`, lekin `DISPUTE_HOLD` journal YO'Q. */
+  async findPostSettlementDisputesWithoutHold(): Promise<{ disputeId: string; contractId: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string; contractId: string }[]>`
+      SELECT d.id, d."contractId"
+      FROM disputes d
+      WHERE d."preSettlement" = false AND d."heldAmount" > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM ledger_transactions lt
+          WHERE lt.type = 'DISPUTE_HOLD' AND lt."sourceId" = d.id::text
+        )
+    `;
+    return rows.map((r) => ({ disputeId: r.id, contractId: r.contractId }));
+  }
+
+  /** RESOLVED Dispute, `sellerAwardAmount > 0`, lekin `DISPUTE_RESOLUTION` journal YO'Q. */
+  async findResolvedDisputesWithMissingSellerJournal(): Promise<{ disputeId: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT d.id
+      FROM disputes d
+      WHERE d.status = 'RESOLVED' AND d."sellerAwardAmount" > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM ledger_transactions lt
+          WHERE lt.type = 'DISPUTE_RESOLUTION' AND lt."sourceId" = d.id::text
+        )
+    `;
+    return rows.map((r) => ({ disputeId: r.id }));
+  }
+
+  /** RESOLVED Dispute, `buyerAwardAmount > 0`, lekin `disputeId` bilan bog'langan Refund YO'Q. */
+  async findResolvedDisputesWithMissingRefund(): Promise<{ disputeId: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT d.id
+      FROM disputes d
+      WHERE d.status = 'RESOLVED' AND d."buyerAwardAmount" > 0
+        AND NOT EXISTS (SELECT 1 FROM refunds r WHERE r."disputeId" = d.id)
+    `;
+    return rows.map((r) => ({ disputeId: r.id }));
+  }
+
+  /** Dispute-driven Refund, `amount` `Dispute.buyerAwardAmount`dan FARQ qiladi (bo'lim 67). */
+  async findDisputeRefundAmountMismatches(): Promise<{ refundId: string; disputeId: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string; disputeId: string }[]>`
+      SELECT r.id, r."disputeId"
+      FROM refunds r
+      JOIN disputes d ON d.id = r."disputeId"
+      WHERE r."disputeId" IS NOT NULL AND r.amount <> d."buyerAwardAmount"
+    `;
+    return rows.map((r) => ({ refundId: r.id, disputeId: r.disputeId }));
+  }
+
+  /** `SELLER_PAYABLE` (yoki boshqa foydalanuvchi hisobi) balansi manfiy — HECH QACHON bo'lmasligi kerak. */
+  async findNegativeUserAccountBalances(): Promise<{ accountId: string; type: string; ownerId: string; balance: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string; type: string; ownerId: string; balance: bigint }[]>`
+      SELECT la.id, la.type, la."ownerId", COALESCE(SUM(le.amount), 0) AS balance
+      FROM ledger_accounts la
+      LEFT JOIN ledger_entries le ON le."accountId" = la.id
+      WHERE la."ownerType" = 'USER'
+      GROUP BY la.id, la.type, la."ownerId"
+      HAVING COALESCE(SUM(le.amount), 0) < 0
+    `;
+    return rows.map((r) => ({ accountId: r.id, type: r.type, ownerId: r.ownerId, balance: r.balance.toString() }));
+  }
 }

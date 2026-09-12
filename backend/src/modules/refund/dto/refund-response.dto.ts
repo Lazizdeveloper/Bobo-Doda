@@ -7,6 +7,7 @@ export class RefundResponseDto {
   @ApiProperty() id!: string;
   @ApiProperty() contractId!: string;
   @ApiProperty() paymentId!: string;
+  @ApiPropertyOptional({ description: 'Bosqich 8 — dispute-driven bo‘lsa tegishli Dispute ID' }) disputeId?: string | null;
   @ApiProperty({ enum: RefundStatus }) status!: RefundStatus;
   @ApiProperty({ description: 'Butun so‘m' }) amount!: number;
   @ApiProperty() currency!: string;
@@ -25,6 +26,7 @@ export function toRefundResponseDto(refund: Refund): RefundResponseDto {
     id: refund.id,
     contractId: refund.contractId,
     paymentId: refund.paymentId,
+    disputeId: refund.disputeId,
     status: refund.status,
     amount: tiyinToSom(refund.amount),
     currency: refund.currency,

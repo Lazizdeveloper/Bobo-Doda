@@ -221,6 +221,114 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).rejects.toThrow(/balanslanmagan/i); // faqat 1 ta yozuv — ATAYLAB balanssiz, enum qiymati o'zi ishlaganini tekshiramiz
   });
 
+  // ── Bosqich 8 — dispute append-only + enum-split migratsiya isboti ───────
+
+  t('bobododa_app dispute_evidence/dispute_events ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
+    // To'liq FK zanjiri kerak (disputes.contractId/openedByUserId real FK) —
+    // tipланган Prisma Client orqali (raw SQL'dan ancha ishonchli/qisqa).
+    // `bobododa_app`ning bu jadvallarga TO'LIQ CRUD huquqi bor (append-only
+    // RO'YXATIDA EMAS) — faqat `dispute_evidence`/`dispute_events` cheklangan.
+    const sellerId = crypto.randomUUID();
+    const buyerId = crypto.randomUUID();
+    const categoryId = crypto.randomUUID();
+    const serviceId = crypto.randomUUID();
+    const contractId = crypto.randomUUID();
+    const disputeId = crypto.randomUUID();
+
+    await appDb!.user.create({
+      data: { id: sellerId, phone: `+99890${Math.floor(Math.random() * 9_000_000 + 1_000_000)}`, fullName: 'Seller T' },
+    });
+    await appDb!.user.create({
+      data: { id: buyerId, phone: `+99890${Math.floor(Math.random() * 9_000_000 + 1_000_000)}`, fullName: 'Buyer T' },
+    });
+    await appDb!.category.create({
+      data: { id: categoryId, slug: `db-roles-cat-${categoryId.slice(0, 8)}`, nameUz: 'T', nameRu: 'T', nameEn: 'T' },
+    });
+    await appDb!.service.create({
+      data: {
+        id: serviceId,
+        sellerId,
+        categoryId,
+        title: 'T',
+        description: 'T'.repeat(20),
+        price: 100_000_00n,
+        deliveryDays: 3,
+        status: 'ACTIVE',
+      },
+    });
+    await appDb!.contract.create({
+      data: {
+        id: contractId,
+        buyerId,
+        sellerId,
+        serviceId,
+        serviceTitleSnapshot: 'T',
+        serviceDescriptionSnapshot: 'T',
+        categoryNameSnapshot: 'T',
+        sellerDisplayNameSnapshot: 'T',
+        agreedAmount: 100_000_00n,
+        platformFeeRateBpsSnapshot: 500,
+        platformFeeAmountSnapshot: 5_000_00n,
+        deadline: new Date(Date.now() + 86_400_000),
+        status: 'ACTIVE',
+      },
+    });
+    await appDb!.dispute.create({
+      data: {
+        id: disputeId,
+        contractId,
+        openedByUserId: buyerId,
+        reason: 'QUALITY',
+        description: 'db-roles append-only proof',
+        preSettlement: true,
+        disputedAmount: 100_000_00n,
+        heldAmount: 100_000_00n,
+        currency: 'UZS',
+      },
+    });
+
+    const evidenceId = crypto.randomUUID();
+    const eventId = crypto.randomUUID();
+    await expect(
+      appDb!.$executeRawUnsafe(
+        `INSERT INTO dispute_evidence (id, "disputeId", type, text) VALUES ('${evidenceId}'::uuid, '${disputeId}'::uuid, 'TEXT', 'proof')`,
+      ),
+    ).resolves.toBeGreaterThanOrEqual(1);
+    await expect(
+      appDb!.$executeRawUnsafe(
+        `INSERT INTO dispute_events (id, "disputeId", type, "actorType", "actorName") VALUES ('${eventId}'::uuid, '${disputeId}'::uuid, 'OPENED', 'SYSTEM', 'test')`,
+      ),
+    ).resolves.toBeGreaterThanOrEqual(1);
+
+    await expect(appDb!.$executeRawUnsafe(`UPDATE dispute_evidence SET text = 'TAMPERED'`)).rejects.toThrow(
+      /permission denied/i,
+    );
+    await expect(appDb!.$executeRawUnsafe(`DELETE FROM dispute_evidence`)).rejects.toThrow(/permission denied/i);
+    await expect(appDb!.$executeRawUnsafe(`UPDATE dispute_events SET type = 'TAMPERED'`)).rejects.toThrow(
+      /permission denied/i,
+    );
+    await expect(appDb!.$executeRawUnsafe(`DELETE FROM dispute_events`)).rejects.toThrow(/permission denied/i);
+
+    // `disputes`ning O'ZI append-only RO'YXATIDA EMAS (status legitim
+    // UPDATE bo'lishi kerak — OPEN→UNDER_REVIEW→RESOLVED) — shuni ham tasdiqlaymiz.
+    await expect(
+      appDb!.$executeRawUnsafe(`UPDATE disputes SET status = 'UNDER_REVIEW' WHERE id = '${disputeId}'::uuid`),
+    ).resolves.toBe(1);
+  });
+
+  t('DB darajasida: DISPUTE_HOLD/DISPUTE_RESOLUTION/DISPUTE_HOLD_RELEASE enum qiymatlari ishlatiladi (enum-split migratsiya muvaffaqiyatli)', async () => {
+    const txId = crypto.randomUUID();
+    await appDb!.$executeRawUnsafe(
+      `INSERT INTO ledger_transactions (id, type, currency, "sourceId") VALUES ('${txId}'::uuid, 'DISPUTE_RESOLUTION', 'UZS', 'db-roles-proof-dispute')`,
+    );
+    await expect(
+      appDb!.$executeRawUnsafe(
+        `INSERT INTO ledger_entries (id, "transactionId", "accountId", amount, currency) VALUES
+           (gen_random_uuid(), '${txId}'::uuid, '00000000-0000-7000-8000-000000000001'::uuid, 1000, 'UZS')`,
+      ),
+    ).rejects.toThrow(/balanslanmagan/i); // faqat 1 ta yozuv — ATAYLAB balanssiz, enum qiymati o'zi ishlaganini tekshiramiz
+  });
+
   t('bobododa_app oddiy jadvalni (users) to‘liq boshqara oladi', async () => {
     await appDb!.$executeRawUnsafe(
       `INSERT INTO users (id, phone, "passwordHash", "fullName", "updatedAt")

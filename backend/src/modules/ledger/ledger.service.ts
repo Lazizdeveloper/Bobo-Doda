@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   Prisma,
   type Contract,
+  type Dispute,
   type LedgerAccount,
   type LedgerTransaction,
   type Payment,
@@ -14,6 +15,10 @@ import { InvariantViolationError, NotFoundError } from '@/common/errors/domain-e
 import { buildPage, type Page } from '@/common/pagination/page-query.dto';
 import {
   assertBalanced,
+  computeDisputeHoldLines,
+  computeDisputeHoldReleaseLines,
+  computeDisputeHoldToRefundLines,
+  computeDisputeResolutionLines,
   computeFundingLines,
   computePayoutReleaseLines,
   computePayoutReservationLines,
@@ -96,7 +101,7 @@ export class LedgerService {
    */
   private async getOrCreateUserAccount(
     tx: Prisma.TransactionClient,
-    type: Extract<LedgerAccountRole, 'ESCROW' | 'SELLER_PAYABLE' | 'PAYOUT_CLEARING'>,
+    type: Extract<LedgerAccountRole, 'ESCROW' | 'SELLER_PAYABLE' | 'PAYOUT_CLEARING' | 'DISPUTE_HOLD'>,
     userId: string,
     currency: string,
   ): Promise<LedgerAccount> {
@@ -139,6 +144,9 @@ export class LedgerService {
       case 'PAYOUT_CLEARING':
         if (!context.sellerId) throw new InvariantViolationError('Ledger: PAYOUT_CLEARING hisobi uchun sellerId shart');
         return this.getOrCreateUserAccount(tx, 'PAYOUT_CLEARING', context.sellerId, currency);
+      case 'DISPUTE_HOLD':
+        if (!context.sellerId) throw new InvariantViolationError('Ledger: DISPUTE_HOLD hisobi uchun sellerId shart');
+        return this.getOrCreateUserAccount(tx, 'DISPUTE_HOLD', context.sellerId, currency);
     }
   }
 
@@ -207,6 +215,28 @@ export class LedgerService {
       lines,
       context: { buyerId: payment.payerUserId },
     });
+  }
+
+  /**
+   * Bosqich 8, bo'lim 14 — POST-settlement dispute uchun provenance:
+   * "shu Contract sozlamasi sellerga aynan qancha net keltirgan" savoli
+   * `LedgerTransaction(type=CONTRACT_SETTLEMENT, sourceId=contract.id)`ning
+   * SELLER_PAYABLE yozuvidan olinadi (mutable mapping YARATILMAYDI — bo'lim
+   * 14: "ledger transaction source yetarli bo'lsa, shundan foydalan").
+   */
+  async getSettlementSellerNet(tx: Prisma.TransactionClient, contractId: string): Promise<bigint> {
+    const settlement = await tx.ledgerTransaction.findUnique({
+      where: { type_sourceId: { type: 'CONTRACT_SETTLEMENT', sourceId: contractId } },
+      include: { entries: { include: { account: true } } },
+    });
+    if (!settlement) {
+      throw new InvariantViolationError('Dispute: Contract COMPLETED, lekin settlement journal topilmadi', { contractId });
+    }
+    const sellerEntry = settlement.entries.find((e) => e.account.type === 'SELLER_PAYABLE');
+    if (!sellerEntry) {
+      throw new InvariantViolationError('Dispute: settlement journalida SELLER_PAYABLE yozuvi topilmadi', { contractId });
+    }
+    return sellerEntry.amount;
   }
 
   /** Bo'lim 13 — settlement oldidan tekshirish uchun (defensive, `ContractService` chaqiradi). */
@@ -360,11 +390,131 @@ export class LedgerService {
     });
   }
 
+  // ── Bosqich 8: Dispute hold / resolution ──────────────────────────────
+
+  /**
+   * Bo'lim 9/40/41/12 — POST-settlement `Dispute` OCHILGANDA chaqiriladi
+   * (`DisputeService.open()`). `lockSellerPayableBalance()` BILAN BIR XIL
+   * advisory lock'ni qayta ishlatadi (bo'lim 12 — Payout bilan lock domain
+   * YAGONA bo'lishi SHART, aks holda ikkalasi bir vaqtda seller balansidan
+   * foydalanishga urinishi mumkin). `heldAmount = min(sellerNetSnapshot,
+   * joriy balans)` — agar seller allaqachon (qisman) payout qilib ulgurgan
+   * bo'lsa, FAQAT mavjud qismi ushlab qolinadi, negative balans HECH QACHON
+   * yaratilmaydi. Agar mavjud balans 0 bo'lsa — hech qanday journal
+   * yozilmaydi, `heldAmount=0n` qaytadi (Dispute BARIBIR ochiladi —
+   * workflow/evidence process moliyaviy holatga bog'liq emas, bo'lim 40).
+   */
+  async openDisputeHold(
+    tx: Prisma.TransactionClient,
+    dispute: Dispute,
+    sellerId: string,
+    currency: string,
+    sellerNetSnapshot: bigint,
+  ): Promise<{ ledgerTx: LedgerTransaction | null; heldAmount: bigint }> {
+    const { balance } = await this.lockSellerPayableBalance(tx, sellerId, currency);
+    const heldAmount = sellerNetSnapshot < balance ? sellerNetSnapshot : balance;
+    if (heldAmount <= 0n) return { ledgerTx: null, heldAmount: 0n };
+
+    const lines = computeDisputeHoldLines(heldAmount);
+    const ledgerTx = await this.postJournal(tx, {
+      type: 'DISPUTE_HOLD',
+      sourceId: dispute.id,
+      currency,
+      description: `Dispute hold — seller ${sellerId}, dispute ${dispute.id}`,
+      lines,
+      context: { sellerId },
+    });
+    return { ledgerTx, heldAmount };
+  }
+
+  /**
+   * Bo'lim 37/38 — `Dispute` REJECTED/CANCELLED (moliyaviy resolution YO'Q):
+   * ushlab qolingan mablag' TO'LIQ SELLER_PAYABLE'ga qaytadi, hech qanday
+   * komissiya yo'q. Faqat `dispute.heldAmount > 0` bo'lganda chaqiriladi
+   * (chaqiruvchi tekshiradi) — pre-settlement disputlarda hech qachon
+   * chaqirilmaydi (hold umuman yo'q).
+   */
+  async releaseDisputeHoldFully(tx: Prisma.TransactionClient, dispute: Dispute, sellerId: string): Promise<LedgerTransaction | null> {
+    const lines = computeDisputeHoldReleaseLines(dispute.heldAmount);
+    return this.postJournal(tx, {
+      type: 'DISPUTE_HOLD_RELEASE',
+      sourceId: dispute.id,
+      currency: dispute.currency,
+      description: `Dispute hold release (${dispute.status}) — dispute ${dispute.id}`,
+      lines,
+      context: { sellerId },
+    });
+  }
+
+  /**
+   * Bo'lim 23/30/31 — resolve() vaqtida SELLER-BOUND qismni ko'chiradi
+   * (`sellerAwardAmount > 0`). Manba `dispute.preSettlement`ga qarab:
+   * `true` → ESCROW(buyer), `false` → DISPUTE_HOLD(seller). Komissiya —
+   * `Contract.platformFeeRateBpsSnapshot` (authoritative snapshot).
+   */
+  async postDisputeSellerAward(
+    tx: Prisma.TransactionClient,
+    dispute: Dispute,
+    contract: Contract,
+    sellerAwardAmount: bigint,
+  ): Promise<LedgerTransaction | null> {
+    const debitRole = dispute.preSettlement ? 'ESCROW' : 'DISPUTE_HOLD';
+    const lines = computeDisputeResolutionLines(debitRole, sellerAwardAmount, contract.platformFeeRateBpsSnapshot);
+    return this.postJournal(tx, {
+      type: 'DISPUTE_RESOLUTION',
+      sourceId: dispute.id,
+      currency: dispute.currency,
+      description: `Dispute resolution (seller award) — dispute ${dispute.id}, contract ${contract.id}`,
+      lines,
+      context: { buyerId: contract.buyerId, sellerId: contract.sellerId },
+    });
+  }
+
+  /**
+   * Bo'lim 25/60 — Dispute-driven buyer refund uchun mavjud `REFUND` turi
+   * (Bosqich 7) qayta ishlatiladi, lekin manba hisobi `dispute.
+   * preSettlement`ga qarab farqlanadi: `true` → ESCROW (`refundPayment()`
+   * bilan BIR XIL hisob, lekin bu funksiya `Contract.status==='ACTIVE'`
+   * talab qilmaydi — dispute allaqachon tasdiqlagan), `false` → DISPUTE_
+   * HOLD. Ikkalasida ham kredit — REFUND_CLEARING. `refundPayment()`ning
+   * o'zi ATAYLAB o'zgartirilmagan (Bosqich 7 kontrakti, bo'lim 26).
+   */
+  async postDisputeBuyerRefund(
+    tx: Prisma.TransactionClient,
+    refund: Refund,
+    dispute: Dispute,
+    contract: Contract,
+  ): Promise<LedgerTransaction | null> {
+    if (dispute.contractId !== contract.id || dispute.id !== refund.disputeId || refund.contractId !== contract.id) {
+      throw new InvariantViolationError('Ledger dispute refund: Contract/Dispute/Refund mos emas', {
+        contractId: contract.id,
+        disputeId: dispute.id,
+        refundId: refund.id,
+      });
+    }
+    if (contract.currency !== refund.currency) {
+      throw new InvariantViolationError('Ledger dispute refund: valyuta mos emas', {
+        contractId: contract.id,
+        refundId: refund.id,
+      });
+    }
+
+    const lines = dispute.preSettlement ? computeRefundLines(refund.amount) : computeDisputeHoldToRefundLines(refund.amount);
+    return this.postJournal(tx, {
+      type: 'REFUND',
+      sourceId: refund.id,
+      currency: refund.currency,
+      description: `Dispute refund — dispute ${dispute.id}, contract ${contract.id}`,
+      lines,
+      context: dispute.preSettlement ? { buyerId: contract.buyerId } : { sellerId: contract.sellerId },
+    });
+  }
+
   // ── O'qish (balans, staff diagnostika) ───────────────────────────────
 
   /** Bo'lim 25/34/56 — mutable `balance` ustuni YO'Q, har doim ledgerdan hisoblanadi. */
   async getUserAccountBalance(
-    type: Extract<LedgerAccountRole, 'ESCROW' | 'SELLER_PAYABLE' | 'PAYOUT_CLEARING'>,
+    type: Extract<LedgerAccountRole, 'ESCROW' | 'SELLER_PAYABLE' | 'PAYOUT_CLEARING' | 'DISPUTE_HOLD'>,
     userId: string,
     currency: string,
   ): Promise<bigint> {

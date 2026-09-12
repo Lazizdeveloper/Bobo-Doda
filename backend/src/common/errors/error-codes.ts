@@ -42,6 +42,7 @@ export const ERROR_CODES = {
   PAYMENT_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // Bosqich 5
   CONTRACT_NOT_FUNDED: { httpStatus: 403, retryable: false }, // Bosqich 6 — bo'lim 18: seller ish topshirishdan oldin funded contract talab qilinadi
   REFUND_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // Bosqich 7 — faqat pre-settlement (ACTIVE + SUCCEEDED payment)
+  DISPUTE_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // Bosqich 8 — Contract holati (ACTIVE/COMPLETED emas) nizo ochishga yaroqsiz
 
   // ── Topilmadi (404) ──────────────────────────────────────────────────
   NOT_FOUND: { httpStatus: 404, retryable: false },
@@ -101,6 +102,12 @@ export const ERROR_CODES = {
   // BLOKLAYDI (aks holda provider allaqachon pulni qaytargan, lekin ledger
   // buni hech qachon posting qila olmaydigan holatga tushib qolardi).
   CONTRACT_REFUND_IN_PROGRESS: { httpStatus: 409, retryable: false }, // Bosqich 7
+  // Bo'lim 7 — bitta Contract uchun bir vaqtda faqat BITTA OPEN/UNDER_REVIEW
+  // Dispute (DB partial unique index — asosiy himoya; bu tezkor app-darajasidagi xato).
+  DISPUTE_ALREADY_OPEN: { httpStatus: 409, retryable: false }, // Bosqich 8
+  // Bo'lim 8/39 — ochiq nizo bo'lgan Contract uchun settlement HAM, yalang'och
+  // Refund HAM bloklanadi (`CONTRACT_REFUND_IN_PROGRESS` bilan bir xil simmetriya).
+  DISPUTE_IN_PROGRESS: { httpStatus: 409, retryable: false }, // Bosqich 8
 
   // ── Validatsiya (422) ──────────────────────────────────────────────
   VALIDATION: { httpStatus: 422, retryable: false },

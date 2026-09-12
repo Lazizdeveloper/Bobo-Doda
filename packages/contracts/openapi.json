@@ -2457,7 +2457,10 @@
                 "CONTRACT_SETTLEMENT",
                 "REFUND",
                 "PAYOUT_RESERVATION",
-                "PAYOUT_RELEASE"
+                "PAYOUT_RELEASE",
+                "DISPUTE_HOLD",
+                "DISPUTE_RESOLUTION",
+                "DISPUTE_HOLD_RELEASE"
               ]
             }
           },
@@ -3014,6 +3017,631 @@
         ],
         "tags": [
           "staff-payouts"
+        ]
+      }
+    },
+    "/me/contracts/{contractId}/disputes": {
+      "post": {
+        "operationId": "OpenDisputeController_open",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes": {
+      "get": {
+        "operationId": "MeDisputeController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "UNDER_REVIEW",
+                "RESOLVED",
+                "REJECTED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}": {
+      "get": {
+        "operationId": "MeDisputeController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}/evidence": {
+      "get": {
+        "operationId": "MeDisputeController_listEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      },
+      "post": {
+        "operationId": "MeDisputeController_addEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEvidenceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}/events": {
+      "get": {
+        "operationId": "MeDisputeController_listEvents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}/cancel": {
+      "post": {
+        "operationId": "MeDisputeController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/staff/disputes": {
+      "get": {
+        "operationId": "StaffDisputeController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "UNDER_REVIEW",
+                "RESOLVED",
+                "REJECTED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "contractId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "buyerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sellerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}": {
+      "get": {
+        "operationId": "StaffDisputeController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/evidence": {
+      "get": {
+        "operationId": "StaffDisputeController_listEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      },
+      "post": {
+        "operationId": "StaffDisputeController_addEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEvidenceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/events": {
+      "get": {
+        "operationId": "StaffDisputeController_listEvents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/start-review": {
+      "post": {
+        "operationId": "StaffDisputeController_startReview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/reject": {
+      "post": {
+        "operationId": "StaffDisputeController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/resolve": {
+      "post": {
+        "operationId": "StaffDisputeController_resolve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
         ]
       }
     }
@@ -4300,7 +4928,8 @@
               "SELLER_PAYABLE",
               "PLATFORM_REVENUE",
               "REFUND_CLEARING",
-              "PAYOUT_CLEARING"
+              "PAYOUT_CLEARING",
+              "DISPUTE_HOLD"
             ]
           },
           "accountOwnerType": {
@@ -4348,7 +4977,10 @@
               "CONTRACT_SETTLEMENT",
               "REFUND",
               "PAYOUT_RESERVATION",
-              "PAYOUT_RELEASE"
+              "PAYOUT_RELEASE",
+              "DISPUTE_HOLD",
+              "DISPUTE_RESOLUTION",
+              "DISPUTE_HOLD_RELEASE"
             ]
           },
           "currency": {
@@ -4681,6 +5313,346 @@
           "updatedAt",
           "sellerId",
           "provider"
+        ]
+      },
+      "OpenDisputeDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SCOPE",
+              "QUALITY",
+              "DEADLINE",
+              "PAYMENT",
+              "COMMUNICATION",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "reason",
+          "description"
+        ]
+      },
+      "DisputeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SCOPE",
+              "QUALITY",
+              "DEADLINE",
+              "PAYMENT",
+              "COMMUNICATION",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "UNDER_REVIEW",
+              "RESOLVED",
+              "REJECTED",
+              "CANCELLED"
+            ]
+          },
+          "preSettlement": {
+            "type": "boolean"
+          },
+          "disputedAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "heldAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "resolutionType": {
+            "type": "string",
+            "enum": [
+              "BUYER_FULL_REFUND",
+              "SELLER_FULL_RELEASE",
+              "SPLIT"
+            ]
+          },
+          "buyerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "sellerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "resolutionReason": {
+            "type": "object"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reviewStartedAt": {
+            "type": "object"
+          },
+          "resolvedAt": {
+            "type": "object"
+          },
+          "rejectedAt": {
+            "type": "object"
+          },
+          "cancelledAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "reason",
+          "description",
+          "status",
+          "preSettlement",
+          "disputedAmount",
+          "heldAmount",
+          "currency",
+          "openedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AddEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "fileReference": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "milestoneId": {
+            "type": "string"
+          }
+        }
+      },
+      "DisputeEvidenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "disputeId": {
+            "type": "string"
+          },
+          "submittedByUserId": {
+            "type": "object"
+          },
+          "submittedByStaffId": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string"
+          },
+          "text": {
+            "type": "object"
+          },
+          "fileReference": {
+            "type": "object"
+          },
+          "milestoneId": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "disputeId",
+          "type",
+          "createdAt"
+        ]
+      },
+      "StaffDisputeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SCOPE",
+              "QUALITY",
+              "DEADLINE",
+              "PAYMENT",
+              "COMMUNICATION",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "UNDER_REVIEW",
+              "RESOLVED",
+              "REJECTED",
+              "CANCELLED"
+            ]
+          },
+          "preSettlement": {
+            "type": "boolean"
+          },
+          "disputedAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "heldAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "resolutionType": {
+            "type": "string",
+            "enum": [
+              "BUYER_FULL_REFUND",
+              "SELLER_FULL_RELEASE",
+              "SPLIT"
+            ]
+          },
+          "buyerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "sellerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "resolutionReason": {
+            "type": "object"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reviewStartedAt": {
+            "type": "object"
+          },
+          "resolvedAt": {
+            "type": "object"
+          },
+          "rejectedAt": {
+            "type": "object"
+          },
+          "cancelledAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "openedByUserId": {
+            "type": "string"
+          },
+          "resolvedByStaffId": {
+            "type": "object"
+          },
+          "rejectedByStaffId": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "reason",
+          "description",
+          "status",
+          "preSettlement",
+          "disputedAmount",
+          "heldAmount",
+          "currency",
+          "openedAt",
+          "createdAt",
+          "updatedAt",
+          "openedByUserId"
+        ]
+      },
+      "RejectDisputeDto": {
+        "type": "object",
+        "properties": {
+          "resolutionReason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "resolutionReason"
+        ]
+      },
+      "ResolveDisputeDto": {
+        "type": "object",
+        "properties": {
+          "buyerAwardAmount": {
+            "type": "number",
+            "description": "Butun so‘m",
+            "minimum": 0
+          },
+          "sellerAwardAmount": {
+            "type": "number",
+            "description": "Butun so‘m",
+            "minimum": 0
+          },
+          "resolutionReason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "buyerAwardAmount",
+          "sellerAwardAmount",
+          "resolutionReason"
         ]
       }
     }

@@ -583,6 +583,23 @@ export class ContractService {
             );
           }
 
+          // Bosqich 8, bo'lim 8/39 — XUDDI SHU simmetriya: ochiq nizo
+          // bo'lgan Contract to'lanmagan holda COMPLETED bo'lib qolmasin
+          // (aks holda dispute keyinroq PRE-settlement deb resolve
+          // qilinishi kerak bo'lib qolardi, lekin Contract allaqachon
+          // COMPLETED — ikkalasi mos kelmaydi).
+          const openDispute = await tx.dispute.findFirst({
+            where: { contractId, status: { in: ['OPEN', 'UNDER_REVIEW'] } },
+            select: { id: true },
+          });
+          if (openDispute) {
+            throw new DomainError(
+              'DISPUTE_IN_PROGRESS',
+              'Bu shartnoma uchun ochiq nizo bor — yakuniy bosqichni tasdiqlab bo‘lmaydi',
+              { context: { contractId, disputeId: openDispute.id } },
+            );
+          }
+
           // Bo'lim 13/18 — defensive: submitMilestone() gate'i buni allaqachon
           // oldini olishi kerak, lekin settlement O'ZI HAM mustaqil tekshiradi
           // ("boshqa qatlamga ishonmaydi" — bo'lim 59). Topilmasa — bu

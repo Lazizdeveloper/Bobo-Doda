@@ -235,6 +235,50 @@ enum PayoutStatus {
   FAILED
 }
 
+/// Bosqich 8 — `Dispute` holat mashinasi. `docs/01`dagi minimal
+/// `OPEN|UNDER_REVIEW|RESOLVED`ga ikkita amaliy holat qo'shilgan
+/// (`REJECTED`/`CANCELLED`) — real workflow ularsiz to'liq emas (staff
+/// asossiz nizoni rad etishi, yoki oshkor tomon o'zi qaytarib olishi
+/// kerak). `AWAITING_EVIDENCE` QO'SHILMADI — hech qanday real qoida buni
+/// alohida holat sifatida talab qilmaydi (dalil istalgan vaqt, OPEN yoki
+/// UNDER_REVIEW'da, qo'shilishi mumkin).
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  /// TERMINAL — moliyaviy resolution qo'llangan.
+  RESOLVED
+  /// TERMINAL — staff asossiz deb rad etdi, hech qanday moliyaviy harakat yo'q.
+  REJECTED
+  /// TERMINAL — ochgan tomon o'zi qaytarib oldi (bo'lim 37).
+  CANCELLED
+}
+
+/// `docs/01-data-model.md`dagi ro'yxat bilan AYNAN bir xil.
+enum DisputeReason {
+  SCOPE
+  QUALITY
+  DEADLINE
+  PAYMENT
+  COMMUNICATION
+  OTHER
+}
+
+/// Bo'lim 19/20 — docs `DisputeOutcome (REFUND_BUYER|PAYOUT_SELLER|SPLIT)`
+/// bilan bir xil kontsept, tavsifliroq nom. `SPLIT` — `BUYER_FULL_REFUND`/
+/// `SELLER_FULL_RELEASE` ning UMUMIY holati (buyerAward+sellerAward har
+/// doim `heldAmount`ga teng; 100/0 va 0/100 shu uchtaning ikkitasi) — lekin
+/// alohida saqlanadi (aniq intent, reporting/audit uchun tushunarli).
+enum DisputeResolutionType {
+  BUYER_FULL_REFUND
+  SELLER_FULL_RELEASE
+  SPLIT
+}
+
+// `DisputeEvidence.type` — Prisma enum EMAS, oddiy `String` ustun
+// (`PaymentProviderEvent.outcome` bilan bir xil naqsh). Ruxsat etilgan
+// qiymatlar TS union sifatida `dispute.constants.ts`da e'lon qilingan va
+// `@IsIn` bilan ilova darajasida tekshiriladi.
+
 /// Bosqich 6/7 — ledger hisobi TURI (buxgalteriya bucket, real bank hisobi
 /// EMAS). `PAYMENT_CLEARING`≈docs `GATEWAY_CLEARING`, `ESCROW`≈`USER_ESCROW`,
 /// `SELLER_PAYABLE`≈`USER_AVAILABLE`.
@@ -259,6 +303,14 @@ enum LedgerAccountType {
   /// mulohazasi bilan bir xil sabab: bitta platforma-darajasidagi pool
   /// hech kimga tegishli bo'lmagan, foydasiz hisob bo'lardi).
   PAYOUT_CLEARING
+  /// Bosqich 8 — Foydalanuvchi (seller): POST-settlement dispute ochilganda
+  /// `SELLER_PAYABLE`dan REZERV qilingan, nizo hal bo'lgunicha yechib
+  /// bo'lmaydigan mablag' (bo'lim 9). ATAYLAB `ownerType=USER`, `PAYOUT_
+  /// CLEARING` bilan bir xil sabab (bo'lim 258'dagi izoh — pooled hisob
+  /// "qaysi seller" savoliga javob berolmaydi). PRE-settlement dispute
+  /// bu hisobni UMUMAN ishlatmaydi — ESCROW o'zi tabiiy "hold" vazifasini
+  /// bajaradi (pul contract ACTIVE ekan hech qayerga ketolmaydi).
+  DISPUTE_HOLD
 }
 
 /// `LedgerAccount.ownerId` kimga tegishli ekanini bildiradi — `PLATFORM`
@@ -269,9 +321,13 @@ enum LedgerAccountOwnerType {
   USER
 }
 
-/// Bosqich 6/7 — faqat haqiqatan kerakli turlar (bo'lim 19/41: "unused
-/// future states qo'shib tashlama"). DISPUTE_SETTLEMENT/ADJUSTMENT —
-/// Bosqich 8+, shu paytda additiv migratsiya bilan qo'shiladi.
+/// Bosqich 6/7/8 — faqat haqiqatan kerakli turlar (bo'lim 19/41: "unused
+/// future states qo'shib tashlama"). Bosqich 8 uchta yangi tur qo'shdi
+/// (`DISPUTE_HOLD`/`DISPUTE_RESOLUTION`/`DISPUTE_HOLD_RELEASE`, pastda) —
+/// buyer-bound refund qismi esa YANGI tur TALAB QILMAYDI, mavjud `REFUND`
+/// turi qayta ishlatiladi (manba hisobi ESCROW yoki DISPUTE_HOLD bo'lishi
+/// mumkin, lekin `type`/`sourceId` semantikasi bir xil: "bu refund tashqi
+/// providerga qanday pul chiqarganini" bildiradi).
 ///
 /// **`PAYOUT_COMPLETION` ATAYLAB YO'Q** (bo'lim 30/41'dagi taklifdan chetga
 /// chiqish, sababi bilan): `PAYMENT_CLEARING`ning o'zi ham "pul tasdiqlandi"
@@ -303,6 +359,31 @@ enum LedgerTransactionType {
   /// qiladi, original yozuvni EMAS — bo'lim 31/32, birinchi haqiqiy
   /// reversal naqshi).
   PAYOUT_RELEASE
+  /// Bosqich 8, bo'lim 9/11 — POST-settlement `Dispute` OCHILGANDA, DARHOL:
+  /// SELLER_PAYABLE(seller) -heldAmount ; DISPUTE_HOLD(seller) +heldAmount.
+  /// `heldAmount = min(sellerNetSnapshot, joriy SELLER_PAYABLE balansi)` —
+  /// agar seller allaqachon payout qilib ulgurgan bo'lsa, TO'LIQ emas,
+  /// FAQAT mavjud qismi ushlab qolinadi (bo'lim 40/41 — negative balans
+  /// UMUMAN yaratilmaydi). PRE-settlement dispute bu turni UMUMAN
+  /// ishlatmaydi (ESCROW o'zi hold vazifasini bajaradi).
+  DISPUTE_HOLD
+  /// Bosqich 8, bo'lim 23/31 — resolve() vaqtida SELLER-BOUND qismni
+  /// KO'CHIRADI (agar `sellerAwardAmount > 0`): manba — pre-settlement
+  /// bo'lsa ESCROW(buyer), post-settlement bo'lsa DISPUTE_HOLD(seller);
+  /// destination — SELLER_PAYABLE(seller) +net, PLATFORM_REVENUE +fee
+  /// (fee — `Contract.platformFeeRateBpsSnapshot` bo'yicha, docs T5
+  /// misolidagi formula: "sotuvchi ulushiga ham standart komissiya
+  /// qo'llanadi"). BUYER-BOUND qism (agar bor bo'lsa) bu journal'da
+  /// UMUMAN ko'rinmaydi — u alohida, DEFERRED `REFUND` journal orqali
+  /// (webhook tasdiqlangandan keyin, bo'lim 25 — crash-safe orchestration).
+  DISPUTE_RESOLUTION
+  /// Bosqich 8, bo'lim 37/38 — `Dispute` REJECTED/CANCELLED (hech qanday
+  /// moliyaviy resolution YO'Q): DISPUTE_HOLD(seller) -heldAmount ;
+  /// SELLER_PAYABLE(seller) +heldAmount (TO'LIQ un-freeze). Faqat hold
+  /// mavjud bo'lgan (post-settlement) disputlar uchun — pre-settlement
+  /// reject/cancel HECH QANDAY ledger harakati talab qilmaydi (hech narsa
+  /// hech qachon ESCROW'dan chiqmagan).
+  DISPUTE_HOLD_RELEASE
 }
 
 // ── Identity ─────────────────────────────────────────────────────────────────
@@ -377,6 +458,7 @@ model User {
   payments           Payment[]
   ledgerAccounts     LedgerAccount[]
   payouts            Payout[]
+  disputesOpened     Dispute[]
 
   @@index([createdAt])
   @@map("users")
@@ -724,6 +806,7 @@ model Contract {
   milestones Milestone[]
   payments   Payment[]
   refunds    Refund[]
+  disputes   Dispute[]
 
   @@index([buyerId, status, createdAt])
   @@index([sellerId, status, createdAt])
@@ -1057,14 +1140,26 @@ model Refund {
   paymentId  String   @db.Uuid
   payment    Payment  @relation(fields: [paymentId], references: [id])
 
+  /// Bosqich 8 — NULL bo'lsa bu bo'lim 3/16'dagi "yalang'och" staff-so'ralgan
+  /// to'liq refund (Bosqich 7, o'zgarishsiz). Berilgan bo'lsa bu Refund
+  /// `DisputeService.resolve()` orqali yaratilgan — buyer-bound award'ning
+  /// tashqi ijrosi (bo'lim 25/60: mavjud Refund infratuzilmasi qayta
+  /// ishlatiladi, alohida "DisputeRefund" domeni YARATILMAYDI).
+  disputeId String?  @db.Uuid
+  dispute   Dispute? @relation(fields: [disputeId], references: [id])
+
   /// `AuditLog.actorId` bilan bir xil naqsh — FK EMAS. Refund FAQAT staff
   /// tomonidan boshlanadi (bo'lim 3/16: buyer arbitrary ACTIVE contract'ni
   /// o'zi refund qila olmaydi — xavfsiz minimal permission modeli).
+  /// Dispute-driven refund uchun — nizoni RESOLVE qilgan staff.
   requestedByStaffId String @db.Uuid
   reason             String
 
-  /// BigInt tiyin — HAR DOIM `Payment.amount`ga teng (bo'lim 8). Client/
-  /// staff summani TANLAMAYDI.
+  /// BigInt tiyin — bo'lim 26/27: yalang'och refund uchun HAR DOIM
+  /// `Payment.amount`ga teng (o'zgarmadi). Dispute-driven bo'lsa
+  /// `Dispute.buyerAwardAmount`ga teng — HAR DOIM `Payment.amount`dan KICHIK
+  /// yoki TENG (hech qachon katta emas — bo'lim 61 invarianti, `Dispute.
+  /// heldAmount` orqali resolve() vaqtida ALLAQACHON majburlangan).
   amount   BigInt
   currency String
 
@@ -1086,6 +1181,7 @@ model Refund {
   @@index([paymentId])
   @@index([status, createdAt])
   @@index([provider, providerRefundId])
+  @@index([disputeId])
   @@map("refunds")
 }
 
@@ -1171,4 +1267,145 @@ model PayoutProviderEvent {
   @@unique([provider, providerEventId])
   @@index([payoutId, receivedAt])
   @@map("payout_provider_events")
+}
+
+// ── Bosqich 8: Dispute + Post-settlement Refund + Split Settlement ───────────
+
+/// Bo'lim 3/6/42 — Contract-darajasida (milestone-darajasida EMAS): bizning
+/// haqiqiy settlement bitta contract uchun BIR MARTA, YAXLIT bo'ladi (docs'
+/// dagi eski per-milestone MILESTONE_RELEASE mock modelidan farqli —
+/// Bosqich 4/6 qarori), shuning uchun "qaysi milestone disputed" savolining
+/// moliyaviy ma'nosi yo'q — butun `agreedAmount` (pre-settlement) yoki
+/// undan kelib chiqqan `sellerNet` (post-settlement) bir butun sifatida
+/// disputlanadi. `Contract.status` FAQAT `ACTIVE` yoki `COMPLETED` bo'lganda
+/// ochiladi (bo'lim 6) — boshqa holatlarda moliyaviy predmet yo'q.
+model Dispute {
+  id String @id @db.Uuid
+
+  contractId String   @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+
+  /// Bo'lim 5 — FAQAT contract ishtirokchisi (buyer YOKI seller).
+  openedByUserId String @db.Uuid
+  openedBy       User   @relation(fields: [openedByUserId], references: [id], onDelete: Restrict)
+
+  reason      DisputeReason
+  description String
+
+  status DisputeStatus @default(OPEN)
+
+  /// Ochilgan paytdagi Contract holati snapshot'i — `true` = pre-settlement
+  /// (ESCROW hali to'liq, ledger hold shart emas), `false` = post-settlement
+  /// (`DISPUTE_HOLD` orqali SELLER_PAYABLE'dan rezerv qilingan). Resolve()
+  /// bu qiymatga qarab qaysi hisobdan (ESCROW yoki DISPUTE_HOLD) yechish
+  /// kerakligini hal qiladi — `contract.status`ni qayta o'qishga ISHONMAYDI
+  /// (bo'lim 59 falsafasi — garchi amalda dispute ochiq turganda Contract
+  /// holati o'zgarmasligi HAM alohida guard bilan majburlangan bo'lsa ham).
+  preSettlement Boolean
+
+  /// Nazariy "to'liq" disputlanadigan summa: pre-settlement — `agreedAmount`;
+  /// post-settlement — settlement journalidan olingan `sellerNet` (bo'lim 14
+  /// — `CONTRACT_SETTLEMENT` provenance authoritative). `heldAmount`dan
+  /// KATTA bo'lishi mumkin (agar seller allaqachon qisman/to'liq payout
+  /// qilib ulgurgan bo'lsa) — informatsion, resolve() `heldAmount`ga qarab
+  /// ishlaydi.
+  disputedAmount BigInt
+  /// HAQIQATDA ushlab qolingan summa — resolve()ning yagona ceiling'i
+  /// (`buyerAwardAmount + sellerAwardAmount <= heldAmount`, bo'lim 61).
+  /// Pre-settlement uchun HAR DOIM `disputedAmount`ga teng (ESCROW to'liq
+  /// mavjud). Post-settlement uchun `min(disputedAmount, ochilish
+  /// paytidagi SELLER_PAYABLE balansi)` — bo'lim 40/41: negative balans
+  /// yaratilmaydi, ortiqcha mablag' "yo'q" deb hisoblanadi (avtomatik
+  /// bekor qilinmaydi, faqat resolve() doirasi torayadi).
+  heldAmount BigInt
+  currency   String
+
+  resolutionType    DisputeResolutionType?
+  buyerAwardAmount  BigInt?
+  sellerAwardAmount BigInt?
+  /// Staff yozgan ochiq (buyer/seller ko'radigan) sabab — ichki eslatma EMAS
+  /// (bo'lim 48: ichki moderatsiya metadata bu yerga yozilmaydi).
+  resolutionReason String?
+
+  openedAt          DateTime  @default(now()) @db.Timestamptz(6)
+  reviewStartedAt   DateTime? @db.Timestamptz(6)
+  resolvedAt        DateTime? @db.Timestamptz(6)
+  resolvedByStaffId String?   @db.Uuid
+  rejectedAt        DateTime? @db.Timestamptz(6)
+  rejectedByStaffId String?   @db.Uuid
+  cancelledAt       DateTime? @db.Timestamptz(6)
+
+  /// `docs/02-decisions.md`: "v1'da admin qarori yakuniy, lekin Dispute'da
+  /// appealable + resolvedAt hozirdan" — maydon ATAYLAB hozir qo'yilgan
+  /// (kelajakdagi v1.1 apellyatsiya migratsiyasini oldini olish uchun),
+  /// lekin HECH QANDAY apellyatsiya logikasi BU BOSQICHDA yo'q (v1.1 scope).
+  appealable Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  version   Int      @default(0)
+
+  evidence DisputeEvidence[]
+  events   DisputeEvent[]
+  refunds  Refund[]
+
+  @@index([contractId, createdAt])
+  @@index([status, createdAt])
+  @@index([openedByUserId])
+  @@map("disputes")
+}
+
+/// **APPEND-ONLY** (bo'lim 16): dalil keyinchalik jimgina tahrirlanmaydi —
+/// typo tuzatish uchun YANGI yozuv qo'shiladi, eskisi UPDATE qilinmaydi.
+/// Xom fayl bayti SAQLANMAYDI (bo'lim 15) — `fileReference` faqat tashqi
+/// obyekt-xotira kaliti/URL (S3 hali yo'q — bu bosqichda faqat matn
+/// referens, `Attachment`ga bog'lash kelajakda additiv).
+model DisputeEvidence {
+  id        String  @id @db.Uuid
+  disputeId String  @db.Uuid
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Restrict)
+
+  /// Ikkalasi ham NULL bo'lishi mumkin emas — validatsiya ilova darajasida
+  /// (bittasi doim to'ldiriladi: kim yubordi — user yoki staff).
+  submittedByUserId  String? @db.Uuid
+  submittedByStaffId String? @db.Uuid
+
+  /// `"TEXT" | "FILE"` — pastdagi izohga qarang (Prisma enum emas, ataylab).
+  type          String
+  text          String?
+  fileReference String?
+  /// Bo'lim 43 — ixtiyoriy, faqat SHU contractning milestone'i bo'lishi
+  /// SHART (ilova darajasida tekshiriladi, FK emas — `LedgerTransaction.
+  /// sourceId` bilan bir xil "polimorf, lekin yagona yozuvchi tekshiradi"
+  /// qarori).
+  milestoneId String? @db.Uuid
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_evidence")
+}
+
+/// **APPEND-ONLY** (bo'lim 16/17) — domen tarixi (workflow timeline),
+/// `AuditLog` bilan MAQSADSIZ DUPLICATE emas: `AuditLog` — xavfsizlik/
+/// accountability ("kim, qachon, qaysi IP'dan"), `DisputeEvent` — domen
+/// hikoyasi (buyer/seller UI'da ko'rsatiladigan chronologik lenta).
+model DisputeEvent {
+  id        String  @id @db.Uuid
+  disputeId String  @db.Uuid
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Restrict)
+
+  /// `"OPENED" | "EVIDENCE_ADDED" | "REVIEW_STARTED" | "RESOLVED" |
+  /// "REJECTED" | "CANCELLED"` — `PaymentProviderEvent.eventType` bilan bir
+  /// xil naqsh (oddiy `String`, Prisma enum emas).
+  type      String
+  actorType AuditActorType
+  actorId   String?
+  actorName String
+  metadata  Json?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_events")
 }

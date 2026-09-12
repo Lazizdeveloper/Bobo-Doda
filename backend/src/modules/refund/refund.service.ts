@@ -62,6 +62,21 @@ export class RefundService {
       throw new DomainError('REFUND_NOT_ALLOWED', 'Ushbu shartnoma uchun muvaffaqiyatli to‘lov topilmadi');
     }
 
+    // Bosqich 8, bo'lim 8/39 simmetriyasi — ochiq nizo bo'lsa, YALANG'OCH
+    // refund (bu metod) bloklanadi: bu Contract endi `DisputeService`
+    // orqali hal qilinishi kerak (u BIR XIL Refund infratuzilmasini
+    // `disputeId` bilan qayta ishlatadi — bo'lim 60).
+    const openDispute = await this.prisma.dispute.findFirst({
+      where: { contractId, status: { in: ['OPEN', 'UNDER_REVIEW'] } },
+      select: { id: true },
+    });
+    if (openDispute) {
+      throw new DomainError(
+        'DISPUTE_IN_PROGRESS',
+        'Bu shartnoma uchun ochiq nizo bor — refund faqat nizo hal qilinishi orqali amalga oshiriladi',
+      );
+    }
+
     // Bo'lim 15 — tezkor, aniqroq xato xabari uchun ilova darajasidagi
     // tekshiruv. HAQIQIY himoya — DB partial unique index
     // (`UNIQUE(paymentId) WHERE status IN ('PENDING','PROCESSING','SUCCEEDED')`).
@@ -117,7 +132,63 @@ export class RefundService {
     return this.callProviderAndAdvance(refund, payment);
   }
 
-  private async callProviderAndAdvance(refund: Refund, payment: Payment): Promise<Refund> {
+  /**
+   * Bosqich 8, bo'lim 25/60 — `DisputeService.resolve()` chaqiradi (o'z
+   * tranzaksiyasi ICHIDA): buyer-bound award uchun PENDING `Refund` qatori
+   * yaratadi, `disputeId` bilan belgilangan. Validatsiya (Contract holati,
+   * summalar) TO'LIQ `DisputeService` tomonidan ALLAQACHON bajarilgan —
+   * bu metod faqat qator yaratadi (mas'uliyat ajratilgan, `create()`dagi
+   * staff-so'ralgan yalang'och refund validatsiyasi bu yerga TEGISHLI EMAS).
+   */
+  async createDisputeRefundRow(
+    tx: Prisma.TransactionClient,
+    params: {
+      id: string;
+      contractId: string;
+      paymentId: string;
+      disputeId: string;
+      amount: bigint;
+      currency: string;
+      resolvedByStaffId: string;
+      actor: AuditActor;
+    },
+  ): Promise<Refund> {
+    const created = await tx.refund.create({
+      data: {
+        id: params.id,
+        contractId: params.contractId,
+        paymentId: params.paymentId,
+        disputeId: params.disputeId,
+        requestedByStaffId: params.resolvedByStaffId,
+        amount: params.amount,
+        currency: params.currency,
+        reason: `Dispute resolution — dispute ${params.disputeId}`,
+        provider: this.provider.name,
+        status: 'PENDING',
+      },
+    });
+    await this.audit.record(
+      {
+        actor: params.actor,
+        action: 'REFUND_CREATED',
+        resourceType: 'REFUND',
+        resourceId: params.id,
+        contextId: params.contractId,
+        newState: { status: 'PENDING', amount: params.amount.toString(), currency: params.currency, disputeId: params.disputeId },
+      },
+      tx,
+    );
+    return created;
+  }
+
+  /**
+   * Bo'lim 11/29 — provider HTTP chaqiruvi (DB tranzaksiyasi TASHQARISIDA).
+   * `create()` ICHKI chaqiradi; `DisputeService.resolve()` HAM (dispute-
+   * driven Refund qatori commit bo'lgandan KEYIN, o'z tranzaksiyasi
+   * TASHQARISIDA) — shu bitta crash-safe orchestration ikkalasiga xizmat
+   * qiladi (bo'lim 25: "mavjud Refund infratuzilmasi qayta ishlatiladi").
+   */
+  async callProviderAndAdvance(refund: Refund, payment: Payment): Promise<Refund> {
     let result;
     try {
       result = await this.provider.refundPayment({
@@ -300,11 +371,19 @@ export class RefundService {
       await tx.$queryRaw`SELECT id FROM contracts WHERE id = ${refund.contractId}::uuid FOR UPDATE`;
       const contract = await tx.contract.findUniqueOrThrow({ where: { id: refund.contractId } });
 
-      // `LedgerService.refundPayment()` o'zi `contract.status==='ACTIVE'`ni
-      // qayta tekshiradi (defensive, bo'lim 59: "boshqa qatlamga
-      // ishonmaydi") — bu yerda ATAYLAB oldindan tekshirmaymiz, xato
-      // xabari bitta joyda (LedgerService) qoladi.
-      const ledgerTx = await this.ledger.refundPayment(tx, refund, contract);
+      // Bosqich 8, bo'lim 25/60 — dispute-driven Refund (post- YOKI
+      // pre-settlement) `LedgerService.postDisputeBuyerRefund()` orqali
+      // (manba ESCROW yoki DISPUTE_HOLD, `dispute.preSettlement`ga qarab);
+      // yalang'och (Bosqich 7) Refund — o'zgarishsiz `refundPayment()`
+      // (`contract.status==='ACTIVE'`ni qayta tekshiradi, bo'lim 59).
+      const ledgerTx = refund.disputeId
+        ? await this.ledger.postDisputeBuyerRefund(
+            tx,
+            refund,
+            await tx.dispute.findUniqueOrThrow({ where: { id: refund.disputeId } }),
+            contract,
+          )
+        : await this.ledger.refundPayment(tx, refund, contract);
       if (ledgerTx) {
         await this.audit.record(
           {

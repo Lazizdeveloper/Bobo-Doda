@@ -1,5 +1,9 @@
 import {
   assertBalanced,
+  computeDisputeHoldLines,
+  computeDisputeHoldReleaseLines,
+  computeDisputeHoldToRefundLines,
+  computeDisputeResolutionLines,
   computeFundingLines,
   computePayoutReleaseLines,
   computePayoutReservationLines,
@@ -128,5 +132,92 @@ describe('computePayoutReleaseLines (Bosqich 7)', () => {
   it('0 yoki manfiy summa — InvariantViolationError', () => {
     expect(() => computePayoutReleaseLines(0n)).toThrow(InvariantViolationError);
     expect(() => computePayoutReleaseLines(-1n)).toThrow(InvariantViolationError);
+  });
+});
+
+describe('computeDisputeHoldLines (Bosqich 8)', () => {
+  it('SELLER_PAYABLE -amount ; DISPUTE_HOLD +amount — balanslangan', () => {
+    const lines = computeDisputeHoldLines(60_000_00n);
+    expect(lines).toEqual([
+      { account: 'SELLER_PAYABLE', amount: -60_000_00n },
+      { account: 'DISPUTE_HOLD', amount: 60_000_00n },
+    ]);
+    expect(() => assertBalanced(lines)).not.toThrow();
+  });
+
+  it('0 yoki manfiy summa — InvariantViolationError', () => {
+    expect(() => computeDisputeHoldLines(0n)).toThrow(InvariantViolationError);
+    expect(() => computeDisputeHoldLines(-1n)).toThrow(InvariantViolationError);
+  });
+});
+
+describe('computeDisputeHoldReleaseLines (Bosqich 8)', () => {
+  it('DISPUTE_HOLD -amount ; SELLER_PAYABLE +amount — hold TESKARISI, balanslangan', () => {
+    const lines = computeDisputeHoldReleaseLines(60_000_00n);
+    expect(lines).toEqual([
+      { account: 'DISPUTE_HOLD', amount: -60_000_00n },
+      { account: 'SELLER_PAYABLE', amount: 60_000_00n },
+    ]);
+    expect(() => assertBalanced(lines)).not.toThrow();
+  });
+
+  it('0 yoki manfiy summa — InvariantViolationError', () => {
+    expect(() => computeDisputeHoldReleaseLines(0n)).toThrow(InvariantViolationError);
+    expect(() => computeDisputeHoldReleaseLines(-1n)).toThrow(InvariantViolationError);
+  });
+});
+
+describe('computeDisputeHoldToRefundLines (Bosqich 8)', () => {
+  it('DISPUTE_HOLD -amount ; REFUND_CLEARING +amount — balanslangan', () => {
+    const lines = computeDisputeHoldToRefundLines(40_000_00n);
+    expect(lines).toEqual([
+      { account: 'DISPUTE_HOLD', amount: -40_000_00n },
+      { account: 'REFUND_CLEARING', amount: 40_000_00n },
+    ]);
+    expect(() => assertBalanced(lines)).not.toThrow();
+  });
+
+  it('0 yoki manfiy summa — InvariantViolationError', () => {
+    expect(() => computeDisputeHoldToRefundLines(0n)).toThrow(InvariantViolationError);
+    expect(() => computeDisputeHoldToRefundLines(-1n)).toThrow(InvariantViolationError);
+  });
+});
+
+describe('computeDisputeResolutionLines (Bosqich 8)', () => {
+  it('ESCROW manbasi — oddiy fee, balanslangan (docs T5 formulasi: sotuvchi ulushiga ham komissiya)', () => {
+    const lines = computeDisputeResolutionLines('ESCROW', 40_000_00n, 500);
+    expect(lines).toEqual([
+      { account: 'ESCROW', amount: -40_000_00n },
+      { account: 'SELLER_PAYABLE', amount: 38_000_00n },
+      { account: 'PLATFORM_REVENUE', amount: 2_000_00n },
+    ]);
+    expect(() => assertBalanced(lines)).not.toThrow();
+  });
+
+  it('DISPUTE_HOLD manbasi — post-settlement, KOMISSIYA YO‘Q (heldAmount allaqachon sellerNet, ikki marta fee olinmaydi)', () => {
+    const lines = computeDisputeResolutionLines('DISPUTE_HOLD', 40_000_00n, 500);
+    expect(lines).toEqual([
+      { account: 'DISPUTE_HOLD', amount: -40_000_00n },
+      { account: 'SELLER_PAYABLE', amount: 40_000_00n },
+    ]);
+    expect(() => assertBalanced(lines)).not.toThrow();
+  });
+
+  it('bo‘lim 58 uslubi — fee=0 bo‘lsa PLATFORM_REVENUE qatori yaratilmaydi (2 ta yozuv, hali balanslangan)', () => {
+    const lines = computeDisputeResolutionLines('ESCROW', 1000n, 0);
+    expect(lines).toEqual([
+      { account: 'ESCROW', amount: -1000n },
+      { account: 'SELLER_PAYABLE', amount: 1000n },
+    ]);
+    expect(() => assertBalanced(lines)).not.toThrow();
+  });
+
+  it('sellerAwardAmount <= 0 — InvariantViolationError', () => {
+    expect(() => computeDisputeResolutionLines('ESCROW', 0n, 500)).toThrow(InvariantViolationError);
+    expect(() => computeDisputeResolutionLines('ESCROW', -1n, 500)).toThrow(InvariantViolationError);
+  });
+
+  it('fee >= sellerAward (sellerNet <= 0) — InvariantViolationError', () => {
+    expect(() => computeDisputeResolutionLines('ESCROW', 100n, 10_000)).toThrow(InvariantViolationError);
   });
 });

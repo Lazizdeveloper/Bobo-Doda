@@ -30,6 +30,7 @@ import { PaymentModule } from '@/modules/payment/payment.module';
 import { LedgerModule } from '@/modules/ledger/ledger.module';
 import { RefundModule } from '@/modules/refund/refund.module';
 import { PayoutModule } from '@/modules/payout/payout.module';
+import { DisputeModule } from '@/modules/dispute/dispute.module';
 
 /**
  * Ildiz modul. Domen modullari (`users`, `catalog`, `contracts`,
@@ -70,6 +71,7 @@ import { PayoutModule } from '@/modules/payout/payout.module';
     LedgerModule,
     RefundModule,
     PayoutModule,
+    DisputeModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

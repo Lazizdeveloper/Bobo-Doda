@@ -1,4 +1,5 @@
 import { InvariantViolationError } from '@/common/errors/domain-error';
+import { computePlatformFee } from '@/common/money/fee.constant';
 
 /** `postJournal()` chaqiruvchisi hisob rolini bildiradi — `LedgerService` shu rolni haqiqiy hisobga map qiladi. */
 export type LedgerAccountRole =
@@ -7,7 +8,8 @@ export type LedgerAccountRole =
   | 'SELLER_PAYABLE'
   | 'PLATFORM_REVENUE'
   | 'REFUND_CLEARING'
-  | 'PAYOUT_CLEARING';
+  | 'PAYOUT_CLEARING'
+  | 'DISPUTE_HOLD';
 
 export interface LedgerLine {
   account: LedgerAccountRole;
@@ -120,6 +122,114 @@ export function computePayoutReleaseLines(amountTiyin: bigint): LedgerLine[] {
   return [
     { account: 'PAYOUT_CLEARING', amount: -amountTiyin },
     { account: 'SELLER_PAYABLE', amount: amountTiyin },
+  ];
+}
+
+/**
+ * Bosqich 8, `DISPUTE_HOLD` — bo'lim 9/11: POST-settlement Dispute
+ * OCHILGANDA, DARHOL: SELLER_PAYABLE -amount ; DISPUTE_HOLD +amount.
+ * `amount` — chaqiruvchi (`LedgerService.openDisputeHold`) tomonidan
+ * ALLAQACHON `min(sellerNetSnapshot, joriy balans)` sifatida hisoblangan
+ * (bo'lim 40/41 — negative balans hech qachon yaratilmaydi).
+ */
+export function computeDisputeHoldLines(amountTiyin: bigint): LedgerLine[] {
+  if (amountTiyin <= 0n) {
+    throw new InvariantViolationError('Ledger dispute hold: amount musbat bo‘lishi shart', {
+      amountTiyin: amountTiyin.toString(),
+    });
+  }
+  return [
+    { account: 'SELLER_PAYABLE', amount: -amountTiyin },
+    { account: 'DISPUTE_HOLD', amount: amountTiyin },
+  ];
+}
+
+/**
+ * Bosqich 8, `DISPUTE_HOLD_RELEASE` — bo'lim 37/38: Dispute REJECTED/
+ * CANCELLED (moliyaviy resolution YO'Q) — TO'LIQ un-freeze, hech qanday
+ * komissiya YO'Q (resolution qo'llanmadi): DISPUTE_HOLD -amount ;
+ * SELLER_PAYABLE +amount. Faqat post-settlement (hold mavjud bo'lgan)
+ * disputlar uchun chaqiriladi.
+ */
+export function computeDisputeHoldReleaseLines(amountTiyin: bigint): LedgerLine[] {
+  if (amountTiyin <= 0n) {
+    throw new InvariantViolationError('Ledger dispute hold release: amount musbat bo‘lishi shart', {
+      amountTiyin: amountTiyin.toString(),
+    });
+  }
+  return [
+    { account: 'DISPUTE_HOLD', amount: -amountTiyin },
+    { account: 'SELLER_PAYABLE', amount: amountTiyin },
+  ];
+}
+
+/**
+ * Bosqich 8, `DISPUTE_RESOLUTION` — bo'lim 23/30/31: resolve() vaqtida
+ * SELLER-BOUND qismni ko'chiradi (`sellerAwardAmount > 0` bo'lganda —
+ * SPLIT yoki 100% SELLER_FULL_RELEASE). Manba `debitRole` — pre-settlement
+ * bo'lsa `ESCROW`, post-settlement bo'lsa `DISPUTE_HOLD` (chaqiruvchi
+ * `Dispute.preSettlement`ga qarab tanlaydi). Komissiya — docs T5 misolidagi
+ * FORMULA: "sotuvchi ulushiga ham standart komissiya qo'llanadi" —
+ * `Contract.platformFeeRateBpsSnapshot` (AUTHORITATIVE snapshot, live
+ * config emas — bo'lim 29) bo'yicha, floor yaxlitlash bilan.
+ *
+ * Buyer-bound qism (agar bor bo'lsa) BU YERDA UMUMAN yo'q — u DEFERRED,
+ * webhook orqali tasdiqlangandan keyin `REFUND` turi bilan (bo'lim 25).
+ */
+export function computeDisputeResolutionLines(
+  debitRole: Extract<LedgerAccountRole, 'ESCROW' | 'DISPUTE_HOLD'>,
+  sellerAwardAmountTiyin: bigint,
+  platformFeeRateBps: number,
+): LedgerLine[] {
+  if (sellerAwardAmountTiyin <= 0n) {
+    throw new InvariantViolationError('Ledger dispute resolution: sellerAwardAmount musbat bo‘lishi shart', {
+      sellerAwardAmountTiyin: sellerAwardAmountTiyin.toString(),
+    });
+  }
+  // Muhim: komissiya FAQAT `ESCROW` manbali (pre-settlement) yo'lda
+  // qo'llanadi — u yerda `sellerAwardAmount` HALI YALTIROQ (fee hech qachon
+  // olinmagan), docs T5 formulasi bilan bir xil ("sotuvchi ulushiga ham
+  // standart komissiya qo'llanadi"). `DISPUTE_HOLD` manbali (post-settlement)
+  // yo'lda `heldAmount` — asl `CONTRACT_SETTLEMENT`dan kelgan, ALLAQACHON
+  // fee ayirilgan `sellerNet` snapshot'i (bo'lim 14) — shu summani qayta
+  // "komissiya" bilan kamaytirish IKKI MARTA fee olish (jiddiy moliyaviy
+  // xato) bo'lardi. Shuning uchun DISPUTE_HOLD manbasi uchun fee HAR DOIM 0.
+  const fee = debitRole === 'ESCROW' ? computePlatformFee(sellerAwardAmountTiyin, platformFeeRateBps) : 0n;
+  const net = sellerAwardAmountTiyin - fee;
+  if (net <= 0n) {
+    throw new InvariantViolationError('Ledger dispute resolution: sellerNet musbat bo‘lishi shart (fee >= sellerAward)', {
+      sellerAwardAmountTiyin: sellerAwardAmountTiyin.toString(),
+      fee: fee.toString(),
+    });
+  }
+
+  const lines: LedgerLine[] = [
+    { account: debitRole, amount: -sellerAwardAmountTiyin },
+    { account: 'SELLER_PAYABLE', amount: net },
+  ];
+  if (fee > 0n) {
+    lines.push({ account: 'PLATFORM_REVENUE', amount: fee });
+  }
+  return lines;
+}
+
+/**
+ * Bosqich 8, bo'lim 25/60 — POST-settlement dispute'da buyer-bound qism
+ * tashqi providerga chiqarilganda (webhook tasdiqlangach): DISPUTE_HOLD
+ * -amount ; REFUND_CLEARING +amount. `computeRefundLines()`ning DISPUTE_
+ * HOLD manbali versiyasi — ALOHIDA funksiya (Bosqich 7'ning allaqachon
+ * sinalgan `computeRefundLines()` signature'iga TEGILMAYDI, bo'lim 26:
+ * "backward compatibility saqlansin").
+ */
+export function computeDisputeHoldToRefundLines(amountTiyin: bigint): LedgerLine[] {
+  if (amountTiyin <= 0n) {
+    throw new InvariantViolationError('Ledger dispute refund (hold manbali): amount musbat bo‘lishi shart', {
+      amountTiyin: amountTiyin.toString(),
+    });
+  }
+  return [
+    { account: 'DISPUTE_HOLD', amount: -amountTiyin },
+    { account: 'REFUND_CLEARING', amount: amountTiyin },
   ];
 }
 
