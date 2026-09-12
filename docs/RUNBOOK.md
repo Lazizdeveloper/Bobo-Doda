@@ -377,3 +377,39 @@ CI_REQUIRE_E2E=true E2E_SUPERUSER_URL=postgresql://x:x@127.0.0.1:1/x \
   npm run test:e2e --workspace backend
 #   → Test Suites: 3 failed (qasddan buzilgan manzil bilan — mexanizm isboti)
 ```
+
+---
+
+## 8. Ledger (Bosqich 6) — moliyaviy incident bo'lsa
+
+**`ledger_accounts`/`ledger_transactions`/`ledger_entries`ga HECH QACHON
+qo'lda `UPDATE`/`DELETE` yozilmasin** — bu shunchaki tavsiya emas, DB
+darajasida majburlangan (`bobododa_app`dan REVOKE qilingan; hatto
+`bobododa_migrator`/superuser bilan qo'lda tuzatish HAM noto'g'ri —
+append-only'ning butun maqsadi "hech kim, hech qachon" degani).
+
+Xato journal (masalan noto'g'ri summa bilan post qilingan) topilsa:
+
+1. **Hech qanday qatorni tahrirlama.** Xato journal DOIM shu ko'rinishda qoladi.
+2. Tuzatish — **reversal journal**: asl tranzaksiyaning har bir yozuvini
+   ishorasi teskari holda takrorlaydigan YANGI `LedgerTransaction`
+   (`docs/03-schema-review.md` B8'dagi naqsh). Bu Bosqich 6'da HALI
+   implement qilinmagan (`LedgerService`da reversal metodi yo'q) — Bosqich
+   7+ vazifasi. Hozircha aniqlangan nomuvofiqlik `LedgerIntegrityService`
+   (`src/modules/ledger/ledger-integrity.service.ts`) orqali topiladi va
+   qo'lda tekshiriladi/hujjatlashtiriladi, avtomatik tuzatilmaydi.
+3. Muvofiqlikni tekshirish uchun (Nest ilova konteksti ichida, masalan
+   `nest console`/vaqtinchalik skript orqali):
+   `LedgerIntegrityService.findUnfundedSucceededPayments()`,
+   `findUnsettledCompletedContracts()`, `findUnbalancedTransactions()`.
+
+**Production'ga chiqarishdan oldin (tarixiy ma'lumot):** agar deploy
+qilinadigan muhitda Bosqich 5'dan oldin yozilgan `SUCCEEDED` Payment yoki
+Bosqich 4'dan oldingi `COMPLETED` Contract qatorlari mavjud bo'lsa, ular
+Bosqich 6 migratsiyasidan keyin ledger funding/settlement journal'iga EGA
+BO'LMAYDI (chunki journal faqat YANGI webhook/approve hodisalarida
+yoziladi, orqaga qarab backfill qilinmaydi). Bu holatni
+`LedgerIntegrityService` yuqoridagi metodlar bilan aniqlaydi — agar
+natija bo'sh bo'lmasa, real deploy'dan OLDIN controlled backfill skripti
+yozish yoki (agar hali real trafik yo'q bo'lsa) shu qatorlarni bilib
+turib e'tiborsiz qoldirish qarori ANIQ hujjatlashtirilishi kerak.

@@ -1,12 +1,8 @@
 import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from '@/app.module';
-import { AppConfigService } from '@/config/app-config.service';
-import { buildValidationPipe } from '@/common/http/validation';
-import { AllExceptionsFilter } from '@/common/http/all-exceptions.filter';
 import { dropDatabase, provisionDb, requireInfraOrSkip } from './support/e2e-infra';
+import { buildTestApp } from './support/build-app';
 
 /**
  * Bosqich 1 "Definition of Done":
@@ -31,23 +27,7 @@ describe('Health (e2e, real Postgres + Redis)', () => {
     await provisionDb('health_e2e'); // rollar + GRANT/REVOKE + migrate (bobododa_migrator)
     // process.env.DATABASE_URL allaqachon bobododa_app@.../health_e2e (setup.ts)
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
-    const config = app.get(AppConfigService);
-    app.setGlobalPrefix('api/v1', {
-      exclude: ['health', 'health/live', 'health/ready', 'docs', 'docs-json'],
-    });
-    app.useGlobalPipes(buildValidationPipe());
-    app.useGlobalFilters(new AllExceptionsFilter());
-    const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
-    if (config.swaggerEnabled) {
-      const doc = SwaggerModule.createDocument(
-        app,
-        new DocumentBuilder().setTitle('Bobo&Doda API').setVersion('0.1.0').build(),
-      );
-      SwaggerModule.setup('docs', app, doc, { jsonDocumentUrl: 'docs-json' });
-    }
-    await app.init(); // F1 (assertDbRoleHardening) shu yerda ishlaydi — bobododa_app → happy path
+    app = await buildTestApp(); // F1 (assertDbRoleHardening) shu yerda ishlaydi — bobododa_app → happy path
   }, 120_000);
 
   afterAll(async () => {

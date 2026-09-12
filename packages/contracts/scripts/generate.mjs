@@ -57,8 +57,10 @@ execFileSync(
       DATABASE_MIGRATION_URL:
         'postgresql://contracts:contracts@127.0.0.1:5432/contracts?schema=public',
       REDIS_URL: 'redis://127.0.0.1:6379',
+      // Bosqich 2 — MAJBURIY (≥32 belgi). Refresh sirlar yo'q (opaque token,
+      // JWT emas — `backend/src/common/security/opaque-token.util.ts`).
       JWT_ACCESS_SECRET: 'x'.repeat(32),
-      JWT_REFRESH_SECRET: 'y'.repeat(32),
+      JWT_STAFF_ACCESS_SECRET: 'z'.repeat(32),
     },
   },
 );

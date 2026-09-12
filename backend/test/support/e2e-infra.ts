@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { PrismaClient } from '@prisma/client';
+import Redis from 'ioredis';
 
 /**
  * E2E infratuzilma manzillari.
@@ -58,6 +59,27 @@ export async function requireInfraOrSkip(label: string): Promise<boolean> {
   }
   process.stderr.write(`[${label}] Postgres yetib bo'lmadi — suite o'tkazib yuborildi\n`);
   return false;
+}
+
+/**
+ * OTP rate-limit hisoblagichlari (`RateLimiterService`, Bosqich 2) Redis'da
+ * saqlanadi — `npm run test:e2e` BUTUN yugurish davomida bitta jarayon,
+ * bitta Redis. Bir nechta e2e fayl OTP so'rasa (Bosqich 3'dan boshlab —
+ * `auth`, `staff-auth`, `profile-account`, `seller-onboarding`,
+ * `marketplace`), ular BIR XIL loopback IP'dan chaqiradi va soatlik IP
+ * limitini (`OTP_IP_HOURLY_LIMIT`) BIRGALIKDA to'ldiradi — birinchi fayl
+ * o'z ichida to'g'ri ishlagan bo'lsa ham, KEYINGI fayl allaqachon
+ * `RATE_LIMITED` bilan boshlanadi. Har OTP-ishlatuvchi spec faylining
+ * `beforeAll`'i shu funksiyani `provisionDb()` bilan BIRGA chaqiradi.
+ */
+export async function flushRedis(): Promise<void> {
+  const client = new Redis(E2E_REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
+  try {
+    await client.connect();
+    await client.flushall();
+  } finally {
+    client.disconnect();
+  }
 }
 
 /** Toza DB yaratadi (qayta ishga tushirishga chidamli). Superuser URL qaytaradi. */

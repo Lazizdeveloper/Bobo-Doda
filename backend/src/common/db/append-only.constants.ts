@@ -41,6 +41,57 @@ export const APPEND_ONLY_TABLES = {
     revoke: ['UPDATE', 'DELETE'],
     allowUpdateColumns: ['status', 'attempts', 'lastError', 'availableAt', 'processedAt'],
   },
+  // Bosqich 4 (Contract/Milestone) — ish topshirish/o'zgartirish so'rovi
+  // tarixi. `AuditLog`dan alohida (bo'lim 16: domain history vs security
+  // audit), lekin xuddi shunday HECH QACHON o'zgartirilmaydi/o'chirilmaydi.
+  milestone_submissions: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  milestone_revision_requests: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  // Bosqich 5 (Payment) — webhook qabul qilish/dedup jurnali. Insert-once
+  // naqsh (natija SHU BITTA `create()` chaqiruvida allaqachon hisoblab
+  // yozilgan bo'ladi — bo'lim 18/54), shuning uchun `milestone_submissions`
+  // bilan bir xil TO'LIQ append-only siyosat.
+  payment_provider_events: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  // Bosqich 6 (Ledger) — double-entry buxgalteriya yozuvlari. Xato tuzatish
+  // FAQAT kelajakdagi reversal-journal orqali (bo'lim 20/49) — eski qator
+  // HECH QACHON UPDATE/DELETE qilinmaydi. `ledger_accounts` ham TO'LIQ
+  // append-only: identifikatsiya maydonlari (type/owner/currency)
+  // yaratilgach o'zgarmasligi SHART (masalan bitta hisobning valyutasi
+  // keyin "USD"ga almashtirilib qo'yilishi — jiddiy moliyaviy xato bo'lardi).
+  // Parallel-birinchi-marta-yaratish poygasi (bo'lim 42) UPDATE huquqi
+  // orqali EMAS, `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` orqali yechiladi
+  // (`LedgerService.getOrCreateUserAccount()`) — shuning uchun UPDATE
+  // huquqiga UMUMAN ehtiyoj yo'q.
+  ledger_accounts: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  ledger_transactions: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  ledger_entries: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  // Bosqich 7 (Refund/Payout) — `payment_provider_events` bilan BIR XIL
+  // insert-once dedup/tarix jurnali, xuddi shu TO'LIQ append-only siyosat.
+  refund_provider_events: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  payout_provider_events: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
 } as const satisfies Record<string, AppendOnlyTableRule>;
 
 export type AppendOnlyTableName = keyof typeof APPEND_ONLY_TABLES;

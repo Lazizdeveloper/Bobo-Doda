@@ -34,6 +34,10 @@ import { REQUEST_ID_HEADER } from '@/common/http/request-id.middleware';
               'req.body.password',
               'req.body.newPassword',
               'req.body.currentPassword',
+              // Bosqich 2 — OTP kodi va tokenlar HECH QACHON logga tushmasin.
+              'req.body.code',
+              'req.body.refreshToken',
+              'res.headers["set-cookie"]',
             ],
             remove: true,
           },

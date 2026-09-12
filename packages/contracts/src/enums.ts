@@ -59,3 +59,124 @@ export const OutboxStatus = {
 } as const;
 export type OutboxStatus = (typeof OutboxStatus)[keyof typeof OutboxStatus];
 export const OutboxStatusValues = ['PENDING', 'PROCESSING', 'SENT', 'FAILED'] as const;
+
+export const UserStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  BLOCKED: 'BLOCKED',
+} as const;
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
+export const UserStatusValues = ['ACTIVE', 'SUSPENDED', 'BLOCKED'] as const;
+
+export const SellerStatus = {
+  NOT_APPLIED: 'NOT_APPLIED',
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  SUSPENDED: 'SUSPENDED',
+} as const;
+export type SellerStatus = (typeof SellerStatus)[keyof typeof SellerStatus];
+export const SellerStatusValues = ['NOT_APPLIED', 'PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED'] as const;
+
+export const SellerApplicationStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+export type SellerApplicationStatus = (typeof SellerApplicationStatus)[keyof typeof SellerApplicationStatus];
+export const SellerApplicationStatusValues = ['PENDING', 'APPROVED', 'REJECTED'] as const;
+
+export const CategoryStatus = {
+  ACTIVE: 'ACTIVE',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+export type CategoryStatus = (typeof CategoryStatus)[keyof typeof CategoryStatus];
+export const CategoryStatusValues = ['ACTIVE', 'ARCHIVED'] as const;
+
+export const ServiceStatus = {
+  DRAFT: 'DRAFT',
+  PENDING_REVIEW: 'PENDING_REVIEW',
+  ACTIVE: 'ACTIVE',
+  REJECTED: 'REJECTED',
+  PAUSED: 'PAUSED',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+export type ServiceStatus = (typeof ServiceStatus)[keyof typeof ServiceStatus];
+export const ServiceStatusValues = ['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'PAUSED', 'ARCHIVED'] as const;
+
+export const ContractStatus = {
+  PENDING_SELLER: 'PENDING_SELLER',
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  REJECTED: 'REJECTED',
+} as const;
+export type ContractStatus = (typeof ContractStatus)[keyof typeof ContractStatus];
+export const ContractStatusValues = ['PENDING_SELLER', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'REJECTED'] as const;
+
+export const MilestoneStatus = {
+  PENDING: 'PENDING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  SUBMITTED: 'SUBMITTED',
+  REVISION_REQUESTED: 'REVISION_REQUESTED',
+  APPROVED: 'APPROVED',
+} as const;
+export type MilestoneStatus = (typeof MilestoneStatus)[keyof typeof MilestoneStatus];
+export const MilestoneStatusValues = ['PENDING', 'IN_PROGRESS', 'SUBMITTED', 'REVISION_REQUESTED', 'APPROVED'] as const;
+
+export const PaymentStatus = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED',
+} as const;
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
+export const PaymentStatusValues = ['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED'] as const;
+
+export const RefundStatus = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED',
+} as const;
+export type RefundStatus = (typeof RefundStatus)[keyof typeof RefundStatus];
+export const RefundStatusValues = ['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED'] as const;
+
+export const PayoutStatus = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED',
+} as const;
+export type PayoutStatus = (typeof PayoutStatus)[keyof typeof PayoutStatus];
+export const PayoutStatusValues = ['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED'] as const;
+
+export const LedgerAccountType = {
+  PAYMENT_CLEARING: 'PAYMENT_CLEARING',
+  ESCROW: 'ESCROW',
+  SELLER_PAYABLE: 'SELLER_PAYABLE',
+  PLATFORM_REVENUE: 'PLATFORM_REVENUE',
+  REFUND_CLEARING: 'REFUND_CLEARING',
+  PAYOUT_CLEARING: 'PAYOUT_CLEARING',
+} as const;
+export type LedgerAccountType = (typeof LedgerAccountType)[keyof typeof LedgerAccountType];
+export const LedgerAccountTypeValues = ['PAYMENT_CLEARING', 'ESCROW', 'SELLER_PAYABLE', 'PLATFORM_REVENUE', 'REFUND_CLEARING', 'PAYOUT_CLEARING'] as const;
+
+export const LedgerAccountOwnerType = {
+  PLATFORM: 'PLATFORM',
+  USER: 'USER',
+} as const;
+export type LedgerAccountOwnerType = (typeof LedgerAccountOwnerType)[keyof typeof LedgerAccountOwnerType];
+export const LedgerAccountOwnerTypeValues = ['PLATFORM', 'USER'] as const;
+
+export const LedgerTransactionType = {
+  PAYMENT_FUNDING: 'PAYMENT_FUNDING',
+  CONTRACT_SETTLEMENT: 'CONTRACT_SETTLEMENT',
+  REFUND: 'REFUND',
+  PAYOUT_RESERVATION: 'PAYOUT_RESERVATION',
+  PAYOUT_RELEASE: 'PAYOUT_RELEASE',
+} as const;
+export type LedgerTransactionType = (typeof LedgerTransactionType)[keyof typeof LedgerTransactionType];
+export const LedgerTransactionTypeValues = ['PAYMENT_FUNDING', 'CONTRACT_SETTLEMENT', 'REFUND', 'PAYOUT_RESERVATION', 'PAYOUT_RELEASE'] as const;

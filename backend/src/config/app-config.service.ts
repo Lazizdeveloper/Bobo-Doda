@@ -84,17 +84,41 @@ export class AppConfigService {
     };
   }
 
-  get jwt(): {
-    accessSecret: string | undefined;
-    refreshSecret: string | undefined;
-    accessTtl: string;
-    refreshTtl: string;
-  } {
+  /**
+   * Marketplace (User) JWT — staff'dan ATAYLAB alohida sir (ADR-04).
+   * `refreshTtl` — opaque refresh token muddati (`RefreshToken.expiresAt`
+   * hisoblash uchun; JWT emas, sirlanmaydi — `opaque-token.util.ts`).
+   */
+  get jwt(): { accessSecret: string; accessTtl: string; refreshTtl: string } {
     return {
       accessSecret: this.get('JWT_ACCESS_SECRET'),
-      refreshSecret: this.get('JWT_REFRESH_SECRET'),
       accessTtl: this.get('JWT_ACCESS_TTL'),
       refreshTtl: this.get('JWT_REFRESH_TTL'),
+    };
+  }
+
+  /** Staff (admin panel) JWT — marketplace'dan kriptografik jihatdan izolyatsiyalangan. */
+  get staffJwt(): { accessSecret: string; accessTtl: string; refreshTtl: string } {
+    return {
+      accessSecret: this.get('JWT_STAFF_ACCESS_SECRET'),
+      accessTtl: this.get('JWT_STAFF_ACCESS_TTL'),
+      refreshTtl: this.get('JWT_STAFF_REFRESH_TTL'),
+    };
+  }
+
+  /** Bosqich 5 — `payment.module.ts` shundan provider'ni tanlaydi. */
+  get payment(): { provider: Env['PAYMENT_PROVIDER']; testWebhookSecret: string | undefined } {
+    return {
+      provider: this.get('PAYMENT_PROVIDER'),
+      testWebhookSecret: this.get('PAYMENT_TEST_WEBHOOK_SECRET'),
+    };
+  }
+
+  /** Bosqich 7 — `payout.module.ts` shundan provider'ni tanlaydi (Payment'dan ALOHIDA). */
+  get payout(): { provider: Env['PAYOUT_PROVIDER']; testWebhookSecret: string | undefined } {
+    return {
+      provider: this.get('PAYOUT_PROVIDER'),
+      testWebhookSecret: this.get('PAYOUT_TEST_WEBHOOK_SECRET'),
     };
   }
 }

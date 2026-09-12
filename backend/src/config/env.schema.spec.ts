@@ -4,6 +4,9 @@ const base = {
   DATABASE_URL: 'postgresql://bobododa_app:app@localhost:5432/db?schema=public',
   DATABASE_MIGRATION_URL: 'postgresql://bobododa_migrator:migrator@localhost:5432/db?schema=public',
   REDIS_URL: 'redis://localhost:6379',
+  // Bosqich 2 — MAJBURIY (≥32 belgi).
+  JWT_ACCESS_SECRET: 'test-access-secret-test-access-secret-32',
+  JWT_STAFF_ACCESS_SECRET: 'test-staff-secret-test-staff-secret-32',
 };
 
 describe('validateEnv', () => {
@@ -67,7 +70,12 @@ describe('validateEnv', () => {
   });
 
   it('production’da SWAGGER_ENABLED=false bilan o’tadi', () => {
-    const env = validateEnv({ ...base, NODE_ENV: 'production', SWAGGER_ENABLED: 'false' });
+    const env = validateEnv({
+      ...base,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
     expect(env.NODE_ENV).toBe('production');
     expect(env.SWAGGER_ENABLED).toBe(false);
   });
@@ -87,13 +95,43 @@ describe('validateEnv', () => {
         NODE_ENV: 'production',
         SWAGGER_ENABLED: 'false',
         DB_ROLE_ASSERTION: 'off',
+        PAYMENT_PROVIDER: 'PAYME',
       }),
     ).toThrow(/DB_ROLE_ASSERTION/);
   });
 
   it('production’da DB_ROLE_ASSERTION sukut (on) bilan o’tadi', () => {
-    const env = validateEnv({ ...base, NODE_ENV: 'production', SWAGGER_ENABLED: 'false' });
+    const env = validateEnv({
+      ...base,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
     expect(env.DB_ROLE_ASSERTION).toBe(true);
+  });
+
+  it('PAYMENT_PROVIDER sukut bo’yicha "TEST"', () => {
+    expect(validateEnv({ ...base }).PAYMENT_PROVIDER).toBe('TEST');
+  });
+
+  it('production’da PAYMENT_PROVIDER=TEST (sukut) rad etiladi (fail closed)', () => {
+    expect(() => validateEnv({ ...base, NODE_ENV: 'production', SWAGGER_ENABLED: 'false' })).toThrow(
+      /PAYMENT_PROVIDER/,
+    );
+  });
+
+  it('production’da PAYMENT_PROVIDER=PAYME bilan o’tadi (Zod darajasida — implementatsiya alohida tekshiriladi)', () => {
+    const env = validateEnv({
+      ...base,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.PAYMENT_PROVIDER).toBe('PAYME');
+  });
+
+  it('PAYOUT_PROVIDER sukut bo’yicha "TEST"', () => {
+    expect(validateEnv({ ...base }).PAYOUT_PROVIDER).toBe('TEST');
   });
 
   it('DB_APP_ROLE sukut bo’yicha "bobododa_app"', () => {
@@ -113,6 +151,30 @@ describe('validateEnv', () => {
       /DB_APP_ROLE/,
     );
     expect(() => validateEnv({ ...base, DB_APP_ROLE: 'a'.repeat(64) })).toThrow(/DB_APP_ROLE/);
+  });
+
+  it('JWT_ACCESS_SECRET yo‘q yoki 32 belgidan qisqa bo‘lsa xato tashlaydi', () => {
+    const { JWT_ACCESS_SECRET: _drop, ...withoutSecret } = base;
+    expect(() => validateEnv(withoutSecret)).toThrow(/JWT_ACCESS_SECRET/);
+    expect(() => validateEnv({ ...base, JWT_ACCESS_SECRET: 'too-short' })).toThrow(/JWT_ACCESS_SECRET/);
+  });
+
+  it('JWT_STAFF_ACCESS_SECRET marketplace’dan ALOHIDA majburiy maydon', () => {
+    const { JWT_STAFF_ACCESS_SECRET: _drop, ...withoutStaffSecret } = base;
+    expect(() => validateEnv(withoutStaffSecret)).toThrow(/JWT_STAFF_ACCESS_SECRET/);
+  });
+
+  it('JWT_ACCESS_TTL/JWT_REFRESH_TTL — noto‘g‘ri format (`\\d+[smhd]` emas) rad etiladi', () => {
+    expect(() => validateEnv({ ...base, JWT_ACCESS_TTL: '15 minutes' })).toThrow(/JWT_ACCESS_TTL/);
+    expect(() => validateEnv({ ...base, JWT_REFRESH_TTL: '30' })).toThrow(/JWT_REFRESH_TTL/);
+  });
+
+  it('JWT TTL sukut qiymatlari', () => {
+    const env = validateEnv({ ...base });
+    expect(env.JWT_ACCESS_TTL).toBe('15m');
+    expect(env.JWT_REFRESH_TTL).toBe('30d');
+    expect(env.JWT_STAFF_ACCESS_TTL).toBe('15m');
+    expect(env.JWT_STAFF_REFRESH_TTL).toBe('8h');
   });
 
   it('bir nechta muammoni bitta xabarda sanaydi', () => {

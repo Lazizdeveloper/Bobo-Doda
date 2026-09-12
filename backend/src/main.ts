@@ -4,6 +4,7 @@ import { Logger as NestLogger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
@@ -11,7 +12,12 @@ import { buildValidationPipe } from './common/http/validation';
 import { AllExceptionsFilter } from './common/http/all-exceptions.filter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // `rawBody: true` — Bosqich 5, bo'lim 16: `req.rawBody` (Buffer) barcha
+  // marshrutlar uchun to'ldiriladi, `req.body` (parsed JSON) BILAN BIRGA.
+  // Webhook signature RAW baytlar ustida tekshiriladi — parsed JSON'ni
+  // qayta `JSON.stringify` qilish signature'ni buzishi mumkin edi (masalan
+  // kalit tartibi/probel farqi).
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
 
   // Pino logger — Nest'ning default logger'i o'rniga.
   app.useLogger(app.get(PinoLogger));
@@ -20,6 +26,9 @@ async function bootstrap(): Promise<void> {
 
   // Xavfsizlik header'lari (X-Frame-Options, HSTS va h.k.).
   app.use(helmet());
+  // Refresh token cookie'lari (`auth`/`staff-auth`) — httpOnly, `req.cookies`
+  // orqali o'qiladi.
+  app.use(cookieParser());
 
   // `api/v1` prefiksi — health va docs undan tashqarida.
   app.setGlobalPrefix('api/v1', {

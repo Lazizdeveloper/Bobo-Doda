@@ -23,6 +23,11 @@ const booleanish = z
   .enum(['true', 'false', '1', '0'])
   .transform((value) => value === 'true' || value === '1');
 
+/** `"15m"`, `"30d"`, `"8h"` — `duration.util.ts#parseDurationMs` bilan BIR XIL qoida. */
+const DURATION_SPEC = z
+  .string()
+  .regex(/^\d+[smhd]$/, 'Format: son + birlik (s/m/h/d), masalan "15m", "30d"');
+
 export const envSchema = z
   .object({
     // ── Runtime ──────────────────────────────────────────────────────────
@@ -76,18 +81,52 @@ export const envSchema = z
     S3_BUCKET_UPLOADS: z.string().default('bobododa-uploads'),
     S3_BUCKET_KYC: z.string().default('bobododa-kyc'),
 
-    // ── Auth (Bosqich 2 da .min(32) majburiy bo'ladi) ──────────────────
-    JWT_ACCESS_SECRET: z.string().min(16).optional(),
-    JWT_REFRESH_SECRET: z.string().min(16).optional(),
-    JWT_ACCESS_TTL: z.string().default('15m'),
-    JWT_REFRESH_TTL: z.string().default('7d'),
+    // ── Auth (Bosqich 2 — MAJBURIY) ─────────────────────────────────────
+    // Marketplace (User) va Staff — ATAYLAB ALOHIDA ACCESS sirlar (talab:
+    // "Staff auth alohida bo'lsin"). Bir xil sir bo'lganda, guard'dagi bitta
+    // xato marketplace tokenini staff route'da qabul qilib qo'yishi mumkin
+    // edi — alohida sir bilan bu KRIPTOGRAFIK jihatdan imkonsiz.
+    //
+    // DIQQAT: "REFRESH_SECRET" YO'Q (ataylab) — refresh token JWT EMAS,
+    // opaque tasodifiy satr (`opaque-token.util.ts`), DB'da SHA-256 hash
+    // bilan saqlanadi va QIDIRUV orqali tekshiriladi. Imzolash siri kerak
+    // emas — bo'lganda ham xavfsizlikka hech narsa qo'shmasdi (token
+    // o'zi 256 bit entropiyaga ega), faqat ishlatilmaydigan konfiguratsiya
+    // bo'lib qolardi.
+    JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET kamida 32 belgi'),
+    JWT_STAFF_ACCESS_SECRET: z.string().min(32, 'JWT_STAFF_ACCESS_SECRET kamida 32 belgi'),
+    // `\d+[smhd]` — `duration.util.ts#parseDurationMs` VA `TokenService`
+    // (`jsonwebtoken`ga uzatilishidan oldin) ANIQ shu formatni kutadi.
+    JWT_ACCESS_TTL: DURATION_SPEC.default('15m'),
+    // Refresh — opaque token muddati; faqat `RefreshToken.expiresAt` /
+    // `StaffSession.expiresAt` hisoblash uchun (`parseDurationMs` formati).
+    JWT_REFRESH_TTL: DURATION_SPEC.default('30d'),
+    JWT_STAFF_ACCESS_TTL: DURATION_SPEC.default('15m'),
+    JWT_STAFF_REFRESH_TTL: DURATION_SPEC.default('8h'),
 
     // ── To'lov gateway'lari (Bosqich 5) ────────────────────────────────
+    // `PAYMENT_PROVIDER` — provider registry kaliti (`payment.module.ts`).
+    // Real PAYME/CLICK protokoli hali IMPLEMENT QILINMAGAN (bo'lim 7: repo/
+    // docs'da signature/callback spec yo'q, o'ylab topilmaydi) — ularni
+    // tanlash hozircha HAR QANDAY muhitda boot vaqtida rad etiladi
+    // (`assertPaymentProviderSupported`). `TEST` — faqat dev/test uchun,
+    // production'da pastdagi `superRefine` fail-fast qiladi.
+    PAYMENT_PROVIDER: z.enum(['TEST', 'PAYME', 'CLICK']).default('TEST'),
+    // Test provider HMAC siri — faqat dev/test. Berilmasa dev-only sukut
+    // qiymat ishlatiladi (`payment.module.ts`) — production'da TEST provider
+    // umuman tanlanolmaydi, shuning uchun bu yerda MAJBURIY emas.
+    PAYMENT_TEST_WEBHOOK_SECRET: z.string().min(16).optional(),
     PAYME_MERCHANT_ID: z.string().optional(),
     PAYME_KEY: z.string().optional(),
     CLICK_MERCHANT_ID: z.string().optional(),
     CLICK_SERVICE_ID: z.string().optional(),
     CLICK_SECRET_KEY: z.string().optional(),
+
+    // ── Payout rail (Bosqich 7) — Payment'dan ALOHIDA provider munosabati
+    // (bo'lim 28: real hayotda butunlay boshqa kompaniya bo'lishi mumkin).
+    // Xuddi PAYMENT_PROVIDER bilan bir xil fail-fast falsafa.
+    PAYOUT_PROVIDER: z.enum(['TEST']).default('TEST'),
+    PAYOUT_TEST_WEBHOOK_SECRET: z.string().min(16).optional(),
 
     // ── Telegram support (Bosqich 6) ──────────────────────────────────
     TELEGRAM_BOT_TOKEN: z.string().optional(),
@@ -113,6 +152,28 @@ export const envSchema = z
           message: "production'da DB_ROLE_ASSERTION=off IMKONSIZ (fail closed)",
         });
       }
+      // Bosqich 5, bo'lim 45 — "NODE_ENV=production'da fake provider bilan
+      // boot qilish fail bo'lsin". PAYME/CLICK ham hali implement qilinmagan
+      // (`payment.module.ts` ikkalasini ham har doim rad etadi) — natijada
+      // hozircha production HECH QANDAY provider bilan ko'tarilolmaydi, bu
+      // ATAYLAB: real provider ulanmaguncha to'lov qabul qiluvchi prod
+      // muhit ishga tushmasligi kerak.
+      if (env.PAYMENT_PROVIDER === 'TEST') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['PAYMENT_PROVIDER'],
+          message: "production'da PAYMENT_PROVIDER=TEST IMKONSIZ (fail closed)",
+        });
+      }
+      // Bosqich 7 — Payout uchun hozircha Zod darajasida DUBLIKAT qilinmadi
+      // (PAYME/CLICK'dan farqli, `PAYOUT_PROVIDER` enum'ida "kelajakda
+      // implement qilinadigan, lekin hozir Zod'dan o'tadigan" haqiqiy qiymat
+      // UMUMAN YO'Q — faqat `TEST`). Shuning uchun bu yerga qo'shsak HAR BIR
+      // boshqa (payout'ga aloqasi yo'q) production testi ham default
+      // `TEST` tufayli beixtiyor yiqilar edi. Fail-closed himoya YAGONA
+      // qatlamda — `payout.module.ts` factory — chunki u yerda ham
+      // `PAYOUT_PROVIDER`ning BOSHQA qiymati yo'q, natija bir xil: real
+      // provider ulanmaguncha production umuman ko'tarilolmaydi.
     }
   });
 
