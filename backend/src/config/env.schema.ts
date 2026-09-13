@@ -41,6 +41,13 @@ export const envSchema = z
       .string()
       .default('http://localhost:3000')
       .transform(csv),
+    // Bosqich 12, bo'lim 38 — reverse proxy (Railway/Nginx/Cloudflare va h.k.)
+    // ortida `req.ip`/`X-Forwarded-For` to'g'ri o'qilishi uchun. Ko'r-ko'rona
+    // `true` (hamma narsaga ishonish) EMAS — sukut `false` (ishonilmaydi).
+    // Qabul qilinadigan qiymatlar: "false", "true", butun son (hop soni)
+    // yoki vergul bilan ajratilgan ishonchli IP/CIDR ro'yxati (masalan
+    // "loopback,10.0.0.0/8") — Express `trust proxy`ning o'zi parslaydi.
+    TRUST_PROXY: z.string().default('false'),
 
     // ── Datastores (MAJBURIY — Bosqich 1) ────────────────────────────────
     // A4 — ikki alohida rol, ikki alohida URL:
@@ -125,8 +132,21 @@ export const envSchema = z
     // qiymat ishlatiladi (`payment.module.ts`) — production'da TEST provider
     // umuman tanlanolmaydi, shuning uchun bu yerda MAJBURIY emas.
     PAYMENT_TEST_WEBHOOK_SECRET: z.string().min(16).optional(),
+    // Bosqich 12 — Payme Merchant API rasmiy protokoli implement qilindi
+    // (developer.help.paycom.uz). Basic auth: Payme Business bizga shu
+    // login/key juftligini yuboradi (`Authorization: Basic base64(login:key)`).
     PAYME_MERCHANT_ID: z.string().optional(),
+    PAYME_LOGIN: z.string().optional(),
     PAYME_KEY: z.string().optional(),
+    // GET-checkout URL bazasi — `https://checkout.paycom.uz` (prod) yoki
+    // `https://test.paycom.uz` (sandbox). Http(s) URL, oxirida `/` yo'q.
+    PAYME_CHECKOUT_URL: z.string().url().optional(),
+    // CLICK — rasmiy docs.click.uz texnik sahifalari (signature formula/
+    // error kodlar) bu muhitda o'qib bo'lmadi (JS-render qilinadigan SPA,
+    // statik fetch faqat navigatsiya qobig'ini qaytardi) — protokol
+    // O'YLAB TOPILMAYDI. `CLICK_PROVIDER_IMPLEMENTATION = BLOCKED_BY_
+    // OFFICIAL_SPEC` (final report). `payment.module.ts` CLICK'ni hamon
+    // rad etadi (Bosqich 5'dan beri o'zgarmagan fail-closed yo'l).
     CLICK_MERCHANT_ID: z.string().optional(),
     CLICK_SERVICE_ID: z.string().optional(),
     CLICK_SECRET_KEY: z.string().optional(),
@@ -223,6 +243,23 @@ export const envSchema = z
       // qatlamda — `payout.module.ts` factory — chunki u yerda ham
       // `PAYOUT_PROVIDER`ning BOSHQA qiymati yo'q, natija bir xil: real
       // provider ulanmaguncha production umuman ko'tarilolmaydi.
+    }
+    // Bosqich 12 — PAYME tanlansa (NODE_ENV'dan qat'i nazar: dev'da ham
+    // sandbox'ga ulanish uchun to'liq credential kerak) 4 ta maydon HAM
+    // MAJBURIY. Ikkinchi qatlam himoya — `payment.module.ts` factory'da
+    // ham qayta tekshiriladi (F1/ADR-03 bilan bir xil falsafa: kritik
+    // fail-closed tekshiruv bitta joyga ishonib qolmaydi).
+    if (env.PAYMENT_PROVIDER === 'PAYME') {
+      const required: (keyof typeof env)[] = ['PAYME_MERCHANT_ID', 'PAYME_LOGIN', 'PAYME_KEY', 'PAYME_CHECKOUT_URL'];
+      for (const key of required) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `PAYMENT_PROVIDER=PAYME bo'lsa ${key} majburiy`,
+          });
+        }
+      }
     }
   });
 

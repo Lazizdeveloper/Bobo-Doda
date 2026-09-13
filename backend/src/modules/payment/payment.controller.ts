@@ -55,8 +55,8 @@ export class PaymentController {
         staleAfterMs: PAYMENT_CREATE_STALE_AFTER_MS,
       },
       async () => {
-        const payment = await this.payments.create(contractId, user.sub, actor);
-        return { statusCode: 200, body: toPaymentResponseDto(payment) };
+        const { payment, checkoutUrl } = await this.payments.create(contractId, user.sub, actor);
+        return { statusCode: 200, body: toPaymentResponseDto(payment, checkoutUrl) };
       },
     );
     return body;

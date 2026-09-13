@@ -32,6 +32,7 @@
     "infra:down": "docker compose down",
     "financial:check": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/financial-check.ts",
     "outbox:cutover": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/outbox-cutover.ts",
+    "production:check": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/production-check.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -65,8 +66,6 @@
     "@nestjs/cli": "^11.0.4",
     "@nestjs/schematics": "^11.0.1",
     "@nestjs/testing": "^11.0.10",
-    "@testcontainers/postgresql": "^10.18.0",
-    "@testcontainers/redis": "^10.18.0",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
@@ -80,7 +79,6 @@
     "rimraf": "^6.0.1",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
-    "testcontainers": "^10.18.0",
     "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",

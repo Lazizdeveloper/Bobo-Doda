@@ -3,8 +3,12 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { StaffPermission, StaffRole } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
-import { ForbiddenError, UnauthenticatedError } from '@/common/errors/domain-error';
-import { STAFF_PERMISSION_KEY, STAFF_ROLE_KEY } from '../decorators/require-permission.decorator';
+import { DomainError, ForbiddenError, UnauthenticatedError } from '@/common/errors/domain-error';
+import {
+  ALLOW_WHEN_PASSWORD_CHANGE_REQUIRED_KEY,
+  STAFF_PERMISSION_KEY,
+  STAFF_ROLE_KEY,
+} from '../decorators/require-permission.decorator';
 import type { StaffAccessTokenPayload } from '@/modules/auth/types/token-payload';
 
 /**
@@ -23,6 +27,10 @@ import type { StaffAccessTokenPayload } from '@/modules/auth/types/token-payload
  *     SUPER_ADMIN" naqshi) — `StaffMember.role` shu ro'yxatda bo'lishi
  *     shart. JWT claim'idagi `role`ga ISHONILMAYDI (LIVE DB'dan, xuddi
  *     permissions kabi) — rol pasaytirilsa darhol kuchga kirsin.
+ *  5. Bosqich 12, bo'lim 34 — `mustChangePassword === true` bo'lsa, FAQAT
+ *     `@AllowWhenPasswordChangeRequired()` bilan belgilangan endpoint'lar
+ *     ishlaydi (minimal whitelist: profil, parol almashtirish, TOTP oqimi).
+ *     Qolgani `PASSWORD_CHANGE_REQUIRED` (403) bilan rad etiladi.
  */
 @Injectable()
 export class StaffPermissionGuard implements CanActivate {
@@ -42,6 +50,11 @@ export class StaffPermissionGuard implements CanActivate {
         context.getHandler(),
         context.getClass(),
       ]) ?? [];
+    const allowedWhenPasswordChangeRequired =
+      this.reflector.getAllAndOverride<boolean | undefined>(ALLOW_WHEN_PASSWORD_CHANGE_REQUIRED_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? false;
 
     const req = context.switchToHttp().getRequest<Request & { staff?: StaffAccessTokenPayload }>();
     const staff = req.staff;
@@ -50,7 +63,7 @@ export class StaffPermissionGuard implements CanActivate {
     const [member, session] = await Promise.all([
       this.prisma.staffMember.findUnique({
         where: { id: staff.sub },
-        select: { status: true, role: true, permissions: true },
+        select: { status: true, role: true, permissions: true, mustChangePassword: true },
       }),
       this.prisma.staffSession.findUnique({
         where: { id: staff.sessionId },
@@ -74,6 +87,12 @@ export class StaffPermissionGuard implements CanActivate {
     }
     if (requiredRoles.length > 0 && !requiredRoles.includes(member.role)) {
       throw new ForbiddenError();
+    }
+    if (member.mustChangePassword && !allowedWhenPasswordChangeRequired) {
+      throw new DomainError(
+        'PASSWORD_CHANGE_REQUIRED',
+        'Davom etishdan oldin parolni almashtirish shart',
+      );
     }
 
     return true;

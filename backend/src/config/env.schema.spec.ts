@@ -11,6 +11,14 @@ const base = {
   STAFF_TOTP_ENCRYPTION_KEY: 'a'.repeat(64),
 };
 
+// Bosqich 12 — PAYMENT_PROVIDER=PAYME tanlansa 4 ta maydon HAM majburiy.
+const paymeCreds = {
+  PAYME_MERCHANT_ID: 'test-merchant-id',
+  PAYME_LOGIN: 'Paycom',
+  PAYME_KEY: 'test-payme-key',
+  PAYME_CHECKOUT_URL: 'https://test.paycom.uz',
+};
+
 describe('validateEnv', () => {
   it('minimal majburiy env bilan o’tadi va default’larni to’ldiradi', () => {
     const env = validateEnv({ ...base });
@@ -74,6 +82,7 @@ describe('validateEnv', () => {
   it('production’da SWAGGER_ENABLED=false bilan o’tadi', () => {
     const env = validateEnv({
       ...base,
+      ...paymeCreds,
       NODE_ENV: 'production',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
@@ -94,6 +103,7 @@ describe('validateEnv', () => {
     expect(() =>
       validateEnv({
         ...base,
+        ...paymeCreds,
         NODE_ENV: 'production',
         SWAGGER_ENABLED: 'false',
         DB_ROLE_ASSERTION: 'off',
@@ -105,6 +115,7 @@ describe('validateEnv', () => {
   it('production’da DB_ROLE_ASSERTION sukut (on) bilan o’tadi', () => {
     const env = validateEnv({
       ...base,
+      ...paymeCreds,
       NODE_ENV: 'production',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
@@ -122,14 +133,49 @@ describe('validateEnv', () => {
     );
   });
 
-  it('production’da PAYMENT_PROVIDER=PAYME bilan o’tadi (Zod darajasida — implementatsiya alohida tekshiriladi)', () => {
+  it('production’da PAYMENT_PROVIDER=PAYME to‘liq credential bilan o’tadi', () => {
     const env = validateEnv({
       ...base,
+      ...paymeCreds,
       NODE_ENV: 'production',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
     expect(env.PAYMENT_PROVIDER).toBe('PAYME');
+    expect(env.PAYME_CHECKOUT_URL).toBe(paymeCreds.PAYME_CHECKOUT_URL);
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=PAYME, lekin credential’lar yo‘q — rad etiladi (dev’da ham, ikkinchi qatlam himoya)', () => {
+    expect(() => validateEnv({ ...base, PAYMENT_PROVIDER: 'PAYME' })).toThrow(/PAYME_MERCHANT_ID/);
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=PAYME, faqat BAZI credential’lar bor — qolganlari nomma-nom sanaladi', () => {
+    try {
+      validateEnv({ ...base, PAYMENT_PROVIDER: 'PAYME', PAYME_MERCHANT_ID: 'm-1' });
+      fail('xato kutilgan edi');
+    } catch (err) {
+      const message = (err as Error).message;
+      expect(message).not.toContain('PAYME_MERCHANT_ID');
+      expect(message).toContain('PAYME_LOGIN');
+      expect(message).toContain('PAYME_KEY');
+      expect(message).toContain('PAYME_CHECKOUT_URL');
+    }
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=PAYME to‘liq credential bilan dev’da ham o’tadi', () => {
+    const env = validateEnv({ ...base, ...paymeCreds, PAYMENT_PROVIDER: 'PAYME' });
+    expect(env.PAYME_MERCHANT_ID).toBe(paymeCreds.PAYME_MERCHANT_ID);
+    expect(env.PAYME_LOGIN).toBe(paymeCreds.PAYME_LOGIN);
+  });
+
+  it('Bosqich 12 — PAYME_CHECKOUT_URL noto‘g‘ri URL bo‘lsa rad etiladi', () => {
+    expect(() =>
+      validateEnv({ ...base, ...paymeCreds, PAYMENT_PROVIDER: 'PAYME', PAYME_CHECKOUT_URL: 'not-a-url' }),
+    ).toThrow(/PAYME_CHECKOUT_URL/);
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=TEST (sukut) bo‘lsa PAYME credential’lari kerak emas', () => {
+    expect(() => validateEnv({ ...base })).not.toThrow();
   });
 
   it('PAYOUT_PROVIDER sukut bo’yicha "TEST"', () => {

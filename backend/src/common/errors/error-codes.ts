@@ -37,6 +37,9 @@ export const ERROR_CODES = {
   NOT_ALLOWED: { httpStatus: 403, retryable: false },
   ACCOUNT_BLOCKED: { httpStatus: 403, retryable: false },
   ACCOUNT_SUSPENDED: { httpStatus: 403, retryable: false }, // Bosqich 3
+  // Bosqich 12, bo'lim 34 — `mustChangePassword=true` staff faqat minimal
+  // whitelist (`@AllowWhenPasswordChangeRequired()`) endpointlarni chaqira oladi.
+  PASSWORD_CHANGE_REQUIRED: { httpStatus: 403, retryable: false },
   SELLER_NOT_APPROVED: { httpStatus: 403, retryable: false }, // Bosqich 3 — Bosqich 4'da ham qayta ishlatiladi (accept/submit)
   CONTRACT_SELF_PURCHASE_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // Bosqich 4
   PAYMENT_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // Bosqich 5

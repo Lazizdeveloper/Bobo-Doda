@@ -834,3 +834,252 @@ olmaydi, ledger yozuv yarata/o'zgartira olmaydi, refund'ni qo'lda
 "muvaffaqiyatli" deb belgilay olmaydi. Barcha moliyaviy operatsiyalar
 FAQAT mavjud Refund/Dispute/Reconciliation workflow'lari orqali (Bosqich
 7/8/9, o'zgarishsiz).
+
+## 12. Real Payme integratsiyasi + production launch hardening (Bosqich 12)
+
+### mustChangePassword — endi HARD GATE
+
+Bosqich 11'da faqat "soft signal" edi (javobda ko'rinardi, hech narsani
+bloklamasdi). Endi `StaffPermissionGuard` HAR bir so'rovda live tekshiradi:
+`mustChangePassword=true` bo'lsa faqat `@AllowWhenPasswordChangeRequired()`
+bilan belgilangan endpointlar ishlaydi — `GET /staff/me`,
+`POST /staff/me/change-password`, TOTP enrollment/verify/disable oqimi
+(`POST /staff/auth/logout` alohida guard'da, tegilmagan). Qolgan HAR
+QANDAY `/staff/*` `PASSWORD_CHANGE_REQUIRED` (403) bilan rad etiladi —
+permission tekshiruvidan KEYIN (staff huquqi yetarli bo'lsa ham baribir
+bloklanadi). Parol muvaffaqiyatli almashtirilsa flag atomik tarzda
+`false`ga tushadi (mavjud "boshqa sessiyalarni bekor qilish" xatti-harakati
+o'zgarishsiz). Admin `password-reset` HAMON flag'ni `true` qiladi.
+
+### Payme Merchant API — rasmiy protokol
+
+Manba: `developer.help.paycom.uz` (Metody Merchant API + Protokol
+Merchant API bo'limlari). Real integratsiya `src/modules/payment/providers/payme/`
+papkasida:
+
+- **Dedicated JSON-RPC endpoint** — `POST /api/v1/payments/payme` (generic
+  `POST /payments/webhooks/:provider`dan ALOHIDA — Payme's protokoli
+  webhook emas, to'liq JSON-RPC bitta endpoint orqali). Javob HAR DOIM
+  HTTP 200, `{result}` yoki `{error}` (rasmiy spec).
+- **Auth** — Basic HTTP (`Authorization: Basic base64(login:key)`),
+  timing-safe solishtirish (`payme-basic-auth.util.ts`). `PAYME_MERCHANT_CONFIG`
+  DI token (`payment.module.ts`) — `PAYMENT_PROVIDER=PAYME` VA to'liq
+  credential (`PAYME_MERCHANT_ID`/`PAYME_LOGIN`/`PAYME_KEY`/`PAYME_CHECKOUT_URL`)
+  bo'lmasa `null` (RPC controller `-32601` bilan "mavjud emas" ko'rsatadi
+  — ichki konfiguratsiya holati oshkor qilinmaydi).
+- **Metodlar** — `CheckPerformTransaction`, `CreateTransaction` (idempotent,
+  DB `@@unique([paymentId])`/`@@unique([paymeTransactionId])` orqali CAS —
+  10 parallel bir xil so'rov → aniq BITTA qator), `PerformTransaction`
+  (idempotent — Payme javobi yo'qolib qayta yuborsa ham funding BIR MARTA),
+  `CancelTransaction`, `CheckTransaction` (persistent snapshot, qayta
+  hisoblamaydi), `GetStatement` (bounded, `createTime` bo'yicha ascending).
+- **Transaksiya modeli** — YANGI `PaymeTransaction` jadvali (protokol
+  holati: `state` 1/2/-1/-2), `PaymentStatus`dan ATAYLAB ALOHIDA. Pul
+  harakati (SUCCEEDED/CANCELLED) HAR DOIM `PaymentService`ning mavjud
+  authoritative metodlari orqali (`attachProviderReference()`/
+  `applyProviderRpcStatus()`) — yangi ledger kod YOZILMAGAN.
+- **Checkout** — Payme'da merchant→provider "create payment" HTTP chaqiruvi
+  YO'Q (foydalanuvchi Payme'ning GET-checkout sahifasiga redirect qilinadi:
+  `<checkout_url>/base64("m=...;ac.payment_id=...;a=...")`). Shuning uchun
+  `PaymentProvider` interfeysi kengaytirildi: `createPayment`/`buildCheckoutUrl`
+  IKKALASI HAM ixtiyoriy (capability-based) — TEST provider eskisidek
+  `createPayment` ishlatadi, Payme faqat sinxron `buildCheckoutUrl`ni.
+  `POST /me/contracts/:id/payment` javobi endi ixtiyoriy `checkoutUrl`
+  qaytaradi (faqat yaratish javobida — keyingi GET'larda YO'Q, bo'lim 25:
+  browser redirect status manbai EMAS).
+- **CancelTransaction — moliyaviy xavfsizlik (ENG MUHIM qism)**: performed
+  bo'lmagan (state=1) transaksiyani bekor qilish xavfsiz — `Payment`
+  PENDING/PROCESSING → CANCELLED (ledger'ga hech qachon tegilmaydi).
+  **ALLAQACHON performed (state=2, Payment SUCCEEDED, ledger funding
+  YOZILGAN) bo'lsa — HAR DOIM rad etiladi** (rasmiy `-31007`, "buyurtma
+  to'liq bajarilgan"). Avtomatik reversal YO'Q — bu ATAYLAB qaror
+  (financial correctness > convenience): Payment/Ledger qatori HECH
+  QACHON bu yo'l orqali o'zgarmaydi, faqat audit yoziladi
+  (`PAYME_CANCEL_AFTER_PERFORM_REFUSED`). Haqiqiy pul qaytarish kerak
+  bo'lsa — staff MAVJUD `RefundService` oqimidan qo'lda boshlaydi.
+- **Merchant-initiated refund YO'Q**: rasmiy Payme Merchant API'da
+  merchant → provider "refund" HTTP metodi UMUMAN yo'q (faqat inbound
+  CancelTransaction, state=1 uchun). `PaymeProvider.refundPayment()`
+  shuning uchun DETERMINISTIK `PAYMENT_PROVIDER_ERROR` bilan rad etadi —
+  `RefundService` buni allaqachon to'g'ri qayta ishlaydi (Refund PENDING
+  → FAILED, aniq sabab bilan).
+- **Reconciliation** — Payme'da merchant → provider "query" metodi YO'Q
+  (`GetStatement` — TESKARI yo'nalish, Payme bizdan so'raydi). Shuning
+  uchun `PaymeProvider.queryPayment` ATAYLAB implement qilinmagan —
+  `ReconciliationService` buni allaqachon gracefully o'tkazib yuboradi
+  (bo'lim 26/27 — fake query endpoint yaratilmagan).
+
+### CLICK — BLOCKED_BY_OFFICIAL_SPEC
+
+`docs.click.uz` texnik sahifalari (Merchant API/Shop API so'rovlar,
+signature formulasi, xato kodlari) bu muhitda JS-render qilinadigan SPA
+bo'lgani uchun statik fetch orqali o'qib bo'lmadi (faqat navigatsiya
+qobig'i qaytdi). Rasmiy protokol TASDIQLANMAGANI uchun CLICK implement
+QILINMADI (o'ylab topilmadi) — `PAYMENT_PROVIDER=CLICK` hamon HAR QANDAY
+muhitda boot'ni rad etadi (Bosqich 5'dan beri o'zgarmagan fail-closed
+yo'l, `payment.module.ts`). Rasmiy spetsifikatsiya keyinroq tekshirilsa,
+shu joyga `providers/click/` (Payme bilan bir xil naqsh) qo'shiladi.
+
+### Provider cutover checklist (real Payme'ga o'tish)
+
+```text
+[ ] PAYMENT_PROVIDER=TEST HECH QANDAY production muhitda YO'Q
+[ ] PAYME_MERCHANT_ID / PAYME_LOGIN / PAYME_KEY / PAYME_CHECKOUT_URL
+    production secret manager'da (real qiymatlar, Payme Business
+    kabinetidan)
+[ ] PAYME_CHECKOUT_URL = https://checkout.paycom.uz (production, test emas)
+[ ] Endpoint URL Payme Business kabinetida bizning production domenga
+    (https://<domain>/api/v1/payments/payme) ko'rsatilgan, HTTPS orqali
+    tashqi tarmoqdan REACHABLE
+[ ] Sandbox (https://test.paycom.uz) orqali to'liq oqim qo'lda tekshirilgan
+    (pastdagi "Sandbox verification" bo'limi)
+[ ] npm run financial:check — CRITICAL anomaliya yo'q
+[ ] npm run production:check — 0 exit
+[ ] Birinchi haqiqiy tranzaksiyadan keyin PaymeTransaction/Payment/Ledger
+    qatorlari qo'lda tekshirilgan (staff panel yoki to'g'ridan-to'g'ri DB)
+```
+
+### Sandbox verification
+
+Real Payme sandbox credential mavjud bo'lmagani uchun bu sessiyada
+sandbox oqimi QO'LDA ishga tushirilmadi — `PAYME_SANDBOX = NOT_RUN`
+(ochiq yozilgan, PASS deb ko'rsatilmagan). Protokol darajasidagi
+to'g'rilik `test/payme.e2e-spec.ts` (26 test — auth, CheckPerform/Create/
+Perform/Cancel/Check/GetStatement, 3 xil concurrency stsenariysi, cancel
+moliyaviy xavfsizligi) orqali REAL Postgres bilan tasdiqlangan — bu
+Payme sandbox'ining O'ZI EMAS, lekin bizning tomondagi implementatsiya
+rasmiy protokolga mos ekanligining dalili. Sandbox credential paydo
+bo'lganda: yuqoridagi cutover checklist'ni sandbox URL bilan bajaring va
+shu bo'limni `PAYME_SANDBOX = PASS` (yoki topilgan muammo bilan `FAIL`)
+ga yangilang.
+
+### Production hardening (bo'lim 37-49)
+
+- **CORS** — `CORS_ORIGINS` (allowlist, vergul bilan ajratilgan) allaqachon
+  Bosqich 1'dan beri mavjud edi, `origin:'*'` HECH QACHON ishlatilmagan —
+  o'zgarishsiz tasdiqlandi.
+- **Trust proxy** — YANGI `TRUST_PROXY` env (`main.ts`, sukut `"false"`).
+  Reverse proxy (Railway/Nginx/Cloudflare) ortida `req.ip` to'g'ri
+  o'qilishi kerak bo'lsa `"true"` (hammasiga ishonish, FAQAT proxy
+  tarmog'i to'liq nazorat qilinsa) yoki konkret hop-soni/CIDR ro'yxati
+  bilan sozlang — ko'r-ko'rona sukut YO'Q.
+- **Body limit** — global JSON/urlencoded chegarasi `1mb`
+  (`app.useBodyParser`) — provider RPC payload'lari doim kichik.
+- **Graceful shutdown** — `app.enableShutdownHooks(['SIGTERM','SIGINT'])`
+  (aniq signallar). BullMQ `WorkerHost`lar (Outbox/Reconciliation)
+  `@nestjs/bullmq` orqali avtomatik yopiladi — yangi kod shart emas edi,
+  faqat signal ro'yxati aniqlashtirildi.
+- **Swagger/TEST provider/DB role assertion** — Bosqich 1-9'dan beri
+  mavjud fail-closed himoyalar o'zgarishsiz qayta tasdiqlandi.
+- **Secrets** — `.env.example` FAQAT placeholder, real qiymat HECH QACHON
+  commit qilinmagan (tekshirilgan).
+
+### Backup strategiyasi
+
+```text
+Nima:      PostgreSQL 16 to'liq baza (jumladan ledger_transactions/
+           ledger_entries/audit_logs/payme_transactions/payment_provider_events)
+Qachon:    kuniga kamida 1 marta to'liq snapshot + agar provider qo'llasa
+           WAL/PITR (point-in-time recovery) — managed Postgres (RDS/Cloud
+           SQL/Supabase/Neon) odatda buni AVTOMATIK taqdim etadi
+Qayerda:   provider-managed encrypted storage (masalan RDS automated
+           backups, Cloud SQL backups) — provider documentation'iga qarang
+Retention: kamida 7 kunlik kunlik snapshot + 4 haftalik haftalik
+           (moliyaviy ma'lumot — qisqa retention YETARLI EMAS)
+RPO:       ≤24 soat (kunlik snapshot) — WAL/PITR mavjud bo'lsa ≤5 daqiqa
+RTO:       ≤2 soat (yangi instance'ga restore + DNS/connection almashtirish)
+```
+
+**Diqqat**: yuqoridagi jadval REJA — backup borligini restore SINAMASDAN
+tasdiqlamang (pastdagi restore drill).
+
+### Restore drill (staging/test'da, production DATA'siga TEGMASDAN)
+
+```text
+1. Eng so'nggi backup/snapshot'ni aniqlang (provider konsoli/CLI)
+2. YANGI, IZOLYATSIYALANGAN DB instance'ga restore qiling (production
+   instance'ni QAYTA YOZMANG)
+3. `npx prisma migrate deploy` — restore qilingan schema joriy
+   migratsiyalar bilan mos kelishini tasdiqlang (agar restore ESKI
+   snapshot bo'lsa, keyingi migratsiyalar shu yerda qo'llanadi)
+4. Kritik jadval qatorlar sonini solishtiring (`payments`, `ledger_transactions`,
+   `ledger_entries`, `audit_logs`, `payme_transactions`) — kutilmagan
+   0/juda kichik son = restore muvaffaqiyatsiz
+5. `npm run financial:check` — restore qilingan DB'ga qarshi (ledger
+   balans invarianti, dispute integrity)
+6. Natijani (muvaffaqiyat/sana/davomiylik) shu bo'limga yozib qo'ying —
+   keyingi drill solishtirish uchun
+```
+
+Ledger/Audit — **eng KRITIK** backup ustuvorligi (`ledger_transactions`,
+`ledger_entries`, `audit_logs`, `payme_transactions`, `payment_provider_events`,
+`refund_provider_events`, `payout_provider_events`) — bular APPEND-ONLY
+(A4, `db-role-assertion.ts`), shuning uchun tabiiy ravishda "point-in-time"
+konsistent: restore qilingan nusxada bu jadvallarning HAR BIR qatori
+haqiqiy tarixiy voqea (keyinchalik o'zgartirilmagan).
+
+### Deployment ketma-ketligi (tavsiya, platform-agnostik)
+
+```text
+1. build (npm run build)
+2. migration preflight — `npx prisma migrate status` (yangi migratsiya
+   bormi, joriy schema bilan mos keladimi)
+3. npx prisma migrate deploy — MIGRATOR rol bilan (RUNBOOK §3)
+4. npm run financial:check — CRITICAL anomaliya bo'lsa DEPLOY TO'XTAYDI
+5. npm run production:check — env/provider/DB rol/Redis tekshiruvi
+6. yangi versiyani ishga tushirish (rolling/blue-green — platformaga bog'liq)
+7. /health/ready → 200 tasdiqlash
+8. (agar fresh production bo'lsa) npm run outbox:cutover — eski backlog
+   siyosati (Bosqich 10 RUNBOOK §10'da batafsil)
+```
+
+**Zero-downtime migratsiya qoidasi**: bitta deploy'da eski kod HALI
+ishlatayotgan ustun/jadvalni DROP qilmang (expand/contract naqshi —
+avval YANGI ustun/jadval QO'SHILADI va eski kod bilan BIRGA ishlaydi
+keyingi deploy'gacha, keyin ALOHIDA migratsiyada eski ustun olib
+tashlanadi). Bosqich 1-12'dagi barcha migratsiyalar shu qoidaga rioya
+qildi (masalan Bosqich 11'da `isActive` faqat YANGI `status` ustuni
+to'liq migratsiya qilingandan KEYIN, BIR XIL migratsiya ichida
+o'chirilgan — chunki bu ustun runtime kodda faqat SHU deploy ichida
+almashtirilgan, eski kod bilan parallel ishlash talab qilinmagan).
+
+### Secret rotation
+
+```text
+JWT_ACCESS_SECRET / JWT_STAFF_ACCESS_SECRET:
+  Yangi qiymat qo'yish — barcha MAVJUD access token'lar (qisqa TTL,
+  15m) tabiiy eskiradi, qayta login talab qilinadi. Downtime YO'Q.
+
+STAFF_TOTP_ENCRYPTION_KEY:
+  ROTATSIYA QILIB BO'LMAYDI joriy formatda (`v1:` versiya prefiksi
+  KELAJAKDAGI kalit-versiyalash uchun tayyorlangan, lekin hozircha
+  registry YO'Q). Kalitni almashtirish MAVJUD shifrlangan TOTP
+  sirlarini o'qib bo'lmaydigan qiladi — bajarilsa, BARCHA staff
+  `adminResetTotp()` orqali qayta enrollment qilishi SHART (bo'lim 58).
+
+Payme PAYME_KEY:
+  Payme Business kabinetida yangi kalit generatsiya qiling → avval
+  YANGI kalitni production secret'ga yozing va deploy qiling → Payme
+  Business kabinetida ESKI kalitni bekor qiling. Downtime YO'Q (bir xil
+  paytda ikkala kalit amal qiladigan oyna bor).
+
+DB parol (bobododa_app / bobododa_migrator):
+  `ALTER ROLE ... PASSWORD` (yangi parol) → `DATABASE_URL`/
+  `DATABASE_MIGRATION_URL` secret'ni yangilang → rolling restart.
+  Eski parol connection pool tugagach ishlamay qoladi — qisqa oyna.
+
+SMS provider credential (kelajakda real provider ulanganda):
+  Provider konsolida yangi kalit → secret yangilash → restart.
+```
+
+### Production readiness — to'liq checklist
+
+`docs/PRODUCTION-READINESS.md` — provider credential'lardan tortib
+rollback rejasigacha to'liq ro'yxat.
+
+### `npm run production:check`
+
+Real tashqi tranzaksiya QILMAYDI — faqat: env valid (Zod), TEST/CONSOLE
+provider'lar production'da rad etilishi, DB rol assertioni, migratsiya
+holati joriy, `financial:check`, Redis reachable, kritik config maydonlar
+mavjudligini tekshiradi. Exit 0 = launch check o'tdi, boshqa = bloklangan.

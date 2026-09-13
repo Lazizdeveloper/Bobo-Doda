@@ -2,9 +2,13 @@ import type { ExecutionContext } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
 import { StaffPermissionGuard } from './staff-permission.guard';
 import type { PrismaService } from '@/infra/prisma/prisma.service';
-import { ForbiddenError, UnauthenticatedError } from '@/common/errors/domain-error';
+import { DomainError, ForbiddenError, UnauthenticatedError } from '@/common/errors/domain-error';
 import type { StaffAccessTokenPayload } from '@/modules/auth/types/token-payload';
-import { STAFF_PERMISSION_KEY, STAFF_ROLE_KEY } from '../decorators/require-permission.decorator';
+import {
+  ALLOW_WHEN_PASSWORD_CHANGE_REQUIRED_KEY,
+  STAFF_PERMISSION_KEY,
+  STAFF_ROLE_KEY,
+} from '../decorators/require-permission.decorator';
 
 function ctxWithStaff(staff: StaffAccessTokenPayload | undefined): ExecutionContext {
   return {
@@ -20,6 +24,7 @@ interface MockMember {
   status: 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
   role: string;
   permissions: string[];
+  mustChangePassword: boolean;
 }
 
 describe('StaffPermissionGuard', () => {
@@ -28,12 +33,15 @@ describe('StaffPermissionGuard', () => {
     member: MockMember | null,
     session: { staffId: string; revokedAt: Date | null; expiresAt: Date } | null,
     requiredRoles?: string[],
+    allowedWhenPasswordChangeRequired = false,
   ) {
-    // Bo'lim 18 — endi IKKITA metadata kaliti o'qiladi (permission + role);
-    // qaysi kalit so'ralganiga qarab mos qiymatni qaytaradi.
+    // Bo'lim 18/Bosqich 12 bo'lim 34 — endi UCHTA metadata kaliti o'qiladi
+    // (permission + role + password-change-whitelist); qaysi kalit
+    // so'ralganiga qarab mos qiymatni qaytaradi.
     const getAllAndOverride = jest.fn((key: string) => {
       if (key === STAFF_PERMISSION_KEY) return required;
       if (key === STAFF_ROLE_KEY) return requiredRoles;
+      if (key === ALLOW_WHEN_PASSWORD_CHANGE_REQUIRED_KEY) return allowedWhenPasswordChangeRequired || undefined;
       return undefined;
     });
     const reflector = { getAllAndOverride } as unknown as Reflector;
@@ -45,10 +53,11 @@ describe('StaffPermissionGuard', () => {
   }
 
   const liveSession = { staffId: 'staff-1', revokedAt: null, expiresAt: new Date(Date.now() + 3_600_000) };
-  const activeMember = (permissions: string[] = [], role = 'OPERATIONS'): MockMember => ({
+  const activeMember = (permissions: string[] = [], role = 'OPERATIONS', mustChangePassword = false): MockMember => ({
     status: 'ACTIVE',
     role,
     permissions,
+    mustChangePassword,
   });
 
   it('staff yo‘q (guard tartibi buzilgan) — UnauthenticatedError', async () => {
@@ -57,12 +66,12 @@ describe('StaffPermissionGuard', () => {
   });
 
   it('StaffMember topilmadi/DISABLED — ACCOUNT_BLOCKED (ForbiddenError)', async () => {
-    const guard = build([], { status: 'DISABLED', role: 'OPERATIONS', permissions: [] }, liveSession);
+    const guard = build([], { status: 'DISABLED', role: 'OPERATIONS', permissions: [], mustChangePassword: false }, liveSession);
     await expect(guard.canActivate(ctxWithStaff(STAFF))).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it('StaffMember SUSPENDED — ACCOUNT_BLOCKED (ForbiddenError) — DISABLED bilan BIR XIL natija', async () => {
-    const guard = build([], { status: 'SUSPENDED', role: 'OPERATIONS', permissions: [] }, liveSession);
+    const guard = build([], { status: 'SUSPENDED', role: 'OPERATIONS', permissions: [], mustChangePassword: false }, liveSession);
     await expect(guard.canActivate(ctxWithStaff(STAFF))).rejects.toBeInstanceOf(ForbiddenError);
   });
 
@@ -122,5 +131,29 @@ describe('StaffPermissionGuard', () => {
 
     const missingPermission = build(['STAFF'], activeMember([], 'SUPER_ADMIN'), liveSession, ['SUPER_ADMIN']);
     await expect(missingPermission.canActivate(ctxWithStaff(STAFF))).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  // ── Bosqich 12, bo'lim 34 — mustChangePassword hard gate ────────────────
+
+  it('mustChangePassword=true, @AllowWhenPasswordChangeRequired YO‘Q — PASSWORD_CHANGE_REQUIRED bilan rad etiladi', async () => {
+    const guard = build(undefined, activeMember([], 'OPERATIONS', true), liveSession);
+    const result = guard.canActivate(ctxWithStaff(STAFF));
+    await expect(result).rejects.toBeInstanceOf(DomainError);
+    await expect(result).rejects.toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
+  });
+
+  it('mustChangePassword=true, @AllowWhenPasswordChangeRequired BOR — o‘tkazadi', async () => {
+    const guard = build(undefined, activeMember([], 'OPERATIONS', true), liveSession, undefined, true);
+    await expect(guard.canActivate(ctxWithStaff(STAFF))).resolves.toBe(true);
+  });
+
+  it('mustChangePassword=false — whitelist’siz ham normal o‘tadi', async () => {
+    const guard = build(undefined, activeMember([], 'OPERATIONS', false), liveSession);
+    await expect(guard.canActivate(ctxWithStaff(STAFF))).resolves.toBe(true);
+  });
+
+  it('mustChangePassword=true HAMDA @RequirePermission yetishmasa — avval ForbiddenError (permission tekshiruvi oldin)', async () => {
+    const guard = build(['PAYOUT_APPROVE'], activeMember(['DASHBOARD'], 'OPERATIONS', true), liveSession);
+    await expect(guard.canActivate(ctxWithStaff(STAFF))).rejects.toBeInstanceOf(ForbiddenError);
   });
 });

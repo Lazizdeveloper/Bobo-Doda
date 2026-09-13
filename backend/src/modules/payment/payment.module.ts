@@ -5,6 +5,10 @@ import { GuardsModule } from '@/common/guards/guards.module';
 import { AppConfigService } from '@/config/app-config.service';
 import { PAYMENT_PROVIDER } from './providers/payment-provider.interface';
 import { TestPaymentProvider } from './providers/test/test-payment.provider';
+import { PaymeProvider } from './providers/payme/payme.provider';
+import { PaymeMerchantService } from './providers/payme/payme-merchant.service';
+import { PaymeMerchantController } from './providers/payme/payme-merchant.controller';
+import { PAYME_MERCHANT_CONFIG, type PaymeMerchantConfig } from './providers/payme/payme-rpc.types';
 import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller';
 import { MePaymentController } from './me-payment.controller';
@@ -26,9 +30,23 @@ const DEV_ONLY_TEST_SECRET = 'test-only-insecure-secret-change-me';
  */
 @Module({
   imports: [AuthModule, StaffAuthModule, GuardsModule],
-  controllers: [PaymentController, MePaymentController, StaffPaymentController],
+  controllers: [PaymentController, MePaymentController, StaffPaymentController, PaymeMerchantController],
   providers: [
     PaymentService,
+    PaymeMerchantService,
+    {
+      // Bo'lim 32 — `PaymeMerchantController` shu orqali "Payme faolmi +
+      // to'liq credential bormi"ni bir joydan biladi (`AppConfigService`ga
+      // to'g'ridan-to'g'ri bog'lanmaydi — test'da osongina override qilinadi).
+      provide: PAYME_MERCHANT_CONFIG,
+      inject: [AppConfigService],
+      useFactory: (config: AppConfigService): PaymeMerchantConfig | null => {
+        if (config.payment.provider !== 'PAYME') return null;
+        const { merchantId, login, key, checkoutUrl } = config.payme;
+        if (!merchantId || !login || !key || !checkoutUrl) return null;
+        return { merchantId, login, key, checkoutUrl };
+      },
+    },
     {
       provide: PAYMENT_PROVIDER,
       inject: [AppConfigService],
@@ -44,14 +62,28 @@ const DEV_ONLY_TEST_SECRET = 'test-only-insecure-secret-change-me';
           }
           return new TestPaymentProvider(testWebhookSecret ?? DEV_ONLY_TEST_SECRET);
         }
-        // PAYME/CLICK — bo'lim 7: real signature/callback protokoli repo
-        // yoki docs'da HECH QAYERDA yo'q, o'ylab topilmaydi. Uydirma
-        // implementatsiya o'rniga aniq xabar bilan boot rad etiladi —
-        // real provider rasmiy spetsifikatsiya bilan qo'shilganda shu
-        // `case` YANGI provider klassiga almashtiriladi.
+        if (provider === 'PAYME') {
+          // Bosqich 12 — rasmiy Payme Merchant API protokoli implement
+          // qilindi (developer.help.paycom.uz). Ikkinchi qatlam himoya —
+          // `env.schema.ts` Zod `superRefine` bu 4 maydonni ALLAQACHON
+          // majburiy qilgan, lekin kritik fail-closed tekshiruv bitta
+          // joyga ishonib qolmaydi (F1/ADR-03 bilan bir xil falsafa).
+          const { merchantId, checkoutUrl } = config.payme;
+          if (!merchantId || !checkoutUrl) {
+            throw new Error('PAYMENT_PROVIDER=PAYME uchun PAYME_MERCHANT_ID/PAYME_CHECKOUT_URL majburiy');
+          }
+          return new PaymeProvider({ merchantId, checkoutUrl });
+        }
+        // CLICK — bo'lim 29/§0: rasmiy docs.click.uz texnik sahifalari
+        // (signature formula/error kodlar) bu muhitda o'qib bo'lmadi
+        // (JS-render qilinadigan SPA, statik fetch faqat navigatsiya
+        // qobig'ini qaytardi). Protokol O'YLAB TOPILMAYDI — CLICK_PROVIDER_
+        // IMPLEMENTATION = BLOCKED_BY_OFFICIAL_SPEC (final report). Rasmiy
+        // spetsifikatsiya tekshirib bo'lingach shu `case` yangi provider
+        // klassiga almashtiriladi.
         throw new Error(
-          `PAYMENT_PROVIDER=${provider} hali implement qilinmagan (rasmiy protokol spetsifikatsiyasi yo'q) — ` +
-            'PAYMENT_PROVIDER=TEST bilan (faqat dev/test) yoki real integratsiya qo‘shilgach ishga tushiring.',
+          `PAYMENT_PROVIDER=${provider} hali implement qilinmagan (rasmiy protokol spetsifikatsiyasi tasdiqlanmagan) — ` +
+            'PAYMENT_PROVIDER=TEST bilan (faqat dev/test) yoki PAYME bilan ishga tushiring.',
         );
       },
     },

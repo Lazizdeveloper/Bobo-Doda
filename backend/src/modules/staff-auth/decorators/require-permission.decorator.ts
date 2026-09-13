@@ -21,3 +21,14 @@ export const RequirePermission = (...perms: StaffPermission[]): MethodDecorator 
 export const STAFF_ROLE_KEY = 'staffRole';
 export const RequireRole = (...roles: StaffRole[]): MethodDecorator & ClassDecorator =>
   SetMetadata(STAFF_ROLE_KEY, roles);
+
+/**
+ * Bosqich 12, bo'lim 34 — `mustChangePassword=true` bo'lgan staff endi
+ * FAQAT shu metadata bilan belgilangan endpoint'larni chaqira oladi
+ * (`StaffPermissionGuard` tekshiradi). Minimal whitelist: profil ko'rish,
+ * parol almashtirish, TOTP oqimi — qolgan HAMMA `/staff/*` `PASSWORD_
+ * CHANGE_REQUIRED` bilan rad etiladi.
+ */
+export const ALLOW_WHEN_PASSWORD_CHANGE_REQUIRED_KEY = 'allowWhenPasswordChangeRequired';
+export const AllowWhenPasswordChangeRequired = (): MethodDecorator & ClassDecorator =>
+  SetMetadata(ALLOW_WHEN_PASSWORD_CHANGE_REQUIRED_KEY, true);

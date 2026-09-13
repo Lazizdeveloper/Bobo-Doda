@@ -22,6 +22,7 @@ import { TotpDisableDto, TotpEnrollResponseDto, TotpVerifyDto } from './dto/totp
 import { StaffSessionListItemDto } from './dto/staff-session-response.dto';
 import { StaffJwtAuthGuard } from './guards/staff-jwt-auth.guard';
 import { StaffPermissionGuard } from './guards/staff-permission.guard';
+import { AllowWhenPasswordChangeRequired } from './decorators/require-permission.decorator';
 import { CurrentStaff } from './decorators/current-staff.decorator';
 import type { StaffAccessTokenPayload } from '@/modules/auth/types/token-payload';
 import {
@@ -113,6 +114,7 @@ export class StaffMeController {
   constructor(private readonly staffAuth: StaffAuthService) {}
 
   @Get()
+  @AllowWhenPasswordChangeRequired()
   @ApiOkResponse({ type: StaffMeDto })
   async getMe(@CurrentStaff() staff: StaffAccessTokenPayload): Promise<StaffMeDto> {
     const member = await this.staffAuth.getById(staff.sub);
@@ -130,6 +132,7 @@ export class StaffMeController {
 
   @Post('change-password')
   @HttpCode(200)
+  @AllowWhenPasswordChangeRequired()
   async changePassword(
     @CurrentStaff() staff: StaffAccessTokenPayload,
     @Body() dto: ChangePasswordDto,
@@ -162,6 +165,7 @@ export class StaffMeController {
 
   @Post('totp/enroll')
   @HttpCode(200)
+  @AllowWhenPasswordChangeRequired()
   @ApiOkResponse({ type: TotpEnrollResponseDto })
   async enrollTotp(@CurrentStaff() staff: StaffAccessTokenPayload): Promise<TotpEnrollResponseDto> {
     return this.staffAuth.beginTotpEnrollment(staff.sub);
@@ -169,6 +173,7 @@ export class StaffMeController {
 
   @Post('totp/verify')
   @HttpCode(200)
+  @AllowWhenPasswordChangeRequired()
   async verifyTotp(
     @CurrentStaff() staff: StaffAccessTokenPayload,
     @Body() dto: TotpVerifyDto,
@@ -179,6 +184,7 @@ export class StaffMeController {
 
   @Post('totp/disable')
   @HttpCode(200)
+  @AllowWhenPasswordChangeRequired()
   async disableTotp(
     @CurrentStaff() staff: StaffAccessTokenPayload,
     @Body() dto: TotpDisableDto,

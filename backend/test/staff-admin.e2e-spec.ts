@@ -89,6 +89,64 @@ describe('Staff admin — lifecycle/permissions/sessions (e2e)', () => {
     expect(login.body.mustChangePassword).toBe(true);
   });
 
+  // ── Bosqich 12, bo'lim 34 — mustChangePassword HARD GATE ────────────────
+
+  t('mustChangePassword=true — privileged /staff/* endpoint PASSWORD_CHANGE_REQUIRED bilan rad etadi, GET /staff/me esa ishlaydi', async () => {
+    const admin = await superAdmin();
+    // `USERS` ruxsati ATAYLAB berilgan — bloklanish SABABI faqat
+    // `mustChangePassword` ekanligini izolyatsiya qilish uchun (permission
+    // yetishmasligi bilan aralashib ketmasin).
+    const payload = createStaffMemberPayload({ permissions: ['USERS'] });
+    const created = await request(app!.getHttpServer())
+      .post('/api/v1/staff/admin/staff-members')
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send(payload)
+      .expect(200);
+    const login = await request(app!.getHttpServer())
+      .post('/api/v1/staff/auth/login')
+      .send({ email: payload.email, password: created.body.tempPassword })
+      .expect(200);
+    const freshToken = login.body.accessToken as string;
+
+    // Whitelist'dagi endpoint — ishlaydi.
+    const me = await request(app!.getHttpServer())
+      .get('/api/v1/staff/me')
+      .set('Authorization', `Bearer ${freshToken}`)
+      .expect(200);
+    expect(me.body.mustChangePassword).toBe(true);
+
+    // Whitelist'da YO'Q, lekin `DASHBOARD` ruxsati BOR bo'lsa ham —
+    // gate PERMISSION tekshiruvidan KEYIN, lekin baribir bloklaydi.
+    const usersList = await request(app!.getHttpServer())
+      .get('/api/v1/staff/users')
+      .set('Authorization', `Bearer ${freshToken}`);
+    expect(usersList.status).toBe(403);
+    expect(usersList.body.code).toBe('PASSWORD_CHANGE_REQUIRED');
+
+    // change-password — whitelist'da, ishlaydi VA flag'ni tozalaydi (bo'lim 35).
+    await request(app!.getHttpServer())
+      .post('/api/v1/staff/me/change-password')
+      .set('Authorization', `Bearer ${freshToken}`)
+      .send({ currentPassword: created.body.tempPassword, newPassword: 'BrandNewSecret456!' })
+      .expect(200);
+
+    const member = await db!.staffMember.findUniqueOrThrow({ where: { id: created.body.id } });
+    expect(member.mustChangePassword).toBe(false);
+
+    // Parol almashtirilgach — endi qolgan barcha OLD sessiyalar bekor
+    // qilingan (change-password oqimi — Bosqich 11'dan mavjud), shuning
+    // uchun YANGI login orqali privileged endpoint endi ishlashini tekshiramiz.
+    const relogin = await request(app!.getHttpServer())
+      .post('/api/v1/staff/auth/login')
+      .send({ email: payload.email, password: 'BrandNewSecret456!' })
+      .expect(200);
+    expect(relogin.body.mustChangePassword).toBe(false);
+    const usersListAfter = await request(app!.getHttpServer())
+      .get('/api/v1/staff/users')
+      .set('Authorization', `Bearer ${relogin.body.accessToken}`);
+    expect(usersListAfter.status).toBe(200);
+  });
+
   t('POST /staff/admin/staff-members — bir xil email ikkinchi marta — ALREADY_EXISTS', async () => {
     const admin = await superAdmin();
     const payload = createStaffMemberPayload();

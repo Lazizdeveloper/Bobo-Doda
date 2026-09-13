@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger as NestLogger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
@@ -17,18 +18,38 @@ async function bootstrap(): Promise<void> {
   // Webhook signature RAW baytlar ustida tekshiriladi — parsed JSON'ni
   // qayta `JSON.stringify` qilish signature'ni buzishi mumkin edi (masalan
   // kalit tartibi/probel farqi).
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
 
   // Pino logger — Nest'ning default logger'i o'rniga.
   app.useLogger(app.get(PinoLogger));
 
   const config = app.get(AppConfigService);
 
-  // Xavfsizlik header'lari (X-Frame-Options, HSTS va h.k.).
+  // Bosqich 12, bo'lim 38 — reverse proxy ortida `req.ip`/`X-Forwarded-For`
+  // to'g'ri o'qilishi uchun (rate limiting, secure IP logging, provider IP
+  // allowlist — bo'lim 5). Ko'r-ko'rona `true` EMAS: sukut `false`
+  // ("false" → Express hech narsaga ishonmaydi), production'da RUNBOOK'da
+  // ko'rsatilgan konkret qiymat (`TRUST_PROXY`) bilan sozlanadi.
+  const trustProxy = config.trustProxy;
+  if (trustProxy === 'true') app.set('trust proxy', true);
+  else if (trustProxy !== 'false') {
+    const asNumber = Number(trustProxy);
+    app.set('trust proxy', Number.isInteger(asNumber) && trustProxy.trim() !== '' ? asNumber : trustProxy);
+  }
+
+  // Xavfsizlik header'lari (X-Frame-Options, HSTS va h.k.). HSTS faqat
+  // haqiqiy HTTPS deployment orqasida mazmunli — reverse proxy/CDN TLS
+  // terminatsiya qiladi (RUNBOOK production readiness bo'limi).
   app.use(helmet());
   // Refresh token cookie'lari (`auth`/`staff-auth`) — httpOnly, `req.cookies`
   // orqali o'qiladi.
   app.use(cookieParser());
+  // Bosqich 12, bo'lim 40 — global so'rov tanasi chegarasi (DoS himoyasi).
+  // Provider JSON-RPC payload'lari (Payme) doim kichik (bir necha KB) —
+  // 1mb keng zaxira bilan yetarli. Fayl yuklash ALOHIDA oqim (bo'lim 78 —
+  // hozircha backend'da yo'q), shuning uchun bu yerga ta'sir qilmaydi.
+  app.useBodyParser('json', { limit: '1mb' });
+  app.useBodyParser('urlencoded', { limit: '1mb', extended: true });
 
   // `api/v1` prefiksi — health va docs undan tashqarida.
   app.setGlobalPrefix('api/v1', {
@@ -47,7 +68,13 @@ async function bootstrap(): Promise<void> {
     exposedHeaders: ['x-request-id'],
   });
 
-  app.enableShutdownHooks();
+  // Bosqich 12, bo'lim 44 — aniq signallar (Nest'ning "barcha signal"
+  // sukutiga ishonib qolmaymiz): SIGTERM (deployment platform normal
+  // to'xtatish) va SIGINT (Ctrl+C, lokal). Har ikkalasi ham `onModuleDestroy`/
+  // `onApplicationShutdown`ni ishga tushiradi — BullMQ `WorkerHost`lar
+  // (Outbox/Reconciliation) va Prisma/Redis ulanishlari shu orqali toza
+  // yopiladi (`@nestjs/bullmq` bilan avtomatik).
+  app.enableShutdownHooks(['SIGTERM', 'SIGINT']);
 
   // Swagger — production'da ataylab yoqilmaydi.
   if (config.swaggerEnabled) {

@@ -1,6 +1,14 @@
 # Bobo&Doda backend — ko'p bosqichli Docker image.
-#   target: build    → to'liq deps + kompilyatsiya + `prisma migrate deploy`
-#   target: runtime  → faqat prod deps + dist/  (lean image)
+#   target: build    → to'liq deps + kompilyatsiya (`npm run build`)
+#   target: runtime  → faqat prod deps + dist/  (lean image, `node dist/main.js`)
+#
+# DIQQAT (Bosqich 12, bo'lim 45) — `prisma migrate deploy` bu image ICHIDA
+# ISHLAMAYDI (na build, na runtime bosqichida). Migratsiya DEPLOY
+# pipeline'ning ALOHIDA, image ishga tushishidan OLDINGI qadami
+# (`DATABASE_MIGRATION_URL` — migrator rol, `docs/RUNBOOK.md` §12
+# "Deployment ketma-ketligi") — runtime konteyner faqat `bobododa_app`
+# (kam huquqli) rol bilan ishlaydi, uning `DATABASE_URL`'ida DDL huquqi
+# UMUMAN yo'q (A4).
 
 # ---- deps ----------------------------------------------------------------
 FROM node:22-alpine AS deps

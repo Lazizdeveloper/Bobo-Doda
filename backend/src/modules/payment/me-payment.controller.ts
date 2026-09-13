@@ -31,7 +31,7 @@ export class MePaymentController {
       query.status,
       query.contractId,
     );
-    return { ...page, items: page.items.map(toPaymentResponseDto) };
+    return { ...page, items: page.items.map((p) => toPaymentResponseDto(p)) };
   }
 
   @Get(':id')

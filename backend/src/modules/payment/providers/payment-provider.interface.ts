@@ -33,8 +33,13 @@ export interface CreatePaymentParams {
 export interface CreatePaymentResult {
   providerPaymentId: string;
   providerCreatedAt: Date;
-  /** Redirect-asosli oqim (Payme/Click) uchun — hozircha ishlatilmaydi (test provider sinxron). */
+  /** Redirect-asosli oqim (Click va h.k.) uchun. */
   redirectUrl?: string;
+}
+
+/** Bosqich 12, bo'lim 24/28 — checkout-only provider natijasi (SINXRON, tarmoq chaqiruvisiz). */
+export interface CheckoutInitiationResult {
+  checkoutUrl: string;
 }
 
 /** Bosqich 9, bo'lim 4 — reconciliation query natijasi, `ProviderOperationState` orqali. */
@@ -95,7 +100,24 @@ export type VerifiedProviderEvent = VerifiedPaymentWebhookEvent | VerifiedRefund
 export interface PaymentProvider {
   readonly name: string;
 
-  createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult>;
+  /**
+   * Merchant → provider OUTBOUND chaqiruv orqali to'lov yaratadigan
+   * provider'lar uchun (masalan TEST). Ixtiyoriy — Payme kabi INBOUND
+   * (provider → merchant JSON-RPC) protokolli provider'lar buni umuman
+   * implement QILMAYDI, o'rniga `buildCheckoutUrl` (pastda) ishlatiladi.
+   * `PaymentService.create()` ikkalasidan qaysi biri mavjudligiga qarab
+   * tanlaydi (bo'lim 28 — capability-based, interfeys portlashisiz).
+   */
+  createPayment?(params: CreatePaymentParams): Promise<CreatePaymentResult>;
+
+  /**
+   * Bosqich 12, bo'lim 24/28 — checkout-only provider'lar uchun (Payme):
+   * SINXRON, HECH QANDAY tarmoq chaqiruvisiz — faqat ma'lum maydonlardan
+   * (`merchantId`, `paymentId`, `amount`) redirect URL quradi. Payme'ning
+   * o'zi hali HECH QANDAY transaksiya yaratmagan — bu faqat frontend uchun
+   * checkout havolasi (bo'lim 25: brauzer natijasi authoritative EMAS).
+   */
+  buildCheckoutUrl?(params: CreatePaymentParams): CheckoutInitiationResult;
 
   /**
    * Bo'lim 31; Bosqich 9 bo'lim 4 — reconciliation. Provider qo'llamasa

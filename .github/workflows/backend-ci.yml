@@ -69,9 +69,16 @@ jobs:
       - name: generate:contracts (OpenAPI → TS types + enums)
         run: |
           npm run generate:contracts
-          git diff --stat -- packages/contracts || true
           test -s packages/contracts/openapi.json
           test -s packages/contracts/src/enums.ts
+
+      - name: Contracts drift — generated artifact’lar commit qilingan holat bilan bir xil bo‘lishi shart (bo‘lim 74)
+        run: |
+          if ! git diff --quiet -- packages/contracts; then
+            echo "::error::packages/contracts eskirgan — 'npm run generate:contracts' natijasi commit qilingan holatdan farq qiladi. Lokal'da ishga tushirib, natijani commit qiling."
+            git diff --stat -- packages/contracts
+            exit 1
+          fi
 
   integration:
     name: Integration (real Postgres 16 + Redis — service containers)
@@ -121,6 +128,55 @@ jobs:
 
       - name: Prisma generate
         run: npm run prisma:generate --workspace backend
+
+      - name: Migration test — rollarni bootstrap qilib, fresh DB'ga migratsiya (bo'lim 73)
+        working-directory: backend
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "CREATE DATABASE ci_migration_check;"
+          psql "postgresql://postgres:postgres@localhost:5432/ci_migration_check" \
+            -v app_pw=ci_app_pw \
+            -v migrator_pw=ci_migrator_pw \
+            -v db_name=ci_migration_check \
+            -f prisma/sql/roles.sql
+          export DATABASE_URL="postgresql://bobododa_app:ci_app_pw@localhost:5432/ci_migration_check?schema=public"
+          export DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:ci_migrator_pw@localhost:5432/ci_migration_check?schema=public"
+          npx prisma migrate deploy
+          STATUS=$(npx prisma migrate status)
+          echo "$STATUS"
+          echo "$STATUS" | grep -q "Database schema is up to date" || (echo "::error::Migratsiyalar joriy emas" && exit 1)
+
+      - name: Production-config test — fail-closed qoidalar HAQIQIY boot bilan tasdiqlanadi (bo'lim 73)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://bobododa_app:ci_app_pw@localhost:5432/ci_migration_check?schema=public
+          DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:ci_migrator_pw@localhost:5432/ci_migration_check?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci-production-config-test-access-secret-32
+          JWT_STAFF_ACCESS_SECRET: ci-production-config-test-staff-secret-32
+          STAFF_TOTP_ENCRYPTION_KEY: '1111111111111111111111111111111111111111111111111111111111111111'
+          NODE_ENV: production
+          SWAGGER_ENABLED: 'false'
+        run: |
+          BOOT_CMD="node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/boot-check.ts"
+          if PAYMENT_PROVIDER=TEST $BOOT_CMD; then
+            echo "::error::production'da PAYMENT_PROVIDER=TEST bilan boot MUVAFFAQIYATLI bo'ldi — fail-closed himoya buzilgan"
+            exit 1
+          fi
+          echo "OK: PAYMENT_PROVIDER=TEST production'da to'g'ri rad etildi"
+          # Bo'lim 87/§88 — DIQQAT: production hozircha TO'LIQ ko'tarila
+          # OLMAYDI, hatto to'g'ri PAYME credential bilan ham: `SMS_PROVIDER`
+          # enum'ida FAQAT `CONSOLE` bor (real SMS provider Bosqich 10'dan
+          # beri implement qilinmagan, bu Bosqich 12 scope'idan TASHQARIDA)
+          # — `sms.module.ts` uni ham fail-closed rad etadi. Bu YANA bir
+          # qatlam to'g'ri ishlayotganini tasdiqlaydi (real launch blocker
+          # sifatida final report'da alohida qayd etilgan).
+          if PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz $BOOT_CMD; then
+            echo "::error::production'da SMS_PROVIDER=CONSOLE bilan boot MUVAFFAQIYATLI bo'ldi — fail-closed himoya buzilgan"
+            exit 1
+          fi
+          echo "OK: to'liq Payme config bilan HAM SMS_PROVIDER=CONSOLE production'da to'g'ri rad etildi (real SMS provider hali yo'q — bilinadigan launch blocker)"
 
       - name: e2e — health + DB-role append-only (A4)
         run: npm run test:e2e --workspace backend

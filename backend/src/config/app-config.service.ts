@@ -43,6 +43,11 @@ export class AppConfigService {
     return this.get('CORS_ORIGINS');
   }
 
+  /** Bosqich 12, bo'lim 38 — Express `trust proxy`ga uzatiladigan xom qiymat (`main.ts`). */
+  get trustProxy(): string {
+    return this.get('TRUST_PROXY');
+  }
+
   get databaseUrl(): string {
     return this.get('DATABASE_URL');
   }
@@ -116,6 +121,16 @@ export class AppConfigService {
     return {
       provider: this.get('PAYMENT_PROVIDER'),
       testWebhookSecret: this.get('PAYMENT_TEST_WEBHOOK_SECRET'),
+    };
+  }
+
+  /** Bosqich 12 — Payme Merchant API. `PAYMENT_PROVIDER=PAYME` bo'lsa hammasi majburiy (env.schema.ts). */
+  get payme(): { merchantId: string | undefined; login: string | undefined; key: string | undefined; checkoutUrl: string | undefined } {
+    return {
+      merchantId: this.get('PAYME_MERCHANT_ID'),
+      login: this.get('PAYME_LOGIN'),
+      key: this.get('PAYME_KEY'),
+      checkoutUrl: this.get('PAYME_CHECKOUT_URL'),
     };
   }
 

@@ -481,9 +481,9 @@ model User {
   email        String?
 
   // Onboarding holati — login'da sessiya qayerda to'xtagan bo'lsa tiklanadi.
-  roleChosen  Boolean @default(false)
-  profileDone Boolean @default(false)
-  verified    Boolean @default(false)
+  roleChosen     Boolean @default(false)
+  profileDone    Boolean @default(false)
+  verified       Boolean @default(false)
   /// Oxirgi tanlangan/almashtirilgan rol (`/me/roles/choose`,
   /// `/me/roles/switch` yangilaydi). Ikkala rolga ega foydalanuvchi YANGI
   /// login (OTP) qilganda — qaysi kontekst bilan boshlanishini shundan
@@ -577,17 +577,17 @@ model RefreshToken {
 /// `attempts`/`consumedAt` tekshirishda yangilanadi. Kod HECH QACHON ochiq
 /// matnda saqlanmaydi — faqat `codeHash` (argon2id).
 model OtpCode {
-  id          String    @id @db.Uuid
+  id         String    @id @db.Uuid
   /// E.164 (masalan +998901234567) — `phone.util.ts` normallashtiradi.
-  phone       String
-  codeHash    String
-  attempts    Int       @default(0)
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
   /// Muvaffaqiyatli tasdiqlangan YOKI 5-xato urinishda "kuygan" vaqt —
   /// ikkalasida ham kod qayta ishlatib bo'lmaydi.
-  consumedAt  DateTime? @db.Timestamptz(6)
-  ip          String?
-  expiresAt   DateTime  @db.Timestamptz(6)
-  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  consumedAt DateTime? @db.Timestamptz(6)
+  ip         String?
+  expiresAt  DateTime  @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([phone, createdAt])
   @@index([expiresAt])
@@ -613,12 +613,12 @@ model SmsLog {
 /// Admin/operator hisobi. `userId` ixtiyoriy — staff ham marketplace
 /// foydalanuvchisi bo'lishi mumkin, lekin IDENTITY alohida (ADR-04).
 model StaffMember {
-  id           String            @id @db.Uuid
-  userId       String?           @unique @db.Uuid
-  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  fullName     String
-  email        String            @unique
-  passwordHash String
+  id                   String            @id @db.Uuid
+  userId               String?           @unique @db.Uuid
+  user                 User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fullName             String
+  email                String            @unique
+  passwordHash         String
   /// Bosqich 11 — admin `POST /staff/admin/staff-members` bilan yaratganda
   /// yoki `.../password-reset` bilan almashtirganda `true`. Login javobida
   /// qaytariladi (client "parolni almashtiring" degan yumshoq signal
@@ -626,10 +626,10 @@ model StaffMember {
   /// (bo'lim 4: "minimal secure flow" — admin temp parolni xavfsiz
   /// kanaldan uzatadi deb ishoniladi, qo'shimcha majburlash murakkablik
   /// qo'shadi, aniq foyda kam).
-  mustChangePassword Boolean @default(false)
-  role         StaffRole
-  title        String
-  permissions  StaffPermission[]
+  mustChangePassword   Boolean           @default(false)
+  role                 StaffRole
+  title                String
+  permissions          StaffPermission[]
   /// Bosqich 11 — `isActive: Boolean`dan almashtirildi (`UserStatus` bilan
   /// bir xil naqsh). ACTIVE — normal. SUSPENDED — vaqtinchalik cheklov
   /// (`reactivate` bilan qaytariladi). DISABLED — doimiy o'chirilgan
@@ -637,31 +637,31 @@ model StaffMember {
   /// Ikkalasi (SUSPENDED/DISABLED) ham `StaffPermissionGuard`da BIR XIL
   /// natija beradi — "faol emas" — operatsion farq faqat qaytarish
   /// siyosatida.
-  status          StaffStatus @default(ACTIVE)
-  statusReason    String?
-  statusChangedAt DateTime?   @db.Timestamptz(6)
-  mfaEnabled   Boolean           @default(false)
+  status               StaffStatus       @default(ACTIVE)
+  statusReason         String?
+  statusChangedAt      DateTime?         @db.Timestamptz(6)
+  mfaEnabled           Boolean           @default(false)
   /// TOTP (RFC 6238) umumiy siri — Bosqich 11'dan boshlab SHIFRLANGAN
   /// holda saqlanadi (`totp-secret-cipher.util.ts`, AES-256-GCM,
   /// `STAFF_TOTP_ENCRYPTION_KEY`). Faqat VERIFY qilingandan keyin shu
   /// ustunga yoziladi (bo'lim 7: "Secret faqat verify bo'lgandan keyin
   /// active bo'lsin").
-  totpSecret   String?
+  totpSecret           String?
   /// Bosqich 11, bo'lim 8 — enrollment boshlangan, HALI verify qilinmagan
   /// sir (shifrlangan). Muddati o'tsa (`pendingTotpExpiresAt`) yaroqsiz —
   /// eski faol MFA konfiguratsiyasiga (`totpSecret`/`mfaEnabled`) TA'SIR
   /// QILMAYDI.
-  pendingTotpSecret     String?
-  pendingTotpExpiresAt  DateTime? @db.Timestamptz(6)
+  pendingTotpSecret    String?
+  pendingTotpExpiresAt DateTime?         @db.Timestamptz(6)
   /// Bosqich 11, bo'lim 13 — RFC 6238 replay himoyasi: oxirgi MUVAFFAQIYATLI
   /// qabul qilingan HOTP counter. Undan KATTA bo'lmagan counter qayta rad
   /// etiladi (bir xil kod ikki marta — parallel so'rovlarda ham — ISHLATIB
   /// BO'LMAYDI).
-  lastTotpCounter Int?
-  lastLoginAt  DateTime?         @db.Timestamptz(6)
-  createdAt    DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime          @updatedAt @db.Timestamptz(6)
-  version      Int               @default(0)
+  lastTotpCounter      Int?
+  lastLoginAt          DateTime?         @db.Timestamptz(6)
+  createdAt            DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
+  version              Int               @default(0)
 
   sessions StaffSession[]
 
@@ -733,40 +733,40 @@ model AuditLog {
 /// ICHIDA yoziladi, alohida worker jo'natadi. Tranzaksiya ichida HTTP call
 /// QILINMAYDI.
 model OutboxEvent {
-  id            String       @id @db.Uuid
-  aggregateType String
-  aggregateId   String
-  eventType     String
-  payload       Json
+  id                  String       @id @db.Uuid
+  aggregateType       String
+  aggregateId         String
+  eventType           String
+  payload             Json
   /// Bosqich 10, bo'lim 15 — worker payload formatini shu bo'yicha
   /// talqin qiladi (backward-compatible parser). Yangi format kerak
   /// bo'lsa versiya oshadi, ESKI qatorlar o'z versiyasida qoladi.
-  payloadVersion Int          @default(1)
-  status        OutboxStatus @default(PENDING)
-  attempts      Int          @default(0)
-  lastError     String?
+  payloadVersion      Int          @default(1)
+  status              OutboxStatus @default(PENDING)
+  attempts            Int          @default(0)
+  lastError           String?
   /// Bosqich 10 — strukturaviy sabab kodi (masalan `UNSUPPORTED_EVENT`,
   /// `RECIPIENT_MISSING`) — erkin matnli `lastError`dan farqli, filtrlash/
   /// klassifikatsiya uchun.
-  lastErrorCode String?
+  lastErrorCode       String?
   /// Bosqich 10, bo'lim 43 — claim token: worker shu qatorni PROCESSING
   /// qilganda o'zining tasodifiy tokenini yozadi; FINALIZE faqat shu token
   /// hali ustunda TURGANDA muvaffaqiyatli bo'ladi (stale worker eskirgan
   /// natija bilan yangi worker holatini QAYTA YOZOLMAYDI).
-  processingToken     String?   @db.Uuid
+  processingToken     String?      @db.Uuid
   /// Bosqich 10, bo'lim 9/10 — lease boshlanish payti. Muddat
   /// (`OUTBOX_PROCESSING_TIMEOUT_SECONDS`) konfiguratsiyada — bu yerda
   /// alohida "leaseUntil" USTUNI YO'Q (hisoblanadi, saqlanmaydi — bir xil
   /// falsafa Bosqich 9's stuck-detection'i bilan).
-  processingStartedAt DateTime? @db.Timestamptz(6)
+  processingStartedAt DateTime?    @db.Timestamptz(6)
   /// Backoff/retry rejalashtirish — bo'lim 24: keyingi urinish shu vaqtdan
   /// OLDIN sodir bo'lmaydi. Bosqich 1'dan mavjud ustun qayta ishlatiladi
   /// (yangi "nextAttemptAt" USTUNI YARATILMAYDI — bir xil ma'no).
-  availableAt   DateTime     @default(now()) @db.Timestamptz(6)
+  availableAt         DateTime     @default(now()) @db.Timestamptz(6)
   /// TERMINAL holatga (SENT/DEAD/SKIPPED) o'tgan payt — qaysi terminal
   /// holat ekanini `status` aytadi, BU maydon FAQAT "qachon".
-  processedAt   DateTime?    @db.Timestamptz(6)
-  createdAt     DateTime     @default(now()) @db.Timestamptz(6)
+  processedAt         DateTime?    @db.Timestamptz(6)
+  createdAt           DateTime     @default(now()) @db.Timestamptz(6)
 
   deliveryAttempts OutboxDeliveryAttempt[]
 
@@ -783,21 +783,21 @@ model OutboxEvent {
 /// Xom provider javobi/body SAQLANMAYDI (bo'lim 5's "Raw response/body
 /// saqlama" + bo'lim 46's redaction qoidasi) — faqat strukturaviy natija.
 model OutboxDeliveryAttempt {
-  id            String                      @id @db.Uuid
-  outboxEventId String                      @db.Uuid
-  outboxEvent   OutboxEvent                 @relation(fields: [outboxEventId], references: [id])
-  attemptNumber Int
-  channel       NotificationChannel
-  provider      String
-  status        OutboxDeliveryAttemptStatus
-  errorCode     String?
+  id                String                      @id @db.Uuid
+  outboxEventId     String                      @db.Uuid
+  outboxEvent       OutboxEvent                 @relation(fields: [outboxEventId], references: [id])
+  attemptNumber     Int
+  channel           NotificationChannel
+  provider          String
+  status            OutboxDeliveryAttemptStatus
+  errorCode         String?
   providerMessageId String?
-  startedAt     DateTime @db.Timestamptz(6)
+  startedAt         DateTime                    @db.Timestamptz(6)
   /// Insert-on-complete (Bosqich 9's `ReconciliationRun` bilan bir xil
   /// naqsh) — qator FAQAT urinish TO'LIQ yakunlanganda BIR MARTA yoziladi,
   /// shuning uchun har doim ma'lum (create-keyin-update tsikli YO'Q).
-  completedAt   DateTime @db.Timestamptz(6)
-  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  completedAt       DateTime                    @db.Timestamptz(6)
+  createdAt         DateTime                    @default(now()) @db.Timestamptz(6)
 
   @@index([outboxEventId, attemptNumber])
   @@index([outboxEventId, createdAt])
@@ -832,22 +832,22 @@ model IdempotencyKey {
 /// (Bosqich 5, `filesService.upload` bilan birga keladi) — shu paytgacha
 /// faqat matn metadata.
 model SellerApplication {
-  id          String                  @id @db.Uuid
-  userId      String                  @db.Uuid
-  user        User                    @relation(fields: [userId], references: [id])
-  legalName   String
-  displayName String
-  description String?
-  status      SellerApplicationStatus @default(PENDING)
-  submittedAt DateTime                @default(now()) @db.Timestamptz(6)
-  reviewedAt  DateTime?               @db.Timestamptz(6)
+  id                String                  @id @db.Uuid
+  userId            String                  @db.Uuid
+  user              User                    @relation(fields: [userId], references: [id])
+  legalName         String
+  displayName       String
+  description       String?
+  status            SellerApplicationStatus @default(PENDING)
+  submittedAt       DateTime                @default(now()) @db.Timestamptz(6)
+  reviewedAt        DateTime?               @db.Timestamptz(6)
   /// `AuditLog.actorId` bilan bir xil naqsh — StaffMember'ga FK EMAS
   /// (mas'uliyat ajratilgan, staff jadvali bilan cascade bog'liqligi yo'q).
-  reviewedByStaffId String?           @db.Uuid
+  reviewedByStaffId String?                 @db.Uuid
   rejectionReason   String?
-  createdAt   DateTime                @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime                @updatedAt @db.Timestamptz(6)
-  version     Int                     @default(0)
+  createdAt         DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime                @updatedAt @db.Timestamptz(6)
+  version           Int                     @default(0)
 
   @@index([userId, status])
   @@index([status, submittedAt])
@@ -880,31 +880,31 @@ model Category {
 /// maydonlar — sellerId/title/price/currency — allaqachon tekis, kelajakdagi
 /// bosqichni to'smaydi).
 model Service {
-  id          String        @id @db.Uuid
-  sellerId    String        @db.Uuid
-  seller      User          @relation(fields: [sellerId], references: [id])
-  categoryId  String        @db.Uuid
-  category    Category      @relation(fields: [categoryId], references: [id])
-  title       String
-  description String
+  id                String        @id @db.Uuid
+  sellerId          String        @db.Uuid
+  seller            User          @relation(fields: [sellerId], references: [id])
+  categoryId        String        @db.Uuid
+  category          Category      @relation(fields: [categoryId], references: [id])
+  title             String
+  description       String
   /// Tarjima qilinmaydi — foydalanuvchi kontenti qaysi tilda yozilgan
   /// bo'lsa saqlanadi (ADR-02 qisqa qarorlar, "i18n").
-  lang        String        @default("uz")
+  lang              String        @default("uz")
   /// BigInt tiyin (ADR-01). DTO chegarasida butun so'mga aylantiriladi
   /// (`common/money/money.util.ts`) — Ledger bilan BIR XIL konvensiya.
-  price        BigInt
-  currency     String        @default("UZS")
-  deliveryDays Int
-  status       ServiceStatus @default(DRAFT)
-  submittedAt  DateTime?     @db.Timestamptz(6)
-  reviewedAt   DateTime?     @db.Timestamptz(6)
-  reviewedByStaffId String?  @db.Uuid
-  rejectionReason    String?
+  price             BigInt
+  currency          String        @default("UZS")
+  deliveryDays      Int
+  status            ServiceStatus @default(DRAFT)
+  submittedAt       DateTime?     @db.Timestamptz(6)
+  reviewedAt        DateTime?     @db.Timestamptz(6)
+  reviewedByStaffId String?       @db.Uuid
+  rejectionReason   String?
   /// Birinchi marta ACTIVE bo'lgan payt (moderatsiya tasdiqlagan).
-  publishedAt  DateTime?     @db.Timestamptz(6)
-  createdAt    DateTime      @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime      @updatedAt @db.Timestamptz(6)
-  version      Int           @default(0)
+  publishedAt       DateTime?     @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(6)
+  version           Int           @default(0)
 
   contracts Contract[]
 
@@ -1018,19 +1018,19 @@ model Milestone {
 /// izi emas — ikkalasi ATAYLAB alohida (bo'lim 16: "domain history va
 /// security audit vazifalarini ajrat").
 model MilestoneSubmission {
-  id            String    @id @db.Uuid
-  milestoneId   String    @db.Uuid
-  milestone     Milestone @relation(fields: [milestoneId], references: [id])
+  id              String    @id @db.Uuid
+  milestoneId     String    @db.Uuid
+  milestone       Milestone @relation(fields: [milestoneId], references: [id])
   /// `AuditLog.actorId` bilan bir xil naqsh — FK emas (hozircha doim
   /// `contract.sellerId`ga teng, lekin yozuv o'zi mustaqil o'qilishi uchun
   /// aniq saqlanadi).
-  submittedById String    @db.Uuid
-  message       String?
+  submittedById   String    @db.Uuid
+  message         String?
   /// Fayl-yuklash infratuzilmasi (S3) hali yo'q (Bosqich 5) — shuning
   /// uchun FAQAT tashqi havolalar (masalan Google Drive), server-side
   /// sxema/uzunlik tekshiruvi bilan (`create-milestone-submission.dto.ts`).
   deliverableUrls String[]
-  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([milestoneId, createdAt])
   @@map("milestone_submissions")
@@ -1069,19 +1069,19 @@ model MilestoneRevisionRequest {
 model Payment {
   id String @id @db.Uuid
 
-  contractId String   @db.Uuid
-  contract   Contract @relation(fields: [contractId], references: [id])
+  contractId  String   @db.Uuid
+  contract    Contract @relation(fields: [contractId], references: [id])
   /// Har doim `contract.buyerId`ga teng (yaratishda tekshiriladi) — lekin
   /// mustaqil saqlanadi, `AuditLog.actorId`/`MilestoneSubmission.submittedById`
   /// bilan bir xil naqsh.
-  payerUserId String @db.Uuid
-  payer       User   @relation(fields: [payerUserId], references: [id])
+  payerUserId String   @db.Uuid
+  payer       User     @relation(fields: [payerUserId], references: [id])
 
   /// Provider registry kaliti (masalan "TEST") — Prisma enum EMAS: haqiqiy
   /// provider hali tanlanmagan/ulanmagan (bo'lim 7), enum qiymati keyin
   /// migratsiya qo'shishni talab qilardi. Ilova darajasida registry orqali
   /// tekshiriladi (`PAYMENT_PROVIDER` env, `payment.module.ts`).
-  provider String
+  provider          String
   /// Provider'ning o'z tizimidagi identifikatori — `createPayment` javobidan.
   /// Ambiguous (timeout) urinishda NULL bo'lib qolishi mumkin.
   providerPaymentId String?
@@ -1092,7 +1092,7 @@ model Payment {
   amount   BigInt
   currency String
 
-  status PaymentStatus @default(PENDING)
+  status        PaymentStatus @default(PENDING)
   /// Faqat XAVFSIZ/ommaviy matn (provider xom xabari EMAS — bo'lim 30/46).
   failureReason String?
 
@@ -1107,8 +1107,9 @@ model Payment {
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
   version   Int      @default(0)
 
-  events  PaymentProviderEvent[]
-  refunds Refund[]
+  events           PaymentProviderEvent[]
+  refunds          Refund[]
+  paymeTransaction PaymeTransaction?
 
   @@index([contractId, createdAt])
   @@index([payerUserId, createdAt])
@@ -1117,6 +1118,60 @@ model Payment {
   @@index([status, updatedAt])
   @@index([provider, providerPaymentId])
   @@map("payments")
+}
+
+/// Bosqich 12 — Payme Merchant API protokoliga XOS transaksiya tarixi.
+/// `PaymentStatus`DAN ATAYLAB ALOHIDA (bo'lim 9): bittasi bizning ichki
+/// pul-harakati state machine'imiz, ikkinchisi Payme protokolining o'z
+/// raqamli holati (`state`: 1=created, 2=performed, -1=cancelled-before-
+/// perform, -2=cancelled-after-perform — rasmiy
+/// developer.help.paycom.uz/metody-merchant-api/ asosida) — ular bir
+/// enumga HECH QACHON birlashtirilmaydi. `Payment.status → SUCCEEDED`
+/// o'tishi HAMISHA `PaymentService`ning yagona authoritative CAS+ledger
+/// yo'li orqali (bo'lim 14) — bu jadval faqat Payme protokol chaqiruvlari
+/// tarixini saqlaydi, hech qanday pul harakati mantig'ini bilmaydi.
+///
+/// `@@unique([paymentId])` — bitta ichki `Payment` qatoriga UMRI DAVOMIDA
+/// KO'PI BILAN BITTA Payme transaksiyasi (bo'lim 12: har checkout urinishi
+/// o'zining YANGI `Payment` qatorini oladi — `PaymentService.create()`,
+/// bo'lim 14ning izohiga qarang). Ikkinchi (boshqa `paymeTransactionId`
+/// bilan) `CreateTransaction` shu DB darajasidagi cheklov orqali rad
+/// etiladi — CAS, try/catch bo'lmasa ham xavfsiz.
+model PaymeTransaction {
+  id String @id @db.Uuid
+
+  /// Payme'ning o'z transaksiya identifikatori (`params.id`) — CreateTransaction
+  /// idempotentligi SHU `@unique` orqali ta'minlanadi (bo'lim 12/13).
+  paymeTransactionId String @unique
+
+  paymentId String  @unique @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id])
+
+  /// BigInt tiyin — CreateTransaction paytida `Payment.amount`dan SNAPSHOT
+  /// qilinadi. Keyingi (idempotent) chaqiruvlar shu qiymat bilan
+  /// solishtiriladi (bo'lim 12 — amount/account o'zgargan bo'lsa conflict).
+  amount BigInt
+
+  /// Payme protokoli raqamli holati — rasmiy spec bilan 1:1 (izohga qarang).
+  state        Int  @default(1)
+  /// `CancelTransaction.reason` — Payme yuborgan raqamli sabab kodi (bo'lim
+  /// 19: xavfsiz strukturaviy maydon, xom payload EMAS).
+  cancelReason Int?
+
+  /// Payme'ning o'z soati (`params.time`, CreateTransaction so'rovida, ms epoch → UTC).
+  providerTime DateTime  @db.Timestamptz(6)
+  /// Bizning tomonimizning transaksiyani yaratgan payti (`result.create_time`).
+  createTime   DateTime  @default(now()) @db.Timestamptz(6)
+  performTime  DateTime? @db.Timestamptz(6)
+  cancelTime   DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  /// Bo'lim 21 — GetStatement `from<=time<=to` (provider creation time)
+  /// bo'yicha filtr, ascending tartib uchun.
+  @@index([createTime])
+  @@map("payme_transactions")
 }
 
 /// Webhook QABUL QILISH jurnali — APPEND-ONLY, dedup/replay-himoya uchun
@@ -1142,7 +1197,7 @@ model PaymentProviderEvent {
   /// Qayta ishlash natijasi: APPLIED | NOOP_ALREADY_TARGET | MISMATCH |
   /// UNKNOWN_PAYMENT | CONFLICT — cheklangan qiymatlar to'plami, lekin enum
   /// emas (ichki tashxis maydoni, wire contract emas).
-  outcome String
+  outcome         String
 
   receivedAt  DateTime  @default(now()) @db.Timestamptz(6)
   processedAt DateTime? @db.Timestamptz(6)
@@ -1194,9 +1249,9 @@ model LedgerAccount {
   /// `SetNull` tanlaydi (`NO ACTION` EMAS), `onDelete` yozilmasa xuddi shu
   /// docs qoidasini BUZGAN bo'lardi (majburiy relation'lardagi sukut
   /// `Restrict`dan farqli — bu Prisma DSL'ning kam ma'lum bo'lgan holati).
-  ownerId String? @db.Uuid
-  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  currency String
+  ownerId   String?                @db.Uuid
+  owner     User?                  @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  currency  String
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
@@ -1225,8 +1280,8 @@ model LedgerAccount {
 model LedgerTransaction {
   id String @id @db.Uuid
 
-  type     LedgerTransactionType
-  currency String
+  type        LedgerTransactionType
+  currency    String
   /// `Payment.id` (PAYMENT_FUNDING) yoki `Contract.id` (CONTRACT_SETTLEMENT).
   /// FK EMAS (docs B8 bilan bir xil ataylab qaror — `Message.contractId`
   /// polimorf naqshi) — yagona yozish yo'li `LedgerService` mavjudlikni
@@ -1328,8 +1383,8 @@ model Refund {
   amount   BigInt
   currency String
 
-  status   RefundStatus @default(PENDING)
-  provider String
+  status           RefundStatus @default(PENDING)
+  provider         String
   providerRefundId String?
   failureReason    String?
 
@@ -1393,8 +1448,8 @@ model Payout {
   currency             String
   destinationReference String
 
-  status   PayoutStatus @default(PENDING)
-  provider String
+  status           PayoutStatus @default(PENDING)
+  provider         String
   providerPayoutId String?
   failureReason    String?
 
@@ -1484,15 +1539,15 @@ model Dispute {
   /// paytidagi SELLER_PAYABLE balansi)` — bo'lim 40/41: negative balans
   /// yaratilmaydi, ortiqcha mablag' "yo'q" deb hisoblanadi (avtomatik
   /// bekor qilinmaydi, faqat resolve() doirasi torayadi).
-  heldAmount BigInt
-  currency   String
+  heldAmount     BigInt
+  currency       String
 
   resolutionType    DisputeResolutionType?
   buyerAwardAmount  BigInt?
   sellerAwardAmount BigInt?
   /// Staff yozgan ochiq (buyer/seller ko'radigan) sabab — ichki eslatma EMAS
   /// (bo'lim 48: ichki moderatsiya metadata bu yerga yozilmaydi).
-  resolutionReason String?
+  resolutionReason  String?
 
   openedAt          DateTime  @default(now()) @db.Timestamptz(6)
   reviewStartedAt   DateTime? @db.Timestamptz(6)
@@ -1545,7 +1600,7 @@ model DisputeEvidence {
   /// SHART (ilova darajasida tekshiriladi, FK emas — `LedgerTransaction.
   /// sourceId` bilan bir xil "polimorf, lekin yagona yozuvchi tekshiradi"
   /// qarori).
-  milestoneId String? @db.Uuid
+  milestoneId   String? @db.Uuid
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
@@ -1597,21 +1652,21 @@ model ReconciliationRun {
   operationType String
   operationId   String
   /// Provider registry kaliti (masalan "TEST") — `Payment.provider` bilan bir xil naqsh.
-  provider String
-  trigger  ReconciliationTrigger
+  provider      String
+  trigger       ReconciliationTrigger
 
   status ReconciliationRunStatus
 
   /// Urinish BOSHIDA kuzatilgan local aggregate status (masalan "PENDING")
   /// — Payment/Refund/Payout'ning O'Z enumi, bitta ustunga sig'dirish uchun `String`.
-  observedLocalStatus String
+  observedLocalStatus    String
   /// `ProviderOperationState` qiymati — `ERROR` holatida query hech qachon
   /// muvaffaqiyatli qaytmagani uchun NULL bo'lishi mumkin.
   observedProviderStatus String?
   /// Diagnostika uchun erkin matn (masalan "MARKED_SUCCEEDED", "RELEASED_RESERVATION", "NONE").
-  actionTaken String?
+  actionTaken            String?
   /// `ERROR` holatida `ErrorCode` qiymati (masalan "PAYMENT_PROVIDER_UNAVAILABLE").
-  errorCode String?
+  errorCode              String?
 
   startedAt   DateTime @db.Timestamptz(6)
   completedAt DateTime @db.Timestamptz(6)

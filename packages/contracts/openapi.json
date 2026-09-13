@@ -6499,6 +6499,9 @@
           "expiresAt": {
             "type": "object"
           },
+          "checkoutUrl": {
+            "type": "string"
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -6563,6 +6566,9 @@
           },
           "expiresAt": {
             "type": "object"
+          },
+          "checkoutUrl": {
+            "type": "string"
           },
           "createdAt": {
             "format": "date-time",

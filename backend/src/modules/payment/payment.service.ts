@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Prisma, type Payment } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
-import { DomainError, NotFoundError } from '@/common/errors/domain-error';
+import { DomainError, InvariantViolationError, NotFoundError } from '@/common/errors/domain-error';
 import { AuditService, type AuditActor } from '@/common/audit/audit.service';
 import { OutboxService } from '@/common/outbox/outbox.service';
 import { assertSupportedCurrency } from '@/common/money/currency.constant';
@@ -42,7 +42,11 @@ export class PaymentService {
 
   // ── Yaratish ──────────────────────────────────────────────────────────
 
-  async create(contractId: string, buyerId: string, actor: AuditActor): Promise<Payment> {
+  async create(
+    contractId: string,
+    buyerId: string,
+    actor: AuditActor,
+  ): Promise<{ payment: Payment; checkoutUrl?: string }> {
     const contract = await this.prisma.contract.findFirst({ where: { id: contractId, buyerId } });
     if (!contract) throw new NotFoundError('Shartnoma topilmadi', 'CONTRACT_NOT_FOUND');
 
@@ -105,16 +109,38 @@ export class PaymentService {
       throw err;
     }
 
+    // Bosqich 12, bo'lim 24/28 — checkout-only provider (Payme): SINXRON,
+    // tarmoq chaqiruvisiz. `Payment` PENDING'da qoladi — Payme o'z
+    // transaksiyasini keyinroq INBOUND CreateTransaction orqali yaratadi
+    // (`attachProviderReference()`, pastda).
+    if (this.provider.buildCheckoutUrl) {
+      const { checkoutUrl } = this.provider.buildCheckoutUrl({
+        paymentId: payment.id,
+        contractId: payment.contractId,
+        amountTiyin: payment.amount,
+        currency: payment.currency,
+      });
+      return { payment, checkoutUrl };
+    }
+    if (!this.provider.createPayment) {
+      throw new InvariantViolationError(
+        `Payment provider "${this.provider.name}" na createPayment, na buildCheckoutUrl amalga oshirgan`,
+      );
+    }
+
     // Bo'lim 13 — provider HTTP chaqiruvi DB tranzaksiyasi TASHQARISIDA:
     // `Payment` allaqachon COMMIT bo'lgan, lock/connection uzoq ushlab
     // turilmaydi.
-    return this.callProviderAndAdvance(payment);
+    return { payment: await this.callProviderAndAdvance(payment, this.provider.createPayment.bind(this.provider)) };
   }
 
-  private async callProviderAndAdvance(payment: Payment): Promise<Payment> {
+  private async callProviderAndAdvance(
+    payment: Payment,
+    createPayment: NonNullable<PaymentProvider['createPayment']>,
+  ): Promise<Payment> {
     let result;
     try {
-      result = await this.provider.createPayment({
+      result = await createPayment({
         paymentId: payment.id,
         contractId: payment.contractId,
         amountTiyin: payment.amount,
@@ -134,31 +160,42 @@ export class PaymentService {
       throw err;
     }
 
+    return this.attachProviderReference(payment.id, result.providerPaymentId, result.providerCreatedAt);
+  }
+
+  /**
+   * Bosqich 12, bo'lim 10/12/28 — `Payment` PENDING → PROCESSING, provider
+   * referensini biriktiradi. Ilgari `callProviderAndAdvance()`ning ICHKI
+   * qismi edi (outbound provider'lar uchun) — endi PUBLIC va reused: Payme
+   * INBOUND `CreateTransaction` RPC handler (`PaymeMerchantService`) ham
+   * SHU BITTA metodni chaqiradi (yangi ledger/CAS kodi YOZILMAYDI). CAS —
+   * ikkinchi chaqiruv (masalan parallel/duplicate CreateTransaction) NOOP
+   * (eski qatorni qaytaradi, xato tashlamaydi — chaqiruvchi allaqachon
+   * `providerPaymentId` bir xilligini o'zi tekshiradi).
+   */
+  async attachProviderReference(paymentId: string, providerPaymentId: string, providerCreatedAt: Date): Promise<Payment> {
     const updated = await this.prisma.$transaction(async (tx) => {
       const cas = await tx.payment.updateMany({
-        where: { id: payment.id, status: 'PENDING' },
-        data: {
-          status: 'PROCESSING',
-          providerPaymentId: result.providerPaymentId,
-          providerCreatedAt: result.providerCreatedAt,
-        },
+        where: { id: paymentId, status: 'PENDING' },
+        data: { status: 'PROCESSING', providerPaymentId, providerCreatedAt },
       });
       if (cas.count === 0) return null;
+      const fresh = await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
       await this.audit.record(
         {
           actor: SYSTEM_ACTOR,
           action: 'PAYMENT_PROVIDER_CREATED',
           resourceType: 'PAYMENT',
-          resourceId: payment.id,
-          contextId: payment.contractId,
+          resourceId: paymentId,
+          contextId: fresh.contractId,
           previousState: { status: 'PENDING' },
           newState: { status: 'PROCESSING', provider: this.provider.name },
         },
         tx,
       );
-      return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
+      return fresh;
     });
-    return updated ?? (await this.prisma.payment.findUniqueOrThrow({ where: { id: payment.id } }));
+    return updated ?? (await this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } }));
   }
 
   private async markFailed(paymentId: string, reason: string): Promise<void> {
@@ -317,17 +354,18 @@ export class PaymentService {
   }
 
   /**
-   * Bo'lim 8/9/76 — CAS + ledger funding + audit + outbox: webhook VA
-   * Bosqich 9 reconciliation IKKALASI ham shu BITTA metodni chaqiradi
-   * (`applyReconciledStatus()` — pastda, public wrapper). Mustaqil
-   * "reconcile ledger" matematikasi YOZILMAYDI — financial mutation faqat
-   * shu yagona yo'ldan o'tadi.
+   * Bo'lim 8/9/76 — CAS + ledger funding + audit + outbox: webhook,
+   * Bosqich 9 reconciliation VA Bosqich 12 Payme PerformTransaction/
+   * CancelTransaction (inbound RPC) — UCHALASI ham shu BITTA metodni
+   * chaqiradi (`applyReconciledStatus()`/`applyProviderRpcStatus()` —
+   * pastda, public wrapper'lar). Mustaqil "reconcile ledger" matematikasi
+   * YOZILMAYDI — financial mutation faqat shu yagona yo'ldan o'tadi.
    */
   private async applyTerminalStatus(
     tx: Prisma.TransactionClient,
     payment: Payment,
     status: VerifiedPaymentWebhookEvent['status'],
-    source: 'WEBHOOK' | 'RECONCILIATION',
+    source: 'WEBHOOK' | 'RECONCILIATION' | 'PROVIDER_RPC',
   ): Promise<PaymentEventOutcome> {
     if (PAYMENT_TERMINAL_STATUSES.includes(payment.status)) {
       if (payment.status === status) return 'NOOP_ALREADY_TARGET';
@@ -422,11 +460,27 @@ export class PaymentService {
     return this.applyTerminalStatus(tx, payment, status, 'RECONCILIATION');
   }
 
+  /**
+   * Bosqich 12, bo'lim 14/15/17 — Payme `PerformTransaction` (SUCCEEDED)
+   * va `CancelTransaction` (performed bo'lmasdan turib CANCELLED) SHU
+   * BITTA metodni chaqiradi (`PaymeMerchantService`). Mismatch tekshiruvi
+   * YO'Q — Payme `CheckPerformTransaction`/`CreateTransaction` amount'ni
+   * ALLAQACHON tasdiqlagan (bo'lim 10/12), shuning uchun `applyReconciledStatus`
+   * bilan bir xil "mismatchsiz" yo'l to'g'ri.
+   */
+  async applyProviderRpcStatus(
+    tx: Prisma.TransactionClient,
+    payment: Payment,
+    status: 'SUCCEEDED' | 'FAILED' | 'CANCELLED',
+  ): Promise<PaymentEventOutcome> {
+    return this.applyTerminalStatus(tx, payment, status, 'PROVIDER_RPC');
+  }
+
   private async recordContradiction(
     tx: Prisma.TransactionClient,
     payment: Payment,
     attemptedStatus: string,
-    source: 'WEBHOOK' | 'RECONCILIATION',
+    source: 'WEBHOOK' | 'RECONCILIATION' | 'PROVIDER_RPC',
   ): Promise<PaymentEventOutcome> {
     // Bo'lim 22/42/43 — "SUCCEEDED -> FAILED" kabi ziddiyatli hodisa HECH
     // QACHON jimgina qayta yozilmaydi (silent overwrite yo'q, terminal

@@ -22,11 +22,18 @@ export class PaymentResponseDto {
   @ApiPropertyOptional() cancelledAt?: Date | null;
   @ApiPropertyOptional() expiresAt?: Date | null;
 
+  /**
+   * Bosqich 12, bo'lim 24 — checkout-only provider (Payme) uchun: faqat
+   * YARATISH javobida bir marta qaytadi (keyingi GET'larda YO'Q — bo'lim
+   * 25: bu shunchaki redirect havolasi, statusning haqiqiy manbai EMAS).
+   */
+  @ApiPropertyOptional() checkoutUrl?: string;
+
   @ApiProperty() createdAt!: Date;
   @ApiProperty() updatedAt!: Date;
 }
 
-export function toPaymentResponseDto(payment: Payment): PaymentResponseDto {
+export function toPaymentResponseDto(payment: Payment, checkoutUrl?: string): PaymentResponseDto {
   return {
     id: payment.id,
     contractId: payment.contractId,
@@ -39,6 +46,7 @@ export function toPaymentResponseDto(payment: Payment): PaymentResponseDto {
     failedAt: payment.failedAt,
     cancelledAt: payment.cancelledAt,
     expiresAt: payment.expiresAt,
+    checkoutUrl,
     createdAt: payment.createdAt,
     updatedAt: payment.updatedAt,
   };

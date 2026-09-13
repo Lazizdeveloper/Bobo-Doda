@@ -2287,6 +2287,7 @@ export interface components {
             failedAt?: Record<string, never>;
             cancelledAt?: Record<string, never>;
             expiresAt?: Record<string, never>;
+            checkoutUrl?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -2306,6 +2307,7 @@ export interface components {
             failedAt?: Record<string, never>;
             cancelledAt?: Record<string, never>;
             expiresAt?: Record<string, never>;
+            checkoutUrl?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
