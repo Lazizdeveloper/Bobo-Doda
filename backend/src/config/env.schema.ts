@@ -143,6 +143,34 @@ export const envSchema = z
     // ── Telegram support (Bosqich 6) ──────────────────────────────────
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_SUPPORT_CHAT_ID: z.string().optional(),
+
+    // ── SMS provider (Bosqich 2 interfeys, Bosqich 10 fail-closed) ──────
+    // `CONSOLE` — real SMS yubormaydi (konsolga chiqaradi), FAQAT dev/test.
+    // Real Eskiz/PlayMobile integratsiyasi spetsifikatsiyasi repo/docs'da
+    // YO'Q (bo'lim 19: o'ylab topilmaydi). `PAYOUT_PROVIDER` bilan BIR XIL
+    // naqsh (bo'lim 28's izohiga qarang): enum'da HOZIRCHA faqat bitta
+    // haqiqiy qiymat bor, shuning uchun Zod darajasida DUPLIKAT
+    // `superRefine` qo'shilmaydi (aks holda "production'da HAR QANDAY
+    // qiymat bilan o'tadi" testi umuman yozib bo'lmas edi) — fail-closed
+    // himoya `sms.module.ts`ning factory'sida, `PAYMENT_PROVIDER`/
+    // `PAYOUT_PROVIDER` bilan bir xil qatlamda.
+    SMS_PROVIDER: z.enum(['CONSOLE']).default('CONSOLE'),
+
+    // ── Outbox notification delivery (Bosqich 10) ───────────────────────
+    // Bo'lim 9/10 — PROCESSING holatda "qotib qolgan" qatorni boshqa worker
+    // qayta claim qila olishi uchun lease muddati.
+    OUTBOX_PROCESSING_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(120),
+    // Bo'lim 38 — bitta claim chaqiruvi qancha qatorni oladi (unbounded scan taqiqi).
+    OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().max(500).default(50),
+    // Bo'lim 39 — parallel yetkazish soni (provider rate-limitiga mos, unbounded Promise.all YO'Q).
+    OUTBOX_WORKER_CONCURRENCY: z.coerce.number().int().positive().max(50).default(5),
+    // Bo'lim 25 — retry tugagach DEAD (DLQ semantikasi).
+    OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().positive().max(20).default(6),
+    // Bo'lim 24 — eksponensial backoff (soniyada, birinchi urinishdan keyingi kutish).
+    OUTBOX_RETRY_BASE_SECONDS: z.coerce.number().int().positive().default(30),
+    OUTBOX_RETRY_MAX_SECONDS: z.coerce.number().int().positive().default(3600),
+    // Bo'lim 67 — rejalashtirilgan (BullMQ repeatable) sweep oralig'i.
+    OUTBOX_SWEEP_INTERVAL_SECONDS: z.coerce.number().int().positive().default(30),
   })
   .superRefine((env, ctx) => {
     // To'lov callback bypass'i production'da IMKONSIZ — ikki qatlamdan biri

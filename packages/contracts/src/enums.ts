@@ -55,10 +55,27 @@ export const OutboxStatus = {
   PENDING: 'PENDING',
   PROCESSING: 'PROCESSING',
   SENT: 'SENT',
-  FAILED: 'FAILED',
+  DEAD: 'DEAD',
+  SKIPPED: 'SKIPPED',
 } as const;
 export type OutboxStatus = (typeof OutboxStatus)[keyof typeof OutboxStatus];
-export const OutboxStatusValues = ['PENDING', 'PROCESSING', 'SENT', 'FAILED'] as const;
+export const OutboxStatusValues = ['PENDING', 'PROCESSING', 'SENT', 'DEAD', 'SKIPPED'] as const;
+
+export const NotificationChannel = {
+  SMS: 'SMS',
+  EMAIL: 'EMAIL',
+  TELEGRAM: 'TELEGRAM',
+} as const;
+export type NotificationChannel = (typeof NotificationChannel)[keyof typeof NotificationChannel];
+export const NotificationChannelValues = ['SMS', 'EMAIL', 'TELEGRAM'] as const;
+
+export const OutboxDeliveryAttemptStatus = {
+  DELIVERED: 'DELIVERED',
+  RETRYABLE_FAILURE: 'RETRYABLE_FAILURE',
+  PERMANENT_FAILURE: 'PERMANENT_FAILURE',
+} as const;
+export type OutboxDeliveryAttemptStatus = (typeof OutboxDeliveryAttemptStatus)[keyof typeof OutboxDeliveryAttemptStatus];
+export const OutboxDeliveryAttemptStatusValues = ['DELIVERED', 'RETRYABLE_FAILURE', 'PERMANENT_FAILURE'] as const;
 
 export const UserStatus = {
   ACTIVE: 'ACTIVE',

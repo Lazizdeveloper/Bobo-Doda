@@ -31,6 +31,7 @@
     "infra:up": "docker compose up -d postgres redis minio",
     "infra:down": "docker compose down",
     "financial:check": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/financial-check.ts",
+    "outbox:cutover": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/outbox-cutover.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

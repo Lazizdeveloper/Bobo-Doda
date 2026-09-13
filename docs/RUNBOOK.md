@@ -528,3 +528,163 @@ tarixiy holat sifatida qabul qilinadi va `acknowledge` bilan belgilanadi.
 muhitida — bunday tarixiy qatorlar UMUMAN YO'Q**, shuning uchun
 `financial:check` u yerda har doim aniq (yolg'on bloklamaydi/yolg'on
 o'tkazib yubormaydi) natija beradi.
+
+## 10. Outbox worker + bildirishnoma yetkazish (Bosqich 10)
+
+**Asosiy tamoyil (§2/§80): bildirishnoma yetkazish business tranzaksiya
+to'g'riligiga HECH QACHON ta'sir qilmaydi.** `OutboxEvent` business
+o'zgarish bilan BITTA DB tranzaksiyada yoziladi (Bosqich 1'dan buyon);
+provider (SMS) chaqiruvi ESA doim tranzaksiya TASHQARISIDA — SMS provider
+ishlamay qolsa ham Payment/Ledger/Contract COMMIT bo'lgan holicha qoladi.
+
+### Arxitektura
+
+```
+Business tranzaksiya → OutboxEvent (PENDING)
+        ↓ (BullMQ "uyg'otish" YOKI periodic sweep — DB authoritative)
+OutboxWorkerService.claimBatch()   — FOR UPDATE SKIP LOCKED, qisqa tranzaksiya
+        ↓ (tranzaksiya TASHQARISIDA)
+RecipientResolverService → EVENT_ROUTES (routing jadvali) → shablon matni
+        ↓
+SmsProvider.send()   — tranzaksiya TASHQARISIDA
+        ↓
+OutboxWorkerService.finalize()   — qisqa tranzaksiya, claim token CAS bilan
+        ↓
+OutboxEvent.status = SENT | PENDING (retry) | DEAD | SKIPPED
++ OutboxDeliveryAttempt (append-only tarix)
+```
+
+`src/modules/notification/` — markaziy modul: `outbox-worker.service.ts`
+(claim/deliver/finalize/retry/staff operatsiyalari),
+`event-routing.constant.ts` (eventType → recipient → shablon, bo'lim 50),
+`recipient-resolver.service.ts` (aggregat qatordan JORIY buyer/seller/user
+kontekstini o'qiydi — payload EMAS, DB), `outbox.processor.ts`/
+`outbox-scheduler.service.ts` (BullMQ, navbat nomi `outbox-delivery` —
+Bosqich 9'ning `reconciliation` navbatidan MUSTAQIL).
+
+### Holat modeli
+
+`PENDING → PROCESSING → SENT` (muvaffaqiyatli) yoki `PENDING` (retryable
+xato, backoff bilan) yoki `DEAD` (retry tugadi/permanent xato/noma'lum
+event/versiya) yoki `SKIPPED` (bildirishnoma ATAYLAB yuborilmadi — qabul
+qiluvchi yo'q yoki bu eventType uchun bildirishnoma umuman mo'ljallanmagan
+— `EVENT_ROUTES`da `null`). **`DEAD` va `SKIPPED` FARQLANADI**: DEAD —
+operator ko'rib chiqishi kerak bo'lgan muammo (provider/kod muammosi);
+SKIPPED — kutilgan, muammosiz holat.
+
+### Claim xavfsizligi — nega hech qachon ikki marta yubormaydi (deyarli)
+
+- Claim — BITTA SQL: `UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP
+  LOCKED LIMIT N)` — parallel worker'lar bir xil qatorni OLOLMAYDI.
+- Har claim BITTA tasodifiy `processingToken` oladi. **Finalize FAQAT shu
+  token hali ustunda TURGAN bo'lsa muvaffaqiyatli** (`WHERE id=? AND
+  processingToken=?`) — kech qolgan/qotib qolgan worker (masalan tarmoq
+  sekinlashuvi tufayli) o'zining ESKI natijasi bilan boshqa worker
+  allaqachon yozgan YANGI holatni EZIB YUBORA OLMAYDI.
+- `OUTBOX_PROCESSING_TIMEOUT_SECONDS` (sukut 120s) — worker crash bo'lsa
+  qator abadiy PROCESSING'da qolmaydi, muddat o'tgach boshqa worker uni
+  qayta claim qiladi.
+- **Bitta haqiqiy chegara (documented, hal qilib bo'lmaydigan)**: agar
+  ESKI worker aynan lease muddati ichida (hali stale hisoblanmasdan)
+  provider'ga chaqiruv yuborgan bo'lsa VA provider xabarni HAQIQATAN
+  yetkazgan bo'lsa, lekin javob keyin (lease tugagach) qaytsa — xabar
+  provider tomonidan YETKAZILGAN, lekin bizning tizim buni "stale" deb
+  rad etadi va qator boshqa worker tomonidan QAYTA claim qilinib, YANA
+  yuborilishi mumkin. Bu — **kamdan-kam, lekin nazariy jihatdan mumkin
+  bo'lgan duplikat SMS holati** (bo'lim 33/80's "provider timeout = aniq
+  yuborilmadi degani emas" — buning teskarisi ham to'g'ri: "aniq
+  yuborilgan" degani ham EMAS). SMS provider (Eskiz/PlayMobile va
+  o'xshashlar) odatda client-tomonidan berilgan idempotency kalitini
+  QO'LLAB-QUVVATLAMAYDI — shuning uchun "exactly-once notification"
+  KAFOLATI BERILMAYDI, faqat **at-least-once delivery attempt +
+  provider-tomonidan-mumkin-bo'lsa idempotent qabul qilish** (bo'lim 3).
+  `OutboxEvent.id` har doim BARQAROR reference sifatida uzatiladi
+  (`SmsProvider.send(..., { reference: outboxEvent.id })`) — real provider
+  buni qo'llab-quvvatlasa, duplikat xavfi YO'QOLADI.
+
+### Retry siyosati
+
+| Klassifikatsiya | Misol | Natija |
+|---|---|---|
+| Retryable | tarmoq xatosi, provider 5xx, istisno/timeout | `PENDING`, eksponensial backoff (`OUTBOX_RETRY_BASE_SECONDS` — sukut 30s, `OUTBOX_RETRY_MAX_SECONDS` — sukut 3600s, ±15% jitter) |
+| Permanent | provider "yaroqsiz raqam" kabi aniq javob | DARHOL `DEAD`, retry qilinmaydi |
+| Noma'lum eventType/payloadVersion | deploy skew, kod hali yangilanmagan | DARHOL `DEAD` — operator ko'rishi kerak, "jim muvaffaqiyatli" ko'rinmaydi |
+| Shablon uchun kerakli maydon yo'q | masalan `title`/`amount` topilmadi | DARHOL `DEAD` (qayta urinish ma'lumotni yaratmaydi) |
+| Max attempts tugadi (`OUTBOX_MAX_ATTEMPTS` — sukut 6) | ketma-ket retryable xatolar | `DEAD`, `lastErrorCode=MAX_ATTEMPTS_EXHAUSTED` |
+
+**Hech qachon**: vaqt o'tgani UCHUNGINA (masalan uzoq PENDING) avtomatik
+`DEAD`/`FAILED` qilinmaydi — faqat YUQORIDAGI ANIQ klassifikatsiya
+asosida. Staff HAM statusni to'g'ridan-to'g'ri "SENT" qila olmaydi (bo'lim
+29) — `POST /staff/outbox/:id/retry` faqat `DEAD`/`SKIPPED`ni `PENDING`ga
+qaytaradi, keyingi haqiqiy claim/deliver siklidan o'tadi.
+
+### DEAD/SKIPPED topilsa (staff)
+
+1. `GET /staff/outbox?status=DEAD` — muammoli qatorlarni ko'ring.
+2. `GET /staff/outbox/:id` — `lastErrorCode`/`lastError` va
+   `deliveryAttempts` tarixini o'qing (`UNSUPPORTED_EVENT`/
+   `UNSUPPORTED_PAYLOAD_VERSION` — kod muammosi, deploy tekshiring;
+   `PERMANENT_PROVIDER_FAILURE`/`MAX_ATTEMPTS_EXHAUSTED` — provider holatini
+   tekshiring).
+3. Muammo hal bo'lgach (masalan yangi deploy bilan kod tuzatildi) —
+   `POST /staff/outbox/:id/retry`.
+4. `SKIPPED` odatda muammo EMAS (masalan bu eventType uchun bildirishnoma
+   ataylab yo'q) — faqat `RECIPIENT_MISSING` bilan `SKIPPED` bo'lgan va
+   endi haqiqatan qabul qiluvchisi bor (masalan foydalanuvchi ma'lumoti
+   tuzatildi) qatorlarni qayta ishga tushiring.
+
+### Redis o'chib qolsa
+
+Business oqim (Payment/Contract/... yozish) Redis'ga UMUMAN BOG'LIQ EMAS —
+`OutboxEvent` DB'da xavfsiz qoladi. Faqat **avtomatik** yetkazish
+to'xtaydi (BullMQ signal yo'q); Redis qaytgach:
+- Repeatable job (`outbox-sweep`, `OUTBOX_SWEEP_INTERVAL_SECONDS` — sukut
+  30s) o'z-o'zidan davom etadi VA
+- DB'dagi `PENDING`/eskirgan `PROCESSING` qatorlar HECH QACHON yo'qolmagan
+  — keyingi claim ularni topadi (queue signal — faqat "uyg'otish",
+  authoritative manba emas).
+
+OTP SMS (`OTP_SMS_QUEUE`) BUTUNLAY ALOHIDA navbat/oqim — bu bo'lim unga
+tegishli emas (Bosqich 2'dan o'zgarishsiz).
+
+### Tarixiy backlog (deploy paytida MAJBURIY qadam)
+
+Bosqich 1-9 davomida yozilgan, hali `PENDING` turgan `OutboxEvent`
+qatorlari bor (masalan doimiy dev DB'da — bu haqiqatda tekshirilgan: bu
+loyihaning o'zida ~22 ta shunday qator topilgan). Agar worker/scheduler
+ULARNI TO'G'RIDAN-TO'G'RI ishga tushirilsa, ular BIRDAN haqiqiy
+foydalanuvchilarga oylar oldingi ("shartnomangiz yaratildi" kabi)
+bildirishnoma sifatida ketishi MUMKIN — bu YOMON, chalkash tajriba.
+
+**Production deploy'da, worker/scheduler ko'tarilishidan OLDIN, BIR
+MARTA**:
+
+```bash
+npm run outbox:cutover -- --dry-run   # avval qancha qator ta'sirlanishini ko'ring
+npm run outbox:cutover                # haqiqatan SKIPPED qiladi (lastErrorCode=HISTORICAL_BACKLOG_CUTOFF)
+```
+
+Bu — ONGLI, BIR MARTALIK, auditable operatsiya (doimiy "cutoff sanasi"
+konfiguratsiyasi YO'Q — shu orqali worker'ning kundalik claim so'rovi
+abadiy murakkablashmaydi). Skript idempotent: qayta ishga tushirilsa
+faqat hali `PENDING` qolganlarni topadi (allaqachon `SKIPPED`
+qilinganlarga tegmaydi).
+
+### SMS provider — production fail-closed
+
+`SMS_PROVIDER=CONSOLE` (real SMS yubormaydi) — `PAYMENT_PROVIDER`/
+`PAYOUT_PROVIDER` bilan BIR XIL fail-closed qatlam: production'da boot
+RAD ETILADI (`sms.module.ts`ning factory'si). OTP va generic
+bildirishnoma BIR XIL `SMS_PROVIDER`ni bo'lishadi (bo'lim 12) — real
+Eskiz/PlayMobile integratsiyasi hali YO'Q (spetsifikatsiya repo/docs'da
+yo'q, o'ylab topilmaydi).
+
+### i18n — hozircha faqat o'zbekcha
+
+`User` modelida `locale` maydoni UMUMAN YO'Q — foydalanuvchining
+qaysi tilni afzal ko'rishini ANIQLASHNING hech qanday yo'li yo'q.
+Shablonlar (`event-routing.constant.ts`) shuning uchun HOZIRCHA FAQAT
+o'zbek tilida — aralash-tilli yoki noto'g'ri taxmin qilingan xabar
+yuborishdan ko'ra bitta izchil til afzal. RU/EN kerak bo'lsa: (1) `User`ga
+`locale` ustuni qo'shiladi, (2) shablon funksiyalari `Locale` parametr
+qabul qiladi.

@@ -134,6 +134,21 @@ describe('validateEnv', () => {
     expect(validateEnv({ ...base }).PAYOUT_PROVIDER).toBe('TEST');
   });
 
+  it('SMS_PROVIDER sukut bo’yicha "CONSOLE"', () => {
+    expect(validateEnv({ ...base }).SMS_PROVIDER).toBe('CONSOLE');
+  });
+
+  it('Bosqich 10 — OUTBOX_* sukut qiymatlari', () => {
+    const env = validateEnv({ ...base });
+    expect(env.OUTBOX_PROCESSING_TIMEOUT_SECONDS).toBe(120);
+    expect(env.OUTBOX_BATCH_SIZE).toBe(50);
+    expect(env.OUTBOX_WORKER_CONCURRENCY).toBe(5);
+    expect(env.OUTBOX_MAX_ATTEMPTS).toBe(6);
+    expect(env.OUTBOX_RETRY_BASE_SECONDS).toBe(30);
+    expect(env.OUTBOX_RETRY_MAX_SECONDS).toBe(3600);
+    expect(env.OUTBOX_SWEEP_INTERVAL_SECONDS).toBe(30);
+  });
+
   it('DB_APP_ROLE sukut bo’yicha "bobododa_app"', () => {
     expect(validateEnv({ ...base }).DB_APP_ROLE).toBe('bobododa_app');
   });

@@ -138,4 +138,30 @@ export class AppConfigService {
       intervalSeconds: this.get('RECONCILIATION_INTERVAL_SECONDS'),
     };
   }
+
+  /** Bosqich 10 — `sms.module.ts` shundan provider'ni tanlaydi (Payment/Payout bilan bir xil naqsh). */
+  get sms(): { provider: Env['SMS_PROVIDER'] } {
+    return { provider: this.get('SMS_PROVIDER') };
+  }
+
+  /** Bosqich 10 — Outbox notification delivery worker konfiguratsiyasi. */
+  get outbox(): {
+    processingTimeoutSeconds: number;
+    batchSize: number;
+    workerConcurrency: number;
+    maxAttempts: number;
+    retryBaseSeconds: number;
+    retryMaxSeconds: number;
+    sweepIntervalSeconds: number;
+  } {
+    return {
+      processingTimeoutSeconds: this.get('OUTBOX_PROCESSING_TIMEOUT_SECONDS'),
+      batchSize: this.get('OUTBOX_BATCH_SIZE'),
+      workerConcurrency: this.get('OUTBOX_WORKER_CONCURRENCY'),
+      maxAttempts: this.get('OUTBOX_MAX_ATTEMPTS'),
+      retryBaseSeconds: this.get('OUTBOX_RETRY_BASE_SECONDS'),
+      retryMaxSeconds: this.get('OUTBOX_RETRY_MAX_SECONDS'),
+      sweepIntervalSeconds: this.get('OUTBOX_SWEEP_INTERVAL_SECONDS'),
+    };
+  }
 }

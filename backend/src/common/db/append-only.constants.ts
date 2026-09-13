@@ -39,7 +39,20 @@ export const APPEND_ONLY_TABLES = {
   },
   outbox_events: {
     revoke: ['UPDATE', 'DELETE'],
-    allowUpdateColumns: ['status', 'attempts', 'lastError', 'availableAt', 'processedAt'],
+    // Bosqich 10 — `lastErrorCode`/`processingToken`/`processingStartedAt`
+    // qo'shildi (claim/finalize worker'ga kerak). `payloadVersion` — FAQAT
+    // yaratilishda yoziladi, keyin HECH QACHON o'zgarmaydi, shuning uchun
+    // ro'yxatda YO'Q (append-only bo'lib qolishi kerak bo'lgan maydon).
+    allowUpdateColumns: [
+      'status',
+      'attempts',
+      'lastError',
+      'lastErrorCode',
+      'processingToken',
+      'processingStartedAt',
+      'availableAt',
+      'processedAt',
+    ],
   },
   // Bosqich 4 (Contract/Milestone) — ish topshirish/o'zgartirish so'rovi
   // tarixi. `AuditLog`dan alohida (bo'lim 16: domain history vs security
@@ -110,6 +123,14 @@ export const APPEND_ONLY_TABLES = {
   // QO'SHILMAYDI — u ataylab mutable (staff `acknowledge()` orqali
   // `resolvedAt`/`resolvedByStaffId`/`resolutionNote`ni yozadi).
   reconciliation_runs: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
+  // Bosqich 10 (Outbox delivery) — insert-on-complete (`ReconciliationRun`
+  // bilan bir xil naqsh): har urinish TO'LIQ yakunlanganda BIR MARTA
+  // yoziladi. Xom provider javobi saqlanmaydi — faqat strukturaviy natija,
+  // shuning uchun tuzatish/tahrirlash ehtiyoji UMUMAN yo'q.
+  outbox_delivery_attempts: {
     revoke: ['UPDATE', 'DELETE'],
     allowUpdateColumns: [],
   },

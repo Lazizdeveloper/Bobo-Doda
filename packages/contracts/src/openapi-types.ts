@@ -1476,6 +1476,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/staff/outbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffOutboxController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/outbox/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffOutboxController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/outbox/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffOutboxController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/outbox/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffOutboxController_retry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2095,6 +2159,58 @@ export interface components {
             startedAt: string;
             /** Format: date-time */
             completedAt: string;
+        };
+        OutboxDeliveryAttemptResponseDto: {
+            id: string;
+            attemptNumber: number;
+            /** @enum {string} */
+            channel: "SMS" | "EMAIL" | "TELEGRAM";
+            provider: string;
+            /** @enum {string} */
+            status: "DELIVERED" | "RETRYABLE_FAILURE" | "PERMANENT_FAILURE";
+            errorCode?: Record<string, never>;
+            providerMessageId?: Record<string, never>;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: string;
+        };
+        OutboxEventDetailResponseDto: {
+            id: string;
+            aggregateType: string;
+            aggregateId: string;
+            eventType: string;
+            payload: Record<string, never>;
+            payloadVersion: number;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "SENT" | "DEAD" | "SKIPPED";
+            attempts: number;
+            lastError?: Record<string, never>;
+            lastErrorCode?: Record<string, never>;
+            /** Format: date-time */
+            availableAt: string;
+            processedAt?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+            deliveryAttempts: components["schemas"]["OutboxDeliveryAttemptResponseDto"][];
+        };
+        OutboxEventResponseDto: {
+            id: string;
+            aggregateType: string;
+            aggregateId: string;
+            eventType: string;
+            payload: Record<string, never>;
+            payloadVersion: number;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "SENT" | "DEAD" | "SKIPPED";
+            attempts: number;
+            lastError?: Record<string, never>;
+            lastErrorCode?: Record<string, never>;
+            /** Format: date-time */
+            availableAt: string;
+            processedAt?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
         };
     };
     responses: never;
@@ -4309,6 +4425,88 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    StaffOutboxController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "PENDING" | "PROCESSING" | "SENT" | "DEAD" | "SKIPPED";
+                eventType?: string;
+                aggregateType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffOutboxController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffOutboxController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutboxEventDetailResponseDto"];
+                };
+            };
+        };
+    };
+    StaffOutboxController_retry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutboxEventResponseDto"];
+                };
             };
         };
     };

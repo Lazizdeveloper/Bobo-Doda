@@ -3921,6 +3921,167 @@
           "staff-financial-integrity"
         ]
       }
+    },
+    "/staff/outbox": {
+      "get": {
+        "operationId": "StaffOutboxController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SENT",
+                "DEAD",
+                "SKIPPED"
+              ]
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "aggregateType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
+    },
+    "/staff/outbox/summary": {
+      "get": {
+        "operationId": "StaffOutboxController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
+    },
+    "/staff/outbox/{id}": {
+      "get": {
+        "operationId": "StaffOutboxController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
+    },
+    "/staff/outbox/{id}/retry": {
+      "post": {
+        "operationId": "StaffOutboxController_retry",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
     }
   },
   "info": {
@@ -6062,6 +6223,196 @@
           "observedLocalStatus",
           "startedAt",
           "completedAt"
+        ]
+      },
+      "OutboxDeliveryAttemptResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attemptNumber": {
+            "type": "number"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "SMS",
+              "EMAIL",
+              "TELEGRAM"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DELIVERED",
+              "RETRYABLE_FAILURE",
+              "PERMANENT_FAILURE"
+            ]
+          },
+          "errorCode": {
+            "type": "object"
+          },
+          "providerMessageId": {
+            "type": "object"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "attemptNumber",
+          "channel",
+          "provider",
+          "status",
+          "startedAt",
+          "completedAt"
+        ]
+      },
+      "OutboxEventDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "aggregateType": {
+            "type": "string"
+          },
+          "aggregateId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "payloadVersion": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SENT",
+              "DEAD",
+              "SKIPPED"
+            ]
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "lastError": {
+            "type": "object"
+          },
+          "lastErrorCode": {
+            "type": "object"
+          },
+          "availableAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "processedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deliveryAttempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutboxDeliveryAttemptResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "aggregateType",
+          "aggregateId",
+          "eventType",
+          "payload",
+          "payloadVersion",
+          "status",
+          "attempts",
+          "availableAt",
+          "createdAt",
+          "deliveryAttempts"
+        ]
+      },
+      "OutboxEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "aggregateType": {
+            "type": "string"
+          },
+          "aggregateId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "payloadVersion": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SENT",
+              "DEAD",
+              "SKIPPED"
+            ]
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "lastError": {
+            "type": "object"
+          },
+          "lastErrorCode": {
+            "type": "object"
+          },
+          "availableAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "processedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "aggregateType",
+          "aggregateId",
+          "eventType",
+          "payload",
+          "payloadVersion",
+          "status",
+          "attempts",
+          "availableAt",
+          "createdAt"
         ]
       }
     }

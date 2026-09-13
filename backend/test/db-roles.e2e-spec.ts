@@ -363,6 +363,43 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).resolves.toBe(1);
   });
 
+  // ── Bosqich 10 — outbox_events yangi ustunlari, outbox_delivery_attempts append-only ──
+
+  t('bobododa_app outbox_events yangi ustunlariga (processingToken/lastErrorCode/processingStartedAt) UPDATE qila oladi', async () => {
+    const outboxId = crypto.randomUUID();
+    await appDb!.outboxEvent.create({
+      data: { id: outboxId, aggregateType: 'TEST', aggregateId: 'db-roles-proof', eventType: 'DB_ROLES_PROOF', payload: {} },
+    });
+    const claimToken = crypto.randomUUID();
+    await expect(
+      appDb!.$executeRawUnsafe(
+        `UPDATE outbox_events SET "processingToken" = '${claimToken}'::uuid, "processingStartedAt" = now(), "lastErrorCode" = 'TEST_CODE' WHERE id = '${outboxId}'::uuid`,
+      ),
+    ).resolves.toBe(1);
+  });
+
+  t('bobododa_app outbox_delivery_attempts ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
+    const outboxId = crypto.randomUUID();
+    await appDb!.outboxEvent.create({
+      data: { id: outboxId, aggregateType: 'TEST', aggregateId: 'db-roles-proof-2', eventType: 'DB_ROLES_PROOF', payload: {} },
+    });
+    const attemptId = crypto.randomUUID();
+    await expect(
+      appDb!.$executeRawUnsafe(
+        `INSERT INTO outbox_delivery_attempts
+           (id, "outboxEventId", "attemptNumber", channel, provider, status, "startedAt", "completedAt")
+         VALUES ('${attemptId}'::uuid, '${outboxId}'::uuid, 1, 'SMS', 'TEST', 'DELIVERED', now(), now())`,
+      ),
+    ).resolves.toBeGreaterThanOrEqual(1);
+
+    await expect(
+      appDb!.$executeRawUnsafe(`UPDATE outbox_delivery_attempts SET status = 'RETRYABLE_FAILURE' WHERE id = '${attemptId}'::uuid`),
+    ).rejects.toThrow(/permission denied/i);
+    await expect(
+      appDb!.$executeRawUnsafe(`DELETE FROM outbox_delivery_attempts WHERE id = '${attemptId}'::uuid`),
+    ).rejects.toThrow(/permission denied/i);
+  });
+
   t('bobododa_app oddiy jadvalni (users) to‘liq boshqara oladi', async () => {
     await appDb!.$executeRawUnsafe(
       `INSERT INTO users (id, phone, "passwordHash", "fullName", "updatedAt")

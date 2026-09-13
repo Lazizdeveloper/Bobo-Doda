@@ -109,10 +109,38 @@ enum AuditActorType {
 
 /// Outbox hodisasining yetkazish holati.
 enum OutboxStatus {
+  /// Yetkazish kutilmoqda (`availableAt` bilan — backoff shu maydonni oldinga suradi).
   PENDING
+  /// Worker claim qilgan (`processingToken`/`processingStartedAt` bilan) — lease muddati bor.
   PROCESSING
+  /// TERMINAL — provider yetkazishni authoritative qabul qildi.
   SENT
-  FAILED
+  /// TERMINAL — Bosqich 10: retry limiti tugadi (DLQ semantikasi). Retry
+  /// qilinadigan oddiy xato BU HOLATDA EMAS — u yana PENDING'ga qaytadi.
+  DEAD
+  /// TERMINAL — Bosqich 10, bo'lim 53: bildirishnoma ATAYLAB YUBORILMADI
+  /// (masalan qabul qiluvchi topilmadi, yoki hodisa turi uchun bildirishnoma
+  /// mo'ljallanmagan) — provider xatosi EMAS, shuning uchun DEAD bilan
+  /// aralashtirilmaydi (operator ikkalasini turli xil o'qishi kerak).
+  SKIPPED
+}
+
+/// Bosqich 10, bo'lim 13/18 — bildirishnoma kanali. Hozircha FAQAT SMS real
+/// implement qilingan (bo'lim 18: real Email/Telegram provider spec yo'q,
+/// o'ylab topilmaydi) — qolgan ikkitasi kelajakdagi kengayish uchun.
+enum NotificationChannel {
+  SMS
+  EMAIL
+  TELEGRAM
+}
+
+/// Bosqich 10, bo'lim 23 — bitta yetkazish urinishining NATIJASI (append-only
+/// `OutboxDeliveryAttempt`da saqlanadi). `RETRYABLE_FAILURE`/`PERMANENT_FAILURE`
+/// ajratilishi retry siyosati uchun MUHIM (bo'lim 23).
+enum OutboxDeliveryAttemptStatus {
+  DELIVERED
+  RETRYABLE_FAILURE
+  PERMANENT_FAILURE
 }
 
 /// Bosqich 3 — hisob holati (staff moderatsiyasi). `User.deletedAt` (B4
@@ -664,16 +692,70 @@ model OutboxEvent {
   aggregateId   String
   eventType     String
   payload       Json
+  /// Bosqich 10, bo'lim 15 — worker payload formatini shu bo'yicha
+  /// talqin qiladi (backward-compatible parser). Yangi format kerak
+  /// bo'lsa versiya oshadi, ESKI qatorlar o'z versiyasida qoladi.
+  payloadVersion Int          @default(1)
   status        OutboxStatus @default(PENDING)
   attempts      Int          @default(0)
   lastError     String?
+  /// Bosqich 10 — strukturaviy sabab kodi (masalan `UNSUPPORTED_EVENT`,
+  /// `RECIPIENT_MISSING`) — erkin matnli `lastError`dan farqli, filtrlash/
+  /// klassifikatsiya uchun.
+  lastErrorCode String?
+  /// Bosqich 10, bo'lim 43 — claim token: worker shu qatorni PROCESSING
+  /// qilganda o'zining tasodifiy tokenini yozadi; FINALIZE faqat shu token
+  /// hali ustunda TURGANDA muvaffaqiyatli bo'ladi (stale worker eskirgan
+  /// natija bilan yangi worker holatini QAYTA YOZOLMAYDI).
+  processingToken     String?   @db.Uuid
+  /// Bosqich 10, bo'lim 9/10 — lease boshlanish payti. Muddat
+  /// (`OUTBOX_PROCESSING_TIMEOUT_SECONDS`) konfiguratsiyada — bu yerda
+  /// alohida "leaseUntil" USTUNI YO'Q (hisoblanadi, saqlanmaydi — bir xil
+  /// falsafa Bosqich 9's stuck-detection'i bilan).
+  processingStartedAt DateTime? @db.Timestamptz(6)
+  /// Backoff/retry rejalashtirish — bo'lim 24: keyingi urinish shu vaqtdan
+  /// OLDIN sodir bo'lmaydi. Bosqich 1'dan mavjud ustun qayta ishlatiladi
+  /// (yangi "nextAttemptAt" USTUNI YARATILMAYDI — bir xil ma'no).
   availableAt   DateTime     @default(now()) @db.Timestamptz(6)
+  /// TERMINAL holatga (SENT/DEAD/SKIPPED) o'tgan payt — qaysi terminal
+  /// holat ekanini `status` aytadi, BU maydon FAQAT "qachon".
   processedAt   DateTime?    @db.Timestamptz(6)
   createdAt     DateTime     @default(now()) @db.Timestamptz(6)
 
+  deliveryAttempts OutboxDeliveryAttempt[]
+
   @@index([status, availableAt])
+  @@index([status, processingStartedAt])
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
+}
+
+/// Bosqich 10, bo'lim 5/6 — append-only yetkazish urinishlari tarixi.
+/// `OutboxEvent.status`ni FAQAT yangilab ketish operational debugging uchun
+/// yetarli emas (nechta urinish bo'lgan, qaysi provider/kanal, qachon) —
+/// bu jadval HAR bir urinishni alohida, o'chmas yozuv sifatida saqlaydi.
+/// Xom provider javobi/body SAQLANMAYDI (bo'lim 5's "Raw response/body
+/// saqlama" + bo'lim 46's redaction qoidasi) — faqat strukturaviy natija.
+model OutboxDeliveryAttempt {
+  id            String                      @id @db.Uuid
+  outboxEventId String                      @db.Uuid
+  outboxEvent   OutboxEvent                 @relation(fields: [outboxEventId], references: [id])
+  attemptNumber Int
+  channel       NotificationChannel
+  provider      String
+  status        OutboxDeliveryAttemptStatus
+  errorCode     String?
+  providerMessageId String?
+  startedAt     DateTime @db.Timestamptz(6)
+  /// Insert-on-complete (Bosqich 9's `ReconciliationRun` bilan bir xil
+  /// naqsh) — qator FAQAT urinish TO'LIQ yakunlanganda BIR MARTA yoziladi,
+  /// shuning uchun har doim ma'lum (create-keyin-update tsikli YO'Q).
+  completedAt   DateTime @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([outboxEventId, attemptNumber])
+  @@index([outboxEventId, createdAt])
+  @@map("outbox_delivery_attempts")
 }
 
 /// Idempotentlik kaliti — pul harakati qiladigan HAR endpoint

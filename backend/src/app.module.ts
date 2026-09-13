@@ -32,6 +32,7 @@ import { RefundModule } from '@/modules/refund/refund.module';
 import { PayoutModule } from '@/modules/payout/payout.module';
 import { DisputeModule } from '@/modules/dispute/dispute.module';
 import { ReconciliationModule } from '@/modules/reconciliation/reconciliation.module';
+import { NotificationModule } from '@/modules/notification/notification.module';
 
 /**
  * Ildiz modul. Domen modullari (`users`, `catalog`, `contracts`,
@@ -74,6 +75,7 @@ import { ReconciliationModule } from '@/modules/reconciliation/reconciliation.mo
     PayoutModule,
     DisputeModule,
     ReconciliationModule,
+    NotificationModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
