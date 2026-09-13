@@ -1,8 +1,8 @@
 # Production Readiness — Bobo&Doda backend
 
-Bosqich 12 natijasi. Bu hujjat production launch oldidan tekshiriladigan
+Bosqich 12/13 natijasi. Bu hujjat production launch oldidan tekshiriladigan
 YAGONA checklist — har band `docs/RUNBOOK.md`ning tegishli bo'limiga
-havola beradi (batafsil kontekst uchun).
+havola beradi (batafsil kontekst uchun, ayniqsa §13).
 
 Ustuvorlik tartibi (loyihaning hamma qarorlarida qo'llaniladi): **Protocol
 correctness > Financial correctness > Provider idempotency > Ledger
@@ -15,8 +15,12 @@ Convenience.**
 - [ ] `PAYME_LOGIN` — odatda `Paycom` (Payme Business bizga shu login bilan murojaat qiladi)
 - [ ] `PAYME_KEY` — kassa qo'shilgandan keyin berilgan parol/kalit
 - [ ] `PAYME_CHECKOUT_URL=https://checkout.paycom.uz` (production — `test.paycom.uz` EMAS)
+- [ ] `PLAYMOBILE_API_URL` — portalda ro'yxatdan o'tgach beriladigan real endpoint (Bosqich 13)
+- [ ] `PLAYMOBILE_LOGIN` / `PLAYMOBILE_PASSWORD` — PlayMobile shaxsiy kabinetidan
+- [ ] `PLAYMOBILE_SENDER` — tasdiqlangan sender nomi (≤11 belgi)
 - [ ] Hech biri `.env`/kod ichida commit qilinmagan (`git log -p` bilan tarixiy tekshiruv ham)
-- [ ] CLICK — implement qilinmagan (`CLICK_PROVIDER_IMPLEMENTATION = BLOCKED_BY_OFFICIAL_SPEC`), credential kerak emas
+- [ ] CLICK — implement qilinmagan (`CLICK_PROVIDER_IMPLEMENTATION = BLOCKED_BY_OFFICIAL_SPEC`, Bosqich 13'da qayta tekshirildi — o'zgarish yo'q), credential kerak emas
+- [ ] Real payout rail hali tanlanmagan — `PAYOUTS_ENABLED=false` bilan launch (bo'lim 3/9 qarang) YOKI real rail tanlanguncha kutish, biznes qaroriga bog'liq
 
 ## 2. DNS / TLS
 
@@ -33,8 +37,8 @@ Convenience.**
 - [ ] `JWT_ACCESS_SECRET` / `JWT_STAFF_ACCESS_SECRET` — ≥32 belgi, tasodifiy, `.env.example` placeholder EMAS
 - [ ] `STAFF_TOTP_ENCRYPTION_KEY` — 64 hex belgi, tasodifiy
 - [ ] `PAYMENT_PROVIDER=PAYME` (`TEST` EMAS)
-- [ ] `PAYOUT_PROVIDER` — hozircha faqat `TEST` mavjud (real payout rail Bosqich 12 scope'idan tashqarida — bo'lim 12 qarang)
-- [ ] `SMS_PROVIDER=CONSOLE` — bu HAM production'da xavfli (real SMS yubormaydi); real provider ulanmaguncha OTP/bildirishnoma email/boshqa kanal orqali qo'lda kuzatilishi kerak
+- [ ] `PAYOUTS_ENABLED=false` (real payout rail hali rasmiy tanlanmagan — Bosqich 13, RUNBOOK §13) — YOKI real rail tanlangach `PAYOUT_PROVIDER` yangilanadi
+- [ ] `SMS_PROVIDER=PLAYMOBILE` (`CONSOLE` EMAS) + `PLAYMOBILE_*` to'liq (Bosqich 13)
 - [ ] `SWAGGER_ENABLED=false`
 - [ ] `DB_ROLE_ASSERTION=on` (yoki sukut — `off` production'da Zod darajasida IMKONSIZ)
 - [ ] `CORS_ORIGINS` — faqat haqiqiy frontend/admin domenlari (vergul bilan)
@@ -58,7 +62,7 @@ Convenience.**
 
 ## 6. Migratsiyalar
 
-- [ ] `npx prisma migrate status` — "up to date" (kutilmagan pending migratsiya yo'q)
+- [ ] `npx prisma migrate status` — "up to date" (kutilmagan pending migratsiya yo'q). Mexanizm (Phase 1→12 barcha migratsiya, genuinely BO'SH DB) Bosqich 13'da bir marta dry-run bilan tasdiqlangan (RUNBOOK §13) — bu HAR BIR haqiqiy deploy'da QAYTA tekshiriladi, bir martalik dry-run kifoya EMAS
 - [ ] Deploy CI/CD bosqichi migratsiyani ALOHIDA qadam sifatida bajaradi (app boot ICHIDA emas — RUNBOOK §12 "Deployment ketma-ketligi")
 - [ ] Zero-downtime qoidasi (expand/contract) yangi migratsiyalar uchun ham qo'llaniladi
 
@@ -86,7 +90,7 @@ RUNBOOK §12 "Provider cutover checklist" (to'liq) — qisqacha:
 ## 10. Backup / Restore
 
 - [ ] Backup strategiyasi hujjatlashtirilgan (RUNBOOK §12) va provayder darajasida FAOL
-- [ ] Restore drill KAMIDA bir marta staging/test DB'da bajarilgan va natija yozib qo'yilgan
+- [ ] Restore drill KAMIDA bir marta staging/test DB'da bajarilgan va natija yozib qo'yilgan — Bosqich 13'da `pg_dump`/`pg_restore` bilan bir marta bajarildi (RUNBOOK §13, `RESTORE_DRILL=PASS`); bu PROVIDER'NING avtomatik backup/restore mexanizmi (RDS/Cloud SQL snapshot) bilan ALMASHTIRMAYDI — production'ga chiqqach provider-darajasidagi drill HAM qilinishi kerak
 - [ ] Ledger/Audit jadvallari (append-only) backup ustuvorligida ALOHIDA ta'kidlangan
 
 ## 11. Monitoring / Health
@@ -123,15 +127,22 @@ payment amount mismatch audit yozuvi   → HAR BIRI ko'rib chiqiladi (potentsial
 ## 14. Sandbox verification
 
 ```text
-PAYME_PROTOCOL: PASS   — test/payme.e2e-spec.ts (26 test, real Postgres)
-PAYME_SANDBOX:  NOT_RUN — real Payme sandbox credential bu sessiyada yo'q edi
+PAYME_PROTOCOL:      PASS    — test/payme.e2e-spec.ts (26 test, real Postgres)
+PAYME_SANDBOX:       NOT_RUN — real Payme sandbox credential bu sessiyada yo'q edi
 
-CLICK_PROTOCOL: BLOCKED — rasmiy docs.click.uz texnik sahifalari o'qilmadi (JS SPA)
+PLAYMOBILE_PROTOCOL: PASS    — provider/util unit testlar (20 test, rasmiy PDF fixture'lariga mos)
+PLAYMOBILE_LIVE:     NOT_RUN — real PlayMobile credential bu sessiyada yo'q edi
+
+CLICK_PROTOCOL: BLOCKED — rasmiy docs.click.uz texnik sahifalari o'qilmadi (JS SPA), Bosqich 13'da qayta tekshirildi, o'zgarish yo'q
 CLICK_SANDBOX:  NOT_RUN
+
+PAYOUT_PROTOCOL: N/A — real rail hali tanlanmagan, PAYOUTS_ENABLED=false bilan feature xavfsiz o'chirilgan (Bosqich 13)
 ```
 
 Real `PAYME_MERCHANT_ID`/`PAYME_LOGIN`/`PAYME_KEY` (sandbox) qo'lga
 kiritilgach: `https://test.paycom.uz` bilan checkout oqimini boshidan
 oxirigacha (checkout → CheckPerformTransaction → CreateTransaction →
-PerformTransaction) qo'lda bajaring va bu bo'limni yangilang. Credential
-yo'qligida PASS deb YOZILMAYDI.
+PerformTransaction) qo'lda bajaring va bu bo'limni yangilang. Real
+`PLAYMOBILE_LOGIN`/`PLAYMOBILE_PASSWORD` qo'lga kiritilgach — bitta haqiqiy
+OTP SMS yuborib, yetkazilganini tasdiqlang. Credential yo'qligida
+HECH QAYSI bo'lim PASS deb YOZILMAYDI.

@@ -182,8 +182,46 @@ describe('validateEnv', () => {
     expect(validateEnv({ ...base }).PAYOUT_PROVIDER).toBe('TEST');
   });
 
+  it('Bosqich 13 — PAYOUTS_ENABLED sukut bo‘yicha true', () => {
+    expect(validateEnv({ ...base }).PAYOUTS_ENABLED).toBe(true);
+  });
+
+  it('Bosqich 13 — PAYOUTS_ENABLED="false" bilan o‘tadi', () => {
+    expect(validateEnv({ ...base, PAYOUTS_ENABLED: 'false' }).PAYOUTS_ENABLED).toBe(false);
+  });
+
   it('SMS_PROVIDER sukut bo’yicha "CONSOLE"', () => {
     expect(validateEnv({ ...base }).SMS_PROVIDER).toBe('CONSOLE');
+  });
+
+  it('Bosqich 13 — SMS_PROVIDER=PLAYMOBILE, credential’lar yo‘q — rad etiladi', () => {
+    expect(() => validateEnv({ ...base, SMS_PROVIDER: 'PLAYMOBILE' })).toThrow(/PLAYMOBILE_API_URL/);
+  });
+
+  it('Bosqich 13 — SMS_PROVIDER=PLAYMOBILE, to‘liq credential bilan o‘tadi', () => {
+    const env = validateEnv({
+      ...base,
+      SMS_PROVIDER: 'PLAYMOBILE',
+      PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
+      PLAYMOBILE_LOGIN: 'test-login',
+      PLAYMOBILE_PASSWORD: 'test-password',
+      PLAYMOBILE_SENDER: 'BoboDoda',
+    });
+    expect(env.SMS_PROVIDER).toBe('PLAYMOBILE');
+    expect(env.PLAYMOBILE_SENDER).toBe('BoboDoda');
+  });
+
+  it('Bosqich 13 — PLAYMOBILE_SENDER 11 belgidan uzun bo‘lsa rad etiladi', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        SMS_PROVIDER: 'PLAYMOBILE',
+        PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
+        PLAYMOBILE_LOGIN: 'test-login',
+        PLAYMOBILE_PASSWORD: 'test-password',
+        PLAYMOBILE_SENDER: 'TooLongSenderName',
+      }),
+    ).toThrow(/PLAYMOBILE_SENDER/);
   });
 
   it('Bosqich 10 — OUTBOX_* sukut qiymatlari', () => {

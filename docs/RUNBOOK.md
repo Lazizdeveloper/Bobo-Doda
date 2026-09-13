@@ -1068,8 +1068,10 @@ DB parol (bobododa_app / bobododa_migrator):
   `DATABASE_MIGRATION_URL` secret'ni yangilang → rolling restart.
   Eski parol connection pool tugagach ishlamay qoladi — qisqa oyna.
 
-SMS provider credential (kelajakda real provider ulanganda):
-  Provider konsolida yangi kalit → secret yangilash → restart.
+PLAYMOBILE_PASSWORD:
+  PlayMobile shaxsiy kabinetida yangi parol → `PLAYMOBILE_PASSWORD`
+  secret'ni yangilang → restart. Downtime qisqa (restart vaqti) — eski
+  parol darhol ishlamay qoladi (Basic auth, sessiya/token YO'Q).
 ```
 
 ### Production readiness — to'liq checklist
@@ -1083,3 +1085,151 @@ Real tashqi tranzaksiya QILMAYDI — faqat: env valid (Zod), TEST/CONSOLE
 provider'lar production'da rad etilishi, DB rol assertioni, migratsiya
 holati joriy, `financial:check`, Redis reachable, kritik config maydonlar
 mavjudligini tekshiradi. Exit 0 = launch check o'tdi, boshqa = bloklangan.
+
+## 13. Real SMS (PlayMobile) + payout feature-gate + launch closure (Bosqich 13)
+
+### SMS — PLAY MOBILE SMS-Broker HTTP API
+
+Manba: rasmiy PDF (`playmobile.uz/instruction/` → "HTTP Protocol" havolasi,
+`playmobile.uz/storage/2022/08/http.pdf`, 2026-09 holatiga ko'ra
+tekshirilgan — konfidensial ichki hujjat, repo'ga NUSXA SAQLANMAGAN).
+Eskiz — rasmiy Postman documenter sahifasi JS-render qilinadigan SPA
+bo'lib chiqdi (statik fetch faqat sarlavhani qaytardi), implement
+QILINMADI.
+
+- **Auth** — Basic (`Authorization: Basic base64(login:password)`).
+- **`POST <PLAYMOBILE_API_URL>/send`** — `sms.originator`/`sms.content.text`
+  + `messages: [{recipient, message-id}]`. `recipient` — `9989xxxxxxx`
+  (E.164'dan `+` olib tashlanadi, faqat shu provider uchun).
+- **`message-id`** — BIZ TANLAYMIZ (provider bermaydi, ≤20 belgi rasmiy
+  chegara): Outbox `reference` bo'lsa SHA-256 hash orqali deterministik
+  qisqartiriladi (retry'da BIR XIL id — idempotency), OTP uchun tasodifiy
+  (bir martalik, stability shart emas).
+- **Matn** — `SmsProvider` interfeysi ikkita chaqiruvchini (OTP: `template=
+  otp_login`+`{code}`; Outbox: `template=eventType`+`{message}` —
+  ALLAQACHON tayyor matn) BIR XIL usulda qabul qiladi;
+  `renderPlayMobileText()` ikkalasini bitta matn qatoriga aylantiradi —
+  PlayMobile'ning o'z "template-id" tizimi (portal ro'yxatdan o'tish talab
+  qiladi) ISHLATILMAYDI.
+- **Xato tasnifi** — rasmiy "Таблица 2.2" to'liq xaritalangan
+  (`playmobile.types.ts`): deyarli barcha kod PERMANENT (bizning so'rov
+  xatosi), FAQAT `100` (Internal server error) RETRYABLE. HTTP 401/403 —
+  PERMANENT (auth/config). HTTP 429 — `Retry-After` o'qiladi. Tarmoq xatosi/
+  timeout (10s, ICHKI qayta urinishsiz — bo'lim 8) — RETRYABLE (sukut).
+- **Fail-closed** — `SMS_PROVIDER=CONSOLE` production'da IMKONSIZ
+  (o'zgarishsiz, Bosqich 10). `SMS_PROVIDER=PLAYMOBILE` tanlansa
+  `PLAYMOBILE_API_URL`/`LOGIN`/`PASSWORD`/`SENDER` HAMMASI majburiy (Zod
+  superRefine + `sms.module.ts` ikkinchi qatlam).
+- **OTP/Outbox semantikasi o'zgarmadi** — `OtpSmsProcessor` (BullMQ, alohida
+  navbat, sir DB'ga yozilmaydi) va `OutboxWorkerService` (Phase 10, claim/
+  deliver/finalize) provayder klassi haqida HECH NARSA bilmaydi
+  (`SmsProvider` interfeysi buzilmagan).
+
+### Real Payout — hali rasmiy tanlanmagan → `PAYOUTS_ENABLED=false`
+
+Repository/business talab hali KONKRET payout rail (bank o'tkazmasi/karta
+payout/merchant API) tanlamagan — bo'lim 13/14 bo'yicha arbitrary provider
+O'YLAB TOPILMADI. Buning o'rniga **xavfsiz feature-gate**:
+
+- `PAYOUTS_ENABLED` env (sukut `true` — dev/test, mavjud xatti-harakat
+  o'zgarishsiz). `false` bo'lsa `payout.module.ts` `PAYOUT_PROVIDER`/
+  `NODE_ENV`dan QAT'I NAZAR har doim `DisabledPayoutProvider` ishlatadi —
+  bu "soxta TEST fallback" EMAS, alohida nomlangan, ochiq holat.
+- `SellerPayoutController.create()` `PAYOUTS_ENABLED`ni ENG BIRINCHI
+  tekshiradi — `FEATURE_DISABLED` (503) darhol, `PayoutService.create()`
+  UMUMAN chaqirilmaydi (hech qanday rezervatsiya/DB yozuv urinilmaydi,
+  mavjud hisob-kitob to'liq tegilmagan).
+- `ReconciliationService`ning `queryPayout?` optional-capability
+  tekshiruvi allaqachon mavjud (Bosqich 9) — `DisabledPayoutProvider` buni
+  implement qilmaydi, reconciliation gracefully o'tkazib yuboradi.
+- **Production launch payout'siz mumkin**: `PAYOUTS_ENABLED=false` +
+  boshqa hamma narsa to'g'ri bo'lsa boot MUVAFFAQIYATLI (pastdagi fresh-DB
+  dry-run bilan tasdiqlangan). Real rail tanlangach — `PayoutProvider`
+  interfeysiga (§16-21, o'zgarishsiz) yangi provider qo'shiladi va
+  `PAYOUTS_ENABLED=true`ga qaytariladi.
+
+### Fresh migration chain — TASDIQLANGAN
+
+Genuinely BO'SH (hech qachon migratsiya qilinmagan) Postgres DB'da
+Phase 1 → Phase 12 barcha 19 ta migratsiya ketma-ket, xatosiz qo'llandi
+(`prisma migrate deploy`, alohida rollar bilan). Faqat doimiy dev DB
+(vaqt o'tishi bilan noaniq holatga kelishi mumkin) migratsiyalangan
+bo'lishi YETARLI EMAS edi — bu talab endi mustaqil tasdiqlangan.
+
+### Fresh production dry-run — TASDIQLANGAN
+
+Yuqoridagi bo'sh DB'ga to'liq TO'G'RI production-simulyatsiya config bilan
+(`NODE_ENV=production`, real Payme/PlayMobile placeholder credential,
+`PAYOUTS_ENABLED=false`, `SWAGGER_ENABLED=false`, aniq `CORS_ORIGINS`,
+`TRUST_PROXY=true`) boot qilindi:
+
+```text
+npm run production:check → PRODUCTION_CHECK_OK (barcha 10 tekshiruv PASS)
+financial:check bo'sh DB'da → 0 CRITICAL (kutilganidek)
+```
+
+Bu — **konfiguratsiya/boot/integrity qatlamining** dalili. Haqiqiy Payme/
+PlayMobile credential bilan REAL tarmoq chaqiruvi bu sessiyada QILINMADI
+(pastga qarang — sandbox/live verification alohida, hamon `NOT_RUN`).
+
+### Restore drill — TASDIQLANGAN
+
+`pg_dump` (custom format, persistent dev DB) → yangi izolyatsiyalangan DB'ga
+`pg_restore` → tekshiruv:
+
+```text
+1. Kritik jadval qatorlar soni (audit_logs, users, contracts, ...) — 1:1 mos
+2. `prisma migrate status` — "up to date"
+3. `boot-check.ts` — BOOT_OK (F1 DB rol assertion restored nusxada HAM o'tadi)
+4. `financial:check` — manba bilan BIR XIL natija (mavjud 2 ta tarixiy
+   CRITICAL anomaliya to'g'ri REPRODUCE bo'ldi — restore jarayoni ma'lumotni
+   BUZMAGANINI isbotlaydi, muammoni yashirmaydi)
+```
+
+**Muhim eslatma**: `pg_restore` `--no-owner` bilan ishlatilganda
+`_prisma_migrations`/append-only jadval huquqlari (`bobododa_migrator`
+egaligi) YO'QOLADI — F1 keyin rad etadi. To'g'ri drill — `--no-owner`SIZ
+(rollar cluster'da allaqachon mavjud bo'lishi kerak) YOKI restore'dan
+keyin `roles.sql`ga teng GRANT/REVOKE qayta qo'llash. Real cloud-provider
+avtomatik backup/restore (RDS/Cloud SQL snapshot) odatda buni to'g'ri
+saqlaydi — bu topilma faqat qo'lda `pg_dump`/`pg_restore` oqimiga tegishli.
+
+`RESTORE_DRILL = PASS` (sabab: yuqoridagi 4 qadam muvaffaqiyatli, throwaway
+DB'larda, production data'ga tegmasdan).
+
+### Outbox cutover dry-run
+
+`npm run outbox:cutover -- --dry-run` — mavjud, ishlaydi (Bosqich 10'dan
+beri), real yozuv/yuborish QILMAYDI, faqat ta'sirlanadigan qator sonini
+chop etadi. Dev DB'da: 0 ta PENDING qator (worker doim tozalab turgan).
+
+### Redis outage — arxitektura tasdiqlangan (kod o'zgarmadi)
+
+Moliyaviy mutatsiyalar (Payment/Refund/Payout/Ledger) DB tranzaksiyasi
+ICHIDA, Redis'ga BOG'LIQ EMAS — Redis o'chsa financial state buzilmaydi.
+Redis'ga bog'liq oqimlar (OTP navbati, `RateLimiterService`, Outbox
+BullMQ scheduling) Redis o'chganda ANIQ xato bilan muvaffaqiyatsiz bo'ladi
+(`RateLimiterService.hit()` try/catch qilmaydi — ataylab, "fail open"
+emas: rate-limit tekshirilmasdan o'tkazib yuborish xavfsizlik regressiyasi
+bo'lardi). Outbox PENDING qatorlari Postgres'da xavfsiz qoladi — Redis
+tiklangach worker davom etadi, hech narsa yo'qolmaydi.
+
+### Staff production bootstrap
+
+Kamida BITTA `ACTIVE` `SUPER_ADMIN` bo'lishi SHART — avtomatik
+yaratilmaydi (default admin/parol — xavfsizlik xatosi bo'lardi). Birinchi
+SUPER_ADMIN qo'lda, DB orqali (bir martalik, deploy runbook qadami)
+yaratiladi: `staffAuthService`ning `create()` yo'li ORQALI EMAS (u HAM
+SUPER_ADMIN talab qiladi — "tuxum-tovuq") — operator to'g'ridan-to'g'ri
+`INSERT INTO staff_members (...)` bilan, `mustChangePassword=true` va
+argon2id hash bilan. TOTP MAJBURIY EMAS (operatsion qaror — kuchli tavsiya
+etiladi, ADR-05 qarang), lekin `mustChangePassword` hard gate (Bosqich 12)
+birinchi login'da darhol parolni almashtirishga majburlaydi.
+
+### Sandbox/live verification — HOZIRGACHA NOT_RUN
+
+Real Payme/PlayMobile merchant credential bu muhitda mavjud emas — haqiqiy
+tashqi tarmoq chaqiruvi QILINMADI. Kod darajasidagi tasdiqlash (protokol
+kontrakti, 26+20 test) SANDBOX VERIFICATION'ning O'RNINI BOSMAYDI.
+Real credential paydo bo'lganda: RUNBOOK §12 "Provider cutover checklist"
++ shu bo'limni real natija bilan yangilang.

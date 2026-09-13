@@ -10,6 +10,7 @@ import { SellerEligibilityGuard } from '@/common/guards/seller-eligibility.guard
 import { AuditService } from '@/common/audit/audit.service';
 import { IdempotencyService } from '@/common/idempotency/idempotency.service';
 import { DomainError } from '@/common/errors/domain-error';
+import { AppConfigService } from '@/config/app-config.service';
 import type { Page } from '@/common/pagination/page-query.dto';
 import { PayoutService } from './payout.service';
 import { CreatePayoutDto } from './dto/create-payout.dto';
@@ -32,6 +33,7 @@ export class SellerPayoutController {
     private readonly payouts: PayoutService,
     private readonly idempotency: IdempotencyService,
     private readonly audit: AuditService,
+    private readonly config: AppConfigService,
   ) {}
 
   @Post()
@@ -44,6 +46,12 @@ export class SellerPayoutController {
     @Body() dto: CreatePayoutDto,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
   ): Promise<PayoutResponseDto> {
+    // Bo'lim 48 — real payout rail hali tanlanmagan bo'lsa, feature
+    // to'liq o'chirilgan: hech qanday DB yozuv/rezervatsiya URINILMAYDI
+    // (mavjud hisob-kitob TEGILMAYDI), aniq xato darhol qaytadi.
+    if (!this.config.payoutsEnabled) {
+      throw new DomainError('FEATURE_DISABLED', 'Pul yechish (payout) hozircha o‘chirilgan');
+    }
     if (!idempotencyKey) {
       throw new DomainError('IDEMPOTENCY_KEY_REQUIRED', 'Idempotency-Key header majburiy');
     }

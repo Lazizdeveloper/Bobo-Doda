@@ -5,6 +5,7 @@ import { GuardsModule } from '@/common/guards/guards.module';
 import { AppConfigService } from '@/config/app-config.service';
 import { PAYOUT_PROVIDER } from './providers/payout-provider.interface';
 import { TestPayoutProvider } from './providers/test/test-payout.provider';
+import { DisabledPayoutProvider } from './providers/disabled/disabled-payout.provider';
 import { PayoutService } from './payout.service';
 import { SellerPayoutController } from './seller-payout.controller';
 import { StaffPayoutController } from './staff-payout.controller';
@@ -28,6 +29,14 @@ const DEV_ONLY_TEST_SECRET = 'test-only-insecure-payout-secret-change-me';
       provide: PAYOUT_PROVIDER,
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => {
+        // Bosqich 13, bo'lim 48 — real payout rail hali rasmiy tanlanmagan.
+        // `PAYOUTS_ENABLED=false` bo'lsa `PAYOUT_PROVIDER`/`NODE_ENV`dan
+        // qat'i nazar HAR DOIM shu (production'da HAM — bu ATAYLAB
+        // production'ni payout'siz ishga tushirish yo'li, "soxta TEST
+        // fallback" EMAS: alohida nomlangan, ochiq holat).
+        if (!config.payoutsEnabled) {
+          return new DisabledPayoutProvider();
+        }
         const { provider, testWebhookSecret } = config.payout;
         if (provider === 'TEST') {
           // Ikkinchi qatlam himoya (`env.schema.ts`da PAYOUT_PROVIDER uchun

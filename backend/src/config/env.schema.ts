@@ -151,11 +151,17 @@ export const envSchema = z
     CLICK_SERVICE_ID: z.string().optional(),
     CLICK_SECRET_KEY: z.string().optional(),
 
-    // ── Payout rail (Bosqich 7) — Payment'dan ALOHIDA provider munosabati
-    // (bo'lim 28: real hayotda butunlay boshqa kompaniya bo'lishi mumkin).
-    // Xuddi PAYMENT_PROVIDER bilan bir xil fail-fast falsafa.
+    // ── Payout rail (Bosqich 7/13) — Payment'dan ALOHIDA provider
+    // munosabati (bo'lim 28: real hayotda butunlay boshqa kompaniya
+    // bo'lishi mumkin). Xuddi PAYMENT_PROVIDER bilan bir xil fail-fast
+    // falsafa. Bosqich 13 — biznes/rasmiy spec hali real payout rail
+    // TANLAMAGAN (bo'lim 13/14: arbitrary provider o'ylab topilmaydi),
+    // shuning uchun `PAYOUTS_ENABLED=false` bilan production launch
+    // xavfsiz mumkin (bo'lim 48) — `PAYOUT_PROVIDER` shu holatda umuman
+    // tekshirilmaydi (`payout.module.ts`).
     PAYOUT_PROVIDER: z.enum(['TEST']).default('TEST'),
     PAYOUT_TEST_WEBHOOK_SECRET: z.string().min(16).optional(),
+    PAYOUTS_ENABLED: booleanish.default('true'),
 
     // ── Reconciliation (Bosqich 9, bo'lim 15/17/33/53) — arbitrary
     // hardcode YO'Q, hammasi konfiguratsiya orqali. Default'lar: "juda tez
@@ -173,17 +179,22 @@ export const envSchema = z
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_SUPPORT_CHAT_ID: z.string().optional(),
 
-    // ── SMS provider (Bosqich 2 interfeys, Bosqich 10 fail-closed) ──────
+    // ── SMS provider (Bosqich 2 interfeys, Bosqich 13 real integratsiya) ──
     // `CONSOLE` — real SMS yubormaydi (konsolga chiqaradi), FAQAT dev/test.
-    // Real Eskiz/PlayMobile integratsiyasi spetsifikatsiyasi repo/docs'da
-    // YO'Q (bo'lim 19: o'ylab topilmaydi). `PAYOUT_PROVIDER` bilan BIR XIL
-    // naqsh (bo'lim 28's izohiga qarang): enum'da HOZIRCHA faqat bitta
-    // haqiqiy qiymat bor, shuning uchun Zod darajasida DUPLIKAT
-    // `superRefine` qo'shilmaydi (aks holda "production'da HAR QANDAY
-    // qiymat bilan o'tadi" testi umuman yozib bo'lmas edi) — fail-closed
-    // himoya `sms.module.ts`ning factory'sida, `PAYMENT_PROVIDER`/
-    // `PAYOUT_PROVIDER` bilan bir xil qatlamda.
-    SMS_PROVIDER: z.enum(['CONSOLE']).default('CONSOLE'),
+    // `PLAYMOBILE` — Bosqich 13'da rasmiy PLAY MOBILE SMS-Broker HTTP API
+    // (playmobile.uz/instruction/, PDF spec) asosida implement qilindi.
+    // Eskiz — rasmiy texnik hujjat (developer.help/Postman documenter)
+    // JS-render qilinadigan sahifa bo'lib chiqdi, statik fetch o'qiy
+    // olmadi — CLICK bilan bir xil sabab, implement QILINMADI.
+    SMS_PROVIDER: z.enum(['CONSOLE', 'PLAYMOBILE']).default('CONSOLE'),
+    // PlayMobile rasmiy hujjatida `<base-url>` merchant-specific (portalda
+    // ro'yxatdan o'tgach beriladi, hujjatda qattiq yozilmagan) — shuning
+    // uchun majburiy env, qattiq yozilgan default YO'Q.
+    PLAYMOBILE_API_URL: z.string().url().optional(),
+    PLAYMOBILE_LOGIN: z.string().optional(),
+    PLAYMOBILE_PASSWORD: z.string().optional(),
+    // Bo'lim 4 — rasmiy chegara: "не более, чем из 11 разрешенных символов".
+    PLAYMOBILE_SENDER: z.string().max(11).optional(),
 
     // ── Outbox notification delivery (Bosqich 10) ───────────────────────
     // Bo'lim 9/10 — PROCESSING holatda "qotib qolgan" qatorni boshqa worker
@@ -257,6 +268,19 @@ export const envSchema = z
             code: z.ZodIssueCode.custom,
             path: [key],
             message: `PAYMENT_PROVIDER=PAYME bo'lsa ${key} majburiy`,
+          });
+        }
+      }
+    }
+    // Bosqich 13 — PLAYMOBILE tanlansa 4 ta maydon HAM majburiy (Payme bilan bir xil ikkinchi qatlam himoya falsafasi).
+    if (env.SMS_PROVIDER === 'PLAYMOBILE') {
+      const required: (keyof typeof env)[] = ['PLAYMOBILE_API_URL', 'PLAYMOBILE_LOGIN', 'PLAYMOBILE_PASSWORD', 'PLAYMOBILE_SENDER'];
+      for (const key of required) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `SMS_PROVIDER=PLAYMOBILE bo'lsa ${key} majburiy`,
           });
         }
       }

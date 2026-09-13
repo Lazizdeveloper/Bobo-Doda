@@ -142,6 +142,11 @@ export class AppConfigService {
     };
   }
 
+  /** Bosqich 13, bo'lim 48 — real payout rail hali tanlanmagan bo'lsa, feature butunlay o'chiriladi (`false`). */
+  get payoutsEnabled(): boolean {
+    return this.get('PAYOUTS_ENABLED');
+  }
+
   /** Bosqich 9 — `ReconciliationService`/`ReconciliationScheduler` shundan o'qiydi. */
   get reconciliation(): {
     paymentAfterSeconds: number;
@@ -162,6 +167,16 @@ export class AppConfigService {
   /** Bosqich 10 — `sms.module.ts` shundan provider'ni tanlaydi (Payment/Payout bilan bir xil naqsh). */
   get sms(): { provider: Env['SMS_PROVIDER'] } {
     return { provider: this.get('SMS_PROVIDER') };
+  }
+
+  /** Bosqich 13 — PlayMobile SMS-Broker. `SMS_PROVIDER=PLAYMOBILE` bo'lsa hammasi majburiy (env.schema.ts). */
+  get playMobile(): { apiUrl: string | undefined; login: string | undefined; password: string | undefined; sender: string | undefined } {
+    return {
+      apiUrl: this.get('PLAYMOBILE_API_URL'),
+      login: this.get('PLAYMOBILE_LOGIN'),
+      password: this.get('PLAYMOBILE_PASSWORD'),
+      sender: this.get('PLAYMOBILE_SENDER'),
+    };
   }
 
   /** Bosqich 10 — Outbox notification delivery worker konfiguratsiyasi. */

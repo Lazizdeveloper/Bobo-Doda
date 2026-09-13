@@ -165,18 +165,26 @@ jobs:
             exit 1
           fi
           echo "OK: PAYMENT_PROVIDER=TEST production'da to'g'ri rad etildi"
-          # Bo'lim 87/§88 — DIQQAT: production hozircha TO'LIQ ko'tarila
-          # OLMAYDI, hatto to'g'ri PAYME credential bilan ham: `SMS_PROVIDER`
-          # enum'ida FAQAT `CONSOLE` bor (real SMS provider Bosqich 10'dan
-          # beri implement qilinmagan, bu Bosqich 12 scope'idan TASHQARIDA)
-          # — `sms.module.ts` uni ham fail-closed rad etadi. Bu YANA bir
-          # qatlam to'g'ri ishlayotganini tasdiqlaydi (real launch blocker
-          # sifatida final report'da alohida qayd etilgan).
+          # Bo'lim 87/§88 — Payme to'g'ri, lekin SMS_PROVIDER hali CONSOLE
+          # (sukut) bo'lsa production HAMON ko'tarilmasligi kerak.
           if PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz $BOOT_CMD; then
             echo "::error::production'da SMS_PROVIDER=CONSOLE bilan boot MUVAFFAQIYATLI bo'ldi — fail-closed himoya buzilgan"
             exit 1
           fi
-          echo "OK: to'liq Payme config bilan HAM SMS_PROVIDER=CONSOLE production'da to'g'ri rad etildi (real SMS provider hali yo'q — bilinadigan launch blocker)"
+          echo "OK: to'liq Payme config bilan HAM SMS_PROVIDER=CONSOLE production'da to'g'ri rad etildi"
+          # Bosqich 13 — TO'LIQ to'g'ri config (Payme + PlayMobile + payouts
+          # xavfsiz o'chirilgan) bilan production ENDI MUVAFFAQIYATLI
+          # ko'tarilishi SHART (fresh-DB dry-run bilan qo'lda tasdiqlangan —
+          # RUNBOOK §13). Bu — "fail-closed FAQAT emas, balki to'g'ri config
+          # bilan HAQIQATAN ishga tushadi" musbat tomonni tekshiradi.
+          if ! PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz \
+             SMS_PROVIDER=PLAYMOBILE PLAYMOBILE_API_URL=https://send.example.uz/broker-api PLAYMOBILE_LOGIN=ci-login PLAYMOBILE_PASSWORD=ci-password PLAYMOBILE_SENDER=BoboDoda \
+             PAYOUTS_ENABLED=false \
+             $BOOT_CMD; then
+            echo "::error::to'liq to'g'ri production config bilan boot MUVAFFAQIYATSIZ bo'ldi"
+            exit 1
+          fi
+          echo "OK: to'liq to'g'ri production config (Payme + PlayMobile + payouts o'chirilgan) bilan boot MUVAFFAQIYATLI"
 
       - name: e2e — health + DB-role append-only (A4)
         run: npm run test:e2e --workspace backend
