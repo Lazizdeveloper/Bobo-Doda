@@ -1,7 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import type { AuditActorType, Prisma } from '@prisma/client';
+import type { AuditActorType, AuditLog, Prisma } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
+import { NotFoundError } from '@/common/errors/domain-error';
+import { buildPage, type Page } from '@/common/pagination/page-query.dto';
+
+export interface AuditLogFilters {
+  actorType?: AuditActorType;
+  actorId?: string;
+  action?: string;
+  resourceType?: string;
+  resourceId?: string;
+  requestId?: string;
+  createdFrom?: Date;
+  createdTo?: Date;
+}
 
 /** Bir marta yozib qo'yiladigan actor ma'lumoti — har chaqiruvda takrorlanmasin. */
 export interface AuditActor {
@@ -89,5 +102,39 @@ export class AuditService {
       select: { id: true, fullName: true, phone: true },
     });
     return { id: user.id, type: 'USER', name: user.fullName ?? user.phone };
+  }
+
+  // ── Bosqich 11, bo'lim 36/38 — staff operational API ────────────────────
+
+  /**
+   * Bo'lim 38 — UNBOUNDED JSON qidiruv YO'Q: filtrlar FAQAT indekslangan
+   * top-level ustunlar bo'yicha (`actorId`/`action`/`resourceType`+
+   * `resourceId`/`requestId`/`createdAt`). `previousState`/`newState`
+   * ICHIDA qidirish UMUMAN taklif qilinmaydi.
+   */
+  async list(filters: AuditLogFilters, page: number, perPage: number): Promise<Page<AuditLog>> {
+    const where: Prisma.AuditLogWhereInput = {
+      actorType: filters.actorType,
+      actorId: filters.actorId,
+      action: filters.action,
+      resourceType: filters.resourceType,
+      resourceId: filters.resourceId,
+      requestId: filters.requestId,
+      createdAt:
+        filters.createdFrom || filters.createdTo
+          ? { gte: filters.createdFrom, lte: filters.createdTo }
+          : undefined,
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * perPage, take: perPage }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+    return buildPage(items, total, page, perPage);
+  }
+
+  async getByIdOrThrow(id: string): Promise<AuditLog> {
+    const log = await this.prisma.auditLog.findUnique({ where: { id } });
+    if (!log) throw new NotFoundError('Audit yozuvi topilmadi', 'NOT_FOUND');
+    return log;
   }
 }

@@ -85,6 +85,14 @@ export const UserStatus = {
 export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 export const UserStatusValues = ['ACTIVE', 'SUSPENDED', 'BLOCKED'] as const;
 
+export const StaffStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  DISABLED: 'DISABLED',
+} as const;
+export type StaffStatus = (typeof StaffStatus)[keyof typeof StaffStatus];
+export const StaffStatusValues = ['ACTIVE', 'SUSPENDED', 'DISABLED'] as const;
+
 export const SellerStatus = {
   NOT_APPLIED: 'NOT_APPLIED',
   PENDING: 'PENDING',

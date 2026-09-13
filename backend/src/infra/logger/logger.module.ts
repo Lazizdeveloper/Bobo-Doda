@@ -37,6 +37,12 @@ import { REQUEST_ID_HEADER } from '@/common/http/request-id.middleware';
               // Bosqich 2 — OTP kodi va tokenlar HECH QACHON logga tushmasin.
               'req.body.code',
               'req.body.refreshToken',
+              // Bosqich 11 — TOTP kod/sir/provisioning URI (enroll javobi
+              // HECH QACHON `req.body` orqali kelmaydi, lekin himoya
+              // qatlamlari bir-biriga ORTIQCHA ishonmasligi kerak).
+              'req.body.totpCode',
+              'req.body.secret',
+              'req.body.otpauthUri',
               'res.headers["set-cookie"]',
             ],
             remove: true,

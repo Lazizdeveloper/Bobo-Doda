@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
+  Param,
   Post,
   Req,
   Res,
@@ -15,6 +17,9 @@ import { UnauthenticatedError } from '@/common/errors/domain-error';
 import { StaffAuthService } from './staff-auth.service';
 import { StaffLoginDto } from './dto/staff-login.dto';
 import { StaffMeDto, StaffSessionDto } from './dto/staff-session.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { TotpDisableDto, TotpEnrollResponseDto, TotpVerifyDto } from './dto/totp.dto';
+import { StaffSessionListItemDto } from './dto/staff-session-response.dto';
 import { StaffJwtAuthGuard } from './guards/staff-jwt-auth.guard';
 import { StaffPermissionGuard } from './guards/staff-permission.guard';
 import { CurrentStaff } from './decorators/current-staff.decorator';
@@ -28,7 +33,7 @@ import type { StaffMember } from '@prisma/client';
 import { Public } from '@/modules/auth/decorators/public.decorator';
 
 function toSessionDto(accessToken: string, staff: StaffMember): StaffSessionDto {
-  return { accessToken, role: staff.role, permissions: staff.permissions };
+  return { accessToken, role: staff.role, permissions: staff.permissions, mustChangePassword: staff.mustChangePassword };
 }
 
 /**
@@ -93,6 +98,12 @@ export class StaffAuthController {
   }
 }
 
+/**
+ * Bosqich 11 — o'ziga xizmat ko'rsatish: profil, parol, TOTP enrollment/
+ * disable, sessiyalar. Barchasi `@RequirePermission()`SIZ (faqat
+ * `StaffPermissionGuard`ning bazaviy live-status/session tekshiruvi) —
+ * bu amallar HAR QANDAY faol staff uchun, granular ruxsatdan qat'i nazar.
+ */
 @Public()
 @ApiTags('staff-auth')
 @ApiBearerAuth()
@@ -113,6 +124,66 @@ export class StaffMeController {
       title: member.title,
       permissions: member.permissions,
       mfaEnabled: member.mfaEnabled,
+      mustChangePassword: member.mustChangePassword,
     };
+  }
+
+  @Post('change-password')
+  @HttpCode(200)
+  async changePassword(
+    @CurrentStaff() staff: StaffAccessTokenPayload,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<{ ok: true }> {
+    await this.staffAuth.changePassword(staff.sub, staff.sessionId, dto.currentPassword, dto.newPassword);
+    return { ok: true };
+  }
+
+  @Get('sessions')
+  async listSessions(@CurrentStaff() staff: StaffAccessTokenPayload): Promise<StaffSessionListItemDto[]> {
+    return this.staffAuth.listOwnSessions(staff.sub);
+  }
+
+  @Delete('sessions/:id')
+  @HttpCode(200)
+  async revokeSession(
+    @CurrentStaff() staff: StaffAccessTokenPayload,
+    @Param('id') id: string,
+  ): Promise<{ ok: true }> {
+    await this.staffAuth.revokeOwnSession(staff.sub, id);
+    return { ok: true };
+  }
+
+  @Delete('sessions')
+  @HttpCode(200)
+  async revokeAllSessions(@CurrentStaff() staff: StaffAccessTokenPayload): Promise<{ ok: true }> {
+    await this.staffAuth.revokeAllOwnSessions(staff.sub);
+    return { ok: true };
+  }
+
+  @Post('totp/enroll')
+  @HttpCode(200)
+  @ApiOkResponse({ type: TotpEnrollResponseDto })
+  async enrollTotp(@CurrentStaff() staff: StaffAccessTokenPayload): Promise<TotpEnrollResponseDto> {
+    return this.staffAuth.beginTotpEnrollment(staff.sub);
+  }
+
+  @Post('totp/verify')
+  @HttpCode(200)
+  async verifyTotp(
+    @CurrentStaff() staff: StaffAccessTokenPayload,
+    @Body() dto: TotpVerifyDto,
+  ): Promise<{ ok: true }> {
+    await this.staffAuth.verifyTotpEnrollment(staff.sub, dto.totpCode);
+    return { ok: true };
+  }
+
+  @Post('totp/disable')
+  @HttpCode(200)
+  async disableTotp(
+    @CurrentStaff() staff: StaffAccessTokenPayload,
+    @Body() dto: TotpDisableDto,
+  ): Promise<{ ok: true }> {
+    await this.staffAuth.disableTotp(staff.sub, dto.currentPassword, dto.totpCode);
+    return { ok: true };
   }
 }

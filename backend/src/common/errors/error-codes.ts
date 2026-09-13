@@ -67,6 +67,9 @@ export const ERROR_CODES = {
   // ── Holat / konflikt (409) ──────────────────────────────────────────
   BAD_STATE: { httpStatus: 409, retryable: false },
   INVALID_TRANSITION: { httpStatus: 409, retryable: false },
+  // Bosqich 11, bo'lim 19 — yagona FAOL SUPER_ADMIN'ni cheklash/o'chirish
+  // orqali platformani boshqaruvchisiz qoldirish TAQIQLANADI.
+  LAST_ADMIN_PROTECTED: { httpStatus: 409, retryable: false },
   DUPLICATE: { httpStatus: 409, retryable: false },
   DUPLICATE_OFFER: { httpStatus: 409, retryable: false },
   DUPLICATE_PROPOSAL: { httpStatus: 409, retryable: false },

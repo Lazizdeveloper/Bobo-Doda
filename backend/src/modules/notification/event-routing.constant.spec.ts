@@ -55,6 +55,8 @@ describe('EVENT_ROUTES — bo‘lim 50 markaziy routing jadvali', () => {
       'DISPUTE_SELLER_FUNDS_RELEASED',
       'DISPUTE_BUYER_REFUND_ALLOCATED',
       'DISPUTE_RESOLVED',
+      'USER_BLOCKED',
+      'SELLER_SUSPENDED',
     ];
     for (const eventType of expected) {
       expect(eventType in EVENT_ROUTES).toBe(true);

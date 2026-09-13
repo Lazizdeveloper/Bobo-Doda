@@ -1,4 +1,4 @@
-import { buildOtpauthUri, generateTotp, generateTotpSecret, verifyTotp } from './totp.util';
+import { buildOtpauthUri, generateTotp, generateTotpSecret, verifyTotp, verifyTotpAtCounter } from './totp.util';
 
 describe('totp.util (RFC 6238)', () => {
   it('generateTotp/verifyTotp — round-trip to‘g‘ri kod tasdiqlanadi', () => {
@@ -53,5 +53,45 @@ describe('totp.util (RFC 6238)', () => {
     const secrets = new Set(Array.from({ length: 100 }, () => generateTotpSecret()));
     expect(secrets.size).toBe(100);
     for (const s of secrets) expect(s).toMatch(/^[A-Z2-7]+$/);
+  });
+
+  // ── Bosqich 11, bo'lim 13 — verifyTotpAtCounter (replay himoyasi asosi) ──
+
+  describe('verifyTotpAtCounter', () => {
+    it('to‘g‘ri kod — MOS KELGAN counterni qaytaradi (number)', () => {
+      const secret = generateTotpSecret();
+      const timeMs = 1_700_000_000_000;
+      const code = generateTotp(secret, timeMs);
+      const counter = verifyTotpAtCounter(secret, code, { timeMs });
+      expect(counter).toBe(Math.floor(timeMs / 1000 / 30));
+    });
+
+    it('noto‘g‘ri kod — null', () => {
+      const secret = generateTotpSecret();
+      expect(verifyTotpAtCounter(secret, '000000')).toBeNull();
+    });
+
+    it('formatga mos kelmagan kod — null (istisno tashlamaydi)', () => {
+      const secret = generateTotpSecret();
+      expect(verifyTotpAtCounter(secret, 'abcdef')).toBeNull();
+    });
+
+    it('BIR XIL kod ikki marta chaqirilsa — IKKALASIDA HAM bir xil counter qaytaradi (o‘zi holatsiz — replay tekshiruvi chaqiruvchiga tegishli)', () => {
+      const secret = generateTotpSecret();
+      const timeMs = 1_700_000_000_000;
+      const code = generateTotp(secret, timeMs);
+      const first = verifyTotpAtCounter(secret, code, { timeMs });
+      const second = verifyTotpAtCounter(secret, code, { timeMs });
+      expect(first).toBe(second);
+      expect(first).not.toBeNull();
+    });
+
+    it('verifyTotp — verifyTotpAtCounter asosida (bir xil natija, boolean qatlam)', () => {
+      const secret = generateTotpSecret();
+      const timeMs = 1_700_000_000_000;
+      const code = generateTotp(secret, timeMs);
+      expect(verifyTotp(secret, code, { timeMs })).toBe(true);
+      expect(verifyTotp(secret, '000000', { timeMs })).toBe(false);
+    });
   });
 });

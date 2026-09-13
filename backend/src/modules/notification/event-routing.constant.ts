@@ -272,4 +272,16 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     recipient: 'BUYER',
     render: (ctx) => (ctx.title ? `Nizoyingiz hal qilindi ("${ctx.title}") — Bobo&Doda` : null),
   },
+
+  // ── Staff admin operatsiyalari (Bosqich 11) ─────────────────────────────
+  USER_BLOCKED: {
+    channel: 'SMS',
+    recipient: 'USER',
+    render: () => 'Hisobingiz bloklandi. Batafsil ma’lumot uchun qo’llab-quvvatlash bilan bog’laning — Bobo&Doda',
+  },
+  SELLER_SUSPENDED: {
+    channel: 'SMS',
+    recipient: 'USER',
+    render: () => 'Sotuvchi faoliyatingiz vaqtincha to’xtatildi. Batafsil: qo’llab-quvvatlash — Bobo&Doda',
+  },
 };

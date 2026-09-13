@@ -104,6 +104,15 @@ export const envSchema = z
     JWT_STAFF_ACCESS_TTL: DURATION_SPEC.default('15m'),
     JWT_STAFF_REFRESH_TTL: DURATION_SPEC.default('8h'),
 
+    // Bosqich 11, bo'lim 9 — TOTP siri at-rest shifrlash kaliti (AES-256-GCM,
+    // `totp-secret-cipher.util.ts`). `JWT_*_SECRET` bilan BIR XIL qatlam:
+    // HAR DOIM majburiy (dev/test/prod) — provayder test-sirlaridagi kabi
+    // "berilmasa dev-only sukut" YO'Q, chunki bu asosiy kriptografik
+    // material (parol/JWT sirlari bilan bir darajada sezgir).
+    STAFF_TOTP_ENCRYPTION_KEY: z
+      .string()
+      .regex(/^[0-9a-fA-F]{64}$/, 'STAFF_TOTP_ENCRYPTION_KEY 64 ta hex belgi (32 bayt) bo‘lishi shart'),
+
     // ── To'lov gateway'lari (Bosqich 5) ────────────────────────────────
     // `PAYMENT_PROVIDER` — provider registry kaliti (`payment.module.ts`).
     // Real PAYME/CLICK protokoli hali IMPLEMENT QILINMAGAN (bo'lim 7: repo/

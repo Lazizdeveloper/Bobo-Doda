@@ -688,3 +688,149 @@ o'zbek tilida — aralash-tilli yoki noto'g'ri taxmin qilingan xabar
 yuborishdan ko'ra bitta izchil til afzal. RU/EN kerak bo'lsa: (1) `User`ga
 `locale` ustuni qo'shiladi, (2) shablon funksiyalari `Locale` parametr
 qabul qiladi.
+
+## 11. Staff/admin operatsiyalari + TOTP boshqaruvi (Bosqich 11)
+
+### Staff lifecycle
+
+`StaffMember.status` (`ACTIVE`/`SUSPENDED`/`DISABLED`) — Bosqich 2'dagi
+`isActive: Boolean`ni almashtirdi (`UserStatus` bilan bir xil naqsh).
+`StaffPermissionGuard` HAR so'rovda LIVE tekshiradi (`status !== 'ACTIVE'`
+— ikkalasi ham bir xil natija: `ACCOUNT_BLOCKED`, 403) — eski access token
+15 daqiqalik muddati ichida ham HECH narsa qila olmaydi. Hard delete YO'Q
+(`DISABLED` — AuditLog actor tarixi buzilmasin).
+
+**`SUPER_ADMIN` roli** endi haqiqatan majburlanadi (`@RequireRole('SUPER_ADMIN')`,
+`StaffPermissionGuard`ning bir qismi — LIVE DB'dan, JWT claim'idagi
+`role`ga ISHONILMAYDI). Faqat ikkita amal talab qiladi:
+`POST /staff/admin/staff-members` (yangi staff yaratish) va
+`PATCH .../permissions` (ruxsat o'zgartirish) — yangi imkoniyat berish
+oddiy moderatsiyadan (suspend/disable/reactivate — faqat `STAFF` huquqi)
+yuqori ishonch talab qiladi (ADR-05'dagi "SETTINGS + SUPER_ADMIN" naqshi
+bilan bir xil falsafa).
+
+**O'z-o'zini cheklash/oshirish TAQIQLANGAN**: staff o'zining permissionlarini
+o'zi o'zgartira olmaydi, o'zini-o'zi suspend/disable qila olmaydi (403,
+`targetId === actor.id` tekshiruvi). **Oxirgi faol `SUPER_ADMIN`ni
+suspend/disable qilish TAQIQLANGAN** (`LAST_ADMIN_PROTECTED`, 409) —
+platformani boshqaruvchisiz qoldirish imkonsiz.
+
+### TOTP — enrollment, shifrlash, replay himoyasi
+
+Oqim: `POST /staff/me/totp/enroll` (sir generatsiya qilinadi,
+`pendingTotpSecret`ga — HALI FAOL EMAS) → `POST /staff/me/totp/verify`
+(to'g'ri kod bersa, `pendingTotpSecret` → `totpSecret`ga ko'chiriladi,
+`mfaEnabled=true`). **Sir FAQAT verify qilingandan keyin active bo'ladi**
+— yarim tugallangan enrollment eski MFA holatiga (yoki uning yo'qligiga)
+ta'sir qilmaydi.
+
+**At-rest shifrlash**: `totpSecret`/`pendingTotpSecret` AES-256-GCM bilan
+shifrlangan (`totp-secret-cipher.util.ts`, format `v1:<iv>:<authTag>:<ciphertext>`,
+hammasi hex). Kalit — `STAFF_TOTP_ENCRYPTION_KEY` (64 hex belgi/32 bayt),
+`JWT_*_SECRET` bilan BIR XIL qatlam: **HAR DOIM majburiy** (dev/test/prod),
+yo'q bo'lsa boot BUTUNLAY BO'LMAYDI (Zod env validatsiyasi). Generatsiya:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+**Migratsiya xavfsizligi** (bo'lim 58): deploy paytida DB'da PLAINTEXT
+`totpSecret` qatorlari bo'lishi MUMKIN emas edi (tekshirilgan — bu loyihada
+enrollment endpoint Bosqich 11'gacha UMUMAN yo'q edi, shuning uchun
+`mfaEnabled=true` bilan haqiqiy qator yo'q). Shunga qaramay migratsiya
+himoya sifatida (agar boshqa muhitda bo'lsa) `totpSecret IS NOT NULL`
+qatorlarni `NULL`ga tushiradi (`mfaEnabled=false`) — bunday hisob qayta
+enroll qilishi kerak bo'ladi, lekin login BUTUNLAY bloklanib qolmaydi.
+
+**Replay himoyasi** (RFC 6238 tavsiyasi): `StaffMember.lastTotpCounter` —
+oxirgi MUVAFFAQIYATLI qabul qilingan HOTP counter. Undan KATTA bo'lmagan
+counter CAS bilan rad etiladi — bitta kod ikki marta (parallel so'rovlarda
+ham) ISHLATIB BO'LMAYDI: ikkita bir xil kodli PARALLEL login/enrollment-
+verify/disable so'rovidan FAQAT BITTASI g'olib chiqadi.
+
+**TOTP brute-force**: login'dagi 2FA tekshiruvi, enrollment-verify VA
+disable — HAMMASI BITTA `RateLimiterService` hisoblagichini bo'lishadi
+(`staff-totp:<staffId>`, sukut 5 urinish / 5 daqiqa) — chegaradan o'tsa
+`RATE_LIMITED` (429).
+
+**Yo'qolgan qurilma/administrator TOTP'ni tiklay olmasa**:
+`POST /staff/admin/staff-members/:id/totp/reset` (`STAFF` huquqi) — MFA'ni
+o'chiradi VA **barcha** sessiyalarni bekor qiladi (xavfsizlik: "yo'qolgan
+qurilma" stsenariysida eski sessiya ham yopiladi). Admin sirni HECH QACHON
+ko'rmaydi/bilmaydi — faqat "reset" so'raydi, keyingi login parol bilan
+(MFA'siz) ishlaydi, foydalanuvchi o'zi qayta enroll qiladi. Recovery
+kodlar YO'Q (bo'lim 14 — hozircha talab qilinmagan, admin reset yetarli).
+
+### Parol — o'zgartirish/reset
+
+`POST /staff/me/change-password` — joriy parol tekshiriladi, muvaffaqiyatli
+bo'lsa **boshqa** (joriy sessiyadan tashqari) barcha sessiyalar bekor
+qilinadi. `POST /staff/admin/staff-members/:id/password-reset` — admin
+YANGI DOIMIY parolni HECH QACHON bilmaydi: tizim tasodifiy vaqtinchalik
+parol yaratadi (`tempPassword`, FAQAT shu javobda bir marta), barcha
+sessiyalarni bekor qiladi, `mustChangePassword=true` qo'yadi. Bu flag
+HECH QANDAY endpointni QATTIQ bloklamaydi (bo'lim 4 — "minimal secure
+flow": admin temp parolni xavfsiz kanaldan uzatadi deb ishoniladi) — faqat
+login/`GET /staff/me` javobida ko'rinadi, client "parolni almashtiring"
+degan yumshoq signal ko'rsatishi mumkin.
+
+Parol siyosati: uzunlik 10–128 (Argon2 DoS himoyasi uchun MAX muhim),
+faqat-bo'sh-joy taqiqlangan. Composition-fetish qoidalar (majburiy katta
+harf/raqam/belgi) YO'Q — docs talab qilmagan.
+
+### Login brute-force himoyasi
+
+Staff login — per-email VA per-IP (`RateLimiterService`, sukut 10/15daqiqa
+email bo'yicha, 30/15daqiqa IP bo'yicha) — parol tekshirishdan OLDIN,
+email mavjud/mavjud-emasligidan QAT'I NAZAR (enumeration-safe: ikkalasi
+ham bir xil `RATE_LIMITED` javob beradi).
+
+### AuditLog — endi operatsion API
+
+`GET /staff/audit-logs` (`AUDIT` huquqi) — filtrlar FAQAT indekslangan
+maydonlar bo'yicha (`actorType`/`actorId`/`action`/`resourceType`+
+`resourceId`/`requestId`/sana oralig'i) — **`previousState`/`newState`
+ICHIDA erkin JSON qidiruv YO'Q** (unbounded, indekslanmagan — performance
+xavfi). Javobda `previousState`/`newState` qo'shimcha DEFENSIV filtrdan
+o'tadi (`audit-redaction.util.ts` — kalit nomi `password`/`secret`/
+`totp`/`token`/`hash` ga mos kelsa `[REDACTED]`), garchi yozuvchilar
+(barcha `audit.record()` chaqiruvchilar) allaqachon sir qo'ymaslik
+intizomiga rioya qilsa ham — bu ikkinchi, DEFENSIV qatlam. Append-only —
+bu API FAQAT o'qish, `AuditService.record()` yagona yozish yo'li bo'lib
+qoladi.
+
+### User/Seller admin ko'rinishi
+
+`GET /staff/users`, `GET /staff/users/:id` (bounded COUNT'lar — contracts/
+payments soni, giant Prisma `include` YO'Q), `GET /staff/sellers`,
+`GET /staff/sellers/:id` (services/contracts/payouts/disputes soni) — HAR
+DOIM `passwordHash` VA boshqa sir maydonlarsiz.
+
+**`POST /staff/users/:id/block` endi ATOMIK**: `User.status=BLOCKED` +
+BARCHA faol `RefreshToken`larni bekor qilish + audit + `USER_BLOCKED`
+Outbox hodisasi — BITTA tranzaksiyada. Avval faqat `AccountStatusGuard`
+LIVE tekshiruviga ishonilar edi (keyingi so'rovda rad etiladi) — endi
+QO'SHIMCHA ravishda eski refresh token'ning O'ZI ham darhol ishlamay
+qoladi (ikkala qatlam). `SELLER_SUSPENDED` xuddi shunday Outbox hodisasi
+yozadi. **Diqqat**: yangi Outbox `eventType` qo'shsangiz `EVENT_ROUTES`
+(`src/modules/notification/event-routing.constant.ts`) da RO'YXATDAN
+O'TKAZILISHI SHART — aks holda worker uni `UNSUPPORTED_EVENT` deb `DEAD`
+qilib qo'yadi (production'ga "jim" chiqib ketmaydi, lekin bildirishnoma
+HAM yetmaydi).
+
+### Moderatsiya kuchaytirish
+
+`POST /staff/services/:id/force-pause` (`SERVICES` huquqi, sabab MAJBURIY)
+— faol xizmatni FAVQULODDA to'xtatadi (masalan xavfli/shikoyat qilingan).
+Sotuvchining o'z `pause()`idan FARQLI — BIR XIL `PAUSED` maqsad holatiga
+o'tadi (yangi status YO'Q), lekin alohida audit action
+(`SERVICE_FORCE_PAUSED`) bilan — "kim to'xtatdi" tarixda ANIQ.
+
+### Moliyaviy xavfsizlik chegarasi — o'zgarmadi
+
+Bosqich 11 **hech qanday** yangi payment/ledger mutatsiya yo'li
+QO'SHMAYDI. Staff HALI HAM: to'lov statusini qo'lda SUCCEEDED qila
+olmaydi, ledger yozuv yarata/o'zgartira olmaydi, refund'ni qo'lda
+"muvaffaqiyatli" deb belgilay olmaydi. Barcha moliyaviy operatsiyalar
+FAQAT mavjud Refund/Dispute/Reconciliation workflow'lari orqali (Bosqich
+7/8/9, o'zgarishsiz).

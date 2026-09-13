@@ -80,13 +80,19 @@ export function generateTotp(base32Secret: string, timeMs = Date.now()): string 
  * `window` — necha qadam oldinga/orqaga toleratsiya (soat sinxron emasligi
  * uchun). Sukut 1 = ±30s. Taqqoslash `timingSafeEqual` bilan (timing
  * hujumidan himoya).
+ *
+ * Bosqich 11, bo'lim 13 — replay himoyasi shu funksiyaga EMAS (u sof/holatsiz
+ * qoladi), chaqiruvchiga (`StaffAuthService`) tegishli: MOS KELGAN counter
+ * qaytariladi, chaqiruvchi uni `StaffMember.lastTotpCounter` bilan
+ * solishtiradi. `verifyTotp()` — orqaga moslik uchun qoldirilgan oddiy
+ * boolean qatlam (mavjud chaqiruvchilar/testlar o'zgarishsiz ishlaydi).
  */
-export function verifyTotp(
+export function verifyTotpAtCounter(
   base32Secret: string,
   code: string,
   opts?: { window?: number; timeMs?: number },
-): boolean {
-  if (!/^\d{6}$/.test(code)) return false;
+): number | null {
+  if (!/^\d{6}$/.test(code)) return null;
   const window = opts?.window ?? 1;
   const timeMs = opts?.timeMs ?? Date.now();
   const counter = Math.floor(timeMs / 1000 / STEP_SECONDS);
@@ -94,10 +100,19 @@ export function verifyTotp(
   const codeBuf = Buffer.from(code);
 
   for (let delta = -window; delta <= window; delta++) {
-    const candidate = Buffer.from(hotp(secretBuf, counter + delta));
-    if (timingSafeEqual(candidate, codeBuf)) return true;
+    const candidateCounter = counter + delta;
+    const candidate = Buffer.from(hotp(secretBuf, candidateCounter));
+    if (timingSafeEqual(candidate, codeBuf)) return candidateCounter;
   }
-  return false;
+  return null;
+}
+
+export function verifyTotp(
+  base32Secret: string,
+  code: string,
+  opts?: { window?: number; timeMs?: number },
+): boolean {
+  return verifyTotpAtCounter(base32Secret, code, opts) !== null;
 }
 
 /** Google Authenticator va sh.k. autentifikator ilovalari uchun provisioning URI. */

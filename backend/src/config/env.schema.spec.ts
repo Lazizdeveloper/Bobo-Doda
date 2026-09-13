@@ -7,6 +7,8 @@ const base = {
   // Bosqich 2 — MAJBURIY (≥32 belgi).
   JWT_ACCESS_SECRET: 'test-access-secret-test-access-secret-32',
   JWT_STAFF_ACCESS_SECRET: 'test-staff-secret-test-staff-secret-32',
+  // Bosqich 11 — MAJBURIY (64 ta hex belgi).
+  STAFF_TOTP_ENCRYPTION_KEY: 'a'.repeat(64),
 };
 
 describe('validateEnv', () => {

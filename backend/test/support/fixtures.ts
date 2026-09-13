@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import * as argon2 from 'argon2';
-import { PrismaClient, type StaffPermission } from '@prisma/client';
+import { PrismaClient, type StaffPermission, type StaffRole } from '@prisma/client';
 import { uuidv7 } from 'uuidv7';
 import { waitFor } from './wait-for';
 import type { SmsProvider, SmsSendResult } from '@/infra/sms/sms-provider.interface';
@@ -86,6 +86,10 @@ export async function createStaffSession(
   app: INestApplication,
   db: PrismaClient,
   permissions: StaffPermission[],
+  // Bosqich 11 — ixtiyoriy: `@RequireRole('SUPER_ADMIN')` bilan himoyalangan
+  // endpointlarni sinash uchun. Sukut `OPERATIONS` — MAVJUD barcha chaqiruv
+  // joylari o'zgarishsiz ishlaydi.
+  role: StaffRole = 'OPERATIONS',
 ): Promise<StaffSession> {
   const email = `staff-${uuidv7()}@bobododa.uz`;
   const password = 'SuperSecret123!';
@@ -95,7 +99,7 @@ export async function createStaffSession(
       fullName: 'Test Staff',
       email,
       passwordHash: await argon2.hash(password, { type: argon2.argon2id }),
-      role: 'OPERATIONS',
+      role,
       title: 'Operator',
       permissions,
     },

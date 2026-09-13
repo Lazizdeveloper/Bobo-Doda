@@ -33,6 +33,8 @@ import { PayoutModule } from '@/modules/payout/payout.module';
 import { DisputeModule } from '@/modules/dispute/dispute.module';
 import { ReconciliationModule } from '@/modules/reconciliation/reconciliation.module';
 import { NotificationModule } from '@/modules/notification/notification.module';
+import { StaffAdminModule } from '@/modules/staff-admin/staff-admin.module';
+import { StaffAuditModule } from '@/modules/staff-audit/staff-audit.module';
 
 /**
  * Ildiz modul. Domen modullari (`users`, `catalog`, `contracts`,
@@ -76,6 +78,8 @@ import { NotificationModule } from '@/modules/notification/notification.module';
     DisputeModule,
     ReconciliationModule,
     NotificationModule,
+    StaffAdminModule,
+    StaffAuditModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

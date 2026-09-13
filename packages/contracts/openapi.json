@@ -413,6 +413,183 @@
         ]
       }
     },
+    "/staff/me/change-password": {
+      "post": {
+        "operationId": "StaffMeController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/sessions": {
+      "get": {
+        "operationId": "StaffMeController_listSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      },
+      "delete": {
+        "operationId": "StaffMeController_revokeAllSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/sessions/{id}": {
+      "delete": {
+        "operationId": "StaffMeController_revokeSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/totp/enroll": {
+      "post": {
+        "operationId": "StaffMeController_enrollTotp",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpEnrollResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/totp/verify": {
+      "post": {
+        "operationId": "StaffMeController_verifyTotp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/totp/disable": {
+      "post": {
+        "operationId": "StaffMeController_disableTotp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpDisableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
     "/categories": {
       "get": {
         "operationId": "CategoryController_list",
@@ -841,6 +1018,97 @@
         ],
         "tags": [
           "staff-seller-applications"
+        ]
+      }
+    },
+    "/staff/sellers": {
+      "get": {
+        "operationId": "StaffSellerController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sellerStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_APPLIED",
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "SUSPENDED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-sellers"
+        ]
+      }
+    },
+    "/staff/sellers/{userId}": {
+      "get": {
+        "operationId": "StaffSellerController_get",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-sellers"
         ]
       }
     },
@@ -1459,6 +1727,193 @@
         ],
         "tags": [
           "staff-services"
+        ]
+      }
+    },
+    "/staff/services/{id}/force-pause": {
+      "post": {
+        "operationId": "StaffServiceController_forcePause",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-services"
+        ]
+      }
+    },
+    "/staff/users": {
+      "get": {
+        "operationId": "StaffUserController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "SUSPENDED",
+                "BLOCKED"
+              ]
+            }
+          },
+          {
+            "name": "sellerStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_APPLIED",
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "SUSPENDED"
+              ]
+            }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SELLER",
+                "BUYER"
+              ]
+            }
+          },
+          {
+            "name": "phone",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-users"
+        ]
+      }
+    },
+    "/staff/users/{id}": {
+      "get": {
+        "operationId": "StaffUserController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-users"
         ]
       }
     },
@@ -4082,6 +4537,589 @@
           "staff-outbox"
         ]
       }
+    },
+    "/staff/admin/staff-members": {
+      "get": {
+        "operationId": "StaffAdminController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "SUSPENDED",
+                "DISABLED"
+              ]
+            }
+          },
+          {
+            "name": "email",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permission",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      },
+      "post": {
+        "operationId": "StaffAdminController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateStaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}": {
+      "get": {
+        "operationId": "StaffAdminController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/permissions": {
+      "patch": {
+        "operationId": "StaffAdminController_updatePermissions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStaffPermissionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/suspend": {
+      "post": {
+        "operationId": "StaffAdminController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffStatusActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/disable": {
+      "post": {
+        "operationId": "StaffAdminController_disable",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffStatusActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/reactivate": {
+      "post": {
+        "operationId": "StaffAdminController_reactivate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/sessions": {
+      "delete": {
+        "operationId": "StaffAdminController_revokeSessions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/totp/reset": {
+      "post": {
+        "operationId": "StaffAdminController_resetTotp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/password-reset": {
+      "post": {
+        "operationId": "StaffAdminController_resetPassword",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPasswordResetResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/audit-logs": {
+      "get": {
+        "operationId": "StaffAuditLogController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "actorType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "STAFF",
+                "SYSTEM"
+              ]
+            }
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-audit-logs"
+        ]
+      }
+    },
+    "/staff/audit-logs/{id}": {
+      "get": {
+        "operationId": "StaffAuditLogController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-audit-logs"
+        ]
+      }
     }
   },
   "info": {
@@ -4467,12 +5505,16 @@
                 "STAFF"
               ]
             }
+          },
+          "mustChangePassword": {
+            "type": "boolean"
           }
         },
         "required": [
           "accessToken",
           "role",
-          "permissions"
+          "permissions",
+          "mustChangePassword"
         ]
       },
       "StaffMeDto": {
@@ -4528,6 +5570,9 @@
           },
           "mfaEnabled": {
             "type": "boolean"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -4537,7 +5582,68 @@
           "role",
           "title",
           "permissions",
-          "mfaEnabled"
+          "mfaEnabled",
+          "mustChangePassword"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "TotpEnrollResponseDto": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "otpauthUri": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauthUri"
+        ]
+      },
+      "TotpVerifyDto": {
+        "type": "object",
+        "properties": {
+          "totpCode": {
+            "type": "string",
+            "description": "6 xonali TOTP kod"
+          }
+        },
+        "required": [
+          "totpCode"
+        ]
+      },
+      "TotpDisableDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "totpCode": {
+            "type": "string",
+            "description": "6 xonali TOTP kod"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "totpCode"
         ]
       },
       "CategoryResponseDto": {
@@ -4720,6 +5826,60 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "SellerDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "object"
+          },
+          "sellerStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_APPLIED",
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "servicesCount": {
+            "type": "number"
+          },
+          "contractsAsSellerCount": {
+            "type": "number"
+          },
+          "payoutsSucceededCount": {
+            "type": "number"
+          },
+          "disputesAsSellerCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "sellerStatus",
+          "createdAt",
+          "verified",
+          "servicesCount",
+          "contractsAsSellerCount",
+          "payoutsSucceededCount",
+          "disputesAsSellerCount"
         ]
       },
       "SuspendSellerDto": {
@@ -4945,6 +6105,88 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "UserDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "object"
+          },
+          "email": {
+            "type": "object"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "SELLER",
+                "BUYER"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "BLOCKED"
+            ]
+          },
+          "statusReason": {
+            "type": "object"
+          },
+          "statusChangedAt": {
+            "type": "object"
+          },
+          "suspendedUntil": {
+            "type": "object"
+          },
+          "sellerStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_APPLIED",
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ]
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "contractsAsBuyerCount": {
+            "type": "number"
+          },
+          "contractsAsSellerCount": {
+            "type": "number"
+          },
+          "paymentsCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "roles",
+          "status",
+          "sellerStatus",
+          "verified",
+          "createdAt",
+          "contractsAsBuyerCount",
+          "contractsAsSellerCount",
+          "paymentsCount"
         ]
       },
       "SuspendUserDto": {
@@ -6412,6 +7654,371 @@
           "status",
           "attempts",
           "availableAt",
+          "createdAt"
+        ]
+      },
+      "StaffMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "DISABLED"
+            ]
+          },
+          "statusReason": {
+            "type": "object"
+          },
+          "statusChangedAt": {
+            "type": "object"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          },
+          "lastLoginAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "title",
+          "role",
+          "permissions",
+          "status",
+          "mfaEnabled",
+          "mustChangePassword",
+          "createdAt"
+        ]
+      },
+      "CreateStaffMemberDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "ops@bobododa.uz"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          }
+        },
+        "required": [
+          "email",
+          "fullName",
+          "title",
+          "role",
+          "permissions"
+        ]
+      },
+      "CreateStaffMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "DISABLED"
+            ]
+          },
+          "statusReason": {
+            "type": "object"
+          },
+          "statusChangedAt": {
+            "type": "object"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          },
+          "lastLoginAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tempPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "title",
+          "role",
+          "permissions",
+          "status",
+          "mfaEnabled",
+          "mustChangePassword",
+          "createdAt",
+          "tempPassword"
+        ]
+      },
+      "UpdateStaffPermissionsDto": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "description": "TO‘LIQ ro‘yxat — mavjudlarni ALMASHTIRADI, qo‘shimcha qilmaydi",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          }
+        },
+        "required": [
+          "permissions"
+        ]
+      },
+      "StaffStatusActionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "AdminPasswordResetResponseDto": {
+        "type": "object",
+        "properties": {
+          "tempPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tempPassword"
+        ]
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "actorId": {
+            "type": "object"
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "STAFF",
+              "SYSTEM"
+            ]
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "contextId": {
+            "type": "object"
+          },
+          "previousState": {
+            "type": "object"
+          },
+          "newState": {
+            "type": "object"
+          },
+          "ip": {
+            "type": "object"
+          },
+          "userAgent": {
+            "type": "object"
+          },
+          "requestId": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actorType",
+          "actorName",
+          "action",
+          "resourceType",
+          "resourceId",
           "createdAt"
         ]
       }

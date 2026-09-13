@@ -155,6 +155,16 @@ enum UserStatus {
   BLOCKED
 }
 
+/// Bosqich 11 — `StaffMember.isActive: Boolean`dan almashtirildi. `UserStatus`
+/// bilan bir xil falsafa, lekin nomi ATAYLAB BOSHQA (`BLOCKED` emas
+/// `DISABLED`) — staff "bloklanmaydi" (bu marketplace tili), operatsion
+/// ravishda "faoliyati to'xtatiladi/o'chiriladi".
+enum StaffStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
 /// "role = SELLER" (layoqat, `User.roles`) DAN MUSTAQIL — sotuvchi sifatida
 /// HAQIQATAN faoliyat yuritish huquqi (Bosqich 3 spec: ikki tushuncha
 /// ataylab ajratilgan). Faqat `APPROVED` bo'lganda yangi `Service` yaratish
@@ -524,6 +534,10 @@ model User {
   disputesOpened     Dispute[]
 
   @@index([createdAt])
+  // Bosqich 11, bo'lim 57 — `GET /staff/users`/`GET /staff/sellers`
+  // filtrlash+saralashi uchun (status/sellerStatus bo'yicha + vaqt tartibi).
+  @@index([status, createdAt])
+  @@index([sellerStatus, createdAt])
   @@map("users")
 }
 
@@ -605,19 +619,45 @@ model StaffMember {
   fullName     String
   email        String            @unique
   passwordHash String
+  /// Bosqich 11 — admin `POST /staff/admin/staff-members` bilan yaratganda
+  /// yoki `.../password-reset` bilan almashtirganda `true`. Login javobida
+  /// qaytariladi (client "parolni almashtiring" degan yumshoq signal
+  /// ko'rsatishi mumkin) — HECH QANDAY endpointni QATTIQ bloklamaydi
+  /// (bo'lim 4: "minimal secure flow" — admin temp parolni xavfsiz
+  /// kanaldan uzatadi deb ishoniladi, qo'shimcha majburlash murakkablik
+  /// qo'shadi, aniq foyda kam).
+  mustChangePassword Boolean @default(false)
   role         StaffRole
   title        String
   permissions  StaffPermission[]
-  isActive     Boolean           @default(true)
+  /// Bosqich 11 — `isActive: Boolean`dan almashtirildi (`UserStatus` bilan
+  /// bir xil naqsh). ACTIVE — normal. SUSPENDED — vaqtinchalik cheklov
+  /// (`reactivate` bilan qaytariladi). DISABLED — doimiy o'chirilgan
+  /// (hard delete YO'Q — bo'lim 60: AuditLog actor tarixi buzilmasin).
+  /// Ikkalasi (SUSPENDED/DISABLED) ham `StaffPermissionGuard`da BIR XIL
+  /// natija beradi — "faol emas" — operatsion farq faqat qaytarish
+  /// siyosatida.
+  status          StaffStatus @default(ACTIVE)
+  statusReason    String?
+  statusChangedAt DateTime?   @db.Timestamptz(6)
   mfaEnabled   Boolean           @default(false)
-  /// TOTP (RFC 6238) umumiy siri — Base32, `totp.util.ts`. Enroll oqimi
-  /// (setup/enable/disable) Bosqich 11 (Admin APIs, staff profil
-  /// boshqaruvi)ga qoldirilgan; Bosqich 2 faqat LOGIN vaqtidagi tekshiruvni
-  /// (`mfaEnabled=true` bo'lsa `totpCode` talab qiladi) joriy qiladi.
-  /// Hech qanday shifrlash qatlami yo'q (bu bosqichda KMS/env-key infra
-  /// yo'q) — bilib qo'yilgan cheklov, keyingi hardening bosqichida ko'rib
-  /// chiqiladi.
+  /// TOTP (RFC 6238) umumiy siri — Bosqich 11'dan boshlab SHIFRLANGAN
+  /// holda saqlanadi (`totp-secret-cipher.util.ts`, AES-256-GCM,
+  /// `STAFF_TOTP_ENCRYPTION_KEY`). Faqat VERIFY qilingandan keyin shu
+  /// ustunga yoziladi (bo'lim 7: "Secret faqat verify bo'lgandan keyin
+  /// active bo'lsin").
   totpSecret   String?
+  /// Bosqich 11, bo'lim 8 — enrollment boshlangan, HALI verify qilinmagan
+  /// sir (shifrlangan). Muddati o'tsa (`pendingTotpExpiresAt`) yaroqsiz —
+  /// eski faol MFA konfiguratsiyasiga (`totpSecret`/`mfaEnabled`) TA'SIR
+  /// QILMAYDI.
+  pendingTotpSecret     String?
+  pendingTotpExpiresAt  DateTime? @db.Timestamptz(6)
+  /// Bosqich 11, bo'lim 13 — RFC 6238 replay himoyasi: oxirgi MUVAFFAQIYATLI
+  /// qabul qilingan HOTP counter. Undan KATTA bo'lmagan counter qayta rad
+  /// etiladi (bir xil kod ikki marta — parallel so'rovlarda ham — ISHLATIB
+  /// BO'LMAYDI).
+  lastTotpCounter Int?
   lastLoginAt  DateTime?         @db.Timestamptz(6)
   createdAt    DateTime          @default(now()) @db.Timestamptz(6)
   updatedAt    DateTime          @updatedAt @db.Timestamptz(6)
@@ -625,6 +665,7 @@ model StaffMember {
 
   sessions StaffSession[]
 
+  @@index([status, createdAt])
   @@map("staff_members")
 }
 
@@ -677,8 +718,13 @@ model AuditLog {
   createdAt     DateTime       @default(now()) @db.Timestamptz(6)
 
   @@index([resourceType, resourceId])
-  @@index([actorId])
-  @@index([action])
+  // Bosqich 11, bo'lim 38/57 — `GET /staff/audit-logs` filtr+tartib
+  // so'rovlari uchun kompozit indekslar (`WHERE actorId=? ORDER BY
+  // createdAt DESC` va sh.k.) — YAKKA `actorId`/`action` indekslarini
+  // ALMASHTIRADI (kompozitning YETAKCHI ustuni yakka-ustun so'rovlarni ham
+  // xizmat qiladi — dublikat indeks bo'lmasin, bo'lim 57's aniq talabi).
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
 }

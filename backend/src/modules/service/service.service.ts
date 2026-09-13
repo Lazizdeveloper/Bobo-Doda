@@ -254,6 +254,36 @@ export class ServiceService {
     return result;
   }
 
+  /**
+   * Bosqich 11, bo'lim 27 — staff FAVQULODDA to'xtatish (masalan xavfli/
+   * shikoyat qilingan xizmat). Sotuvchi o'zining `pause()`idan FARQLI —
+   * BIR XIL `PAUSED` maqsad holatiga o'tadi (yangi status YARATILMAYDI),
+   * lekin sabab MAJBURIY va alohida audit action bilan (`SERVICE_FORCE_PAUSED`)
+   * — "kim to'xtatdi" tarixda ANIQ ko'rinadi.
+   */
+  async forcePause(id: string, reason: string, actor: AuditActor): Promise<Service> {
+    const existing = await this.getByIdOrThrow(id);
+    const result = await this.prisma.$transaction(async (tx) => {
+      const cas = await tx.service.updateMany({ where: { id, status: 'ACTIVE' }, data: { status: 'PAUSED' } });
+      if (cas.count === 0) return null;
+      await this.audit.record(
+        {
+          actor,
+          action: 'SERVICE_FORCE_PAUSED',
+          resourceType: 'SERVICE',
+          resourceId: id,
+          contextId: existing.sellerId,
+          previousState: { status: 'ACTIVE' },
+          newState: { status: 'PAUSED', reason },
+        },
+        tx,
+      );
+      return tx.service.findUniqueOrThrow({ where: { id } });
+    });
+    if (!result) throw new DomainError('INVALID_TRANSITION', 'Faqat faol xizmatni to‘xtatish mumkin');
+    return result;
+  }
+
   // ── Public ────────────────────────────────────────────────────────────
 
   async listPublic(query: ListServicesQueryDto): Promise<Page<Service>> {

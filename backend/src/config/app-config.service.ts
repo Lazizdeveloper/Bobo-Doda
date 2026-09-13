@@ -106,6 +106,11 @@ export class AppConfigService {
     };
   }
 
+  /** Bosqich 11 — TOTP at-rest shifrlash kaliti, hex qatordan `Buffer`ga oldindan parse qilingan (`totp-secret-cipher.util.ts`). */
+  get staffTotpEncryptionKey(): Buffer {
+    return Buffer.from(this.get('STAFF_TOTP_ENCRYPTION_KEY'), 'hex');
+  }
+
   /** Bosqich 5 — `payment.module.ts` shundan provider'ni tanlaydi. */
   get payment(): { provider: Env['PAYMENT_PROVIDER']; testWebhookSecret: string | undefined } {
     return {

@@ -135,6 +135,13 @@ export class RecipientResolverService {
         };
       }
 
+      // Bosqich 11, bo'lim 52 — staff admin amallari (USER_BLOCKED va sh.k.).
+      case 'USER': {
+        const user = await this.prisma.user.findUnique({ where: { id: aggregateId } });
+        if (!user) return null;
+        return { userId: user.id, extra };
+      }
+
       case 'DISPUTE': {
         const dispute = await this.prisma.dispute.findUnique({
           where: { id: aggregateId },

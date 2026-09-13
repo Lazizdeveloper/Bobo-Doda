@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type SellerApplication } from '@prisma/client';
+import { Prisma, type SellerApplication, type SellerStatus } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
 import { DomainError, NotFoundError } from '@/common/errors/domain-error';
@@ -200,20 +200,28 @@ export class SellerApplicationService {
 
   /** Ariza ORQALI EMAS — staff to'g'ridan-to'g'ri (APPROVED → SUSPENDED). */
   async suspendSeller(userId: string, reason: string, actor: AuditActor): Promise<void> {
-    const cas = await this.prisma.user.updateMany({
-      where: { id: userId, sellerStatus: 'APPROVED' },
-      data: { sellerStatus: 'SUSPENDED' },
-    });
-    if (cas.count === 0) {
-      throw new DomainError('INVALID_TRANSITION', 'Faqat tasdiqlangan sotuvchini to‘xtatish mumkin');
-    }
-    await this.audit.record({
-      actor,
-      action: 'SELLER_SUSPENDED',
-      resourceType: 'USER',
-      resourceId: userId,
-      previousState: { sellerStatus: 'APPROVED' },
-      newState: { sellerStatus: 'SUSPENDED', reason },
+    await this.prisma.$transaction(async (tx) => {
+      const cas = await tx.user.updateMany({
+        where: { id: userId, sellerStatus: 'APPROVED' },
+        data: { sellerStatus: 'SUSPENDED' },
+      });
+      if (cas.count === 0) {
+        throw new DomainError('INVALID_TRANSITION', 'Faqat tasdiqlangan sotuvchini to‘xtatish mumkin');
+      }
+      await this.audit.record(
+        {
+          actor,
+          action: 'SELLER_SUSPENDED',
+          resourceType: 'USER',
+          resourceId: userId,
+          previousState: { sellerStatus: 'APPROVED' },
+          newState: { sellerStatus: 'SUSPENDED', reason },
+        },
+        tx,
+      );
+      // Bosqich 11, bo'lim 52 — `EVENT_ROUTES`da ro'yxatdan o'tgan (aks
+      // holda Outbox worker buni UNSUPPORTED_EVENT deb DEAD qilib qo'yardi).
+      await this.outbox.enqueue({ aggregateType: 'USER', aggregateId: userId, eventType: 'SELLER_SUSPENDED', payload: {} }, tx);
     });
   }
 
@@ -233,5 +241,45 @@ export class SellerApplicationService {
       previousState: { sellerStatus: 'SUSPENDED' },
       newState: { sellerStatus: 'APPROVED' },
     });
+  }
+
+  // ── Bosqich 11, bo'lim 26 — operatsion ko'rinish (o'qish, mutatsiya YO'Q) ──
+
+  /** Sukut — `NOT_APPLIED` bo'lmagan (haqiqatan sotuvchilik bilan bog'liq bo'lgan) foydalanuvchilar. */
+  async listSellersForStaff(
+    filters: { sellerStatus?: SellerStatus },
+    page: number,
+    perPage: number,
+  ): Promise<Page<{ id: string; phone: string; fullName: string | null; sellerStatus: SellerStatus; createdAt: Date }>> {
+    const where: Prisma.UserWhereInput = {
+      sellerStatus: filters.sellerStatus ?? { not: 'NOT_APPLIED' },
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        select: { id: true, phone: true, fullName: true, sellerStatus: true, createdAt: true },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return buildPage(items, total, page, perPage);
+  }
+
+  /** Bo'lim 26 — MINIMAL foydali ko'rinish: bounded COUNT'lar, giant include YO'Q. */
+  async getSellerDetailByIdOrThrow(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, phone: true, fullName: true, sellerStatus: true, verified: true, createdAt: true },
+    });
+    if (!user) throw new NotFoundError('Foydalanuvchi topilmadi', 'USER_NOT_FOUND');
+    const [servicesCount, contractsAsSellerCount, payoutsSucceededCount, disputesAsSellerCount] = await Promise.all([
+      this.prisma.service.count({ where: { sellerId: userId } }),
+      this.prisma.contract.count({ where: { sellerId: userId } }),
+      this.prisma.payout.count({ where: { sellerId: userId, status: 'SUCCEEDED' } }),
+      this.prisma.dispute.count({ where: { contract: { sellerId: userId } } }),
+    ]);
+    return { ...user, servicesCount, contractsAsSellerCount, payoutsSucceededCount, disputesAsSellerCount };
   }
 }

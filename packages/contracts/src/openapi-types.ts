@@ -260,6 +260,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/staff/me/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffMeController_changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/me/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffMeController_listSessions"];
+        put?: never;
+        post?: never;
+        delete: operations["StaffMeController_revokeAllSessions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/me/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["StaffMeController_revokeSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/me/totp/enroll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffMeController_enrollTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/me/totp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffMeController_verifyTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/me/totp/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffMeController_disableTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/categories": {
         parameters: {
             query?: never;
@@ -414,6 +510,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["StaffSellerApplicationController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/sellers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffSellerController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/sellers/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffSellerController_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -638,6 +766,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["StaffServiceController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/services/{id}/force-pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffServiceController_forcePause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffUserController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffUserController_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1540,6 +1716,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/staff/admin/staff-members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffAdminController_list"];
+        put?: never;
+        post: operations["StaffAdminController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffAdminController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["StaffAdminController_updatePermissions"];
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffAdminController_suspend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffAdminController_disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffAdminController_reactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["StaffAdminController_revokeSessions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}/totp/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffAdminController_resetTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/admin/staff-members/{id}/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffAdminController_resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffAuditLogController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/audit-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffAuditLogController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1670,6 +2022,7 @@ export interface components {
             /** @enum {string} */
             role: "SUPER_ADMIN" | "OPERATIONS" | "FINANCE" | "SUPPORT" | "TRUST_SAFETY" | "KYC_REVIEWER" | "ADMIN";
             permissions: ("DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF")[];
+            mustChangePassword: boolean;
         };
         StaffMeDto: {
             id: string;
@@ -1680,6 +2033,24 @@ export interface components {
             title: string;
             permissions: ("DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF")[];
             mfaEnabled: boolean;
+            mustChangePassword: boolean;
+        };
+        ChangePasswordDto: {
+            currentPassword: string;
+            newPassword: string;
+        };
+        TotpEnrollResponseDto: {
+            secret: string;
+            otpauthUri: string;
+        };
+        TotpVerifyDto: {
+            /** @description 6 xonali TOTP kod */
+            totpCode: string;
+        };
+        TotpDisableDto: {
+            currentPassword: string;
+            /** @description 6 xonali TOTP kod */
+            totpCode: string;
         };
         CategoryResponseDto: {
             id: string;
@@ -1738,6 +2109,20 @@ export interface components {
         RejectSellerApplicationDto: {
             reason: string;
         };
+        SellerDetailResponseDto: {
+            id: string;
+            phone: string;
+            fullName?: Record<string, never>;
+            /** @enum {string} */
+            sellerStatus: "NOT_APPLIED" | "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+            /** Format: date-time */
+            createdAt: string;
+            verified: boolean;
+            servicesCount: number;
+            contractsAsSellerCount: number;
+            payoutsSucceededCount: number;
+            disputesAsSellerCount: number;
+        };
         SuspendSellerDto: {
             reason: string;
         };
@@ -1795,6 +2180,26 @@ export interface components {
         };
         RejectServiceDto: {
             reason: string;
+        };
+        UserDetailResponseDto: {
+            id: string;
+            phone: string;
+            fullName?: Record<string, never>;
+            email?: Record<string, never>;
+            roles: ("SELLER" | "BUYER")[];
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED" | "BLOCKED";
+            statusReason?: Record<string, never>;
+            statusChangedAt?: Record<string, never>;
+            suspendedUntil?: Record<string, never>;
+            /** @enum {string} */
+            sellerStatus: "NOT_APPLIED" | "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+            verified: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            contractsAsBuyerCount: number;
+            contractsAsSellerCount: number;
+            paymentsCount: number;
         };
         SuspendUserDto: {
             reason: string;
@@ -2212,6 +2617,80 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        StaffMemberResponseDto: {
+            id: string;
+            email: string;
+            fullName: string;
+            title: string;
+            /** @enum {string} */
+            role: "SUPER_ADMIN" | "OPERATIONS" | "FINANCE" | "SUPPORT" | "TRUST_SAFETY" | "KYC_REVIEWER" | "ADMIN";
+            permissions: ("DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF")[];
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED" | "DISABLED";
+            statusReason?: Record<string, never>;
+            statusChangedAt?: Record<string, never>;
+            mfaEnabled: boolean;
+            mustChangePassword: boolean;
+            lastLoginAt?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateStaffMemberDto: {
+            /** @example ops@bobododa.uz */
+            email: string;
+            fullName: string;
+            title: string;
+            /** @enum {string} */
+            role: "SUPER_ADMIN" | "OPERATIONS" | "FINANCE" | "SUPPORT" | "TRUST_SAFETY" | "KYC_REVIEWER" | "ADMIN";
+            permissions: ("DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF")[];
+        };
+        CreateStaffMemberResponseDto: {
+            id: string;
+            email: string;
+            fullName: string;
+            title: string;
+            /** @enum {string} */
+            role: "SUPER_ADMIN" | "OPERATIONS" | "FINANCE" | "SUPPORT" | "TRUST_SAFETY" | "KYC_REVIEWER" | "ADMIN";
+            permissions: ("DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF")[];
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED" | "DISABLED";
+            statusReason?: Record<string, never>;
+            statusChangedAt?: Record<string, never>;
+            mfaEnabled: boolean;
+            mustChangePassword: boolean;
+            lastLoginAt?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+            tempPassword: string;
+        };
+        UpdateStaffPermissionsDto: {
+            /** @description TO‘LIQ ro‘yxat — mavjudlarni ALMASHTIRADI, qo‘shimcha qilmaydi */
+            permissions: ("DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF")[];
+        };
+        StaffStatusActionDto: {
+            reason: string;
+        };
+        AdminPasswordResetResponseDto: {
+            tempPassword: string;
+        };
+        AuditLogResponseDto: {
+            id: string;
+            actorId?: Record<string, never>;
+            /** @enum {string} */
+            actorType: "USER" | "STAFF" | "SYSTEM";
+            actorName: string;
+            action: string;
+            resourceType: string;
+            resourceId: string;
+            contextId?: Record<string, never>;
+            previousState?: Record<string, never>;
+            newState?: Record<string, never>;
+            ip?: Record<string, never>;
+            userAgent?: Record<string, never>;
+            requestId?: Record<string, never>;
+            /** Format: date-time */
+            createdAt: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2568,6 +3047,141 @@ export interface operations {
             };
         };
     };
+    StaffMeController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffMeController_listSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffMeController_revokeAllSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffMeController_revokeSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffMeController_enrollTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TotpEnrollResponseDto"];
+                };
+            };
+        };
+    };
+    StaffMeController_verifyTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpVerifyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffMeController_disableTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotpDisableDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CategoryController_list: {
         parameters: {
             query?: never;
@@ -2840,6 +3454,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SellerApplicationResponseDto"];
+                };
+            };
+        };
+    };
+    StaffSellerController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                sellerStatus?: "NOT_APPLIED" | "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffSellerController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellerDetailResponseDto"];
                 };
             };
         };
@@ -3190,6 +3846,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ServiceResponseDto"];
+                };
+            };
+        };
+    };
+    StaffServiceController_forcePause: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectServiceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponseDto"];
+                };
+            };
+        };
+    };
+    StaffUserController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "ACTIVE" | "SUSPENDED" | "BLOCKED";
+                sellerStatus?: "NOT_APPLIED" | "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                role?: "SELLER" | "BUYER";
+                phone?: string;
+                /** @description ISO sana */
+                createdFrom?: string;
+                /** @description ISO sana */
+                createdTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffUserController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDetailResponseDto"];
                 };
             };
         };
@@ -4506,6 +5236,283 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OutboxEventResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAdminController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "ACTIVE" | "SUSPENDED" | "DISABLED";
+                email?: string;
+                permission?: "DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF";
+                /** @description ISO sana */
+                createdFrom?: string;
+                /** @description ISO sana */
+                createdTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffAdminController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStaffMemberDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateStaffMemberResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAdminController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMemberResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAdminController_updatePermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStaffPermissionsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMemberResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAdminController_suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffStatusActionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMemberResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAdminController_disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffStatusActionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMemberResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAdminController_reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffMemberResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAdminController_revokeSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffAdminController_resetTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffAdminController_resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPasswordResetResponseDto"];
+                };
+            };
+        };
+    };
+    StaffAuditLogController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                actorType?: "USER" | "STAFF" | "SYSTEM";
+                actorId?: string;
+                action?: string;
+                resourceType?: string;
+                resourceId?: string;
+                requestId?: string;
+                /** @description ISO sana */
+                createdFrom?: string;
+                /** @description ISO sana */
+                createdTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffAuditLogController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogResponseDto"];
                 };
             };
         };

@@ -63,4 +63,17 @@ export class StaffServiceController {
     const actor = await this.audit.resolveStaffActor(staff.sub);
     return toServiceResponseDto(await this.services.reject(id, dto.reason, actor));
   }
+
+  /** Bo'lim 27 — favqulodda to'xtatish (masalan xavfli/shikoyat qilingan xizmat). `RejectServiceDto` qayta ishlatiladi (bir xil shakl — sabab, majburiy). */
+  @Post(':id/force-pause')
+  @HttpCode(200)
+  @ApiOkResponse({ type: ServiceResponseDto })
+  async forcePause(
+    @CurrentStaff() staff: StaffAccessTokenPayload,
+    @Param('id') id: string,
+    @Body() dto: RejectServiceDto,
+  ): Promise<ServiceResponseDto> {
+    const actor = await this.audit.resolveStaffActor(staff.sub);
+    return toServiceResponseDto(await this.services.forcePause(id, dto.reason, actor));
+  }
 }
