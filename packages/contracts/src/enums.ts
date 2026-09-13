@@ -182,6 +182,29 @@ export const DisputeResolutionType = {
 export type DisputeResolutionType = (typeof DisputeResolutionType)[keyof typeof DisputeResolutionType];
 export const DisputeResolutionTypeValues = ['BUYER_FULL_REFUND', 'SELLER_FULL_RELEASE', 'SPLIT'] as const;
 
+export const ReconciliationTrigger = {
+  AUTOMATIC: 'AUTOMATIC',
+} as const;
+export type ReconciliationTrigger = (typeof ReconciliationTrigger)[keyof typeof ReconciliationTrigger];
+export const ReconciliationTriggerValues = ['AUTOMATIC'] as const;
+
+export const ReconciliationRunStatus = {
+  NO_CHANGE: 'NO_CHANGE',
+  RECONCILED: 'RECONCILED',
+  ANOMALY: 'ANOMALY',
+  ERROR: 'ERROR',
+} as const;
+export type ReconciliationRunStatus = (typeof ReconciliationRunStatus)[keyof typeof ReconciliationRunStatus];
+export const ReconciliationRunStatusValues = ['NO_CHANGE', 'RECONCILED', 'ANOMALY', 'ERROR'] as const;
+
+export const FinancialAnomalySeverity = {
+  INFO: 'INFO',
+  WARNING: 'WARNING',
+  CRITICAL: 'CRITICAL',
+} as const;
+export type FinancialAnomalySeverity = (typeof FinancialAnomalySeverity)[keyof typeof FinancialAnomalySeverity];
+export const FinancialAnomalySeverityValues = ['INFO', 'WARNING', 'CRITICAL'] as const;
+
 export const LedgerAccountType = {
   PAYMENT_CLEARING: 'PAYMENT_CLEARING',
   ESCROW: 'ESCROW',

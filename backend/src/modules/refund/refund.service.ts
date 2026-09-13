@@ -345,25 +345,41 @@ export class RefundService {
       return 'MISMATCH';
     }
 
+    return this.applyTerminalStatus(tx, refund, event.status, 'WEBHOOK');
+  }
+
+  /**
+   * Bosqich 9, bo'lim 12/76 — CAS + ledger (ESCROW yoki DISPUTE_HOLD
+   * manbali, `dispute.preSettlement`ga qarab) + Contract CAS + audit +
+   * outbox: webhook VA reconciliation IKKALASI ham shu BITTA metodni
+   * chaqiradi (`applyReconciledStatus()` — pastda). Mustaqil "reconcile
+   * ledger" matematikasi YOZILMAYDI.
+   */
+  private async applyTerminalStatus(
+    tx: Prisma.TransactionClient,
+    refund: Refund,
+    status: 'SUCCEEDED' | 'FAILED',
+    source: 'WEBHOOK' | 'RECONCILIATION',
+  ): Promise<RefundEventOutcome> {
     if (!REFUND_NON_TERMINAL_STATUSES.includes(refund.status)) {
-      if (refund.status === event.status) return 'NOOP_ALREADY_TARGET';
-      return this.recordContradiction(tx, refund, event);
+      if (refund.status === status) return 'NOOP_ALREADY_TARGET';
+      return this.recordContradiction(tx, refund, status, source);
     }
 
     const cas = await tx.refund.updateMany({
       where: { id: refund.id, status: { in: ['PENDING', 'PROCESSING'] } },
       data:
-        event.status === 'SUCCEEDED'
+        status === 'SUCCEEDED'
           ? { status: 'SUCCEEDED', succeededAt: new Date() }
-          : { status: 'FAILED', failedAt: new Date(), failureReason: 'Provider webhook: FAILED' },
+          : { status: 'FAILED', failedAt: new Date(), failureReason: `Provider ${source === 'WEBHOOK' ? 'webhook' : 'reconciliation'}: FAILED` },
     });
     if (cas.count === 0) {
       const fresh = await tx.refund.findUniqueOrThrow({ where: { id: refund.id } });
-      if (fresh.status === event.status) return 'NOOP_ALREADY_TARGET';
-      return this.recordContradiction(tx, { ...refund, status: fresh.status }, event);
+      if (fresh.status === status) return 'NOOP_ALREADY_TARGET';
+      return this.recordContradiction(tx, { ...refund, status: fresh.status }, status, source);
     }
 
-    if (event.status === 'SUCCEEDED') {
+    if (status === 'SUCCEEDED') {
       // Bo'lim 18/62 — Contract qatorini `FOR UPDATE` bilan qulflaymiz
       // (ContractService.approveMilestone() bilan BIR XIL naqsh) —
       // settlement bilan poyga bo'lsa, ikkalasidan FAQAT BITTASI g'olib
@@ -458,10 +474,24 @@ export class RefundService {
     return 'APPLIED';
   }
 
+  /**
+   * Bosqich 9, bo'lim 12/76 — reconciliation query natijasi asosida SHU
+   * BITTA (webhook bilan bir xil) yo'l orqali qo'llaydi. Amount/currency
+   * mismatch tekshiruvi YO'Q (provider query faqat status qaytaradi).
+   */
+  async applyReconciledStatus(
+    tx: Prisma.TransactionClient,
+    refund: Refund,
+    status: 'SUCCEEDED' | 'FAILED',
+  ): Promise<RefundEventOutcome> {
+    return this.applyTerminalStatus(tx, refund, status, 'RECONCILIATION');
+  }
+
   private async recordContradiction(
     tx: Prisma.TransactionClient,
     refund: Refund,
-    event: VerifiedRefundWebhookEvent,
+    attemptedStatus: string,
+    source: 'WEBHOOK' | 'RECONCILIATION',
   ): Promise<RefundEventOutcome> {
     await this.audit.record(
       {
@@ -471,7 +501,7 @@ export class RefundService {
         resourceId: refund.id,
         contextId: refund.contractId,
         previousState: { status: refund.status },
-        newState: { attemptedStatus: event.status },
+        newState: { attemptedStatus, source },
       },
       tx,
     );

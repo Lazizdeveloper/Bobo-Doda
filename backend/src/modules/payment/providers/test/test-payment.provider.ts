@@ -1,11 +1,14 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { DomainError } from '@/common/errors/domain-error';
+import type { ProviderQueryResult } from '@/common/provider/provider-operation-state';
 import type {
   CreatePaymentParams,
   CreatePaymentResult,
   CreateRefundParams,
   CreateRefundResult,
   PaymentProvider,
+  QueryPaymentResult,
+  QueryRefundResult,
   VerifiedPaymentWebhookEvent,
   VerifiedProviderEvent,
   VerifiedRefundWebhookEvent,
@@ -13,6 +16,15 @@ import type {
 } from '../payment-provider.interface';
 
 export type TestScenario = 'OK' | 'REJECT' | 'TIMEOUT';
+
+/**
+ * Bosqich 9, bo'lim 71 — reconciliation query stsenariylari, YARATISH
+ * stsenariylaridan (`TestScenario`) ALOHIDA kalit fazosida (`queryScenarios`
+ * Map) — chunki query'ning kaliti (`providerPaymentId`/`providerRefundId`,
+ * masalan "test_p1") yaratish kalitidan (`contractId`/`paymentId`) FARQ
+ * qiladi, ikkalasi bir vaqtda mustaqil boshqarilishi kerak.
+ */
+export type TestQueryScenario = 'SUCCEEDED' | 'FAILED' | 'PENDING' | 'NOT_FOUND' | 'UNKNOWN' | 'TIMEOUT' | 'MALFORMED' | 'AUTH_ERROR';
 
 const SIGNATURE_HEADER = 'x-test-signature';
 
@@ -37,12 +49,19 @@ export class TestPaymentProvider implements PaymentProvider {
 
   /** e2e/unit testlar `contractId`/`refundId` bo'yicha KEYINGI provider chaqiruvi natijasini boshqarish uchun. */
   private readonly scenarios = new Map<string, TestScenario>();
+  /** Bosqich 9 — `queryPayment`/`queryRefund` uchun, provider REFERENSI (masalan "test_p1") bo'yicha. */
+  private readonly queryScenarios = new Map<string, TestQueryScenario>();
 
   constructor(private readonly webhookSecret: string) {}
 
   /** Faqat test kodidan chaqiriladi (`app.get(PAYMENT_PROVIDER)`). */
   queueScenario(key: string, scenario: TestScenario): void {
     this.scenarios.set(key, scenario);
+  }
+
+  /** Bosqich 9 — reconciliation query natijasini oldindan belgilaydi (`providerPaymentId`/`providerRefundId` bo'yicha). */
+  queueQueryScenario(providerReference: string, scenario: TestQueryScenario): void {
+    this.queryScenarios.set(providerReference, scenario);
   }
 
   async createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult> {
@@ -86,6 +105,46 @@ export class TestPaymentProvider implements PaymentProvider {
       providerRefundId: `test_refund_${params.refundId}`,
       providerCreatedAt: new Date(),
     };
+  }
+
+  /** Bosqich 9, bo'lim 4/8. */
+  async queryPayment(providerPaymentId: string): Promise<QueryPaymentResult> {
+    return this.resolveQuery(providerPaymentId);
+  }
+
+  /** Bosqich 9, bo'lim 4/12. */
+  async queryRefund(providerRefundId: string): Promise<QueryRefundResult> {
+    return this.resolveQuery(providerRefundId);
+  }
+
+  private async resolveQuery(providerReference: string): Promise<ProviderQueryResult> {
+    // Bo'lim 4/54 — YARATISH stsenariyalaridan (`scenarios`) FARQLI ravishda
+    // BIR MARTALIK ISTE'MOL QILINMAYDI: haqiqiy provider bir xil operatsiya
+    // uchun bir necha marta so'ralganda IZCHIL javob qaytaradi (multi-worker
+    // xavfsizligi — bo'lim 36: "provider so'rovlari bir necha marta
+    // ishlashi mumkin, bu normal"). Testda holat o'zgarishini simulyatsiya
+    // qilish uchun chaqiruvchi `queueQueryScenario()`ni QAYTA chaqiradi.
+    const scenario = this.queryScenarios.get(providerReference) ?? 'UNKNOWN';
+    await Promise.resolve(); // haqiqiy provider — tarmoq I/O — bilan bir xil async chegara
+
+    if (scenario === 'TIMEOUT') {
+      throw new DomainError('PAYMENT_PROVIDER_UNAVAILABLE', 'Test provider: query javob bermadi (ambiguous)');
+    }
+    if (scenario === 'AUTH_ERROR') {
+      // Bo'lim 35 — config/auth xatosi, ambiguous EMAS: qayta-qayta so'rash
+      // yordam bermaydi, `ReconciliationService` shu kodni ko'rsa batch'ni to'xtatadi.
+      throw new DomainError('PROVIDER_CONFIG_ERROR', 'Test provider: noto‘g‘ri credentials (simulyatsiya)');
+    }
+    if (scenario === 'MALFORMED') {
+      // Bo'lim 32/41 — "provider javob berdi, lekin tushunarsiz" — ISTISNO
+      // EMAS, oddiy `UNKNOWN` natija (aniq semantik farq: bu ambiguous
+      // TRANSPORT xatosi emas, muvaffaqiyatli-lekin-tushunarsiz JAVOB).
+      return { state: 'UNKNOWN', providerReference };
+    }
+    if (scenario === 'NOT_FOUND') {
+      return { state: 'NOT_FOUND', providerReference: null };
+    }
+    return { state: scenario, providerReference };
   }
 
   verifyWebhook(req: WebhookRequest): VerifiedProviderEvent {

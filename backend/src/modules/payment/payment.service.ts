@@ -313,35 +313,53 @@ export class PaymentService {
       return 'MISMATCH';
     }
 
+    return this.applyTerminalStatus(tx, payment, event.status, 'WEBHOOK');
+  }
+
+  /**
+   * Bo'lim 8/9/76 — CAS + ledger funding + audit + outbox: webhook VA
+   * Bosqich 9 reconciliation IKKALASI ham shu BITTA metodni chaqiradi
+   * (`applyReconciledStatus()` — pastda, public wrapper). Mustaqil
+   * "reconcile ledger" matematikasi YOZILMAYDI — financial mutation faqat
+   * shu yagona yo'ldan o'tadi.
+   */
+  private async applyTerminalStatus(
+    tx: Prisma.TransactionClient,
+    payment: Payment,
+    status: VerifiedPaymentWebhookEvent['status'],
+    source: 'WEBHOOK' | 'RECONCILIATION',
+  ): Promise<PaymentEventOutcome> {
     if (PAYMENT_TERMINAL_STATUSES.includes(payment.status)) {
-      if (payment.status === event.status) return 'NOOP_ALREADY_TARGET';
-      return this.recordContradiction(tx, payment, event);
+      if (payment.status === status) return 'NOOP_ALREADY_TARGET';
+      return this.recordContradiction(tx, payment, status, source);
     }
 
     const cas = await tx.payment.updateMany({
       where: { id: payment.id, status: { in: ['PENDING', 'PROCESSING'] } },
-      data: this.terminalUpdateData(event.status),
+      data: this.terminalUpdateData(status),
     });
     if (cas.count === 0) {
-      // Race: parallel boshqa hodisa bizdan oldin terminal holatga o'tkazdi.
+      // Race: parallel boshqa hodisa (webhook YOKI reconciliation) bizdan
+      // oldin terminal holatga o'tkazdi (bo'lim 14 — race har ikki
+      // yo'nalishda ham himoyalangan, faqat BITTASI g'olib chiqadi).
       const fresh = await tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
-      if (fresh.status === event.status) return 'NOOP_ALREADY_TARGET';
-      return this.recordContradiction(tx, { ...payment, status: fresh.status }, event);
+      if (fresh.status === status) return 'NOOP_ALREADY_TARGET';
+      return this.recordContradiction(tx, { ...payment, status: fresh.status }, status, source);
     }
 
     await this.audit.record(
       {
         actor: SYSTEM_ACTOR,
-        action: this.eventAuditAction(event.status),
+        action: this.eventAuditAction(status),
         resourceType: 'PAYMENT',
         resourceId: payment.id,
         contextId: payment.contractId,
         previousState: { status: payment.status },
-        newState: { status: event.status },
+        newState: { status, source },
       },
       tx,
     );
-    if (event.status === 'SUCCEEDED') {
+    if (status === 'SUCCEEDED') {
       // Bo'lim 16 — ATOMIK: Payment CAS (yuqorida) + ledger funding + audit
       // + outbox BIR XIL tranzaksiyada. Natija: "Payment SUCCEEDED lekin
       // escrow funded emas" holati STRUKTURAVIY ravishda IMKONSIZ — yo
@@ -376,7 +394,7 @@ export class PaymentService {
         { aggregateType: 'PAYMENT', aggregateId: payment.id, eventType: 'PAYMENT_SUCCEEDED', payload: { contractId: payment.contractId } },
         tx,
       );
-    } else if (event.status === 'FAILED') {
+    } else if (status === 'FAILED') {
       // Bo'lim 54 — FAILED/CANCELLED/EXPIRED HECH QACHON ledger funding
       // yaratmaydi (faqat authoritative SUCCEEDED source).
       await this.outbox.enqueue(
@@ -387,14 +405,32 @@ export class PaymentService {
     return 'APPLIED';
   }
 
+  /**
+   * Bosqich 9, bo'lim 8/9/12 — reconciliation query natijasi asosida SHU
+   * BITTA (webhook bilan bir xil) yo'l orqali qo'llaydi. Mismatch tekshiruvi
+   * YO'Q (provider query amount/currency qaytarmaydi — faqat status),
+   * qolgan hammasi (terminal-holat himoyasi, CAS, ledger, audit, outbox)
+   * ANIQ bir xil. Chaqiruvchi (`ReconciliationService`) natijaga qarab
+   * `FinancialAnomaly` yaratish/yaratmaslikni hal qiladi — bu servis faqat
+   * "nima bo'ldi"ni qaytaradi (mas'uliyat ajratilgan).
+   */
+  async applyReconciledStatus(
+    tx: Prisma.TransactionClient,
+    payment: Payment,
+    status: 'SUCCEEDED' | 'FAILED',
+  ): Promise<PaymentEventOutcome> {
+    return this.applyTerminalStatus(tx, payment, status, 'RECONCILIATION');
+  }
+
   private async recordContradiction(
     tx: Prisma.TransactionClient,
     payment: Payment,
-    event: VerifiedPaymentWebhookEvent,
+    attemptedStatus: string,
+    source: 'WEBHOOK' | 'RECONCILIATION',
   ): Promise<PaymentEventOutcome> {
-    // Bo'lim 22 — "SUCCEEDED -> FAILED" kabi ziddiyatli hodisa HECH QACHON
-    // jimgina qayta yozilmaydi (silent overwrite yo'q) — faqat audit'ga
-    // qayd etiladi, rekonsiliatsiya uchun.
+    // Bo'lim 22/42/43 — "SUCCEEDED -> FAILED" kabi ziddiyatli hodisa HECH
+    // QACHON jimgina qayta yozilmaydi (silent overwrite yo'q, terminal
+    // monotonicity saqlanadi) — faqat audit'ga qayd etiladi.
     await this.audit.record(
       {
         actor: SYSTEM_ACTOR,
@@ -403,7 +439,7 @@ export class PaymentService {
         resourceId: payment.id,
         contextId: payment.contractId,
         previousState: { status: payment.status },
-        newState: { attemptedStatus: event.status },
+        newState: { attemptedStatus, source },
       },
       tx,
     );

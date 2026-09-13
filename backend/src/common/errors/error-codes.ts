@@ -166,6 +166,12 @@ export const ERROR_CODES = {
   // ── Server / ichki invariant (500) ─────────────────────────────
   UNKNOWN: { httpStatus: 500, retryable: true },
   INVARIANT_VIOLATION: { httpStatus: 500, retryable: false },
+  // Bosqich 9, bo'lim 32/35 — provider auth/config xatosi (masalan
+  // noto'g'ri merchant credentials): ambiguous timeout'dan FARQLI —
+  // qayta-qayta query qilish YORDAM BERMAYDI (config to'g'irlanmaguncha).
+  // `ReconciliationService` shu kodni ko'rsa JORIY BATCH'ni ATAYLAB
+  // to'xtatadi (bo'lim 35 — "1000 operationni qayta-qayta query qilma").
+  PROVIDER_CONFIG_ERROR: { httpStatus: 500, retryable: false }, // Bosqich 9
 } as const satisfies Record<string, ErrorCodeMeta>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

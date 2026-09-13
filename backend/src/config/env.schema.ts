@@ -128,6 +128,18 @@ export const envSchema = z
     PAYOUT_PROVIDER: z.enum(['TEST']).default('TEST'),
     PAYOUT_TEST_WEBHOOK_SECRET: z.string().min(16).optional(),
 
+    // ── Reconciliation (Bosqich 9, bo'lim 15/17/33/53) — arbitrary
+    // hardcode YO'Q, hammasi konfiguratsiya orqali. Default'lar: "juda tez
+    // emas, juda sekin ham emas" — provider yukini himoya qiladi (bo'lim
+    // 35/55), lekin stuck operatsiyalarni ham asossiz uzoq ushlab turmaydi.
+    PAYMENT_RECONCILE_AFTER_SECONDS: z.coerce.number().int().positive().default(300),
+    REFUND_RECONCILE_AFTER_SECONDS: z.coerce.number().int().positive().default(300),
+    PAYOUT_RECONCILE_AFTER_SECONDS: z.coerce.number().int().positive().default(300),
+    // Bo'lim 17 — bitta run BUTUN DB'ni scan qilmasin (unbounded scan taqiqi).
+    RECONCILIATION_BATCH_SIZE: z.coerce.number().int().positive().max(500).default(50),
+    // Bo'lim 52/53 — rejalashtirilgan job oralig'i (BullMQ repeatable job).
+    RECONCILIATION_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
+
     // ── Telegram support (Bosqich 6) ──────────────────────────────────
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_SUPPORT_CHAT_ID: z.string().optional(),

@@ -124,4 +124,59 @@ export class LedgerIntegrityService {
     `;
     return rows.map((r) => ({ accountId: r.id, type: r.type, ownerId: r.ownerId, balance: r.balance.toString() }));
   }
+
+  // ── Bosqich 9, bo'lim 21 — reconciliation integratsiyasi ────────────────
+
+  /** `PAYMENT_FUNDING` journal bor, lekin Payment `SUCCEEDED` EMAS — struktura buzilishi (bo'lim 21). */
+  async findFundingJournalsWithoutSucceededPayment(): Promise<{ paymentId: string; status: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string; status: string }[]>`
+      SELECT p.id, p.status
+      FROM ledger_transactions lt
+      JOIN payments p ON p.id::text = lt."sourceId"
+      WHERE lt.type = 'PAYMENT_FUNDING' AND p.status <> 'SUCCEEDED'
+    `;
+    return rows.map((r) => ({ paymentId: r.id, status: r.status }));
+  }
+
+  /**
+   * `SUCCEEDED` Refund, lekin `REFUND` journal YO'Q. Dispute-driven refund
+   * (`disputeId` bor) ATAYLAB CHIQARIB TASHLANADI — u `REFUND` turida EMAS,
+   * `DISPUTE_RESOLUTION`da hisoblanadi (Bosqich 8'ning o'z tekshiruvlari —
+   * `findResolvedDisputesWithMissingRefund` — buni allaqachon qamrab oladi).
+   */
+  async findUnjournaledSucceededRefunds(): Promise<{ refundId: string; contractId: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string; contractId: string }[]>`
+      SELECT r.id, r."contractId"
+      FROM refunds r
+      WHERE r.status = 'SUCCEEDED' AND r."disputeId" IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM ledger_transactions lt
+          WHERE lt.type = 'REFUND' AND lt."sourceId" = r.id::text
+        )
+    `;
+    return rows.map((r) => ({ refundId: r.id, contractId: r.contractId }));
+  }
+
+  /** `FAILED` Payout, rezervatsiya BOR, lekin `PAYOUT_RELEASE` YO'Q — mablag' `PAYOUT_CLEARING`da "qotib" qolgan bo'lishi mumkin. */
+  async findFailedPayoutsMissingRelease(): Promise<{ payoutId: string; sellerId: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string; sellerId: string }[]>`
+      SELECT p.id, p."sellerId"
+      FROM payouts p
+      WHERE p.status = 'FAILED'
+        AND EXISTS (SELECT 1 FROM ledger_transactions lt WHERE lt.type = 'PAYOUT_RESERVATION' AND lt."sourceId" = p.id::text)
+        AND NOT EXISTS (SELECT 1 FROM ledger_transactions lt WHERE lt.type = 'PAYOUT_RELEASE' AND lt."sourceId" = p.id::text)
+    `;
+    return rows.map((r) => ({ payoutId: r.id, sellerId: r.sellerId }));
+  }
+
+  /** `SUCCEEDED` Payout, lekin `PAYOUT_RESERVATION` journal YO'Q — struktura buzilishi (rezervatsiya HAR DOIM yaratilish paytida yoziladi). */
+  async findSucceededPayoutsWithoutReservation(): Promise<{ payoutId: string; sellerId: string }[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string; sellerId: string }[]>`
+      SELECT p.id, p."sellerId"
+      FROM payouts p
+      WHERE p.status = 'SUCCEEDED'
+        AND NOT EXISTS (SELECT 1 FROM ledger_transactions lt WHERE lt.type = 'PAYOUT_RESERVATION' AND lt."sourceId" = p.id::text)
+    `;
+    return rows.map((r) => ({ payoutId: r.id, sellerId: r.sellerId }));
+  }
 }

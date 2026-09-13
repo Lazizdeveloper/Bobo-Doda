@@ -103,6 +103,16 @@ export const APPEND_ONLY_TABLES = {
     revoke: ['UPDATE', 'DELETE'],
     allowUpdateColumns: [],
   },
+  // Bosqich 9 (Reconciliation) — insert-on-complete naqsh (bo'lim 59/60):
+  // qator FAQAT natija TO'LIQ ma'lum bo'lganda bir marta yoziladi (create-
+  // keyin-update tsikli YO'Q), shuning uchun `payment_provider_events` bilan
+  // bir xil TO'LIQ append-only siyosat. `financial_anomalies` BU YERGA
+  // QO'SHILMAYDI — u ataylab mutable (staff `acknowledge()` orqali
+  // `resolvedAt`/`resolvedByStaffId`/`resolutionNote`ni yozadi).
+  reconciliation_runs: {
+    revoke: ['UPDATE', 'DELETE'],
+    allowUpdateColumns: [],
+  },
 } as const satisfies Record<string, AppendOnlyTableRule>;
 
 export type AppendOnlyTableName = keyof typeof APPEND_ONLY_TABLES;

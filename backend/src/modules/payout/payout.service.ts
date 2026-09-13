@@ -303,25 +303,39 @@ export class PayoutService {
       return 'MISMATCH';
     }
 
+    return this.applyTerminalStatus(tx, payout, event.status, 'WEBHOOK');
+  }
+
+  /**
+   * Bosqich 9, bo'lim 13/76 — CAS + (FAILED bo'lsa) `PAYOUT_RELEASE` +
+   * audit + outbox: webhook VA reconciliation IKKALASI ham shu BITTA
+   * metodni chaqiradi. Mustaqil "reconcile ledger" matematikasi YOZILMAYDI.
+   */
+  private async applyTerminalStatus(
+    tx: Prisma.TransactionClient,
+    payout: Payout,
+    status: 'SUCCEEDED' | 'FAILED',
+    source: 'WEBHOOK' | 'RECONCILIATION',
+  ): Promise<PayoutEventOutcome> {
     if (!PAYOUT_NON_TERMINAL_STATUSES.includes(payout.status)) {
-      if (payout.status === event.status) return 'NOOP_ALREADY_TARGET';
-      return this.recordContradiction(tx, payout, event);
+      if (payout.status === status) return 'NOOP_ALREADY_TARGET';
+      return this.recordContradiction(tx, payout, status, source);
     }
 
     const cas = await tx.payout.updateMany({
       where: { id: payout.id, status: { in: ['PENDING', 'PROCESSING'] } },
       data:
-        event.status === 'SUCCEEDED'
+        status === 'SUCCEEDED'
           ? { status: 'SUCCEEDED', succeededAt: new Date() }
-          : { status: 'FAILED', failedAt: new Date(), failureReason: 'Provider webhook: FAILED' },
+          : { status: 'FAILED', failedAt: new Date(), failureReason: `Provider ${source === 'WEBHOOK' ? 'webhook' : 'reconciliation'}: FAILED` },
     });
     if (cas.count === 0) {
       const fresh = await tx.payout.findUniqueOrThrow({ where: { id: payout.id } });
-      if (fresh.status === event.status) return 'NOOP_ALREADY_TARGET';
-      return this.recordContradiction(tx, { ...payout, status: fresh.status }, event);
+      if (fresh.status === status) return 'NOOP_ALREADY_TARGET';
+      return this.recordContradiction(tx, { ...payout, status: fresh.status }, status, source);
     }
 
-    if (event.status === 'SUCCEEDED') {
+    if (status === 'SUCCEEDED') {
       // Bo'lim 30/41 — HECH QANDAY qo'shimcha ledger yozuvi YO'Q: mablag'
       // reservation vaqtida ALLAQACHON SELLER_PAYABLE'dan PAYOUT_CLEARING'ga
       // o'tgan (PAYMENT_CLEARING bilan bir xil simmetriya — schema izohiga qarang).
@@ -387,10 +401,23 @@ export class PayoutService {
     return 'APPLIED';
   }
 
+  /**
+   * Bosqich 9, bo'lim 13/76 — reconciliation query natijasi asosida SHU
+   * BITTA (webhook bilan bir xil) yo'l orqali qo'llaydi.
+   */
+  async applyReconciledStatus(
+    tx: Prisma.TransactionClient,
+    payout: Payout,
+    status: 'SUCCEEDED' | 'FAILED',
+  ): Promise<PayoutEventOutcome> {
+    return this.applyTerminalStatus(tx, payout, status, 'RECONCILIATION');
+  }
+
   private async recordContradiction(
     tx: Prisma.TransactionClient,
     payout: Payout,
-    event: VerifiedPayoutWebhookEvent,
+    attemptedStatus: string,
+    source: 'WEBHOOK' | 'RECONCILIATION',
   ): Promise<PayoutEventOutcome> {
     await this.audit.record(
       {
@@ -400,7 +427,7 @@ export class PayoutService {
         resourceId: payout.id,
         contextId: payout.sellerId,
         previousState: { status: payout.status },
-        newState: { attemptedStatus: event.status },
+        newState: { attemptedStatus, source },
       },
       tx,
     );

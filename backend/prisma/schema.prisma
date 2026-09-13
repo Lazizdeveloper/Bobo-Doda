@@ -274,6 +274,41 @@ enum DisputeResolutionType {
   SPLIT
 }
 
+/// Bosqich 9, bo'lim 7 — reconciliation urinishini kim/nima boshlagani.
+/// Faqat haqiqatan kerakli uchta manba (bo'lim 7: "keraksiz enum qo'shma").
+enum ReconciliationTrigger {
+  /// Rejalashtirilgan job (`ReconciliationProcessor`) — stuck operatsiyalarni topib avtomatik tekshiradi.
+  AUTOMATIC
+  /// Staff `POST /staff/{payments,refunds,payouts}/:id/reconcile` orqali.
+  STAFF
+  /// `npm run financial:check` — deploy oldidan preflight (bo'lim 47/50).
+  DEPLOYMENT_CHECK
+}
+
+/// Bosqich 9, bo'lim 6 — bitta reconciliation urinishining YAKUNIY natijasi
+/// (bo'lim 59/60: append-only uchun INSERT-ON-COMPLETE dizayni — "boshida
+/// create, oxirida update" YO'Q, faqat natija ANIQ bo'lgach BITTA INSERT).
+enum ReconciliationRunStatus {
+  /// Provider hali PENDING/PROCESSING dedi — hech narsa o'zgarmadi.
+  NO_CHANGE
+  /// Provider terminal holat qaytardi va local aggregate SHU orqali (webhook
+  /// bilan BIR XIL yo'ldan) muvaffaqiyatli yangilandi.
+  RECONCILED
+  /// Contradiction (bo'lim 42/43) yoki NOT_FOUND/UNKNOWN (bo'lim 11/41) —
+  /// moliyaviy harakat YO'Q, `FinancialAnomaly` yozildi.
+  ANOMALY
+  /// Query o'zi muvaffaqiyatsiz bo'ldi (ambiguous timeout YOKI config xatosi,
+  /// bo'lim 32/35) — keyinroq qayta urinish uchun qoldiriladi.
+  ERROR
+}
+
+/// Bosqich 9, bo'lim 22 — integrity/reconciliation anomaliyasining og'irlik darajasi.
+enum FinancialAnomalySeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
 // `DisputeEvidence.type` — Prisma enum EMAS, oddiy `String` ustun
 // (`PaymentProviderEvent.outcome` bilan bir xil naqsh). Ruxsat etilgan
 // qiymatlar TS union sifatida `dispute.constants.ts`da e'lon qilingan va
@@ -950,6 +985,8 @@ model Payment {
   @@index([contractId, createdAt])
   @@index([payerUserId, createdAt])
   @@index([status, createdAt])
+  /// Bosqich 9, bo'lim 57 — stuck-scan uchun (`status IN (...) AND updatedAt < threshold ORDER BY updatedAt, id`).
+  @@index([status, updatedAt])
   @@index([provider, providerPaymentId])
   @@map("payments")
 }
@@ -1180,6 +1217,7 @@ model Refund {
   @@index([contractId, createdAt])
   @@index([paymentId])
   @@index([status, createdAt])
+  @@index([status, updatedAt])
   @@index([provider, providerRefundId])
   @@index([disputeId])
   @@map("refunds")
@@ -1243,6 +1281,7 @@ model Payout {
 
   @@index([sellerId, createdAt])
   @@index([status, createdAt])
+  @@index([status, updatedAt])
   @@index([provider, providerPayoutId])
   @@map("payouts")
 }
@@ -1408,4 +1447,89 @@ model DisputeEvent {
 
   @@index([disputeId, createdAt])
   @@map("dispute_events")
+}
+
+// ── Bosqich 9: Financial Reconciliation + Operational Hardening ──────────────
+
+/// **APPEND-ONLY** (bo'lim 31/59/60) — "insert-on-complete" dizayni: provider
+/// so'rovi bajariladi, natija ANIQ bo'lgach BITTA marta yoziladi (boshida
+/// create qilib oxirida update qilish YO'Q, shuning uchun append-only
+/// jadval bilan tabiiy mos keladi). Har urinish (muvaffaqiyatli, o'zgarishsiz
+/// yoki xato bilan) shu yerga yoziladi — `AuditLog` esa FAQAT ma'noli
+/// mutatsiya/anomaliya uchun (bo'lim 30: "har background poll uchun audit
+/// yozib DB'ni to'ldirma").
+///
+/// `operationId`/`operationType` — `LedgerTransaction.sourceId` bilan bir
+/// xil ATAYLAB polimorf, lekin FK EMAS qaror (bo'lim 6): Payment/Refund/
+/// Payout uchtasi ham mumkin, alohida ustunlar keraksiz murakkablik bo'lardi.
+model ReconciliationRun {
+  id String @id @db.Uuid
+
+  /// `"PAYMENT" | "REFUND" | "PAYOUT"`.
+  operationType String
+  operationId   String
+  /// Provider registry kaliti (masalan "TEST") — `Payment.provider` bilan bir xil naqsh.
+  provider String
+  trigger  ReconciliationTrigger
+
+  status ReconciliationRunStatus
+
+  /// Urinish BOSHIDA kuzatilgan local aggregate status (masalan "PENDING")
+  /// — Payment/Refund/Payout'ning O'Z enumi, bitta ustunga sig'dirish uchun `String`.
+  observedLocalStatus String
+  /// `ProviderOperationState` qiymati — `ERROR` holatida query hech qachon
+  /// muvaffaqiyatli qaytmagani uchun NULL bo'lishi mumkin.
+  observedProviderStatus String?
+  /// Diagnostika uchun erkin matn (masalan "MARKED_SUCCEEDED", "RELEASED_RESERVATION", "NONE").
+  actionTaken String?
+  /// `ERROR` holatida `ErrorCode` qiymati (masalan "PAYMENT_PROVIDER_UNAVAILABLE").
+  errorCode String?
+
+  startedAt   DateTime @db.Timestamptz(6)
+  completedAt DateTime @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([operationType, operationId, createdAt])
+  @@index([status, createdAt])
+  @@map("reconciliation_runs")
+}
+
+/// Operator ko'rinishi uchun STRUKTURALASHTIRILGAN anomaliya (bo'lim 22) —
+/// oddiy string ro'yxat EMAS. Mutable (append-only EMAS): staff `resolvedAt`
+/// orqali "ko'rib chiqildi" deb belgilashi mumkin — bu FAQAT operator
+/// workflow holati, hech qanday moliyaviy maydonga tegmaydi (bo'lim 27:
+/// "manual ledger patch yo'q").
+///
+/// `@@unique([code, entityType, entityId])` — bir xil aniqlangan muammo
+/// qayta-qayta scan qilinsa ham (masalan har reconciliation batch'ida)
+/// DUPLIKAT qator YARATILMAYDI (`createMany({skipDuplicates:true})` orqali,
+/// bo'lim 22: operator visibility shovqinsiz bo'lishi kerak).
+model FinancialAnomaly {
+  id String @id @db.Uuid
+
+  /// Masalan "SUCCEEDED_PAYMENT_WITHOUT_FUNDING", "TERMINAL_CONTRADICTION",
+  /// "PROVIDER_NOT_FOUND", "PROVIDER_STATUS_UNKNOWN" — kichik, ichki, HUJJATLASHTIRILGAN
+  /// to'plam (`anomaly-codes.constant.ts`), Prisma enum EMAS (tez-tez
+  /// kengayishi mumkin, migratsiya talab qilmasin).
+  code     String
+  severity FinancialAnomalySeverity
+
+  /// `"PAYMENT" | "REFUND" | "PAYOUT" | "CONTRACT" | "LEDGER_TRANSACTION"`.
+  entityType String
+  entityId   String
+
+  description String
+
+  detectedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  resolvedAt        DateTime? @db.Timestamptz(6)
+  resolvedByStaffId String?   @db.Uuid
+  resolutionNote    String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([code, entityType, entityId])
+  @@index([severity, detectedAt])
+  @@index([entityType, entityId])
+  @@map("financial_anomalies")
 }

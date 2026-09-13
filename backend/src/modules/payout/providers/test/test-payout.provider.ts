@@ -1,14 +1,19 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { DomainError } from '@/common/errors/domain-error';
+import type { ProviderQueryResult } from '@/common/provider/provider-operation-state';
 import type {
   CreatePayoutParams,
   CreatePayoutResult,
   PayoutProvider,
   PayoutWebhookRequest,
+  QueryPayoutResult,
   VerifiedPayoutWebhookEvent,
 } from '../payout-provider.interface';
 
 export type TestPayoutScenario = 'OK' | 'REJECT' | 'TIMEOUT';
+
+/** Bosqich 9, bo'lim 71 — `TestPaymentProvider.TestQueryScenario` bilan bir xil vositalar to'plami. */
+export type TestPayoutQueryScenario = 'SUCCEEDED' | 'FAILED' | 'PENDING' | 'NOT_FOUND' | 'UNKNOWN' | 'TIMEOUT' | 'MALFORMED' | 'AUTH_ERROR';
 
 const SIGNATURE_HEADER = 'x-test-payout-signature';
 
@@ -21,11 +26,17 @@ export class TestPayoutProvider implements PayoutProvider {
   readonly name = 'TEST';
 
   private readonly scenarios = new Map<string, TestPayoutScenario>();
+  private readonly queryScenarios = new Map<string, TestPayoutQueryScenario>();
 
   constructor(private readonly webhookSecret: string) {}
 
   queueScenario(payoutId: string, scenario: TestPayoutScenario): void {
     this.scenarios.set(payoutId, scenario);
+  }
+
+  /** Bosqich 9 — reconciliation query natijasini oldindan belgilaydi (`providerPayoutId` bo'yicha). */
+  queueQueryScenario(providerPayoutId: string, scenario: TestPayoutQueryScenario): void {
+    this.queryScenarios.set(providerPayoutId, scenario);
   }
 
   async createPayout(params: CreatePayoutParams): Promise<CreatePayoutResult> {
@@ -46,6 +57,33 @@ export class TestPayoutProvider implements PayoutProvider {
     }
 
     return { providerPayoutId: `test_payout_${params.payoutId}`, providerCreatedAt: new Date() };
+  }
+
+  /**
+   * Bosqich 9, bo'lim 4/13. `TestPaymentProvider.resolveQuery()` bilan bir
+   * xil sabab bilan BIR MARTALIK ISTE'MOL QILINMAYDI — real provider bir
+   * xil so'rov bir necha marta yuborilsa IZCHIL javob qaytaradi.
+   */
+  async queryPayout(providerPayoutId: string): Promise<QueryPayoutResult> {
+    const scenario = this.queryScenarios.get(providerPayoutId) ?? 'UNKNOWN';
+    await Promise.resolve();
+
+    if (scenario === 'TIMEOUT') {
+      throw new DomainError('PAYOUT_PROVIDER_UNAVAILABLE', 'Test payout provider: query javob bermadi (ambiguous)');
+    }
+    if (scenario === 'AUTH_ERROR') {
+      throw new DomainError('PROVIDER_CONFIG_ERROR', 'Test payout provider: noto‘g‘ri credentials (simulyatsiya)');
+    }
+    if (scenario === 'MALFORMED') {
+      const result: ProviderQueryResult = { state: 'UNKNOWN', providerReference: providerPayoutId };
+      return result;
+    }
+    if (scenario === 'NOT_FOUND') {
+      const result: ProviderQueryResult = { state: 'NOT_FOUND', providerReference: null };
+      return result;
+    }
+    const result: ProviderQueryResult = { state: scenario, providerReference: providerPayoutId };
+    return result;
   }
 
   verifyWebhook(req: PayoutWebhookRequest): VerifiedPayoutWebhookEvent {

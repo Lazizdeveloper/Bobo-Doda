@@ -413,3 +413,118 @@ yoziladi, orqaga qarab backfill qilinmaydi). Bu holatni
 natija bo'sh bo'lmasa, real deploy'dan OLDIN controlled backfill skripti
 yozish yoki (agar hali real trafik yo'q bo'lsa) shu qatorlarni bilib
 turib e'tiborsiz qoldirish qarori ANIQ hujjatlashtirilishi kerak.
+
+## 9. Reconciliation (Bosqich 9) — stuck operatsiyalar, provider timeout, anomaliyalar
+
+**Asosiy tamoyil: LOKAL TIMEOUT != PROVIDER XATOSI.** Payment/Refund/Payout
+yaratish yoki so'rash paytida tarmoq/timeout xatosi provider haqiqatan
+muvaffaqiyatsiz bo'lganini ANGLATMAYDI — provider so'rovni qabul qilgan,
+lekin javob yo'qolgan bo'lishi mumkin. Shuning uchun bunday holatlar
+tizimda **PENDING/PROCESSING** holatda "osilib" qoladi — bu Bosqich 9'gacha
+qo'lda (staff) yoki umuman hal qilinmagan edi. Reconciliation shu
+noaniqlikni HAL QILADI: provider'dan HAQIQIY holatni so'raydi va faqat
+provider AUTORITATIV javob berganda (`SUCCEEDED`/`FAILED`) mavjud (Bosqich
+5/6/7) webhook state-machine'ini ishga tushiradi — **yangi ledger mantiq
+YOZILMAGAN**, faqat qayta ishlatiladi.
+
+### "Stuck" nima anglatadi
+
+- **Payment** `PENDING`/`PROCESSING`da, `updatedAt` dan
+  `PAYMENT_RECONCILE_AFTER_SECONDS` (sukut 300s) dan ko'p vaqt o'tgan.
+- **Refund** — xuddi shunday, `REFUND_RECONCILE_AFTER_SECONDS`.
+- **Payout** — xuddi shunday, `PAYOUT_RECONCILE_AFTER_SECONDS`. **Payout
+  `PROCESSING`da uzoq tursa ham HECH QACHON avtomatik "release"
+  qilinmaydi** — mablag' `PAYOUT_CLEARING` hisobida xavfsiz turadi, faqat
+  provider **avtoritativ** ravishda `FAILED` deganda `PAYOUT_RELEASE`
+  journal yoziladi va seller balansi tiklanadi. Vaqt o'tishi — bu DALIL
+  EMAS.
+
+Avtomatik job (`ReconciliationSchedulerService`, BullMQ repeatable,
+`RECONCILIATION_INTERVAL_SECONDS` — sukut 60s) shu uchala navbatni
+bosqichma-bosqich (`RECONCILIATION_BATCH_SIZE` — sukut 50, `updatedAt ASC`
+tartibda) tekshiradi. Test muhitida (`config.isTest`) bu job RO'YXATDAN
+O'TKAZILMAYDI — e2e testlar determinist bo'lishi uchun.
+
+### Qo'lda reconciliation (staff)
+
+- `GET /staff/reconciliation/summary` — stuck sonlar + ochiq anomaliyalar
+  (severity bo'yicha).
+- `GET /staff/reconciliation/anomalies` — filtrlanadigan/sahifalanadigan
+  ro'yxat (`code`/`severity`/`entityType`/`resolved`/`since`).
+- `POST /staff/reconciliation/anomalies/:id/acknowledge` — "ko'rib
+  chiqildi" belgisi (HECH QANDAY moliyaviy maydonga tegmaydi).
+- `POST /staff/reconciliation/payments/:id/reconcile` (xuddi shunday
+  `refunds`/`payouts` uchun) — provider'dan SO'RAYDI va MAVJUD
+  webhook-bilan-bir-xil state machine'ni ishga tushiradi. Staff HECH
+  QACHON statusni to'g'ridan-to'g'ri o'rnata olmaydi — `POST
+  /staff/ledger/fix` kabi endpoint UMUMAN YO'Q va bo'lmaydi.
+
+Ikki marta bosish xavfsiz: mutatsiya CAS (`updateMany({where:{status:
+PENDING|PROCESSING}})`) orqali exactly-once — ikkinchi chaqiruv
+`NO_CHANGE`/`SKIPPED` qaytaradi, pul ikki marta harakatlanmaydi.
+
+### Provider javobini qanday talqin qilish kerak
+
+| Provider natijasi | Ma'no | Harakat |
+|---|---|---|
+| `PENDING`/`PROCESSING` | Hali hal bo'lmagan | Hech narsa (`NO_CHANGE`) |
+| `SUCCEEDED`/`FAILED` | Avtoritativ | Mavjud webhook state-machine (CAS+ledger+audit+outbox) |
+| `NOT_FOUND` | Provider referensni tanimayapti | **Darhol FAILED emas** — `PROVIDER_NOT_FOUND` (WARNING) anomaliya, qo'lda tekshirish |
+| `UNKNOWN` | Javob keldi, lekin tasniflab bo'lmadi | `PROVIDER_STATUS_UNKNOWN` (WARNING) anomaliya, mutatsiya YO'Q |
+| Tarmoq/timeout xatosi | Ambiguous — provider holati NOMA'LUM | Mutatsiya YO'Q, keyinroq qayta so'raladi |
+| Config/auth xatosi (`PROVIDER_CONFIG_ERROR`) | Qayta urinish YORDAM BERMAYDI | Shu provider uchun JORIY batch to'xtatiladi (operator xabardor qilinishi kerak — credentials tekshirilsin) |
+
+**Ziddiyat (masalan local `FAILED`, lekin provider endi `SUCCEEDED`
+deydi)** — HECH QACHON avtomatik qabul qilinmaydi (terminal-holat
+monotonligi): `TERMINAL_CONTRADICTION` (CRITICAL) anomaliya yoziladi,
+ledgerga HECH NARSA yozilmaydi. Bunday holat rasmiy provider
+qoidasi/hujjati bilan tasdiqlanmaguncha faqat QO'LDA (operator + moliya)
+tekshiriladi.
+
+### Moliyaviy yaxlitlik (integrity) anomaliyasi topilsa
+
+`FinancialAnomaly` — DETECT + ESCALATE, avtomatik tuzatish YO'Q (§8'dagi
+"ledger qatori hech qachon UPDATE qilinmaydi" bilan bir xil falsafa).
+Anomaliya topilsa:
+
+1. **Hech qanday qatorni qo'lda tahrirlama** (bo'lim 8'ga qarang).
+2. `entityType`/`entityId` orqali tegishli Payment/Refund/Payout/
+   Contract/Dispute yozuvini toping, `code`/`description`ni o'qing.
+3. Agar bu **provider-so'rov vaqtidagi** anomaliya (`PROVIDER_NOT_FOUND`,
+   `PROVIDER_STATUS_UNKNOWN`) bo'lsa — qayta `POST
+   /staff/reconciliation/.../reconcile` bilan qo'lda urinib ko'ring
+   (provider holati o'zgargan bo'lishi mumkin).
+4. Agar bu **ledger-yaxlitlik** anomaliyasi (`SUCCEEDED_PAYMENT_WITHOUT_FUNDING`
+   va sh.k.) bo'lsa — §8'dagi reversal-journal yo'lini ko'ring; hozircha
+   avtomatik tuzatish YO'Q, qo'lda tekshirilib hujjatlashtiriladi.
+5. Ko'rib chiqilgandan so'ng `POST
+   /staff/reconciliation/anomalies/:id/acknowledge` bilan belgilang (bu
+   FAQAT belgi — moliyaviy holatga ta'sir qilmaydi).
+
+### Production preflight
+
+```bash
+npm run financial:check
+```
+
+Butun ilovani ko'taradi, `FinancialIntegrityService.scan()` (Bosqich
+6/7/8/9'ning BARCHA mavjud tekshiruvlari) ishga tushiradi, natijani
+JSON qilib chop etadi va **exit 0** (CRITICAL anomaliya YO'Q) yoki
+**exit 1** (kamida bitta CRITICAL topildi) bilan chiqadi. CI/pre-deploy
+pipeline'da shu exit code'ga qarab deploy to'xtatilishi mumkin.
+
+**Diqqat — doimiy lokal dev DB'da "eski" anomaliyalar kutilgan bo'lishi
+mumkin.** Masalan agar `bobododa` DB'da Bosqich 6 (ledger)dan OLDIN qo'lda
+sinov uchun yaratilgan `COMPLETED` Contract qatorlari bo'lsa, ular
+`CONTRACT_SETTLEMENT` journal'iga EGA BO'LMAYDI (chunki journal faqat
+Bosqich 6+ kodida yoziladi) — bu **haqiqiy regressiya EMAS**, balki
+ledger joriy etilishidan oldingi tarixiy holat. `financial:check` buni
+ATAYLAB yashirmaydi (aks holda yangi, haqiqiy anomaliya ham
+yashiringan bo'lardi) — operator `detectedAt` va tegishli
+Contract/Payment `createdAt`ni solishtirib, sana Bosqich 6 migratsiyasidan
+(`20260912150000_stage6_ledger`) OLDIN ekanini tasdiqlasa, bu ma'lum
+tarixiy holat sifatida qabul qilinadi va `acknowledge` bilan belgilanadi.
+**Fresh (yangi provisioned) DB'da — jumladan CI'ning `test:e2e`
+muhitida — bunday tarixiy qatorlar UMUMAN YO'Q**, shuning uchun
+`financial:check` u yerda har doim aniq (yolg'on bloklamaydi/yolg'on
+o'tkazib yubormaydi) natija beradi.

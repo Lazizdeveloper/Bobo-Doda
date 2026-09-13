@@ -3644,6 +3644,283 @@
           "staff-disputes"
         ]
       }
+    },
+    "/staff/reconciliation/anomalies": {
+      "get": {
+        "operationId": "StaffReconciliationController_listAnomalies",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "severity",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "CRITICAL"
+              ]
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resolved",
+            "required": false,
+            "in": "query",
+            "description": "true — faqat hal qilingan, false — faqat ochiq",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana — shundan keyin aniqlanganlar",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/anomalies/{id}/acknowledge": {
+      "post": {
+        "operationId": "StaffReconciliationController_acknowledgeAnomaly",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeAnomalyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnomalyResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/summary": {
+      "get": {
+        "operationId": "StaffReconciliationController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/payments/{id}/reconcile": {
+      "post": {
+        "operationId": "StaffReconciliationController_reconcilePayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationRunResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/refunds/{id}/reconcile": {
+      "post": {
+        "operationId": "StaffReconciliationController_reconcileRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationRunResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/payouts/{id}/reconcile": {
+      "post": {
+        "operationId": "StaffReconciliationController_reconcilePayout",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationRunResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/financial-integrity/scan": {
+      "post": {
+        "operationId": "StaffFinancialIntegrityController_scan",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-financial-integrity"
+        ]
+      }
     }
   },
   "info": {
@@ -5058,6 +5335,10 @@
           "paymentId": {
             "type": "string"
           },
+          "disputeId": {
+            "type": "object",
+            "description": "Bosqich 8 — dispute-driven bo‘lsa tegishli Dispute ID"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -5129,6 +5410,10 @@
           },
           "paymentId": {
             "type": "string"
+          },
+          "disputeId": {
+            "type": "object",
+            "description": "Bosqich 8 — dispute-driven bo‘lsa tegishli Dispute ID"
           },
           "status": {
             "type": "string",
@@ -5653,6 +5938,130 @@
           "buyerAwardAmount",
           "sellerAwardAmount",
           "resolutionReason"
+        ]
+      },
+      "AcknowledgeAnomalyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "AnomalyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "INFO",
+              "WARNING",
+              "CRITICAL"
+            ]
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "detectedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resolvedAt": {
+            "type": "object"
+          },
+          "resolvedByStaffId": {
+            "type": "object"
+          },
+          "resolutionNote": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "severity",
+          "entityType",
+          "entityId",
+          "description",
+          "detectedAt"
+        ]
+      },
+      "ReconciliationRunResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "operationType": {
+            "type": "string"
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "AUTOMATIC",
+              "STAFF",
+              "DEPLOYMENT_CHECK"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "NO_CHANGE",
+              "RECONCILED",
+              "ANOMALY",
+              "ERROR"
+            ]
+          },
+          "observedLocalStatus": {
+            "type": "string"
+          },
+          "observedProviderStatus": {
+            "type": "object"
+          },
+          "actionTaken": {
+            "type": "object"
+          },
+          "errorCode": {
+            "type": "object"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "operationType",
+          "operationId",
+          "provider",
+          "trigger",
+          "status",
+          "observedLocalStatus",
+          "startedAt",
+          "completedAt"
         ]
       }
     }

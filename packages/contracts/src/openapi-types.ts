@@ -1364,6 +1364,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/staff/reconciliation/anomalies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffReconciliationController_listAnomalies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/reconciliation/anomalies/{id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffReconciliationController_acknowledgeAnomaly"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/reconciliation/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StaffReconciliationController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/reconciliation/payments/{id}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffReconciliationController_reconcilePayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/reconciliation/refunds/{id}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffReconciliationController_reconcileRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/reconciliation/payouts/{id}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffReconciliationController_reconcilePayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/staff/financial-integrity/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StaffFinancialIntegrityController_scan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1771,6 +1883,8 @@ export interface components {
             id: string;
             contractId: string;
             paymentId: string;
+            /** @description Bosqich 8 — dispute-driven bo‘lsa tegishli Dispute ID */
+            disputeId?: Record<string, never>;
             /** @enum {string} */
             status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED";
             /** @description Butun so‘m */
@@ -1792,6 +1906,8 @@ export interface components {
             id: string;
             contractId: string;
             paymentId: string;
+            /** @description Bosqich 8 — dispute-driven bo‘lsa tegishli Dispute ID */
+            disputeId?: Record<string, never>;
             /** @enum {string} */
             status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED";
             /** @description Butun so‘m */
@@ -1944,6 +2060,41 @@ export interface components {
             /** @description Butun so‘m */
             sellerAwardAmount: number;
             resolutionReason: string;
+        };
+        AcknowledgeAnomalyDto: {
+            note?: string;
+        };
+        AnomalyResponseDto: {
+            id: string;
+            code: string;
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "CRITICAL";
+            entityType: string;
+            entityId: string;
+            description: string;
+            /** Format: date-time */
+            detectedAt: string;
+            resolvedAt?: Record<string, never>;
+            resolvedByStaffId?: Record<string, never>;
+            resolutionNote?: Record<string, never>;
+        };
+        ReconciliationRunResponseDto: {
+            id: string;
+            operationType: string;
+            operationId: string;
+            provider: string;
+            /** @enum {string} */
+            trigger: "AUTOMATIC" | "STAFF" | "DEPLOYMENT_CHECK";
+            /** @enum {string} */
+            status: "NO_CHANGE" | "RECONCILED" | "ANOMALY" | "ERROR";
+            observedLocalStatus: string;
+            observedProviderStatus?: Record<string, never>;
+            actionTaken?: Record<string, never>;
+            errorCode?: Record<string, never>;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: string;
         };
     };
     responses: never;
@@ -4009,6 +4160,155 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["StaffDisputeResponseDto"];
                 };
+            };
+        };
+    };
+    StaffReconciliationController_listAnomalies: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                code?: string;
+                severity?: "INFO" | "WARNING" | "CRITICAL";
+                entityType?: string;
+                /** @description true — faqat hal qilingan, false — faqat ochiq */
+                resolved?: boolean;
+                /** @description ISO sana — shundan keyin aniqlanganlar */
+                since?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffReconciliationController_acknowledgeAnomaly: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcknowledgeAnomalyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnomalyResponseDto"];
+                };
+            };
+        };
+    };
+    StaffReconciliationController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    StaffReconciliationController_reconcilePayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunResponseDto"];
+                };
+            };
+        };
+    };
+    StaffReconciliationController_reconcileRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunResponseDto"];
+                };
+            };
+        };
+    };
+    StaffReconciliationController_reconcilePayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunResponseDto"];
+                };
+            };
+        };
+    };
+    StaffFinancialIntegrityController_scan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

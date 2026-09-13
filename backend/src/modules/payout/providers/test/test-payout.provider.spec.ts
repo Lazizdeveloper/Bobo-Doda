@@ -60,6 +60,62 @@ describe('TestPayoutProvider.createPayout', () => {
   });
 });
 
+describe('TestPayoutProvider.queryPayout (Bosqich 9)', () => {
+  it('sukut (navbatga qo‘yilmagan) — UNKNOWN', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toEqual({ state: 'UNKNOWN', providerReference: 'test_payout_p1' });
+  });
+
+  it('SUCCEEDED ssenariysi', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'SUCCEEDED');
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toEqual({ state: 'SUCCEEDED', providerReference: 'test_payout_p1' });
+  });
+
+  it('FAILED ssenariysi', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'FAILED');
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toEqual({ state: 'FAILED', providerReference: 'test_payout_p1' });
+  });
+
+  it('PENDING ssenariysi', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'PENDING');
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toEqual({ state: 'PENDING', providerReference: 'test_payout_p1' });
+  });
+
+  it('NOT_FOUND ssenariysi — providerReference null', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'NOT_FOUND');
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toEqual({ state: 'NOT_FOUND', providerReference: null });
+  });
+
+  it('MALFORMED ssenariysi — istisno EMAS, UNKNOWN natija', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'MALFORMED');
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toEqual({ state: 'UNKNOWN', providerReference: 'test_payout_p1' });
+  });
+
+  it('TIMEOUT ssenariysi — PAYOUT_PROVIDER_UNAVAILABLE (ambiguous)', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'TIMEOUT');
+    await expect(provider.queryPayout('test_payout_p1')).rejects.toMatchObject({ code: 'PAYOUT_PROVIDER_UNAVAILABLE' });
+  });
+
+  it('AUTH_ERROR ssenariysi — PROVIDER_CONFIG_ERROR (batch to‘xtatilishi kerak)', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'AUTH_ERROR');
+    await expect(provider.queryPayout('test_payout_p1')).rejects.toMatchObject({ code: 'PROVIDER_CONFIG_ERROR' });
+  });
+
+  it('ssenariya IZCHIL (bir necha marta so‘ralsa ham) — real provider bilan bir xil, yaratish stsenariyalaridan farqli', async () => {
+    const provider = new TestPayoutProvider(SECRET);
+    provider.queueQueryScenario('test_payout_p1', 'FAILED');
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toMatchObject({ state: 'FAILED' });
+    await expect(provider.queryPayout('test_payout_p1')).resolves.toMatchObject({ state: 'FAILED' });
+  });
+});
+
 describe('TestPayoutProvider.verifyWebhook', () => {
   const provider = new TestPayoutProvider(SECRET);
 

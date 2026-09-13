@@ -329,6 +329,40 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).rejects.toThrow(/balanslanmagan/i); // faqat 1 ta yozuv — ATAYLAB balanssiz, enum qiymati o'zi ishlaganini tekshiramiz
   });
 
+  // ── Bosqich 9 — reconciliation_runs append-only, financial_anomalies mutable ──
+
+  t('bobododa_app reconciliation_runs ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
+    const runId = crypto.randomUUID();
+    await expect(
+      appDb!.$executeRawUnsafe(
+        `INSERT INTO reconciliation_runs
+           (id, "operationType", "operationId", provider, trigger, status, "observedLocalStatus", "startedAt", "completedAt")
+         VALUES ('${runId}'::uuid, 'PAYMENT', 'db-roles-proof-op', 'TEST', 'AUTOMATIC', 'NO_CHANGE', 'PENDING', now(), now())`,
+      ),
+    ).resolves.toBeGreaterThanOrEqual(1);
+
+    await expect(
+      appDb!.$executeRawUnsafe(`UPDATE reconciliation_runs SET status = 'RECONCILED' WHERE id = '${runId}'::uuid`),
+    ).rejects.toThrow(/permission denied/i);
+    await expect(appDb!.$executeRawUnsafe(`DELETE FROM reconciliation_runs WHERE id = '${runId}'::uuid`)).rejects.toThrow(
+      /permission denied/i,
+    );
+  });
+
+  t('bobododa_app financial_anomalies ga INSERT VA UPDATE qila oladi (ataylab mutable — staff acknowledge)', async () => {
+    const anomalyId = crypto.randomUUID();
+    await expect(
+      appDb!.$executeRawUnsafe(
+        `INSERT INTO financial_anomalies (id, code, severity, "entityType", "entityId", description)
+         VALUES ('${anomalyId}'::uuid, 'DB_ROLES_PROOF', 'WARNING', 'TEST', 'db-roles-proof-entity', 'proof')`,
+      ),
+    ).resolves.toBeGreaterThanOrEqual(1);
+
+    await expect(
+      appDb!.$executeRawUnsafe(`UPDATE financial_anomalies SET "resolvedAt" = now() WHERE id = '${anomalyId}'::uuid`),
+    ).resolves.toBe(1);
+  });
+
   t('bobododa_app oddiy jadvalni (users) to‘liq boshqara oladi', async () => {
     await appDb!.$executeRawUnsafe(
       `INSERT INTO users (id, phone, "passwordHash", "fullName", "updatedAt")

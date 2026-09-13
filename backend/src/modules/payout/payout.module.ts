@@ -46,6 +46,9 @@ const DEV_ONLY_TEST_SECRET = 'test-only-insecure-payout-secret-change-me';
       },
     },
   ],
-  exports: [PayoutService],
+  // Bosqich 9 — `PAYOUT_PROVIDER` eksport qilinadi: `ReconciliationModule`
+  // shu bitta provider instansiyasini `queryPayout()` uchun qayta ishlatadi
+  // (`PaymentModule`ning `PAYMENT_PROVIDER` eksporti bilan bir xil naqsh).
+  exports: [PayoutService, PAYOUT_PROVIDER],
 })
 export class PayoutModule {}

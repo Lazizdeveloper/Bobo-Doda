@@ -121,4 +121,21 @@ export class AppConfigService {
       testWebhookSecret: this.get('PAYOUT_TEST_WEBHOOK_SECRET'),
     };
   }
+
+  /** Bosqich 9 — `ReconciliationService`/`ReconciliationScheduler` shundan o'qiydi. */
+  get reconciliation(): {
+    paymentAfterSeconds: number;
+    refundAfterSeconds: number;
+    payoutAfterSeconds: number;
+    batchSize: number;
+    intervalSeconds: number;
+  } {
+    return {
+      paymentAfterSeconds: this.get('PAYMENT_RECONCILE_AFTER_SECONDS'),
+      refundAfterSeconds: this.get('REFUND_RECONCILE_AFTER_SECONDS'),
+      payoutAfterSeconds: this.get('PAYOUT_RECONCILE_AFTER_SECONDS'),
+      batchSize: this.get('RECONCILIATION_BATCH_SIZE'),
+      intervalSeconds: this.get('RECONCILIATION_INTERVAL_SECONDS'),
+    };
+  }
 }

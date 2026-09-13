@@ -11,6 +11,8 @@
  * dagi bitta registry qatori qo'shiladi — boshqa hech narsa o'zgarmaydi
  * (SMS provayder abstraksiyasi bilan bir xil naqsh — `infra/sms`).
  */
+import type { ProviderQueryResult } from '@/common/provider/provider-operation-state';
+
 export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
 
 export interface CreatePaymentParams {
@@ -35,12 +37,10 @@ export interface CreatePaymentResult {
   redirectUrl?: string;
 }
 
-export type ProviderPaymentStatus = 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
-
-export interface QueryPaymentResult {
-  providerPaymentId: string;
-  status: ProviderPaymentStatus;
-}
+/** Bosqich 9, bo'lim 4 — reconciliation query natijasi, `ProviderOperationState` orqali. */
+export type QueryPaymentResult = ProviderQueryResult;
+/** Bosqich 9, bo'lim 12 — Refund HAM shu provider orqali (bo'lim 4 munosabati bilan bir xil). */
+export type QueryRefundResult = ProviderQueryResult;
 
 export interface WebhookRequest {
   rawBody: Buffer;
@@ -97,8 +97,18 @@ export interface PaymentProvider {
 
   createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult>;
 
-  /** Bo'lim 31 — reconciliation. Provider qo'llamasa `undefined` qoldiriladi (uydirma qilinmaydi). */
+  /**
+   * Bo'lim 31; Bosqich 9 bo'lim 4 — reconciliation. Provider qo'llamasa
+   * `undefined` qoldiriladi (uydirma qilinmaydi). Ambiguous xato (timeout/
+   * tarmoq) `PAYMENT_PROVIDER_UNAVAILABLE` tashlaydi; config/auth xatosi
+   * `PROVIDER_CONFIG_ERROR` (bo'lim 35) — boshqa HAR QANDAY holat (topilmadi,
+   * tanilmagan status) ISTISNO EMAS, oddiy natija sifatida qaytadi
+   * (`state: 'NOT_FOUND' | 'UNKNOWN'`).
+   */
   queryPayment?(providerPaymentId: string): Promise<QueryPaymentResult>;
+
+  /** Bosqich 9, bo'lim 12 — Refund reconciliation, `queryPayment` bilan bir xil semantik/xato qoidalari. */
+  queryRefund?(providerRefundId: string): Promise<QueryRefundResult>;
 
   cancelPayment?(providerPaymentId: string): Promise<void>;
 

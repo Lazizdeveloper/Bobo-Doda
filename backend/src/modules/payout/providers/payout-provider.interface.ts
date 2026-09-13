@@ -5,6 +5,8 @@
  * `PaymentProvider` bilan bir xil naqsh (`infra/sms`dan meros) — real
  * provider spec yo'q bo'lsa faqat chegara + test provider.
  */
+import type { ProviderQueryResult } from '@/common/provider/provider-operation-state';
+
 export const PAYOUT_PROVIDER = Symbol('PAYOUT_PROVIDER');
 
 export interface CreatePayoutParams {
@@ -22,12 +24,8 @@ export interface CreatePayoutResult {
   providerCreatedAt: Date;
 }
 
-export type ProviderPayoutStatus = 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED';
-
-export interface QueryPayoutResult {
-  providerPayoutId: string;
-  status: ProviderPayoutStatus;
-}
+/** Bosqich 9, bo'lim 4/13 — reconciliation query natijasi, `ProviderOperationState` orqali (Payment bilan bir xil turdosh). */
+export type QueryPayoutResult = ProviderQueryResult;
 
 export interface PayoutWebhookRequest {
   rawBody: Buffer;
