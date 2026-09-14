@@ -1233,3 +1233,159 @@ tashqi tarmoq chaqiruvi QILINMADI. Kod darajasidagi tasdiqlash (protokol
 kontrakti, 26+20 test) SANDBOX VERIFICATION'ning O'RNINI BOSMAYDI.
 Real credential paydo bo'lganda: RUNBOOK §12 "Provider cutover checklist"
 + shu bo'limni real natija bilan yangilang.
+
+---
+
+## 14. Frontend production integratsiyasi (Bosqich 17)
+
+Frontend (`/lib/api`) mock'dan real backend'ga o'tkazildi. Almashadigan
+YAGONA fayllar — `lib/api/client.ts` (xaridor/mutaxassis) va
+`lib/api/admin.ts` (xodim/admin) — CLAUDE.md'dagi migratsiya rejasiga mos.
+
+### To'liq stack'ni birga ko'tarish (lokal)
+
+```bash
+# Terminal 1 — backend (Prisma Query Engine uchun nix-shell SHART,
+# aks holda "could not locate the Query Engine for runtime linux-nixos")
+cd backend && nix-shell --run "npm run start:dev"
+#  → http://localhost:4000/health/ready
+
+# Terminal 2 — frontend. NEXT_PUBLIC_API_URL `next dev` ISHGA TUSHISH
+# VAQTIDA o'qiladi (hot-reload qilinmaydi) — server ishga tushmasdan OLDIN
+# .env.local (gitignored, .env.example ga qarang) yozilgan bo'lsin:
+#   NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+cd /home/laziz/Bobo-Doda && npm run dev
+#  → http://localhost:3000
+```
+
+`SMS_PROVIDER` sukut qiymati `CONSOLE` — OTP kod backend stdout'iga
+`📱 [SMS DEV — otp_login] → <phone> { code: '<code>' }` shaklida chiqadi;
+`PAYMENT_PROVIDER` sukuti `TEST` — checkout javobida `checkoutUrl` KELMAYDI
+(`TestPaymentProvider.createPayment()` uni bermaydi), shuning uchun
+xaridor workroom sahifasi bu holatda pollingga o'tadi (`paymentsService.
+getContractPayment()`, 5s × 24 urinish) — bu haqiqiy, kerakli mantiq,
+o'lik defensive kod emas.
+
+### Headless brauzer (Playwright) — NixOS sandbox resepti
+
+Bu muhitda oddiy `npx playwright test` ISHLAMAYDI: Chromium'ga kerakli
+FHS kutubxonalar (`libglib`, `libnspr4`, ...) tizimda standart yo'llarda
+yo'q. Ishlaydigan retsept — `nix-shell` (kutubxonalar uchun) `steam-run`ni
+(FHS moslashtirgich, allaqachon o'rnatilgan) o'rab oladi, HAMDA `TMPDIR`ni
+aniq `/tmp` ga qaytaradi (`steam-run` `/tmp`ni alohida, deyarli bo'sh
+mount namespace'ga izolyatsiya qiladi — tashqi nix-shell'ning o'z vaqtinchalik
+`TMPDIR`i shu ichkarida mavjud bo'lmaydi va brauzer `mkdtemp ENOENT` bilan
+yiqiladi):
+
+```bash
+nix-shell -p nspr nss glib gtk3 pango cairo atk cups dbus expat libdrm \
+  libxkbcommon mesa udev alsa-lib at-spi2-atk at-spi2-core libxml2 libx11 \
+  libxcomposite libxdamage libxext libxfixes libxrandr --run '
+LDLP="$(nix-build "<nixpkgs>" -A nspr --no-out-link)/lib:$(nix-build "<nixpkgs>" -A nss --no-out-link)/lib:$LD_LIBRARY_PATH"
+steam-run env LD_LIBRARY_PATH="$LDLP" TMPDIR=/tmp node scratch/smoke-test.mjs
+'
+```
+
+Qo'shimcha eslatmalar:
+- Test skripti **loyiha ildizi ostida** turishi kerak (masalan `scratch/`),
+  `/tmp` ichida EMAS — Node ESM `node_modules`ni skript joylashuvidan
+  yuqoriga qarab qidiradi, `NODE_PATH` ESM uchun ishlamaydi.
+  `npx playwright install chromium` bir martalik (~300MB, fallback build —
+  "OS rasmiy qo'llab-quvvatlanmaydi" ogohlantirishi normal).
+- `steam-run` ostidan ishlayotgan skript host'ning vaqtinchalik sessiya
+  papkalarini (masalan CI/agent scratch yo'llari) KO'RMAYDI — faqat
+  `/home/...` ostidagi yo'llar ko'rinadi. Log tailing/screenshot chiqishi
+  shunga qarab `/home/...` ostiga yo'naltirilsin.
+- Backend CORS (`CORS_ORIGINS`) origin'ni ANIQ solishtiradi — test skripti
+  `127.0.0.1` bilan `localhost`ni ARALASHTIRMASIN (ikkalasi brauzerda har
+  xil origin, biri backend ro'yxatida bo'lmasa so'rov jim yiqiladi, hech
+  qanday log backend'ga tushmaydi).
+
+### Formal Playwright E2E suite — `npm run test:e2e:live`
+
+`tests/e2e/` (root `playwright.config.ts`) — real backendga qarshi ishlaydigan
+rasmiy suite, `scratch/smoke-*.mjs`larning o'rnini bosadi (ular bir martalik
+qo'lda diagnostika skriptlari edi, repo deliverable'i emas). Ishga tushirish
+xuddi yuqoridagi nix-shell+steam-run retsepti bilan:
+
+```bash
+nix-shell -p nspr nss glib gtk3 pango cairo atk cups dbus expat libdrm \
+  libxkbcommon mesa udev alsa-lib at-spi2-atk at-spi2-core libxml2 libx11 \
+  libxcomposite libxdamage libxext libxfixes libxrandr --run '
+LDLP="$(nix-build "<nixpkgs>" -A nspr --no-out-link)/lib:$(nix-build "<nixpkgs>" -A nss --no-out-link)/lib:$LD_LIBRARY_PATH"
+steam-run env LD_LIBRARY_PATH="$LDLP" TMPDIR=/tmp npx playwright test
+'
+```
+
+**Muhim dizayn qarori — OTP IP-soatlik chegarasi (20/soat, BARCHA telefon
+raqamlari birgalikda, `backend/src/modules/auth/constants/otp.constants.ts`,
+env orqali sozlanmaydi).** Bu sessiyada tirik brauzer testlari aynan shu
+chegaraga urilib to'xtab qoldi — shuning uchun suite HAR bir test uchun
+alohida OTP so'ramaydi. **Boshlang'ich dizayn** (`globalSetup` + bir marta
+login qilib natijani `storageState` JSON faylga yozib, ko'p fayl/kontekst
+orasida qayta ishlatish) birinchi tirik ishga tushirishda XATO chiqdi —
+refresh token BIR MARTALIK (rotatsiya + qayta-ishlatishni aniqlash, to'g'ri
+xavfsizlik xatti-harakati): statik JSON'dagi "muzlatilgan" cookie'ni
+ikkinchi mustaqil kontekst yuklasa, birinchisi allaqachon uni aylantirib
+bo'lgan bo'ladi va ikkinchisi `TOKEN_REUSED` (401) bilan yiqiladi. **Yakuniy
+(ishlaydigan) dizayn**: `global-setup.ts` UMUMAN YO'Q — har bir spec fayl
+`test.beforeAll`da O'ZINING BITTA jonli kontekst/sahifasini ochadi
+(`tests/e2e/helpers.ts` — `loginBuyer()`/`setupApprovedSeller()`, ikkalasi
+ham YANGI tasodifiy raqam bilan) va shu BITTA (fayl emas, jonli) sahifani
+butun fayl davomida qayta ishlatadi (`test.describe.serial()` bilan bir
+nechta test bitta sahifani baham ko'radi); ikki aktyor kerak bo'lgan
+fayllar (purchase-lifecycle, disputes) ikkalasini ham o'z `beforeAll`/test
+tanasida ochadi. `playwright.config.ts`da `workers: 1` + `fullyParallel:
+false` ataylab — parallellik shu chegarani osongina buzardi. To'liq suite
+~7 ta OTP so'rov sarflaydi (soatiga ~2-3 marta ishga tushirish mumkin).
+Sotuvchi tasdiqlash (`seller_applications.status='APPROVED'`) va uning
+bitta faol xizmati xodim moderatsiyasi o'rniga to'g'ridan-to'g'ri DB orqali
+(`runDbCommand`, `setupApprovedSeller()` ichida) o'rnatiladi — staff login
+bu sessiyada sinovdan o'tkazilmagani sabab (pastga qarang).
+
+`tests/e2e/admin.spec.ts` `E2E_STAFF_EMAIL`/`E2E_STAFF_PASSWORD` berilmasa
+tushunarli sabab bilan `test.skip()` qilinadi (jimgina "yashil" chiqib,
+qamrov yo'qligini yashirmaydi) — staff hisob parolini DB orqali o'rnatish
+"secret-store write" sifatida avtomatik bloklandi (pastga qarang).
+
+`tests/e2e/purchase-lifecycle.spec.ts` va `disputes.spec.ts` Bosqich 17'da
+tirik brauzer orqali topilgan UCH real xatoni regressiyadan himoya qiladi
+(barchasi shu sessiyada tuzatildi):
+1. Xaridorning "To'lash" tugmasi HAR safar faol+mablag'lanmagan kontraktni
+   ochganda ~2 daqiqaga yashiringan edi (`app/xaridor/shartnomalar/[id]/
+   page.tsx` — polling effekti optimistik `"processing"` bilan boshlanardi).
+2. Sotuvchi HECH QACHON "mablag'langan" holatini ko'rmasdi (`hydrateContract`/
+   `mapContract`, `lib/api/client.ts`+`mappers.ts` — `funded=true` bo'lsa ham
+   `fundedAt` doim `undefined` qolardi, sahifa `!!contract.fundedAt`ga
+   tayanadi).
+3. Nizo ochish HAR DOIM 422 (`IDEMPOTENCY_KEY_REQUIRED`) bilan muvaffaqiyatsiz
+   bo'lardi — `disputesService.open()` backend MAJBURIY talab qiladigan
+   `Idempotency-Key` header'ini yubormasdi. Audit paytida YANA IKKITASI
+   topildi (xuddi shu naqsh): `staffResolveDispute`/`staffCreateRefund`
+   (`lib/api/admin.ts`) — ikkalasi ham tuzatildi, `staffHttp()`ga
+   `idempotencyKey` qo'llab-quvvatlash qo'shildi (`lib/api/staff-http.ts`).
+
+### Bilinadigan benign xatti-harakat — birinchi `/me` so'rovida 401
+
+Access token FAQAT xotirada saqlanadi (module-scope, XSS'dan himoya —
+`lib/api/http.ts`); to'liq sahifa navigatsiyasidan keyin u yo'qoladi.
+`bootstrapSession()` fonda `/auth/refresh`ni boshlaydi, lekin sahifa
+komponenti undan OLDIN birinchi so'rovni yuborishi mumkin — natijada
+tarmoq jurnalida bitta `401 GET /me` ko'rinadi, so'ng `http()`ning
+single-flight refresh+retry mexanizmi uni JIMGINA tuzatadi (foydalanuvchi
+hech narsa sezmaydi). Bu XATO EMAS — brauzer DevTools tarmoq bo'limida
+ko'ringanda tekshiruv/QA jarayonida shuni hisobga oling.
+
+### Gated (ataylab o'chirilgan) funksiyalar
+
+Real backend'da ekvivalenti yo'q yoki hali qamrovga kiritilmagan mock
+funksiyalar `client.ts`/`admin.ts` darajasida `FEATURE_DISABLED` xato bilan
+o'raladi — har bir sahifaning mavjud `loadError`/`<ErrorState>` konvensiyasi
+buni avtomatik ko'rsatadi (sahifa kodi o'zgarmaydi): Ish e'loni/Taklif/Offer
+ikki yo'lli arxitekturasi, Xabarlar (chat), Sharhlar, bildirishnoma
+lentasi, Saqlanganlar, KYC verifikatsiya, mock support ticketlar, bank
+kartasi boshqaruvi, xaridor balansini kartaga yechish. Admin panelda —
+foydalanuvchi aniq tanlovi bilan (`AskUserQuestion`, Bosqich 17) — faqat
+Foydalanuvchilar/Nizolar/To'lovlar+Qaytarish/Shartnomalar/Audit jurnali
+real; Xizmatlar/Kategoriyalar/Pul chiqarish mutatsiyalari/Xodimlar
+boshqaruvi/Reconciliation/Outbox hozircha gated holatda qoladi.

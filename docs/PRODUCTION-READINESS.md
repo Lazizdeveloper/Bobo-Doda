@@ -146,3 +146,104 @@ PerformTransaction) qo'lda bajaring va bu bo'limni yangilang. Real
 `PLAYMOBILE_LOGIN`/`PLAYMOBILE_PASSWORD` qo'lga kiritilgach — bitta haqiqiy
 OTP SMS yuborib, yetkazilganini tasdiqlang. Credential yo'qligida
 HECH QAYSI bo'lim PASS deb YOZILMAYDI.
+
+## 15. Frontend integratsiyasi (Bosqich 17) — ikki bosqichli status
+
+Bu bo'lim shu hujjatning qolgan qismidan (sof backend/infra) FARQLI: u
+`/lib/api` real backend'ga ulanganini va shu integratsiya doirasida
+tekshirilgan/ochiq qolgan narsalarni qamraydi. To'liq texnik tafsilot —
+RUNBOOK §14.
+
+**CODE_RELEASE_CANDIDATE: HA.** Xaridor+mutaxassis oqimlari (OTP kirish,
+bozor, to'g'ridan-to'g'ri xarid, shartnoma qabul/rad, escrow to'lovi,
+bosqich topshirish/qabul/o'zgartirish so'rash, nizo ochish/ko'rish/qaytarib
+olish, shartnoma yakunlanishi) va admin panelning "asosiy moliyaviy/nazorat"
+qismi (Foydalanuvchilar, Nizolar+hal qilish, To'lovlar+Qaytarish,
+Shartnomalar, Audit) haqiqiy backend'ga ulangan; `npm run lint`/`tsc`/
+`build`/`check:csp` toza, real Postgres+Redis'ga ulangan backend bilan
+brauzerda (Playwright, headless Chromium) qo'lda **to'liq** tasdiqlangan:
+1. Xaridor: OTP kirish → rol tanlash → bozor → sozlamalar.
+2. **Ikki aktyor, to'liq escrow tsikli**: xaridor xizmat sotib oladi →
+   mutaxassis qabul qiladi (`imzolangan`→`faol`) → xaridor "To'lash"ni
+   bosadi → to'lov yaratiladi (TEST provider) → TEST webhook qo'lda
+   imzolanib yuborilgan (HMAC-SHA256, `x-test-signature`) → to'lov
+   `SUCCEEDED` → sotuvchi "mablag'langan" holatini ko'radi → bosqichni
+   topshiradi → xaridor qabul qiladi → shartnoma **`COMPLETED`**.
+3. **Nizo**: xaridor faol+mablag'langan shartnomada nizo ochadi → sotuvchi
+   shartnoma sahifasida nizoni ko'radi → xaridor uni qaytarib oladi.
+
+Shu tekshiruv jarayonida **UCHTA real xato topilib, TUZATILDI** (barchasi
+`tests/e2e/purchase-lifecycle.spec.ts`+`disputes.spec.ts` orqali
+regressiyadan himoyalangan, RUNBOOK §14):
+1. Xaridorning "To'lash" tugmasi HAR safar faol+mablag'lanmagan kontraktni
+   ochganda ~2 daqiqaga yashiringan edi (polling holati optimistik
+   `"processing"` bilan boshlangani sabab) — yangi xarid qilgan xaridor
+   to'lovni DARHOL boshlay olmasdi.
+2. Sotuvchi HECH QACHON "mablag'langan" holatini ko'rmasdi — `hydrateContract`
+   sotuvchi uchun `funded=true` hisoblasa ham, `mapContract` `fundedAt`ni
+   doim `undefined` qaytarardi (sahifa `!!contract.fundedAt`ga tayanadi) —
+   sotuvchi hech qachon real to'lovdan keyin ham ishni "bemalol boshlash
+   mumkin" degan belgini ko'rmasdi.
+3. Nizo ochish HAR DOIM 422 (`IDEMPOTENCY_KEY_REQUIRED`) bilan
+   muvaffaqiyatsiz bo'lardi — `disputesService.open()` backend MAJBURIY
+   talab qiladigan `Idempotency-Key` header'ini yubormasdi. Kengroq audit
+   paytida YANA IKKITASI (xuddi shu naqsh) topildi va tuzatildi:
+   `staffResolveDispute` va `staffCreateRefund` (`lib/api/admin.ts`) —
+   ya'ni admin panelning nizo-hal-qilish va qaytarish-yaratish amallari
+   ham xuddi shunday har doim muvaffaqiyatsiz bo'lardi.
+
+**Formal Playwright E2E to'plami YOZILDI VA TIRIK TASDIQLANDI** —
+`playwright.config.ts` + `tests/e2e/` (6 spec fayl, 11 test: auth, bozor,
+to'liq xarid-to'lov-yakunlanish tsikli, nizo, sotuvchi xizmatlari, admin —
+oxirgisi staff credential berilmasa tushunarli sabab bilan skip qilinadi).
+`npm run test:e2e:live`. **10/10 ishlaydigan test (admin tashqari) real
+Postgres+Redis'ga ulangan backend bilan to'liq o'tdi** — jumladan to'liq
+xarid→to'lov→topshirish→yakunlanish tsikli va nizo oqimi ikkalasi ham
+uchdan-uchgacha real HTTP orqali tasdiqlandi (webhook qo'lda imzolanib).
+
+Birinchi tirik ishga tushirishda **YANA IKKITA muammo** (endi tuzatilgan)
+suite'ning O'ZIDA (ilova kodida EMAS) topildi:
+- `storageState` snapshot'ini bir nechta mustaqil brauzer kontekst/fayl
+  orasida qayta ishlatish refresh token bir martalik ekanini hisobga
+  olmagan edi (rotatsiya + qayta-ishlatish aniqlash — to'g'ri xavfsizlik
+  xatti-harakati) — ikkinchi mustaqil kontekst "TOKEN_REUSED" bilan
+  yiqilardi. Tuzatildi: har bir spec fayl endi `test.beforeAll`da O'ZINING
+  jonli login sessiyasini ochadi (`tests/e2e/helpers.ts` —
+  `loginBuyer`/`setupApprovedSeller`), fayl faylga QAYTA ISHLATILMAYDI.
+- Xizmat yaratish wizard testi "Bajarish muddati" maydonini to'ldirmagan
+  edi (faqat narxni) — validatsiya to'g'ri bloklagan, test noto'g'ri yozilgan.
+
+**REAL OTP IP-soatlik chegarasi bu suite'ni qanday shakllantirgani** —
+o'quv ahamiyatga ega: backend IP bo'yicha soatiga 20 ta
+`/auth/otp/request`ni cheklaydi (barcha telefon raqamlari birgalikda
+hisoblanadi, konfiguratsiya qilinmaydi) + har bir raqam kuniga 10 tagacha.
+Qo'lda tirik test paytida bu ikkala chegaraga ham urilib to'xtab qolindi —
+suite shu tajribadan qurilgan: har fayl FAQAT bitta (yoki ikkita, ikki
+aktyor kerak bo'lsa) real login qiladi, to'liq suite ~7 ta OTP so'rov
+sarflaydi (soatiga ~2-3 marta ishga tushirish mumkin).
+
+**Tekshirilmagan/ochiq qolgan qismlar:**
+- **Staff/admin login brauzerda TASDIQLANMAGAN.** Lokal DB'dagi yagona
+  staff hisobi (`ops-phase4@bobododa.uz`) paroli noma'lum (oldingi
+  sessiyada qo'lda yaratilgan, hujjatlashtirilmagan) — parol hash'ini
+  bilib turib qayta yozish (yoki yangi hisob uchun yangi hash yaratish)
+  avtomatik ravishda "secret-store write" sifatida BLOKLANDI (to'g'ri
+  ehtiyot chorasi, ikki marta qayta urinilmadi), shuning uchun bu qadam
+  ATAYLAB bajarilmadi. Real production'da bu muammo emas — har bir
+  SUPER_ADMIN birinchi login'da `mustChangePassword` orqali o'z parolini
+  o'zi qo'yadi (RUNBOOK §11). `tests/e2e/admin.spec.ts` shu sabab bilan
+  skip holatda qoladi (`E2E_STAFF_EMAIL`/`E2E_STAFF_PASSWORD` berilguncha).
+- **OTP rate-limit — real, hujjatlashtirilgan kashfiyot.** Backend IP
+  bo'yicha soatiga 20 ta `/auth/otp/request`ni cheklaydi (barcha telefon
+  raqamlari birgalikda hisoblanadi, konfiguratsiya qilinmaydi) + har bir
+  raqam kunига 10 tagacha. Qo'lda tirik test paytida bu chegaraga ikki
+  marta urilib to'xtab qolindi (RUNBOOK §14) — E2E suite shuni hisobga
+  olib qurilgan (yuqoriga qarang), lekin real deploy/CI muhitida ham shu
+  chegara amal qiladi — ko'p marta ketma-ket smoke-test ishga tushirish
+  rejalashtirilsa shu bilan hisoblashish kerak.
+
+**REAL_PRODUCTION_READY: BLOCKED_BY_INFRASTRUCTURE** (bo'lim 1/14 bilan
+bir xil sabab — real Payme/PlayMobile credential yo'q, real payout rail
+tanlanmagan). Frontend tomonidan qo'shimcha blokировка YO'Q — backend
+tayyor bo'lgach frontend kod o'zgarishisiz ishlaydi (`NEXT_PUBLIC_API_URL`
+production domenga almashadi, xolos).

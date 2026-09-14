@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
-import { NotificationBell } from "@/components/shared/NotificationBell";
 import { usersService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
@@ -49,16 +48,14 @@ export function TopNav({ base }: TopNavProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
+  /* Bosqich 17 — Job/Proposal/Offer va Xabarlar real backendda yo'q
+     (mock-only "ikki yo'l" arxitekturasi): nav'dan olib tashlangan, lekin
+     sahifalar o'zi o'chirilmagan (to'g'ridan-to'g'ri URL orqali kirilsa
+     `<ErrorState code="FEATURE_DISABLED">` ko'rsatadi). */
   const items = [
     { href: "/xaridor", label: t("nav.dashboard"), exact: true },
     { href: "/xaridor/bozor", label: t("nav.market") },
-    { href: "/xaridor/elonlarim", label: t("nav.myJobs") },
-    /* Yuborilgan takliflar (Offer) — A yo'lning butun oqimi shu sahifada.
-       Ilgari menyuda yo'q edi: unga faqat taklif yuborgandan keyingi
-       yo'naltirish yoki Xabarlar orqali tushib bo'lardi. */
-    { href: "/xaridor/takliflarim", label: t("nav.myOffers") },
     { href: "/xaridor/shartnomalar", label: t("nav.contracts") },
-    { href: "/xaridor/xabarlar", label: t("nav.messages") },
   ];
 
   return (
@@ -90,7 +87,6 @@ export function TopNav({ base }: TopNavProps) {
 
         <div className="flex items-center gap-3">
           <LangSwitch />
-          <NotificationBell />
 
           {/* Mobile menu button */}
           <button
@@ -107,9 +103,6 @@ export function TopNav({ base }: TopNavProps) {
           </button>
 
           <div className="hidden lg:flex items-center gap-3">
-            <Link href="/xaridor/xarajatlar" className="text-xs font-medium text-muted hover:text-ink">
-              {t("nav.spending")}
-            </Link>
             <Link href="/xaridor/yordam" className="text-xs font-medium text-muted hover:text-ink">
               {t("nav.help")}
             </Link>
@@ -141,9 +134,6 @@ export function TopNav({ base }: TopNavProps) {
                 {item.label}
               </Link>
             ))}
-            <Link href="/xaridor/xarajatlar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-               {t("nav.spending")}
-            </Link>
             <Link href="/xaridor/yordam" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
                {t("nav.help")}
             </Link>

@@ -15,6 +15,9 @@ const serviceTones: Record<ServiceStatus, BadgeTone> = {
   active: "success",
   paused: "warning",
   draft: "neutral",
+  pending_review: "info",
+  rejected: "danger",
+  archived: "neutral",
 };
 
 export function ServiceStatusBadge({ status }: { status: ServiceStatus }) {

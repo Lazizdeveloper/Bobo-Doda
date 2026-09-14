@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { FileUpload } from "@/components/ui/FileUpload";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -23,7 +22,6 @@ export function DisputeControl({
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<Dispute["reason"]>("scope");
   const [description, setDescription] = useState("");
-  const [evidence, setEvidence] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -34,7 +32,7 @@ export function DisputeControl({
     }
     setSaving(true);
     try {
-      await disputesService.open(contractId, { reason, description, evidence });
+      await disputesService.open(contractId, { reason, description, evidence: [] });
       setOpen(false);
       toast(t("dispute.opened"));
       onOpened();
@@ -100,13 +98,6 @@ export function DisputeControl({
             rows={5}
             maxLength={5000}
             error={error}
-          />
-          <FileUpload
-            label={t("dispute.evidence")}
-            value={evidence}
-            onChange={setEvidence}
-            max={5}
-            acceptDocs
           />
         </div>
       </Modal>

@@ -1,129 +1,685 @@
 /**
  * Admin chegarasi — `app/admin/**` va `components/admin/**` FAQAT shu
- * moduldan import qiladi (hech qachon `@/lib/admin-api` dan to'g'ridan-to'g'ri).
+ * moduldan import qiladi.
  *
- * Ilgari bu fayl bitta `export * from "@/lib/admin-api"` qatoridan iborat edi
- * va shuning uchun ikki narsa yo'q edi:
+ * Bosqich 17 — STAFF AUTENTIFIKATSIYASI REAL (`staff/auth/*`, `staff/me/*`):
+ * login (parol + shartli TOTP), `mustChangePassword` qattiq darvoza,
+ * TOTP enroll/verify/disable, sessiya ro'yxati, logout. Session/ruxsat
+ * snapshot'i (`getAdminSession`/`getCurrentAdmin`/`hasPermission`) ilova
+ * tomonidagi `authService.getSession()` bilan BIR XIL qoida — sinxron,
+ * brauzerdagi snapshot, haqiqiy tekshiruv har so'rovda serverda.
  *
- * 1. **Xato taksonomiyasi.** Admin funksiyalari `throw new Error("FORBIDDEN")`
- *    tashlaydi. Ilova tomonida bunday xatolar `client.ts` da `ApiError` ga
- *    o'giriladi, admin tomonida esa o'girilmasdi — `<ErrorState>` har doim
- *    "yuklab bo'lmadi + qayta urinish" ko'rsatardi, hatto ruxsat yo'qligida
- *    ham (qayta urinish u yerda hech qachon yordam bermaydi).
- * 2. **Shartnoma.** Backend ulanganda almashtiriladigan aniq sirt yo'q edi.
- *
- * Endi har bir operatsiya shu yerdan, `ApiError` ga o'ralgan holda chiqadi.
- * Funksiya imzolari o'zgarmadi (sinxron — sinxron, async — async), shuning
- * uchun chaqiruvchi kod bir xil qoladi. Backend'ga o'tishda faqat shu fayl
- * (ilova tomonidagi `client.ts` kabi) HTTP chaqiruvlariga almashtiriladi.
+ * QOLGAN operatsiyalar (foydalanuvchi/xizmat/shartnoma/to'lov navbatlari,
+ * moderatsiya, KYC, ticketlar, B2B va h.k.) — real backend DTO shakli
+ * mock `AdminUserRow`/`AdminData` dan TUBDAN farq qiladi (masalan
+ * `roles[]` va agregat hisoblagichlar, nested massivlar EMAS). Bularni
+ * "faqat shu faylni almashtirish" bilan hal qilib bo'lmaydi — har bir
+ * admin SAHIFASINI ham qayta yozish kerak (buyer/seller tomon bilan bir
+ * xil hajmda, alohida bosqich). Shuning uchun ATAYLAB `FEATURE_DISABLED`
+ * tashlaydi — mavjud sahifalar `loadError`/`<ErrorState>` konvensiyasi
+ * orqali xavfsiz ko'rinadi, SOXTA (localStorage) ma'lumot ko'rsatilmaydi.
  */
-import * as adminMock from "@/lib/admin-api";
 import { normalizeApiError } from "./errors";
+import type * as adminMock from "@/lib/admin-api";
+import {
+  bootstrapStaffSession,
+  decodeStaffJwtSub,
+  roleToLower,
+  setStaffAccessToken,
+  staffAccountStore,
+  staffHttp,
+  staffSessionStore,
+  staffToQuery,
+} from "./staff-http";
+import type { AdminAccount, AdminPermission, AdminRole, AdminSession } from "@/lib/admin-types";
 
-/** SINXRON qoladigan amallar uchun (faqat sessiya/huquq snapshot'i).
-    `ApiError.message` asl kod satri bo'lib qoladi (`"FORBIDDEN"`), shuning
-    uchun kodga qarab matn tanlaydigan sahifalar o'zgarishsiz ishlaydi. */
-function guard<A extends unknown[], R>(fn: (...args: A) => R) {
-  return (...args: A): R => {
-    try {
-      return fn(...args);
-    } catch (error) {
-      throw normalizeApiError(error);
-    }
-  };
-}
+bootstrapStaffSession();
 
-/** Allaqachon `Promise` qaytaradigan mock funksiyasi uchun. */
-function guardAsync<A extends unknown[], R>(fn: (...args: A) => Promise<R>) {
-  return async (...args: A): Promise<R> => {
-    try {
-      return await fn(...args);
-    } catch (error) {
-      throw normalizeApiError(error);
-    }
-  };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- arity kerak, `Asyncified<typeof adminMock.X>` bilan mos kelishi uchun
+function disabledAsync<T = never>(..._args: unknown[]): Promise<T> {
+  return Promise.reject(new Error("FEATURE_DISABLED"));
 }
 
 /**
- * Sinxron mock funksiyasini ASYNC chegara amaliga aylantiradi.
- *
- * NEGA: backend'da har bir o'qish va mutatsiya HTTP so'rov, ya'ni majburan
- * promise. Agar chegara sinxron qolsa, backend ulangan kunda HAR BIR
- * chaqiruv joyi (`useEffect`, `load()`, tugma handleri) qayta yozilishi
- * kerak bo'lardi — ya'ni chegara o'z vazifasini bajarmagan bo'lardi.
- * Mock bugun javobni darhol qaytaradi, lekin imzo allaqachon kelajakdagi
- * shakl.
- *
- * ISTISNO — sessiya/huquq snapshot'i (`getCurrentAdmin`, `hasPermission`,
- * `getAdminSession`, `adminLogout`) sinxron qoladi: ular har render'da,
- * layout guard'ida chaqiriladi va backend'da ham brauzerdagi token
- * snapshot'idan o'qiladi (ilova tomonidagi `authService.getSession()` bilan
- * bir xil qoida).
+ * Eski admin.ts HAMMA mock funksiyani (sinxron bo'lsa ham) `asyncGuard`
+ * bilan async chegara amaliga o'rar edi (bo'lim — "backend'da har bir
+ * o'qish HTTP so'rov"). Shu shartnomani saqlash uchun: `typeof adminMock.X`
+ * qanday bo'lishidan qat'i nazar, bu yerda HAR DOIM Promise qaytaruvchi
+ * tur kerak.
  */
-function asyncGuard<A extends unknown[], R>(fn: (...args: A) => R) {
-  return async (...args: A): Promise<R> => guard(fn)(...args);
-}
+type Asyncified<F> = F extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never;
 
 /* ---------------- Sessiya va huquq (SINXRON snapshot) ---------------- */
-export const getAdminSession = guard(adminMock.getAdminSession);
-export const getCurrentAdmin = guard(adminMock.getCurrentAdmin);
-export const hasPermission = guard(adminMock.hasPermission);
-export const adminLogout = guard(adminMock.adminLogout);
+export function getAdminSession(): AdminSession | null {
+  return staffSessionStore.read();
+}
+export function getCurrentAdmin(): AdminAccount | null {
+  return staffAccountStore.read();
+}
+export function hasPermission(permission: AdminPermission): boolean {
+  return getCurrentAdmin()?.permissions.includes(permission) ?? false;
+}
+export function adminLogout(): void {
+  void staffHttp("/staff/auth/logout", { method: "POST" }, false).catch(() => {});
+  setStaffAccessToken(null);
+  staffSessionStore.clear();
+  staffAccountStore.clear();
+}
 
-/* ---------------- Autentifikatsiya ---------------- */
-export const adminLogin = guardAsync(adminMock.adminLogin);
-export const getAdminAccounts = asyncGuard(adminMock.getAdminAccounts);
-export const setAdminActive = asyncGuard(adminMock.setAdminActive);
-export const addAdmin = asyncGuard(adminMock.addAdmin);
-export const updateAdminAccount = asyncGuard(adminMock.updateAdminAccount);
+interface StaffSessionResponse {
+  accessToken: string;
+  role: string;
+  permissions: string[];
+  mustChangePassword: boolean;
+}
 
-/* ---------------- O'qish ---------------- */
+function permissionsToLower(permissions: string[]): AdminPermission[] {
+  return permissions.map((p) => (p === "STAFF" ? "admins" : p.toLowerCase())) as AdminPermission[];
+}
+
+async function applySession(res: StaffSessionResponse): Promise<AdminAccount> {
+  setStaffAccessToken(res.accessToken);
+  const session: AdminSession = {
+    adminId: decodeStaffJwtSub(res.accessToken),
+    role: roleToLower(res.role),
+    expiresAt: new Date(Date.now() + 14 * 60 * 1000).toISOString(),
+  };
+  staffSessionStore.write(session);
+  const me = await staffHttp<{
+    id: string;
+    fullName: string;
+    email: string;
+    role: string;
+    title: string;
+    permissions: string[];
+    mfaEnabled: boolean;
+    mustChangePassword: boolean;
+  }>("/staff/me");
+  const account: AdminAccount = {
+    id: me.id,
+    fullName: me.fullName,
+    email: me.email,
+    role: roleToLower(me.role),
+    title: me.title,
+    active: true,
+    permissions: permissionsToLower(me.permissions),
+    createdAt: "",
+    mustChangePassword: me.mustChangePassword,
+    mfaEnabled: me.mfaEnabled,
+  };
+  staffAccountStore.write(account);
+  return account;
+}
+
 /**
- * @deprecated Ro'yxat sahifalarida ishlatilmasin — HAR BIR kolleksiyaning
- * HAMMA qatorini qaytaradi. Backend'da bu imkonsiz (100 000 shartnomani
- * brauzerga yuborib bo'lmaydi). Ro'yxatlar uchun `list*Queue`,
- * ko'rsatkichlar uchun `getAdminCounters` ishlating.
+ * Bosqich 17 — real login: `email`+`password`, 2FA yoqilgan hisoblarda
+ * `totpCode` MAJBURIY (yo'q bo'lsa server `MFA_REQUIRED` qaytaradi —
+ * chaqiruvchi UI shu kodni ushlab ikkinchi bosqichni ko'rsatadi).
+ * Uchinchi `expectedRole` — FAQAT mijoz tomonidagi UX yo'naltirish
+ * (masalan `/rahbariyat` portali faqat super_admin kutadi); haqiqiy
+ * ruxsat HAR DOIM serverda (`StaffPermissionGuard`).
  */
-export const getAdminData = asyncGuard(adminMock.getAdminData);
-export const getAuditEvents = asyncGuard(adminMock.getAuditEvents);
-export const getInternalNotes = asyncGuard(adminMock.getInternalNotes);
-export const getTicketConversation = asyncGuard(adminMock.getTicketConversation);
-export const adminGlobalSearch = asyncGuard(adminMock.adminGlobalSearch);
+export async function adminLogin(email: string, password: string, totpCode?: string, expectedRole?: AdminRole): Promise<AdminAccount> {
+  try {
+    const res = await staffHttp<StaffSessionResponse>("/staff/auth/login", {
+      method: "POST",
+      body: { email, password, totpCode },
+    });
+    const account = await applySession(res);
+    if (expectedRole && account.role !== expectedRole) {
+      adminLogout();
+      throw new Error("FORBIDDEN");
+    }
+    return account;
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
 
-/* ---------------- Navbatlar (filtr + sahifalash server tomonida) ----------
-     GET /api/v1/admin/queues/users?page=1&perPage=10&search=&status=
-   Imzo va qaytish shakli (`AdminPage<T>`) backend'da ham bir xil. */
-export const listUsersQueue = asyncGuard(adminMock.listUsersQueue);
-export const listServicesQueue = asyncGuard(adminMock.listServicesQueue);
-export const listJobsQueue = asyncGuard(adminMock.listJobsQueue);
-export const listContractsQueue = asyncGuard(adminMock.listContractsQueue);
-export const listVerificationsQueue = asyncGuard(adminMock.listVerificationsQueue);
-export const listDisputesQueue = asyncGuard(adminMock.listDisputesQueue);
-export const listWithdrawalsQueue = asyncGuard(adminMock.listWithdrawalsQueue);
-export const listTransactionsQueue = asyncGuard(adminMock.listTransactionsQueue);
-export const listTicketsQueue = asyncGuard(adminMock.listTicketsQueue);
-export const listReportsQueue = asyncGuard(adminMock.listReportsQueue);
-export const listAppealsQueue = asyncGuard(adminMock.listAppealsQueue);
-export const listReviewsQueue = asyncGuard(adminMock.listReviewsQueue);
-export const listAuditQueue = asyncGuard(adminMock.listAuditQueue);
+export async function staffChangePassword(currentPassword: string, newPassword: string): Promise<void> {
+  try {
+    await staffHttp("/staff/me/change-password", { method: "POST", body: { currentPassword, newPassword } });
+    const current = staffAccountStore.read();
+    if (current) staffAccountStore.write({ ...current, mustChangePassword: false });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
 
-/** Dashboard KPI va sidebar badge'lari uchun agregatlar (`GET /admin/stats`). */
-export const getAdminCounters = asyncGuard(adminMock.getAdminCounters);
+export async function staffEnrollTotp(): Promise<{ secret: string; otpauthUri: string }> {
+  try {
+    return await staffHttp("/staff/me/totp/enroll", { method: "POST" });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffVerifyTotp(totpCode: string): Promise<void> {
+  try {
+    await staffHttp("/staff/me/totp/verify", { method: "POST", body: { totpCode } });
+    const current = staffAccountStore.read();
+    if (current) staffAccountStore.write({ ...current, mfaEnabled: true });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffDisableTotp(currentPassword: string, totpCode: string): Promise<void> {
+  try {
+    await staffHttp("/staff/me/totp/disable", { method: "POST", body: { currentPassword, totpCode } });
+    const current = staffAccountStore.read();
+    if (current) staffAccountStore.write({ ...current, mfaEnabled: false });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
 
-/* ---------------- Detal o'quvchilar (tanlangan yozuv bo'yicha) ---------- */
-export const getContractMilestones = asyncGuard(adminMock.getContractMilestones);
-export const getDisputeContext = asyncGuard(adminMock.getDisputeContext);
-export const getUserDetail = asyncGuard(adminMock.getUserDetail);
+export interface StaffSessionListItem {
+  id: string;
+  userAgent?: string | null;
+  ip?: string | null;
+  createdAt: string;
+  expiresAt: string;
+}
+export async function staffListOwnSessions(): Promise<StaffSessionListItem[]> {
+  try {
+    return await staffHttp("/staff/me/sessions");
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffRevokeOwnSession(id: string): Promise<void> {
+  try {
+    await staffHttp(`/staff/me/sessions/${id}`, { method: "DELETE" });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
 
-/* Global qidiruv deep-link'i: yozuvni ID bo'yicha topadi. Yuklangan
-   sahifadan izlash MUMKIN EMAS — ekranda atigi 10 ta qator bor. */
-export const findUserById = asyncGuard(adminMock.findUserById);
-export const findServiceById = asyncGuard(adminMock.findServiceById);
-export const findContractById = asyncGuard(adminMock.findContractById);
-export const findJobById = asyncGuard(adminMock.findJobById);
-export const findVerificationByUserId = asyncGuard(adminMock.findVerificationByUserId);
-export const findTicketById = asyncGuard(adminMock.findTicketById);
-export const findDisputeById = asyncGuard(adminMock.findDisputeById);
+/* ==========================================================================
+   PASTDAGI HAMMASI — Bosqich 17'da hali ko'chirilmagan (bo'lim boshidagi
+   izohga qarang). ATAYLAB FEATURE_DISABLED: mavjud sahifalar xavfsiz
+   `<ErrorState>` ko'rsatadi, mock ma'lumot ishlatilmaydi.
+   ========================================================================== */
+export const getAdminAccounts: Asyncified<typeof adminMock.getAdminAccounts> = disabledAsync;
+export const setAdminActive: Asyncified<typeof adminMock.setAdminActive> = disabledAsync;
+export const addAdmin: Asyncified<typeof adminMock.addAdmin> = disabledAsync;
+export const updateAdminAccount: Asyncified<typeof adminMock.updateAdminAccount> = disabledAsync;
+
+export const getAdminData: Asyncified<typeof adminMock.getAdminData> = disabledAsync;
+export const getAuditEvents: Asyncified<typeof adminMock.getAuditEvents> = disabledAsync;
+export const getInternalNotes: Asyncified<typeof adminMock.getInternalNotes> = disabledAsync;
+export const getTicketConversation: Asyncified<typeof adminMock.getTicketConversation> = disabledAsync;
+export const adminGlobalSearch: Asyncified<typeof adminMock.adminGlobalSearch> = disabledAsync;
+
+export const listUsersQueue: Asyncified<typeof adminMock.listUsersQueue> = disabledAsync;
+export const listServicesQueue: Asyncified<typeof adminMock.listServicesQueue> = disabledAsync;
+export const listJobsQueue: Asyncified<typeof adminMock.listJobsQueue> = disabledAsync;
+export const listContractsQueue: Asyncified<typeof adminMock.listContractsQueue> = disabledAsync;
+export const listVerificationsQueue: Asyncified<typeof adminMock.listVerificationsQueue> = disabledAsync;
+export const listDisputesQueue: Asyncified<typeof adminMock.listDisputesQueue> = disabledAsync;
+export const listWithdrawalsQueue: Asyncified<typeof adminMock.listWithdrawalsQueue> = disabledAsync;
+export const listTransactionsQueue: Asyncified<typeof adminMock.listTransactionsQueue> = disabledAsync;
+export const listTicketsQueue: Asyncified<typeof adminMock.listTicketsQueue> = disabledAsync;
+export const listReportsQueue: Asyncified<typeof adminMock.listReportsQueue> = disabledAsync;
+export const listAppealsQueue: Asyncified<typeof adminMock.listAppealsQueue> = disabledAsync;
+export const listReviewsQueue: Asyncified<typeof adminMock.listReviewsQueue> = disabledAsync;
+export const listAuditQueue: Asyncified<typeof adminMock.listAuditQueue> = disabledAsync;
+
+export async function getAdminCounters(): Promise<adminMock.AdminCounters> {
+  /* Bo'lim 91-J — badge/KPI raqamlarining REAL, kam-xarajat manbasi:
+     har navbatdan faqat `total` (perPage=1). Mock-only navbatlar (KYC,
+     reports, tickets, appeals, withdrawals, jobs, reviews) 0 qoladi. */
+  try {
+    const [users, services, contracts, disputesOpen, disputesReview, audit] = await Promise.all([
+      staffHttp<{ total: number }>("/staff/users?perPage=1"),
+      staffHttp<{ total: number }>("/staff/services?perPage=1"),
+      staffHttp<{ total: number }>("/staff/contracts?perPage=1"),
+      staffHttp<{ total: number }>("/staff/disputes?status=OPEN&perPage=1"),
+      staffHttp<{ total: number }>("/staff/disputes?status=UNDER_REVIEW&perPage=1"),
+      staffHttp<{ total: number }>("/staff/audit-logs?perPage=1"),
+    ]);
+    return {
+      pendingKyc: 0,
+      openDisputes: disputesOpen.total + disputesReview.total,
+      pendingWithdrawals: 0,
+      openReports: 0,
+      openTickets: 0,
+      pendingAppeals: 0,
+      totalUsers: users.total,
+      totalServices: services.total,
+      totalJobs: 0,
+      totalContracts: contracts.total,
+      totalReviews: 0,
+      totalAuditEvents: audit.total,
+      auditAdmins: [] as string[],
+      escrowTotal: 0,
+      payoutsTotal: 0,
+      commissionTotal: 0,
+    };
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+/* ==========================================================================
+   REAL — bo'lim 91-J tanlangan doira: Foydalanuvchilar, Nizolar, To'lovlar/
+   Qaytarish/Chiqarish, Shartnomalar, Audit jurnali. Mock nomlari bilan
+   TO'QNASHMASLIGI uchun ATAYLAB yangi `staff*` prefiksi bilan — tegishli
+   sahifalar shu yangi funksiyalarni chaqiradi (eski mock-shaped nomlar
+   yuqorida hamon FEATURE_DISABLED, boshqa hech qaysi sahifa ularga
+   tegmaydi).
+   ========================================================================== */
+type Page<T> = { items: T[]; page: number; perPage: number; total: number; totalPages: number };
+
+function asStr(v: unknown): string | undefined {
+  return typeof v === "string" ? v : undefined;
+}
+
+/* ---------------- Foydalanuvchilar (staff/users) ---------------- */
+export interface StaffUserRow {
+  id: string;
+  phone: string;
+  fullName?: string;
+  email?: string;
+  roles: string[];
+  status: "ACTIVE" | "SUSPENDED" | "BLOCKED";
+  sellerStatus: string;
+  verified: boolean;
+  createdAt: string;
+}
+export interface StaffUserDetail extends StaffUserRow {
+  statusReason?: string;
+  statusChangedAt?: string;
+  suspendedUntil?: string;
+  contractsAsBuyerCount: number;
+  contractsAsSellerCount: number;
+  paymentsCount: number;
+}
+function mapStaffUser(u: Record<string, unknown>): StaffUserRow {
+  return {
+    id: u.id as string,
+    phone: u.phone as string,
+    fullName: asStr(u.fullName),
+    email: asStr(u.email),
+    roles: u.roles as string[],
+    status: u.status as StaffUserRow["status"],
+    sellerStatus: u.sellerStatus as string,
+    verified: u.verified as boolean,
+    createdAt: u.createdAt as string,
+  };
+}
+export async function staffListUsers(query: {
+  page?: number;
+  perPage?: number;
+  phone?: string;
+  status?: string;
+  role?: string;
+}): Promise<Page<StaffUserRow>> {
+  try {
+    const res = await staffHttp<Page<Record<string, unknown>>>(`/staff/users${staffToQuery(query)}`);
+    return { ...res, items: res.items.map(mapStaffUser) };
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffGetUser(id: string): Promise<StaffUserDetail> {
+  try {
+    const u = await staffHttp<Record<string, unknown>>(`/staff/users/${id}`);
+    return {
+      ...mapStaffUser(u),
+      statusReason: asStr(u.statusReason),
+      statusChangedAt: asStr(u.statusChangedAt),
+      suspendedUntil: asStr(u.suspendedUntil),
+      contractsAsBuyerCount: u.contractsAsBuyerCount as number,
+      contractsAsSellerCount: u.contractsAsSellerCount as number,
+      paymentsCount: u.paymentsCount as number,
+    };
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffSuspendUser(id: string, reason: string, suspendedUntil?: string): Promise<void> {
+  try {
+    await staffHttp(`/staff/users/${id}/suspend`, { method: "POST", body: { reason, suspendedUntil } });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffBlockUser(id: string, reason: string): Promise<void> {
+  try {
+    await staffHttp(`/staff/users/${id}/block`, { method: "POST", body: { reason } });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffReactivateUser(id: string): Promise<void> {
+  try {
+    await staffHttp(`/staff/users/${id}/reactivate`, { method: "POST" });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+/* ---------------- Shartnomalar (staff/contracts) ---------------- */
+export interface StaffMilestone {
+  id: string;
+  title: string;
+  description?: string;
+  amount: number;
+  position: number;
+  status: string;
+  dueAt?: string;
+  submittedAt?: string;
+  approvedAt?: string;
+}
+export interface StaffContract {
+  id: string;
+  buyerId: string;
+  sellerId: string;
+  serviceId: string;
+  serviceTitleSnapshot: string;
+  sellerDisplayNameSnapshot: string;
+  agreedAmount: number;
+  currency: string;
+  deadline: string;
+  status: string;
+  milestones: StaffMilestone[];
+  createdAt: string;
+}
+function mapStaffMilestone(m: Record<string, unknown>): StaffMilestone {
+  return {
+    id: m.id as string,
+    title: m.title as string,
+    description: asStr(m.description),
+    amount: m.amount as number,
+    position: m.position as number,
+    status: m.status as string,
+    dueAt: asStr(m.dueAt),
+    submittedAt: asStr(m.submittedAt),
+    approvedAt: asStr(m.approvedAt),
+  };
+}
+function mapStaffContract(c: Record<string, unknown>): StaffContract {
+  return {
+    id: c.id as string,
+    buyerId: c.buyerId as string,
+    sellerId: c.sellerId as string,
+    serviceId: c.serviceId as string,
+    serviceTitleSnapshot: c.serviceTitleSnapshot as string,
+    sellerDisplayNameSnapshot: c.sellerDisplayNameSnapshot as string,
+    agreedAmount: c.agreedAmount as number,
+    currency: c.currency as string,
+    deadline: c.deadline as string,
+    status: c.status as string,
+    milestones: ((c.milestones as Record<string, unknown>[]) ?? []).map(mapStaffMilestone),
+    createdAt: c.createdAt as string,
+  };
+}
+export async function staffListContracts(query: {
+  page?: number;
+  perPage?: number;
+  status?: string;
+  buyerId?: string;
+  sellerId?: string;
+}): Promise<Page<StaffContract>> {
+  try {
+    const res = await staffHttp<Page<Record<string, unknown>>>(`/staff/contracts${staffToQuery(query)}`);
+    return { ...res, items: res.items.map(mapStaffContract) };
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffGetContract(id: string): Promise<StaffContract> {
+  try {
+    return mapStaffContract(await staffHttp(`/staff/contracts/${id}`));
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+/* ---------------- Nizolar (staff/disputes) ---------------- */
+export interface StaffDispute {
+  id: string;
+  contractId: string;
+  reason: string;
+  description: string;
+  status: string;
+  disputedAmount: number;
+  heldAmount: number;
+  currency: string;
+  resolutionType?: string;
+  buyerAwardAmount?: number;
+  sellerAwardAmount?: number;
+  resolutionReason?: string;
+  openedByUserId: string;
+  openedAt: string;
+}
+export interface StaffDisputeEvidence {
+  id: string;
+  type: string;
+  text?: string;
+  fileReference?: string;
+  createdAt: string;
+}
+export interface StaffDisputeEvent {
+  id: string;
+  type: string;
+  actorType: string;
+  actorName: string;
+  createdAt: string;
+}
+function mapStaffDispute(d: Record<string, unknown>): StaffDispute {
+  return {
+    id: d.id as string,
+    contractId: d.contractId as string,
+    reason: d.reason as string,
+    description: d.description as string,
+    status: d.status as string,
+    disputedAmount: d.disputedAmount as number,
+    heldAmount: d.heldAmount as number,
+    currency: d.currency as string,
+    resolutionType: asStr(d.resolutionType),
+    buyerAwardAmount: typeof d.buyerAwardAmount === "number" ? d.buyerAwardAmount : undefined,
+    sellerAwardAmount: typeof d.sellerAwardAmount === "number" ? d.sellerAwardAmount : undefined,
+    resolutionReason: asStr(d.resolutionReason),
+    openedByUserId: d.openedByUserId as string,
+    openedAt: d.openedAt as string,
+  };
+}
+export async function staffListDisputes(query: {
+  page?: number;
+  perPage?: number;
+  status?: string;
+  contractId?: string;
+}): Promise<Page<StaffDispute>> {
+  try {
+    const res = await staffHttp<Page<Record<string, unknown>>>(`/staff/disputes${staffToQuery(query)}`);
+    return { ...res, items: res.items.map(mapStaffDispute) };
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffGetDispute(id: string): Promise<StaffDispute> {
+  try {
+    return mapStaffDispute(await staffHttp(`/staff/disputes/${id}`));
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffListDisputeEvidence(id: string): Promise<StaffDisputeEvidence[]> {
+  try {
+    return await staffHttp(`/staff/disputes/${id}/evidence`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffListDisputeEvents(id: string): Promise<StaffDisputeEvent[]> {
+  try {
+    return await staffHttp(`/staff/disputes/${id}/events`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffStartDisputeReview(id: string): Promise<void> {
+  try {
+    await staffHttp(`/staff/disputes/${id}/start-review`, { method: "POST" });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffRejectDispute(id: string, resolutionReason: string): Promise<void> {
+  try {
+    await staffHttp(`/staff/disputes/${id}/reject`, { method: "POST", body: { resolutionReason } });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffResolveDispute(
+  id: string,
+  buyerAwardAmount: number,
+  sellerAwardAmount: number,
+  resolutionReason: string,
+): Promise<void> {
+  try {
+    await staffHttp(`/staff/disputes/${id}/resolve`, {
+      method: "POST",
+      body: { buyerAwardAmount, sellerAwardAmount, resolutionReason },
+      idempotencyKey: crypto.randomUUID(),
+    });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+/* ---------------- To'lovlar / Qaytarish / Chiqarish ---------------- */
+export interface StaffPayment {
+  id: string;
+  contractId: string;
+  provider: string;
+  status: string;
+  amount: number;
+  currency: string;
+  payerUserId: string;
+  createdAt: string;
+}
+export interface StaffRefund {
+  id: string;
+  contractId: string;
+  paymentId: string;
+  status: string;
+  amount: number;
+  currency: string;
+  reason: string;
+  createdAt: string;
+}
+export interface StaffPayout {
+  id: string;
+  sellerId: string;
+  status: string;
+  amount: number;
+  currency: string;
+  destinationReference: string;
+  createdAt: string;
+}
+export async function staffListPayments(query: { page?: number; perPage?: number; status?: string }): Promise<Page<StaffPayment>> {
+  try {
+    return await staffHttp(`/staff/payments${staffToQuery(query)}`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffListRefunds(query: { page?: number; perPage?: number; status?: string }): Promise<Page<StaffRefund>> {
+  try {
+    return await staffHttp(`/staff/refunds${staffToQuery(query)}`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffCreateRefund(contractId: string, reason: string): Promise<void> {
+  try {
+    await staffHttp(`/staff/refunds`, {
+      method: "POST",
+      body: { contractId, reason },
+      idempotencyKey: crypto.randomUUID(),
+    });
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffListPayouts(query: { page?: number; perPage?: number; status?: string }): Promise<Page<StaffPayout>> {
+  try {
+    return await staffHttp(`/staff/payouts${staffToQuery(query)}`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+/* ---------------- Ledger (staff/ledger/transactions) — append-only ---------------- */
+export interface StaffLedgerEntry {
+  id: string;
+  accountType: string;
+  accountOwnerType: string;
+  accountOwnerId?: string;
+  amount: number;
+  currency: string;
+}
+export interface StaffLedgerTransaction {
+  id: string;
+  type: string;
+  currency: string;
+  sourceId: string;
+  description?: string;
+  entries: StaffLedgerEntry[];
+  createdAt: string;
+}
+export async function staffListLedgerTransactions(query: { page?: number; perPage?: number; type?: string }): Promise<Page<StaffLedgerTransaction>> {
+  try {
+    return await staffHttp(`/staff/ledger/transactions${staffToQuery(query)}`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+/* ---------------- Audit jurnali (staff/audit-logs) ---------------- */
+export interface StaffAuditLogRow {
+  id: string;
+  actorType: string;
+  actorName: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  createdAt: string;
+}
+export async function staffListAuditLogs(query: {
+  page?: number;
+  perPage?: number;
+  action?: string;
+  resourceType?: string;
+}): Promise<Page<StaffAuditLogRow>> {
+  try {
+    return await staffHttp(`/staff/audit-logs${staffToQuery(query)}`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+export async function staffGetAuditLog(id: string): Promise<StaffAuditLogRow & { previousState?: unknown; newState?: unknown }> {
+  try {
+    return await staffHttp(`/staff/audit-logs/${id}`);
+  } catch (error) {
+    throw normalizeApiError(error);
+  }
+}
+
+export const getContractMilestones: Asyncified<typeof adminMock.getContractMilestones> = disabledAsync;
+export const getDisputeContext: Asyncified<typeof adminMock.getDisputeContext> = disabledAsync;
+export const getUserDetail: Asyncified<typeof adminMock.getUserDetail> = disabledAsync;
+
+export const findUserById: Asyncified<typeof adminMock.findUserById> = disabledAsync;
+export const findServiceById: Asyncified<typeof adminMock.findServiceById> = disabledAsync;
+export const findContractById: Asyncified<typeof adminMock.findContractById> = disabledAsync;
+export const findJobById: Asyncified<typeof adminMock.findJobById> = disabledAsync;
+export const findVerificationByUserId: Asyncified<typeof adminMock.findVerificationByUserId> = disabledAsync;
+export const findTicketById: Asyncified<typeof adminMock.findTicketById> = disabledAsync;
+export const findDisputeById: Asyncified<typeof adminMock.findDisputeById> = disabledAsync;
 
 export type {
   AdminCounters,
@@ -135,43 +691,37 @@ export type {
 } from "@/lib/admin-api";
 export type { AdminQueueQuery, AdminPage } from "@/lib/admin-types";
 
-/* ---------------- Foydalanuvchi moderatsiyasi ---------------- */
-export const suspendUser = asyncGuard(adminMock.suspendUser);
-export const unsuspendUser = asyncGuard(adminMock.unsuspendUser);
-export const blockUser = asyncGuard(adminMock.blockUser);
-export const deactivateUser = asyncGuard(adminMock.deactivateUser);
-export const softDeleteUser = asyncGuard(adminMock.softDeleteUser);
-export const adminModerateKYC = asyncGuard(adminMock.adminModerateKYC);
-export const adminModerate = asyncGuard(adminMock.adminModerate);
+export const suspendUser: Asyncified<typeof adminMock.suspendUser> = disabledAsync;
+export const unsuspendUser: Asyncified<typeof adminMock.unsuspendUser> = disabledAsync;
+export const blockUser: Asyncified<typeof adminMock.blockUser> = disabledAsync;
+export const deactivateUser: Asyncified<typeof adminMock.deactivateUser> = disabledAsync;
+export const softDeleteUser: Asyncified<typeof adminMock.softDeleteUser> = disabledAsync;
+export const adminModerateKYC: Asyncified<typeof adminMock.adminModerateKYC> = disabledAsync;
+export const adminModerate: Asyncified<typeof adminMock.adminModerate> = disabledAsync;
 
-/* ---------------- Bozor moderatsiyasi ---------------- */
-export const closeJobAsAdmin = asyncGuard(adminMock.closeJobAsAdmin);
-export const setServiceStatus = asyncGuard(adminMock.setServiceStatus);
-export const deleteReview = asyncGuard(adminMock.deleteReview);
-export const updateTrustReport = asyncGuard(adminMock.updateTrustReport);
-export const handleUserAppeal = asyncGuard(adminMock.handleUserAppeal);
+export const closeJobAsAdmin: Asyncified<typeof adminMock.closeJobAsAdmin> = disabledAsync;
+export const setServiceStatus: Asyncified<typeof adminMock.setServiceStatus> = disabledAsync;
+export const deleteReview: Asyncified<typeof adminMock.deleteReview> = disabledAsync;
+export const updateTrustReport: Asyncified<typeof adminMock.updateTrustReport> = disabledAsync;
+export const handleUserAppeal: Asyncified<typeof adminMock.handleUserAppeal> = disabledAsync;
 
-/* ---------------- Nizo va arbitraj ---------------- */
-export const forceCloseContract = asyncGuard(adminMock.forceCloseContract);
+export const forceCloseContract: Asyncified<typeof adminMock.forceCloseContract> = disabledAsync;
 
-/* ---------------- Yordam xizmati ---------------- */
-export const replyToTicket = asyncGuard(adminMock.replyToTicket);
-export const closeTicket = asyncGuard(adminMock.closeTicket);
+export const replyToTicket: Asyncified<typeof adminMock.replyToTicket> = disabledAsync;
+export const closeTicket: Asyncified<typeof adminMock.closeTicket> = disabledAsync;
 
-/* ---------------- Moliya ---------------- */
-export const approveWithdrawal = asyncGuard(adminMock.approveWithdrawal);
-export const rejectWithdrawal = asyncGuard(adminMock.rejectWithdrawal);
-export const reviewWithdrawal = asyncGuard(adminMock.reviewWithdrawal);
-export const listB2bPendingContracts = asyncGuard(adminMock.listB2bPendingContracts);
-export const approveB2bPayment = asyncGuard(adminMock.approveB2bPayment);
-export const rejectB2bPayment = asyncGuard(adminMock.rejectB2bPayment);
-export const reverseTransaction = asyncGuard(adminMock.reverseTransaction);
+export const approveWithdrawal: Asyncified<typeof adminMock.approveWithdrawal> = disabledAsync;
+export const rejectWithdrawal: Asyncified<typeof adminMock.rejectWithdrawal> = disabledAsync;
+export const reviewWithdrawal: Asyncified<typeof adminMock.reviewWithdrawal> = disabledAsync;
+export const listB2bPendingContracts: Asyncified<typeof adminMock.listB2bPendingContracts> = disabledAsync;
+export const approveB2bPayment: Asyncified<typeof adminMock.approveB2bPayment> = disabledAsync;
+export const rejectB2bPayment: Asyncified<typeof adminMock.rejectB2bPayment> = disabledAsync;
+export const reverseTransaction: Asyncified<typeof adminMock.reverseTransaction> = disabledAsync;
 
-/* ---------------- Tizim ---------------- */
-export const saveCategory = asyncGuard(adminMock.saveCategory);
-export const toggleCategoryActive = asyncGuard(adminMock.toggleCategoryActive);
-export const updatePlatformSetting = asyncGuard(adminMock.updatePlatformSetting);
-export const addInternalNote = asyncGuard(adminMock.addInternalNote);
-export const addAudit = asyncGuard(adminMock.addAudit);
+export const saveCategory: Asyncified<typeof adminMock.saveCategory> = disabledAsync;
+export const toggleCategoryActive: Asyncified<typeof adminMock.toggleCategoryActive> = disabledAsync;
+export const updatePlatformSetting: Asyncified<typeof adminMock.updatePlatformSetting> = disabledAsync;
+export const addInternalNote: Asyncified<typeof adminMock.addInternalNote> = disabledAsync;
+export const addAudit: Asyncified<typeof adminMock.addAudit> = disabledAsync;
 
 export type { SearchResultItem } from "@/lib/admin-api";

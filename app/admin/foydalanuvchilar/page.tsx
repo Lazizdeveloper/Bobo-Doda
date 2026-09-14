@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * Bosqich 17 — real backend: `GET /staff/users` (offset sahifalash),
+ * `GET /staff/users/:id`, `POST /staff/users/:id/{suspend,block,reactivate}`.
+ * Eski mock `AdminUserRow`/`listUsersQueue` bilan ALMASHTIRILDI — real
+ * foydalanuvchida KYC holati, ko'nikma/kategoriya, boy profil YO'Q (bo'lim
+ * 91-B mock audit) — faqat status/sellerStatus/rollar/hisoblagichlar.
+ */
 import { useCallback, useEffect, useState } from "react";
 import { AdminPageHeader, MetricCard, Pagination } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
@@ -7,68 +14,74 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Select";
 import { Table, type TableColumn } from "@/components/ui/Table";
 import { Avatar } from "@/components/ui/Avatar";
-import { UserDetailDrawer } from "@/components/admin/UserDetailDrawer";
+import { Textarea } from "@/components/ui/Textarea";
+import { useToast } from "@/components/ui/Toast";
 import {
-  listUsersQueue,
-  findUserById,
-  getUserDetail,
-  type AdminPage,
-  type AdminUserRow,
+  staffListUsers,
+  staffGetUser,
+  staffSuspendUser,
+  staffBlockUser,
+  staffReactivateUser,
+  type StaffUserRow,
+  type StaffUserDetail,
 } from "@/lib/api/admin";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
-import { useAdminDeepLink } from "@/lib/hooks/useAdminDeepLink";
 import { formatDate } from "@/lib/format";
 
-export default function UserManagementPage() {
-  const [page, setPage] = useState<AdminPage<AdminUserRow> | null>(null);
-  const [loadError, setLoadError] = useState<unknown>(null);
-  const [tab, setTab] = useState<"all" | "buyer" | "specialist">("all");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended" | "blocked" | "deactivated">("all");
-  const [kycFilter, setKycFilter] = useState<string>("all");
+const STATUS_LABEL: Record<string, { label: string; tone: BadgeTone }> = {
+  ACTIVE: { label: "Faol", tone: "success" },
+  SUSPENDED: { label: "To'xtatilgan", tone: "warning" },
+  BLOCKED: { label: "Bloklangan", tone: "danger" },
+};
 
-  // Pagination States
+export default function UserManagementPage() {
+  const { toast } = useToast();
+  const [page, setPage] = useState<{ items: StaffUserRow[]; page: number; perPage: number; total: number; totalPages: number } | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [roleFilter, setRoleFilter] = useState<"all" | "BUYER" | "SELLER">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "ACTIVE" | "SUSPENDED" | "BLOCKED">("all");
+  const [phone, setPhone] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Selected User for Drawer inspection
-  const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
-  /* Tanlangan foydalanuvchining bog'liq yozuvlari — ALOHIDA chaqiruv */
-  const [detail, setDetail] = useState<Awaited<
-    ReturnType<typeof getUserDetail>
-  > | null>(null);
+  const [selected, setSelected] = useState<StaffUserRow | null>(null);
+  const [detail, setDetail] = useState<StaffUserDetail | null>(null);
+  const [actionOpen, setActionOpen] = useState<"suspend" | "block" | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  /* Qidiruv debounce bilan */
-  const debouncedSearch = useDebouncedValue(search, 300);
+  const debouncedPhone = useDebouncedValue(phone, 300);
 
-  /* SERVER tomonida filtrlanadi va sahifalanadi; moderatsiya va KYC holati
-     qatorga server tomonida biriktirilgan (`AdminUserRow`). */
   const load = useCallback(() => {
     setLoadError(null);
-    listUsersQueue({
+    staffListUsers({
       page: currentPage,
       perPage: rowsPerPage,
-      search: debouncedSearch,
-      status: statusFilter,
-      category: tab === "buyer" ? "xaridor" : tab === "specialist" ? "mutaxassis" : "all",
-      severity: kycFilter,
+      phone: debouncedPhone || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      role: roleFilter === "all" ? undefined : roleFilter,
     })
       .then(setPage)
       .catch(setLoadError);
-  }, [currentPage, rowsPerPage, debouncedSearch, statusFilter, tab, kycFilter]);
+  }, [currentPage, rowsPerPage, debouncedPhone, statusFilter, roleFilter]);
 
   useEffect(load, [load]);
 
-  /* Kartochka ochilganda bog'liq yozuvlar yuklanadi */
   useEffect(() => {
-    if (!selectedUser) {
+    setCurrentPage(1);
+  }, [debouncedPhone, statusFilter, roleFilter, rowsPerPage]);
+
+  useEffect(() => {
+    if (!selected) {
       setDetail(null);
       return;
     }
     let cancelled = false;
-    getUserDetail(selectedUser.id)
+    staffGetUser(selected.id)
       .then((d) => {
         if (!cancelled) setDetail(d);
       })
@@ -78,134 +91,105 @@ export default function UserManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedUser]);
+  }, [selected]);
 
-  /* Global qidiruvdan kelgan deep-link — yozuvni topib ochadi */
-  useAdminDeepLink("userId", findUserById, setSelectedUser);
+  function refreshDetail() {
+    if (!selected) return;
+    staffGetUser(selected.id)
+      .then(setDetail)
+      .catch(() => {});
+  }
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, kycFilter, tab, rowsPerPage]);
+  async function handleReactivate() {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      await staffReactivateUser(selected.id);
+      toast("Foydalanuvchi faollashtirildi");
+      load();
+      refreshDetail();
+    } catch {
+      toast("Xatolik yuz berdi", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  /* KPI — faset sanoqlaridan */
-  const facets = page?.facets ?? {};
-  const stats = {
-    total: facets._all ?? 0,
-    buyers: facets["role:xaridor"] ?? 0,
-    specialists: facets["role:mutaxassis"] ?? 0,
-    blocked: facets.blocked ?? 0,
-  };
+  async function handleAction() {
+    if (!selected || !actionOpen) return;
+    if (reason.trim().length < 5) {
+      toast("Sababni kamida 5 belgi bilan kiriting", "error");
+      return;
+    }
+    setBusy(true);
+    try {
+      if (actionOpen === "suspend") await staffSuspendUser(selected.id, reason.trim());
+      else await staffBlockUser(selected.id, reason.trim());
+      toast("Amal bajarildi");
+      setActionOpen(null);
+      setReason("");
+      load();
+      refreshDetail();
+    } catch {
+      toast("Xatolik yuz berdi", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
-
-  /* Holat qatorda tayyor keladi — mijoz endi moderatsiya jadvalini
-     ko'rmaydi. */
-  const getUserStatusInfo = (u: AdminUserRow) => {
-    if (u.moderationStatus === "suspended")
-      return { status: "suspended", label: "To‘xtatilgan", tone: "warning" as BadgeTone };
-    if (u.moderationStatus === "blocked")
-      return { status: "blocked", label: "Bloklangan", tone: "danger" as BadgeTone };
-    if (u.moderationStatus === "deactivated")
-      return { status: "deactivated", label: "Deaktivatsiya", tone: "neutral" as BadgeTone };
-    if (u.moderationStatus === "deleted")
-      return { status: "deleted", label: "O‘chirilgan", tone: "neutral" as BadgeTone };
-    return { status: "active", label: "Faol", tone: "success" as BadgeTone };
-  };
-
-  const columns: TableColumn<AdminUserRow>[] = [
+  const columns: TableColumn<StaffUserRow>[] = [
     {
       key: "fullName",
       header: "Foydalanuvchi",
-      render: (u) => {
-        return (
-          <div className="flex items-center gap-3">
-            <Avatar name={u.fullName} src={u.avatarUrl} size="sm" />
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-ink truncate">{u.fullName}</span>
-                {u.kycStatus === "tasdiqlangan" && (
-                  <span className="text-primary text-xs" title="Tasdiqlangan shaxs">✓</span>
-                )}
-              </div>
-              <p className="text-2xs text-muted font-mono">{u.id}</p>
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "phone",
-      header: "Telefon",
-      render: (u) => <span className="font-mono text-xs text-ink">{u.phone}</span>,
-    },
-    {
-      key: "role",
-      header: "Roli",
       render: (u) => (
-        <Badge tone={u.role === "mutaxassis" ? "primary" : "neutral"} size="sm">
-          {u.role === "mutaxassis" ? "Mutaxassis" : "Xaridor"}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Avatar name={u.fullName || u.phone} size="sm" />
+          <div className="min-w-0">
+            <span className="font-semibold text-ink truncate block">{u.fullName || "—"}</span>
+            <p className="text-2xs text-muted font-mono">{u.id.slice(0, 8)}</p>
+          </div>
+        </div>
+      ),
+    },
+    { key: "phone", header: "Telefon", render: (u) => <span className="font-mono text-xs text-ink">{u.phone}</span> },
+    {
+      key: "roles",
+      header: "Rollar",
+      render: (u) => (
+        <div className="flex flex-wrap gap-1">
+          {u.roles.map((r) => (
+            <Badge key={r} tone={r === "SELLER" ? "primary" : "neutral"} size="sm">
+              {r === "SELLER" ? "Sotuvchi" : "Xaridor"}
+            </Badge>
+          ))}
+        </div>
       ),
     },
     {
       key: "status",
       header: "Holat",
       render: (u) => {
-        const info = getUserStatusInfo(u);
-        return (
-          <Badge tone={info.tone} size="sm">
-            {info.label}
-          </Badge>
-        );
+        const info = STATUS_LABEL[u.status] ?? { label: u.status, tone: "neutral" as BadgeTone };
+        return <Badge tone={info.tone} size="sm">{info.label}</Badge>;
       },
     },
-    {
-      key: "kyc",
-      header: "KYC",
-      render: (u) => {
-        const statusMap: Record<string, { label: string; tone: BadgeTone }> = {
-          tasdiqlangan: { label: "Tasdiqlangan", tone: "success" },
-          korib_chiqilmoqda: { label: "Kutilmoqda", tone: "warning" },
-          rad_etilgan: { label: "Rad etilgan", tone: "danger" },
-          boshlanmagan: { label: "Boshlanmagan", tone: "neutral" },
-        };
-        const res = statusMap[u.kycStatus] || { label: "Yo'q", tone: "neutral" };
-        return <Badge tone={res.tone} size="sm">{res.label}</Badge>;
-      },
-    },
-    {
-      key: "createdAt",
-      header: "Ro‘yxatdan o‘tgan",
-      render: (u) => <span className="text-xs text-muted">{formatDate(u.createdAt)}</span>,
-    },
+    { key: "sellerStatus", header: "Sotuvchi arizasi", render: (u) => <span className="text-2xs text-muted">{u.sellerStatus}</span> },
+    { key: "createdAt", header: "Ro'yxatdan o'tgan", render: (u) => <span className="text-xs text-muted">{formatDate(u.createdAt)}</span> },
     {
       key: "action",
       header: "Amallar",
       render: (u) => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setSelectedUser(u)}
-          className="text-xs"
-        >
+        <Button size="sm" variant="outline" onClick={() => setSelected(u)} className="text-xs">
           Boshqarish →
         </Button>
       ),
     },
   ];
 
-  /* XATO HOLATI YUKLANISH HOLATIDAN OLDIN tekshiriladi. Ilgari tartib
-     teskari edi va bu butun admin panelida bir xil xatoga olib kelardi:
-     yuklash yiqilsa holat `null` bo'lib qolar, birinchi shart
-     ishlab "Yuklanmoqda..." qaytarardi va pastdagi `<ErrorState>` bloki
-     HECH QACHON chizilmasdi — operator abadiy "yuklanmoqda" ekranini
-     ko'rar, qayta urinish tugmasi esa o'lik kod edi. */
   if (loadError) {
     return (
       <div className="space-y-6">
-      <AdminPageHeader
-        title="Foydalanuvchilar Boshqaruvi & Nazorati"
-        description="Bozor ishtirokchilari profillari, tekshiruv fayllari, faollik ko‘rsatkichlari va sanktsiyalar nazorati."
-      />
+        <AdminPageHeader title="Foydalanuvchilar" description="Bozor ishtirokchilari, holatlari va sanktsiyalar." />
         <ErrorState error={loadError} onRetry={load} />
       </div>
     );
@@ -215,118 +199,47 @@ export default function UserManagementPage() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Foydalanuvchilar Boshqaruvi & Nazorati"
-        description="Bozor ishtirokchilari profillari, tekshiruv fayllari, faollik ko‘rsatkichlari va sanktsiyalar nazorati."
-      />
+      <AdminPageHeader title="Foydalanuvchilar" description="Bozor ishtirokchilari, holatlari va sanktsiyalar." />
 
-      {/* KPI Cards */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Jami Foydalanuvchilar" value={stats.total} detail="Barcha ro'yxatdan o'tganlar" />
-        <MetricCard label="Xaridorlar" value={stats.buyers} detail="Buyurtmachi kompaniyalar" tone="primary" />
-        <MetricCard label="Mutaxassislar" value={stats.specialists} detail="Freelancer mutaxassislar" tone="success" />
-        <MetricCard label="Bloklanganlar" value={stats.blocked} detail="Cheklov o'rnatilgan hisoblar" tone="danger" />
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <MetricCard label="Filtrga mos foydalanuvchilar" value={page.total} detail="Joriy filtr bo'yicha" />
       </section>
 
-      {/* Filters and Search */}
       <Card padding="md" className="space-y-3">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          {/* Tab buttons */}
-          <div className="flex border-b border-line overflow-x-auto max-w-full pb-0.5">
-            {[
-              { id: "all", label: "Barcha foydalanuvchilar" },
-              { id: "buyer", label: `Xaridorlar (${stats.buyers})` },
-              { id: "specialist", label: `Mutaxassislar (${stats.specialists})` },
-            ].map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id as "all" | "buyer" | "specialist")}
-                className={`border-b-2 px-4 py-2 font-heading text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
-                  tab === t.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted hover:text-ink"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Controls */}
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              aria-label="Holat bo'yicha filtr"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "suspended" | "blocked" | "deactivated")}
-              className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs text-ink outline-none focus:border-primary"
-            >
-              <option value="all">Barcha holatlar</option>
-              <option value="active">Faol</option>
-              <option value="suspended">To‘xtatilgan</option>
-              <option value="blocked">Bloklangan</option>
-              <option value="deactivated">Deaktiv</option>
-            </select>
-
-            <select
-              aria-label="KYC bo'yicha filtr"
-              value={kycFilter}
-              onChange={(e) => setKycFilter(e.target.value)}
-              className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs text-ink outline-none focus:border-primary"
-            >
-              <option value="all">Barcha KYC</option>
-              <option value="tasdiqlangan">Tasdiqlangan</option>
-              <option value="korib_chiqilmoqda">Ko‘rib chiqilmoqda</option>
-              <option value="rad_etilgan">Rad etilgan</option>
-              <option value="boshlanmagan">Boshlanmagan</option>
-            </select>
-
-            <div className="w-full sm:w-64">
-              <Input
-                aria-label="Qidirish"
-                placeholder="Ism, telefon yoki ID bo'yicha qidiruv..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <Select
+            aria-label="Rol bo'yicha filtr"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
+            options={[
+              { value: "all", label: "Barcha rollar" },
+              { value: "BUYER", label: "Xaridorlar" },
+              { value: "SELLER", label: "Sotuvchilar" },
+            ]}
+            className="sm:w-48"
+          />
+          <Select
+            aria-label="Holat bo'yicha filtr"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            options={[
+              { value: "all", label: "Barcha holatlar" },
+              { value: "ACTIVE", label: "Faol" },
+              { value: "SUSPENDED", label: "To'xtatilgan" },
+              { value: "BLOCKED", label: "Bloklangan" },
+            ]}
+            className="sm:w-48"
+          />
+          <div className="w-full sm:w-64">
+            <Input aria-label="Telefon bo'yicha qidirish" placeholder="Telefon raqami..." value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
         </div>
       </Card>
 
-      {/* Users Table */}
       <div className="mt-4">
         {page.items.length ? (
           <>
-            <Table
-              columns={columns}
-              rows={page.items}
-              rowKey={(u) => u.id}
-              renderMobileCard={(u) => {
-                const info = getUserStatusInfo(u);
-                return (
-                  <div className="flex items-start justify-between gap-3 p-3 border border-line rounded-xl bg-card">
-                    <div className="flex gap-2.5 min-w-0 flex-1">
-                      <Avatar name={u.fullName} src={u.avatarUrl} size="sm" />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-ink truncate">{u.fullName}</p>
-                        <p className="text-2xs text-muted">ID: {u.id}</p>
-                        <p className="text-xs text-ink font-mono mt-0.5">{u.phone}</p>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          <Badge tone={u.role === "mutaxassis" ? "primary" : "neutral"} size="sm">
-                            {u.role}
-                          </Badge>
-                          <Badge tone={info.tone} size="sm">
-                            {info.label}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline" onClick={() => setSelectedUser(u)} className="text-xs shrink-0">
-                      Ko‘rish
-                    </Button>
-                  </div>
-                );
-              }}
-            />
+            <Table columns={columns} rows={page.items} rowKey={(u) => u.id} />
             <Pagination
               currentPage={page.page}
               totalPages={page.totalPages}
@@ -337,35 +250,91 @@ export default function UserManagementPage() {
             />
           </>
         ) : (
-          <Card className="py-12 text-center text-xs text-muted">
-            Tanlangan filtrlarga mos keluvchi foydalanuvchilar topilmadi.
-          </Card>
+          <Card className="py-12 text-center text-xs text-muted">Tanlangan filtrlarga mos foydalanuvchi topilmadi.</Card>
         )}
       </div>
 
-      {/* User Detail Inspection Drawer Modal */}
-      {selectedUser && (
-        <UserDetailDrawer
-          user={selectedUser}
-          open={Boolean(selectedUser)}
-          onClose={() => setSelectedUser(null)}
-          onUpdated={() => {
-            load();
-            if (selectedUser) {
-              /* Drawer ochiq turgan foydalanuvchining bog'liq yozuvlari
-                 amaldan keyin qayta o'qiladi (holat o'zgargan). */
-              getUserDetail(selectedUser.id)
-                .then(setDetail)
-                .catch(() => setDetail(null));
-            }
-          }}
-          allContracts={detail?.contracts ?? []}
-          allServices={detail?.services ?? []}
-          allJobs={detail?.jobs ?? []}
-          allVerifications={detail?.verifications ?? []}
-          moderationInfo={detail?.moderation}
-        />
-      )}
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.fullName || selected?.phone || "Foydalanuvchi"}>
+        {detail ? (
+          <div className="flex flex-col gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-muted">Telefon</p>
+                <p className="font-mono text-ink">{detail.phone}</p>
+              </div>
+              <div>
+                <p className="text-muted">Holat</p>
+                <Badge tone={STATUS_LABEL[detail.status]?.tone ?? "neutral"} size="sm">
+                  {STATUS_LABEL[detail.status]?.label ?? detail.status}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-muted">Sotuvchi arizasi</p>
+                <p className="text-ink">{detail.sellerStatus}</p>
+              </div>
+              <div>
+                <p className="text-muted">Ro'yxatdan o'tgan</p>
+                <p className="text-ink">{formatDate(detail.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-muted">Shartnomalar (xaridor)</p>
+                <p className="text-ink">{detail.contractsAsBuyerCount}</p>
+              </div>
+              <div>
+                <p className="text-muted">Shartnomalar (sotuvchi)</p>
+                <p className="text-ink">{detail.contractsAsSellerCount}</p>
+              </div>
+              <div>
+                <p className="text-muted">To'lovlar soni</p>
+                <p className="text-ink">{detail.paymentsCount}</p>
+              </div>
+            </div>
+            {detail.statusReason && (
+              <div className="rounded-input border border-line bg-surface p-3 text-xs">
+                <p className="text-muted">Sabab</p>
+                <p className="text-ink mt-1">{detail.statusReason}</p>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 border-t border-line pt-3">
+              {detail.status !== "ACTIVE" && (
+                <Button size="sm" onClick={handleReactivate} loading={busy}>
+                  Faollashtirish
+                </Button>
+              )}
+              {detail.status !== "SUSPENDED" && (
+                <Button size="sm" variant="secondary" onClick={() => setActionOpen("suspend")} disabled={busy}>
+                  To'xtatish
+                </Button>
+              )}
+              {detail.status !== "BLOCKED" && (
+                <Button size="sm" variant="danger" onClick={() => setActionOpen("block")} disabled={busy}>
+                  Bloklash
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted">Yuklanmoqda...</p>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!actionOpen}
+        onClose={() => setActionOpen(null)}
+        title={actionOpen === "suspend" ? "Foydalanuvchini to'xtatish" : "Foydalanuvchini bloklash"}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setActionOpen(null)} disabled={busy}>
+              Bekor qilish
+            </Button>
+            <Button variant="danger" loading={busy} onClick={handleAction}>
+              Tasdiqlash
+            </Button>
+          </>
+        }
+      >
+        <Textarea label="Sabab" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} placeholder="Kamida 5 belgi" />
+      </Modal>
     </div>
   );
 }

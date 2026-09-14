@@ -10,6 +10,12 @@ node_modules/
 
 # testing
 /coverage
+# Playwright E2E — real sessiya holati (httpOnly cookie + storageState JSON,
+# tests/e2e/global-setup.ts yozadi) va HTML hisobot. Hech qachon commit
+# qilinmasin — real (garchi lokal test hisobi bo'lsa-da) refresh token bor.
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
 
 # next.js
 /.next/

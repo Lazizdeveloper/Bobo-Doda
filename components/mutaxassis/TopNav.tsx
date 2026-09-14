@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
-import { NotificationBell } from "@/components/shared/NotificationBell";
 import { usersService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
@@ -49,13 +48,12 @@ export function TopNav({ base }: TopNavProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
+  /* Bosqich 17 — Job/Proposal va Xabarlar real backendda yo'q, nav'dan
+     olib tashlangan (sahifalar o'zi FEATURE_DISABLED bilan qoladi). */
   const items = [
     { href: "/mutaxassis", label: t("nav.dashboard"), exact: true },
-    { href: "/mutaxassis/ish-elonlari", label: t("nav.jobs") },
-    { href: "/mutaxassis/takliflarim", label: t("nav.proposals") },
     { href: "/mutaxassis/xizmatlarim", label: t("nav.services") },
     { href: "/mutaxassis/shartnomalar", label: t("nav.contracts") },
-    { href: "/mutaxassis/xabarlar", label: t("nav.messages") },
   ];
 
   return (
@@ -87,7 +85,6 @@ export function TopNav({ base }: TopNavProps) {
 
         <div className="flex items-center gap-3">
           <LangSwitch />
-          <NotificationBell />
 
           {/* Mobile menu button */}
           <button

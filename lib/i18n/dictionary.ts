@@ -454,6 +454,11 @@ export const dictionary: Record<string, Entry> = {
     uz: "Faol, imzolangan yoki nizodagi shartnoma bor. Avval uni yakunlang.",
     ru: "Есть активный, подписанный или спорный контракт. Сначала завершите его.",
   },
+  "paymentResult.checkingTitle": { uz: "To'lov holati tekshirilmoqda", ru: "Проверяем статус оплаты" },
+  "paymentResult.checkingDesc": {
+    uz: "Haqiqiy holatni shartnoma sahifasida ko'rasiz — u yerda avtomatik yangilanadi. Iltimos, to'lovni qayta boshlamang.",
+    ru: "Реальный статус вы увидите на странице контракта — он обновится автоматически. Пожалуйста, не начинайте оплату заново.",
+  },
   "paymentResult.successTitle": { uz: "To'lov muvaffaqiyatli", ru: "Оплата успешна" },
   "paymentResult.successDesc": { uz: "Mablag' escrow'ga qabul qilindi va shartnoma faollashtiriladi.", ru: "Средства приняты в эскроу, контракт будет активирован." },
   "paymentResult.pendingTitle": { uz: "To'lov tekshirilmoqda", ru: "Платёж проверяется" },
@@ -591,6 +596,17 @@ export const dictionary: Record<string, Entry> = {
   },
   "auth.finalStep": { uz: "Yakuniy bosqich", ru: "Последний шаг" },
   "auth.confirmTitle": { uz: "Akkountni tasdiqlang", ru: "Подтвердите аккаунт" },
+  "auth.otpIntro": {
+    uz: "Telefon raqamingizni kiriting — SMS orqali bir martalik kod yuboramiz.",
+    ru: "Введите номер телефона — мы отправим одноразовый код по SMS.",
+  },
+  "auth.sendCode": { uz: "Kod yuborish", ru: "Отправить код" },
+  "auth.errRateLimited": {
+    uz: "Juda ko'p urinish. Iltimos, biroz kutib qayta urinib ko'ring.",
+    ru: "Слишком много попыток. Подождите немного и повторите попытку.",
+  },
+  "auth.otpSentTo": { uz: "Kod shu raqamga yuborildi:", ru: "Код отправлен на номер:" },
+  "auth.resendCode": { uz: "Kodni qayta yuborish", ru: "Отправить код повторно" },
   "auth.confirmIntro": {
     uz: "Akkountingizni faollashtirish uchun Telegram bot orqali tasdiqlang. Bu — himoyalangan hisob va bosqichli to'lov kafolatining kaliti.",
     ru: "Активируйте аккаунт, подтвердив его через Telegram-бот. Это ключ к защищённому аккаунту и поэтапной гарантии оплаты.",
@@ -680,6 +696,14 @@ export const dictionary: Record<string, Entry> = {
     uz: "Bu ma'lumotlar buyurtmachilarga sizni tanlashda yordam beradi",
     ru: "Эта информация поможет заказчикам выбрать вас",
   },
+  "onboard.applicationSubtitle": {
+    uz: "Sotuvchi sifatida ishlashni boshlash uchun ariza yuboring — platforma ma'muriyati ko'rib chiqadi.",
+    ru: "Отправьте заявку, чтобы начать работать как продавец — её рассмотрит администрация платформы.",
+  },
+  "onboard.legalName": { uz: "Rasmiy F.I.Sh (hujjat bo'yicha)", ru: "Официальное Ф.И.О (по документу)" },
+  "onboard.displayName": { uz: "Bozorda ko'rinadigan nom", ru: "Имя, видимое на бирже" },
+  "onboard.displayNamePh": { uz: "Masalan: Aziz Design Studio", ru: "Например: Aziz Design Studio" },
+  "onboard.submitApplication": { uz: "Arizani yuborish", ru: "Отправить заявку" },
   "onboard.fullName": { uz: "To'liq ism", ru: "Полное имя" },
   "onboard.fullNamePh": { uz: "Masalan: Aziz Karimov", ru: "Например: Азиз Каримов" },
   "onboard.bio": { uz: "O'zingiz haqingizda", ru: "О себе" },
@@ -707,6 +731,19 @@ export const dictionary: Record<string, Entry> = {
   "dash.title": { uz: "Boshqaruv", ru: "Обзор" },
   "dash.greeting": { uz: "Xush kelibsiz", ru: "Добро пожаловать" },
   "dash.activeContracts": { uz: "Faol shartnomalar", ru: "Активные контракты" },
+  "dash.pendingDecisions": { uz: "Javob kutilmoqda", ru: "Ожидает ответа" },
+  "dash.recentContracts": { uz: "So'nggi shartnomalar", ru: "Последние контракты" },
+  "dash.noContracts": { uz: "Hozircha shartnoma yo'q", ru: "Пока нет контрактов" },
+  "dash.applicationPending": { uz: "Arizangiz ko'rib chiqilmoqda", ru: "Ваша заявка на рассмотрении" },
+  "dash.applicationPendingDesc": {
+    uz: "Platforma ma'muriyati arizangizni tasdiqlagach, xizmat qo'shish va shartnoma qabul qilish imkoniyati ochiladi.",
+    ru: "После одобрения заявки администрацией вы сможете добавлять услуги и принимать контракты.",
+  },
+  "dash.applicationRejected": { uz: "Arizangiz rad etildi", ru: "Ваша заявка отклонена" },
+  "dash.applicationRejectedDesc": {
+    uz: "Batafsil ma'lumot uchun yordam markaziga murojaat qiling.",
+    ru: "За подробностями обратитесь в центр поддержки.",
+  },
   "dash.pendingProposals": { uz: "Kutilayotgan takliflar", ru: "Ожидающие предложения" },
   "dash.monthlyEarnings": { uz: "Oylik daromad", ru: "Доход за месяц" },
   "dash.recentMessages": { uz: "Oxirgi xabarlar", ru: "Последние сообщения" },
@@ -733,15 +770,21 @@ export const dictionary: Record<string, Entry> = {
   "services.activate": { uz: "Faollashtirish", ru: "Активировать" },
   "services.paused": { uz: "Pauza qilindi", ru: "Поставлено на паузу" },
   "services.activated": { uz: "Faollashtirildi", ru: "Активировано" },
-  "services.deleted": { uz: "Xizmat o'chirildi", ru: "Услуга удалена" },
-  "services.deleteTitle": { uz: "Xizmat o'chirilsinmi?", ru: "Удалить услугу?" },
+  "services.deleted": { uz: "Xizmat arxivlandi", ru: "Услуга архивирована" },
+  "services.deleteTitle": { uz: "Xizmat arxivlansinmi?", ru: "Архивировать услугу?" },
   "services.deleteDesc": {
-    uz: "Bu amalni ortga qaytarib bo'lmaydi. Xizmat butunlay o'chiriladi.",
-    ru: "Это действие нельзя отменить. Услуга будет удалена навсегда.",
+    uz: "Arxivlangan xizmat bozorda ko'rinmaydi. Bu amalni ortga qaytarib bo'lmaydi.",
+    ru: "Архивированная услуга не будет видна на бирже. Это действие нельзя отменить.",
   },
+  "services.archive": { uz: "Arxivlash", ru: "Архивировать" },
+  "services.submitForReview": { uz: "Ko'rib chiqishga yuborish", ru: "Отправить на модерацию" },
+  "services.submittedForReview": { uz: "Ko'rib chiqishga yuborildi", ru: "Отправлено на модерацию" },
   "svcStatus.active": { uz: "Faol", ru: "Активна" },
   "svcStatus.paused": { uz: "Pauzada", ru: "На паузе" },
   "svcStatus.draft": { uz: "Qoralama", ru: "Черновик" },
+  "svcStatus.pending_review": { uz: "Ko'rib chiqilmoqda", ru: "На модерации" },
+  "svcStatus.rejected": { uz: "Rad etildi", ru: "Отклонена" },
+  "svcStatus.archived": { uz: "Arxivlangan", ru: "В архиве" },
 
   /* Wizard */
   "wizard.newTitle": { uz: "Yangi xizmat", ru: "Новая услуга" },
@@ -800,10 +843,14 @@ export const dictionary: Record<string, Entry> = {
     uz: "Ma'lumotlarni tekshiring. Nashr qilingach, xizmat buyurtmachilarga ko'rinadi.",
     ru: "Проверьте данные. После публикации услуга станет видна заказчикам.",
   },
-  "wizard.publish": { uz: "Nashr qilish", ru: "Опубликовать" },
-  "wizard.published": { uz: "Nashr qilindi", ru: "Опубликовано" },
+  "wizard.publish": { uz: "Ko'rib chiqishga yuborish", ru: "Отправить на модерацию" },
+  "wizard.published": { uz: "Ko'rib chiqishga yuborildi", ru: "Отправлено на модерацию" },
   "wizard.saveDraft": { uz: "Qoralama sifatida saqlash", ru: "Сохранить как черновик" },
   "wizard.draftSaved": { uz: "Qoralama saqlandi", ru: "Черновик сохранён" },
+  "wizard.editOnlyNote": {
+    uz: "Bu xizmat allaqachon yuborilgan/faol — o'zgarishlar saqlanadi, lekin qayta ko'rib chiqishga yuborilmaydi.",
+    ru: "Эта услуга уже отправлена/активна — изменения сохранятся, но повторно на модерацию не отправятся.",
+  },
   "wizard.saveChanges": { uz: "O'zgarishlarni saqlash", ru: "Сохранить изменения" },
   "wizard.changesSaved": { uz: "O'zgarishlar saqlandi", ru: "Изменения сохранены" },
   "wizard.errCategory": { uz: "Kategoriyani tanlang", ru: "Выберите категорию" },
@@ -955,8 +1002,8 @@ export const dictionary: Record<string, Entry> = {
     ru: "По этому контракту открыт спор. Администрация платформы рассматривает его.",
   },
   "contract.cancelledNote": {
-    uz: "Bu shartnoma bekor qilingan. Escrow'dagi mablag' xaridorning Bobo&Doda hisobiga qaytarildi (Xarajatlar bo'limida kartaga yechish mumkin).",
-    ru: "Контракт отменён. Средства из эскроу возвращены на счёт Bobo&Doda заказчика (можно вывести на карту в разделе «Расходы»).",
+    uz: "Bu shartnoma bekor qilingan. To'lov hali amalga oshirilmagan edi, shuning uchun hech qanday mablag' yechilmagan.",
+    ru: "Контракт отменён. Оплата ещё не производилась, поэтому средства не списывались.",
   },
   "contract.cancel": { uz: "Shartnomani bekor qilish", ru: "Отменить контракт" },
   "contract.hireAgainTitle": {
@@ -973,8 +1020,8 @@ export const dictionary: Record<string, Entry> = {
     ru: "Отменить контракт?",
   },
   "contract.cancelDesc": {
-    uz: "Qabul qilingan bosqichlar to'langanicha qoladi, escrow'dagi mablag' buyurtmachiga qaytadi. Bu amalni ortga qaytarib bo'lmaydi.",
-    ru: "Принятые этапы остаются оплаченными, средства из эскроу возвращаются заказчику. Это действие нельзя отменить.",
+    uz: "Mutaxassis hali javob bermagan. Bekor qilsangiz, shartnoma yopiladi — hali to'lov amalga oshirilmagani uchun hech qanday mablag' yechilmaydi. Bu amalni ortga qaytarib bo'lmaydi.",
+    ru: "Специалист ещё не ответил. При отмене контракт закроется — оплата ещё не производилась, поэтому средства не списываются. Это действие нельзя отменить.",
   },
   "contract.cancelled": { uz: "Shartnoma bekor qilindi", ru: "Контракт отменён" },
   "contract.viewDocument": {
@@ -996,6 +1043,38 @@ export const dictionary: Record<string, Entry> = {
   "contract.signedSuccess": {
     uz: "Shartnoma muvaffaqiyatli imzolandi!",
     ru: "Контракт успешно подписан!",
+  },
+  "contract.decisionTitle": {
+    uz: "Yangi shartnoma — javobingiz kutilmoqda",
+    ru: "Новый контракт — ожидается ваш ответ",
+  },
+  "contract.decisionDesc": {
+    uz: "Xaridor sizga xizmat asosida shartnoma yubordi. Qabul qilsangiz, ish boshlanadi; rad etsangiz, shartnoma yopiladi.",
+    ru: "Заказчик отправил вам контракт на основе услуги. Если примете — работа начнётся; если отклоните — контракт закроется.",
+  },
+  "contract.acceptAction": { uz: "Qabul qilish", ru: "Принять" },
+  "contract.rejectAction": { uz: "Rad etish", ru: "Отклонить" },
+  "contract.rejectDesc": {
+    uz: "Shartnomani rad etasizmi? Xaridorga xabar beriladi, bu amalni ortga qaytarib bo'lmaydi.",
+    ru: "Отклонить контракт? Заказчик будет уведомлён, это действие нельзя отменить.",
+  },
+  "contract.acceptedToast": { uz: "Shartnoma qabul qilindi", ru: "Контракт принят" },
+  "contract.rejectedToast": { uz: "Shartnoma rad etildi", ru: "Контракт отклонён" },
+  "contract.awaitingSellerDecision": {
+    uz: "Shartnoma mutaxassisga yuborildi — javobini kutmoqdasiz. Javob berilguncha bekor qilishingiz mumkin.",
+    ru: "Контракт отправлен специалисту — ожидается его ответ. Пока ответа нет, вы можете отменить контракт.",
+  },
+  "contract.escrowFundedTitle": {
+    uz: "TO'LOV KAFOLATLANGAN (BOBO&DODA ESCROW)",
+    ru: "ОПЛАТА ГАРАНТИРОВАНА (BOBO&DODA ESCROW)",
+  },
+  "contract.escrowFundedBuyerDesc": {
+    uz: "Pulingiz xavfsiz kafolat hisobida muzlatilgan. Mutaxassis ishni to'liq bajarib, siz tekshirib tasdiqlamaguningizcha mablag' unga o'tkazilmaydi.",
+    ru: "Ваши деньги надёжно заморожены на гарантийном счёте. Средства не поступят специалисту, пока он полностью не выполнит работу и вы её не подтвердите.",
+  },
+  "contract.escrowFundedSellerDesc": {
+    uz: "Xaridor to'lovni to'liq amalga oshirdi va mablag' xavfsiz muzlatilgan. Ishni bexavotir topshirishingiz mumkin — tasdiqlangach, mablag' balansingizga o'tadi.",
+    ru: "Заказчик полностью оплатил, средства надёжно заморожены. Можете спокойно сдавать работу — после подтверждения средства поступят на ваш баланс.",
   },
   "contract.closeAction": { uz: "Ishni yopish", ru: "Завершить работу" },
   "contract.closeTitle": { uz: "Ishni yakunlash (yopish)", ru: "Завершение контракта" },
@@ -1110,6 +1189,10 @@ export const dictionary: Record<string, Entry> = {
   "earn.withdrawableHint": {
     uz: "Hisobingizdagi, kartaga yechsa bo'ladigan mablag'",
     ru: "Средства на счёте, доступные для вывода на карту",
+  },
+  "earn.balanceHint": {
+    uz: "Hisobingizdagi joriy qoldiq. Kartaga yechish hali ishga tushirilmagan.",
+    ru: "Текущий остаток на счёте. Вывод на карту пока не запущен.",
   },
   "earn.recent": { uz: "So'nggi to'lovlar", ru: "Последние выплаты" },
   "earn.withdraw": { uz: "Pul yechish", ru: "Вывести средства" },
@@ -1788,6 +1871,27 @@ export const dictionary: Record<string, Entry> = {
   "hire.errDue": { uz: "Muddatni tanlang", ru: "Выберите срок" },
   "hire.defaultMilestone": { uz: "To'liq ish", ru: "Вся работа" },
 
+  /* To'g'ridan-to'g'ri xarid (bosqich 17 — Offer/Job oqimi o'rniga) */
+  "purchase.title": { uz: "Shartnoma yaratish", ru: "Создать контракт" },
+  "purchase.desc": {
+    uz: "Shartnoma sotuvchiga yuboriladi — u qabul qilgach ishga tayyor bo'lasiz. Hozircha to'lov olinmaydi.",
+    ru: "Контракт будет отправлен продавцу — после его принятия можно начинать. Оплата сейчас не взимается.",
+  },
+  "purchase.deadline": { uz: "Yakuniy muddat", ru: "Крайний срок" },
+  "purchase.milestones": { uz: "Bosqichlar", ru: "Этапы" },
+  "purchase.addMilestone": { uz: "Bosqich qo'shish", ru: "Добавить этап" },
+  "purchase.total": { uz: "Jami", ru: "Итого" },
+  "purchase.submit": { uz: "Shartnoma yaratish", ru: "Создать контракт" },
+  "purchase.created": { uz: "Shartnoma yaratildi — sotuvchi javobini kuting", ru: "Контракт создан — ожидайте ответа продавца" },
+  "purchase.errSumMismatch": {
+    uz: "Bosqichlar yig'indisi xizmat narxiga teng bo'lishi shart",
+    ru: "Сумма этапов должна равняться цене услуги",
+  },
+  "purchase.errSellerNotApproved": {
+    uz: "Bu sotuvchi hozir mavjud emas",
+    ru: "Этот продавец сейчас недоступен",
+  },
+
   /* Xaridor shartnomalari */
   "contracts.colSeller": { uz: "Mutaxassis", ru: "Специалист" },
 
@@ -1814,6 +1918,24 @@ export const dictionary: Record<string, Entry> = {
   "cfund.awaitingSeller": {
     uz: "Buyurtmachi to'lovni amalga oshirishi kutilmoqda — to'lov tushgach ishni boshlaysiz",
     ru: "Ожидается оплата от заказчика — начнёте работу после поступления средств",
+  },
+
+  /* Real Payme to'lov holati (bosqich 17) */
+  "payment.processing": {
+    uz: "To'lov tekshirilmoqda... Payme'da to'lovni yakunlagan bo'lsangiz, bir necha soniyada bu yerda avtomatik yangilanadi.",
+    ru: "Проверяем оплату... Если вы завершили оплату в Payme, статус обновится здесь автоматически через несколько секунд.",
+  },
+  "payment.failed": {
+    uz: "To'lov amalga oshmadi. Qaytadan urinib ko'ring.",
+    ru: "Оплата не прошла. Попробуйте ещё раз.",
+  },
+  "payment.cancelled": {
+    uz: "To'lov bekor qilindi. Qaytadan urinib ko'ring.",
+    ru: "Оплата отменена. Попробуйте ещё раз.",
+  },
+  "payment.expired": {
+    uz: "To'lov muddati tugadi. Qaytadan urinib ko'ring.",
+    ru: "Срок оплаты истёк. Попробуйте ещё раз.",
   },
   /* Xaridor tomoni uchun alohida matn: to'lashi kerak bo'lgan odam
      "buyurtmachi to'lashini kutmoqdamiz" degan matnni ko'rmasligi kerak. */

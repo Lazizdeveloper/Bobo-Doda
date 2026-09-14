@@ -1,4 +1,4 @@
-import * as mock from "@/lib/mock-api";
+import type { components } from "@bobododa/contracts";
 import type {
   AuthService,
   CatalogService,
@@ -14,172 +14,562 @@ import type {
   ProposalsService,
   ReviewsService,
   SavedService,
+  SellerApplicationService,
   ServicesService,
   SupportRequestService,
   SupportService,
   UsersService,
   VerificationService,
 } from "./contracts";
-import { withNormalizedErrors } from "./errors";
+import { ApiError, withNormalizedErrors } from "./errors";
+import { http, toQuery, sessionStore, setAccessToken, decodeJwtSub, refreshSession } from "./http";
+import {
+  asStr,
+  mapContract,
+  mapDispute,
+  mapMilestone,
+  mapPayment,
+  mapPublicService,
+  mapSellerApplicationStatus,
+  mapSellerProfile,
+  mapService,
+  mapUser,
+  roleToReal,
+  roleToUz,
+} from "./mappers";
+import type * as Model from "@/lib/types";
+
+type RealService = components["schemas"]["ServiceResponseDto"];
+type RealPublicService = components["schemas"]["PublicServiceResponseDto"];
+type RealContract = components["schemas"]["ContractResponseDto"];
+type RealMilestone = components["schemas"]["MilestoneResponseDto"];
+type RealPayment = components["schemas"]["PaymentResponseDto"];
+type RealDispute = components["schemas"]["DisputeResponseDto"];
+type RealMe = components["schemas"]["MeResponseDto"];
+type RealSellerApplication = components["schemas"]["SellerApplicationResponseDto"];
+type RealCategory = components["schemas"]["CategoryResponseDto"];
+type RealAuthSession = components["schemas"]["AuthSessionDto"];
+type Page<T> = { items: T[]; page: number; perPage: number; total: number; totalPages: number };
 
 const call = <T>(operation: () => Promise<T>) => withNormalizedErrors(operation);
 
+/** Bosqich 17 — real backendda hali qamrab olinmagan operatsiya: `client.ts`
+    ATAYLAB shu kodni tashlaydi, `errors.ts#LEGACY_CODES` uni `FEATURE_DISABLED`
+    ga o'giradi va mavjud `<ErrorState>` konvensiyasi ekranni ko'rsatadi. */
+function disabled<T = never>(): Promise<T> {
+  return Promise.reject(new Error("FEATURE_DISABLED"));
+}
+
+function currentRole(): Model.UserRole | null {
+  return sessionStore.read()?.role ?? null;
+}
+
+/* ------------------------------------------------------------------------
+   Kategoriyalar — ochiq, kam o'zgaradigan katalog; modul darajasida
+   keshlanadi (ko'p joyda categoryId <-> slug tarjimasi kerak).
+   ------------------------------------------------------------------------ */
+let categoriesCache: RealCategory[] | null = null;
+async function getCategories(): Promise<RealCategory[]> {
+  if (categoriesCache) return categoriesCache;
+  const list = await http<RealCategory[]>("/categories");
+  categoriesCache = list;
+  return list;
+}
+function slugById(categories: RealCategory[], id: string): string {
+  return categories.find((c) => c.id === id)?.slug ?? "biznes";
+}
+function idBySlug(categories: RealCategory[], slug: string): string | undefined {
+  return categories.find((c) => c.slug === slug)?.id;
+}
+
+/* ------------------------------------------------------------------------
+   Shartnoma "mablag'langanmi" — real `ContractResponseDto`ning o'zida yo'q.
+   Xaridor uchun `/me/payments?contractId=` orqali ANIQ, sotuvchi uchun
+   ochiq endpoint yo'q — bosqich holatidan TAXMIN qilinadi. MUHIM: bosqich
+   `ACTIVE` bo'lishi bilanoq (hali TO'LANMAGAN bo'lsa ham) `IN_PROGRESS`ga
+   o'tadi (to'lovga bog'liq emas) — shuning uchun bu taxmin aslida "faol"
+   bilan deyarli bir xil, aniq "to'langan" emas. Haqiqiy himoya baribir
+   serverda: `submitMilestone` `CONTRACT_NOT_FUNDED`ni mustaqil tekshiradi —
+   shu sabab bu yerdagi noaniqlik xavfsiz (eng yomoni: sotuvchi "topshirish"
+   tugmasini erta ko'radi-yu, server uni rad etadi).
+   ------------------------------------------------------------------------ */
+async function hydrateContract(c: RealContract, role: Model.UserRole | null): Promise<Model.Contract> {
+  let funded = false;
+  let fundedAt: string | undefined;
+  if (role === "mutaxassis") {
+    funded = c.milestones.some((m) => m.status !== "PENDING");
+    /* `mapContract` `funded=true` bo'lganda `fundedAt` YO'Q bo'lsa uni
+       yana `undefined`ga qaytaradi (pastga qarang) — shuning uchun bu
+       yerda albatta bir qiymat berish SHART, aks holda UI hech qachon
+       "mablag'langan" holatini ko'rsatmaydi. Aniq vaqt yo'q — kontrakt
+       oxirgi yangilangan payti bilan taxminlanadi. */
+    fundedAt = funded ? c.updatedAt : undefined;
+  } else {
+    try {
+      const page = await http<Page<RealPayment>>(`/me/payments${toQuery({ contractId: c.id, perPage: 5 })}`);
+      const succeeded = page.items.find((p) => p.status === "SUCCEEDED");
+      funded = !!succeeded;
+      fundedAt = succeeded ? asStr(succeeded.succeededAt) : undefined;
+    } catch {
+      /* xaridor bo'lmasa yoki so'rov muvaffaqiyatsiz bo'lsa — unfunded deb qoladi */
+    }
+  }
+  return mapContract(c, { funded, fundedAt });
+}
+
+/* ==========================================================================
+   AUTH — OTP asosida (parol YO'Q). Sessiya snapshot `lib/api/http.ts`da.
+   ========================================================================== */
 export const authService: AuthService = {
-  getSession: mock.getSession,
-  login: (input) => call(() => mock.login(input)),
-  register: (input) => call(() => mock.register(input)),
-  loginWithTelegram: (payload) => call(() => mock.loginWithTelegram(payload)),
-  loginWithGoogle: (payload) => call(() => mock.loginWithGoogle(payload)),
-  verifyTelegram: (code) => call(() => mock.verifyTelegram(code)),
-  verifyGoogle: (email) => call(() => mock.verifyGoogle(email)),
-  chooseRole: (role) => call(() => mock.chooseRole(role)),
-  resetPassword: (input) => call(() => mock.resetPassword(input)),
-  refresh: () => call(mock.refreshSession),
-  logout: mock.logout,
+  getSession: sessionStore.read,
+  requestOtp: (phone) => call(async () => http<{ sent: true }>("/auth/otp/request", { method: "POST", body: { phone } })),
+  verifyOtp: (phone, code) =>
+    call(async () => {
+      const res = await http<RealAuthSession>("/auth/otp/verify", { method: "POST", body: { phone, code } });
+      setAccessToken(res.accessToken);
+      const session: Model.Session = {
+        userId: decodeJwtSub(res.accessToken),
+        role: roleToUz(res.activeRole),
+        profileDone: res.profileDone,
+        verified: true,
+      };
+      sessionStore.write(session);
+      return session;
+    }),
+  chooseRole: (role) =>
+    call(async () => {
+      const res = await http<RealAuthSession>("/me/roles/choose", { method: "POST", body: { role: roleToReal(role) } });
+      setAccessToken(res.accessToken);
+      const session: Model.Session = {
+        userId: decodeJwtSub(res.accessToken),
+        role: roleToUz(res.activeRole),
+        profileDone: res.profileDone,
+        verified: true,
+      };
+      sessionStore.write(session);
+      return session;
+    }),
+  refresh: () => call(refreshSession),
+  logout: () => {
+    void http("/auth/logout", { method: "POST" }, false).catch(() => {});
+    setAccessToken(null);
+    sessionStore.clear();
+  },
 };
 
+/* ==========================================================================
+   USERS — `/me` + `/me/profile`. Boy sotuvchi profili (bio/skills/portfolio)
+   real backendda YO'Q — `setAvailability`/preferences/parol/eksport/o'chirish
+   ham (OTP-only hisobda parol tushunchasi yo'q).
+   ========================================================================== */
 export const usersService: UsersService = {
-  getCurrent: () => call(mock.getCurrentUser),
-  getSellerProfile: () => call(mock.getSellerProfile),
-  updateName: (name) => call(() => mock.updateUserName(name)),
-  updateUserProfile: (data) => call(() => mock.updateUserProfile(data)),
-  completeSellerProfile: (input) => call(() => mock.completeSellerProfile(input)),
-  updateSellerProfile: (input) => call(() => mock.updateSellerProfile(input)),
-  setAvailability: (available) => call(() => mock.setAvailability(available)),
-  getPreferences: () => call(mock.getAccountPreferences),
-  savePreferences: (preferences) => call(() => mock.saveAccountPreferences(preferences)),
-  changePassword: (current, next) => call(() => mock.changePassword(current, next)),
-  exportData: () => call(mock.exportCurrentUserData),
-  deleteAccount: () => call(mock.deleteCurrentAccount),
+  getCurrent: () =>
+    call(async () => {
+      try {
+        return mapUser(await http<RealMe>("/me"));
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "UNAUTHENTICATED") return null;
+        throw e;
+      }
+    }),
+  getSellerProfile: () =>
+    call(async () => {
+      const me = await http<RealMe>("/me");
+      let application: RealSellerApplication | null = null;
+      try {
+        application = await http<RealSellerApplication>("/me/seller-application");
+      } catch {
+        /* hali ariza yo'q */
+      }
+      return mapSellerProfile(me, application);
+    }),
+  updateName: (fullName) => call(async () => void (await http("/me/profile", { method: "PATCH", body: { fullName } }))),
+  updateUserProfile: (data) =>
+    call(async () => {
+      if (data.fullName) await http("/me/profile", { method: "PATCH", body: { fullName: data.fullName } });
+    }),
+  completeSellerProfile: (input) =>
+    call(async () => void (await http("/me/profile", { method: "PATCH", body: { fullName: input.fullName } }))),
+  updateSellerProfile: (input) =>
+    call(async () => void (await http("/me/profile", { method: "PATCH", body: { fullName: input.fullName } }))),
+  setAvailability: () => disabled(),
+  getPreferences: () => disabled(),
+  savePreferences: () => disabled(),
+  changePassword: () => disabled(),
+  exportData: () => disabled(),
+  deleteAccount: () => disabled(),
 };
 
+/* ==========================================================================
+   CATALOG — ochiq mutaxassis direktoriyasi real backendda YO'Q (faqat
+   xodimlarga `staff/sellers`); sharh modeli ham yo'q (bo'sh ro'yxat).
+   ========================================================================== */
 export const catalogService: CatalogService = {
-  listSpecialists: () => call(mock.getSpecialists),
-  getSpecialist: (userId) => call(() => mock.getSpecialist(userId)),
-  listSellerReviews: (sellerId) => call(() => mock.getReviewsForSeller(sellerId)),
+  listSpecialists: () => disabled(),
+  getSpecialist: () => disabled(),
+  listSellerReviews: () => call(async () => []),
+  listCategories: () => call(async () => (await getCategories()).map((c) => c.slug as Model.ServiceCategory)),
 };
 
+/* Saqlangan (bookmark) — real backendda umuman yo'q */
 export const savedService: SavedService = {
-  listJobIds: () => call(mock.getSavedJobIds),
-  toggleJob: (jobId) => call(() => mock.toggleSavedJob(jobId)),
-  listMarketIds: () => call(mock.getSavedMarketIds),
-  toggleMarketItem: (id) => call(() => mock.toggleSavedMarketItem(id)),
+  listJobIds: () => disabled(),
+  toggleJob: () => disabled(),
+  listMarketIds: () => disabled(),
+  toggleMarketItem: () => disabled(),
 };
 
+/* ==========================================================================
+   SERVICES — sotuvchi CRUD + ochiq katalog. `fields`/`images`/`extras` kabi
+   mock-only maydonlar real DTO'da yo'q — yozishda tashlanadi, o'qishda
+   bo'sh/standart qiymat bilan to'ldiriladi.
+   ========================================================================== */
 export const servicesService: ServicesService = {
-  listMine: () => call(mock.getServices),
-  listPublic: () => call(mock.getPublicServices),
-  get: (id) => call(() => mock.getService(id)),
-  create: (input) => call(() => mock.createService(input)),
-  update: (id, input) => call(() => mock.updateService(id, input)),
-  remove: (id) => call(() => mock.deleteService(id)),
+  listMine: () =>
+    call(async () => {
+      const categories = await getCategories();
+      const page = await http<Page<RealService>>(`/seller/services${toQuery({ perPage: 100 })}`);
+      return page.items.map((s) => mapService(s, slugById(categories, s.categoryId)));
+    }),
+  listPublic: () =>
+    call(async () => {
+      const categories = await getCategories();
+      const page = await http<Page<RealPublicService>>(`/services${toQuery({ perPage: 100 })}`);
+      return page.items.map((s) => mapPublicService(s, slugById(categories, s.categoryId)));
+    }),
+  get: (id) =>
+    call(async () => {
+      const categories = await getCategories();
+      if (currentRole() === "mutaxassis") {
+        try {
+          const dto = await http<RealService>(`/seller/services/${id}`);
+          return mapService(dto, slugById(categories, dto.categoryId));
+        } catch (e) {
+          if (!(e instanceof ApiError && e.code === "NOT_FOUND")) throw e;
+        }
+      }
+      try {
+        const dto = await http<RealPublicService>(`/services/${id}`);
+        return mapPublicService(dto, slugById(categories, dto.categoryId));
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
+        throw e;
+      }
+    }),
+  create: (input) =>
+    call(async () => {
+      const categories = await getCategories();
+      const categoryId = idBySlug(categories, input.category);
+      if (!categoryId) throw new Error("VALIDATION");
+      const dto = await http<RealService>("/seller/services", {
+        method: "POST",
+        body: {
+          categoryId,
+          title: input.title,
+          description: input.description,
+          price: input.price,
+          deliveryDays: input.deliveryDays,
+        },
+      });
+      return mapService(dto, input.category);
+    }),
+  update: (id, input) =>
+    call(async () => {
+      const categories = await getCategories();
+      const body: Record<string, unknown> = {};
+      if (input.title !== undefined) body.title = input.title;
+      if (input.description !== undefined) body.description = input.description;
+      if (input.price !== undefined) body.price = input.price;
+      if (input.deliveryDays !== undefined) body.deliveryDays = input.deliveryDays;
+      if (input.category !== undefined) {
+        const categoryId = idBySlug(categories, input.category);
+        if (categoryId) body.categoryId = categoryId;
+      }
+      const dto = await http<RealService>(`/seller/services/${id}`, { method: "PATCH", body });
+      return mapService(dto, slugById(categories, dto.categoryId));
+    }),
+  /* Real backendda "o'chirish" yo'q — eng yaqin ekvivalent arxivlash */
+  remove: (id) => call(async () => void (await http(`/seller/services/${id}/archive`, { method: "POST" }))),
+  submit: (id) =>
+    call(async () => {
+      const categories = await getCategories();
+      const dto = await http<RealService>(`/seller/services/${id}/submit`, { method: "POST" });
+      return mapService(dto, slugById(categories, dto.categoryId));
+    }),
+  pause: (id) =>
+    call(async () => {
+      const categories = await getCategories();
+      const dto = await http<RealService>(`/seller/services/${id}/pause`, { method: "POST" });
+      return mapService(dto, slugById(categories, dto.categoryId));
+    }),
+  resume: (id) =>
+    call(async () => {
+      const categories = await getCategories();
+      const dto = await http<RealService>(`/seller/services/${id}/resume`, { method: "POST" });
+      return mapService(dto, slugById(categories, dto.categoryId));
+    }),
 };
 
+/* Job/Proposal/Offer — "ikki yo'l" arxitekturasining B/A yo'llari real
+   backendda umuman yo'q (faqat to'g'ridan-to'g'ri xizmat xaridi bor). */
 export const jobsService: JobsService = {
-  list: () => call(mock.getJobs),
-  get: (id) => call(() => mock.getJob(id)),
-  listMine: () => call(mock.getBuyerJobs),
-  create: (input) => call(() => mock.createJob(input)),
-  close: (id) => call(() => mock.closeJob(id)),
+  list: () => disabled(),
+  get: () => disabled(),
+  listMine: () => disabled(),
+  create: () => disabled(),
+  close: () => disabled(),
 };
 
 export const proposalsService: ProposalsService = {
-  listMine: () => call(mock.getProposals),
-  get: (id) => call(() => mock.getProposal(id)),
-  listForJob: (id) => call(() => mock.getJobProposals(id)),
-  create: (input) => call(() => mock.createProposal(input)),
-  setStatus: (id, status) => call(() => mock.setProposalStatus(id, status)),
-  hire: (proposalId, milestones) => call(() => mock.hireProposal(proposalId, milestones)),
-  withdraw: (id) => call(() => mock.withdrawProposal(id)),
+  listMine: () => disabled(),
+  get: () => disabled(),
+  listForJob: () => disabled(),
+  create: () => disabled(),
+  setStatus: () => disabled(),
+  hire: () => disabled(),
+  withdraw: () => disabled(),
 };
 
 export const offersService: OffersService = {
-  get: (id) => call(() => mock.getOffer(id)),
-  create: (input) => call(() => mock.createOffer(input)),
-  listSent: () => call(mock.getSentOffers),
-  listIncoming: () => call(mock.getIncomingOffers),
-  accept: (id) => call(() => mock.acceptOffer(id)),
-  withdraw: (id) => call(() => mock.withdrawOffer(id)),
-  decline: (id) => call(() => mock.declineOffer(id)),
+  get: () => disabled(),
+  create: () => disabled(),
+  listSent: () => disabled(),
+  listIncoming: () => disabled(),
+  accept: () => disabled(),
+  withdraw: () => disabled(),
+  decline: () => disabled(),
 };
 
+/* ==========================================================================
+   CONTRACTS + MILESTONES — real backend'ning asosiy oqimi.
+   ========================================================================== */
 export const contractsService: ContractsService = {
-  list: () => call(mock.getContracts),
-  get: (id) => call(() => mock.getContract(id)),
-  cancel: (id) => call(() => mock.cancelContract(id)),
-  requestClose: (id, note) => call(() => mock.requestCloseContract(id, note)),
-  approveClose: (id) => call(() => mock.approveCloseContract(id)),
-  sign: (id) => call(() => mock.signContract(id)),
+  list: () =>
+    call(async () => {
+      const role = currentRole();
+      const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
+      const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
+      return Promise.all(page.items.map((c) => hydrateContract(c, role)));
+    }),
+  get: (id) =>
+    call(async () => {
+      const role = currentRole();
+      const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
+      try {
+        const c = await http<RealContract>(`${base}/${id}`);
+        return await hydrateContract(c, role);
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
+        throw e;
+      }
+    }),
+  create: (input, idempotencyKey) =>
+    call(async () => {
+      const c = await http<RealContract>("/contracts", { method: "POST", body: input, idempotencyKey });
+      return hydrateContract(c, "xaridor");
+    }),
+  accept: (id) =>
+    call(async () => {
+      const c = await http<RealContract>(`/seller/contracts/${id}/accept`, { method: "POST" });
+      return hydrateContract(c, "mutaxassis");
+    }),
+  reject: (id) =>
+    call(async () => {
+      const c = await http<RealContract>(`/seller/contracts/${id}/reject`, { method: "POST" });
+      return hydrateContract(c, "mutaxassis");
+    }),
+  cancel: (id) =>
+    call(async () => {
+      const c = await http<RealContract>(`/me/contracts/${id}/cancel`, { method: "POST" });
+      return hydrateContract(c, "xaridor");
+    }),
+  /* Ikki tomonlama "yopish so'rovi" oqimi real backendda yo'q — yakunlanish
+     FAQAT oxirgi bosqich tasdiqlanganda avtomatik sodir bo'ladi. */
+  requestClose: () => disabled(),
+  approveClose: () => disabled(),
+  sign: () => disabled(),
 };
 
 export const milestonesService: MilestonesService = {
-  list: (id) => call(() => mock.getMilestones(id)),
-  listMine: () => call(mock.getAllMilestones),
-  submit: (id, deliverable) => call(() => mock.submitMilestone(id, deliverable)),
-  accept: (id) => call(() => mock.acceptMilestone(id)),
-  requestRevision: (id, comment) => call(() => mock.requestRevision(id, comment)),
+  list: (contractId) =>
+    call(async () => {
+      const role = currentRole();
+      const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
+      const c = await http<RealContract>(`${base}/${contractId}`);
+      const hydrated = await hydrateContract(c, role);
+      return c.milestones
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map((m) => mapMilestone(m, !!hydrated.fundedAt));
+    }),
+  listMine: () =>
+    call(async () => {
+      const role = currentRole();
+      const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
+      const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
+      const results: Model.Milestone[] = [];
+      for (const c of page.items) {
+        const hydrated = await hydrateContract(c, role);
+        for (const m of c.milestones) results.push(mapMilestone(m, !!hydrated.fundedAt));
+      }
+      return results;
+    }),
+  submit: (contractId, milestoneId, deliverable) =>
+    call(async () => {
+      const m = await http<RealMilestone>(`/seller/contracts/${contractId}/milestones/${milestoneId}/submit`, {
+        method: "POST",
+        body: {
+          message: deliverable?.note,
+          deliverableUrls: deliverable?.link ? [deliverable.link] : undefined,
+        },
+      });
+      return mapMilestone(m, true);
+    }),
+  accept: (contractId, milestoneId) =>
+    call(async () => {
+      const m = await http<RealMilestone>(`/me/contracts/${contractId}/milestones/${milestoneId}/approve`, {
+        method: "POST",
+      });
+      return mapMilestone(m, true);
+    }),
+  requestRevision: (contractId, milestoneId, comment) =>
+    call(async () => {
+      const m = await http<RealMilestone>(
+        `/me/contracts/${contractId}/milestones/${milestoneId}/request-revision`,
+        { method: "POST", body: { reason: comment } },
+      );
+      return mapMilestone(m, true);
+    }),
 };
 
+/* Fayl yuklash — S3 presigned infratuzilmasi hali yo'q (backend Bosqich 5+) */
 export const filesService: FilesService = {
-  upload: (file) => call(() => mock.uploadAttachment(file)),
+  upload: () => disabled(),
 };
 
+/* ==========================================================================
+   PAYMENTS — real Payme checkout oqimi + sotuvchi ledger balansi. Karta/
+   yechish/B2B kabi mock-only usullar real backendda yo'q.
+   ========================================================================== */
 export const paymentsService: PaymentsService = {
-  fundContract: (id, input) => call(() => mock.fundContract(id, input)),
-  fundMilestone: (contractId, milestoneId, method) =>
-    call(() => mock.fundMilestone(contractId, milestoneId, method)),
-  getBalance: () => call(mock.getBalance),
-  getCards: () => call(mock.getCards),
-  addCard: (input) => call(() => mock.addCard(input)),
-  removeCard: (id) => call(() => mock.removeCard(id)),
-  withdrawEarnings: (destination, amount) => call(() => mock.withdrawFunds(destination, amount)),
-  withdrawBalance: (destination, amount) => call(() => mock.withdrawBalance(destination, amount)),
-  getPendingWithdrawalTotal: () => call(mock.getPendingWithdrawalTotal),
-  listMyWithdrawalRequests: () => call(mock.getMyWithdrawalRequests),
-  getWithdrawnTotal: () => call(mock.getWithdrawnTotal),
+  fundContract: () => disabled(),
+  fundMilestone: () => disabled(),
+  getBalance: () =>
+    call(async () => {
+      if (currentRole() !== "mutaxassis") return 0;
+      const res = await http<{ currency: string; available: number }>("/seller/balance");
+      return res.available;
+    }),
+  getCards: () => disabled(),
+  addCard: () => disabled(),
+  removeCard: () => disabled(),
+  withdrawEarnings: () => disabled(),
+  withdrawBalance: () => disabled(),
+  getWithdrawnTotal: () => disabled(),
+  getPendingWithdrawalTotal: () => disabled(),
+  listMyWithdrawalRequests: () => disabled(),
+  createContractPayment: (contractId, idempotencyKey) =>
+    call(async () => mapPayment(await http<RealPayment>(`/me/contracts/${contractId}/payment`, { method: "POST", idempotencyKey }))),
+  getContractPayment: (contractId) =>
+    call(async () => {
+      const page = await http<Page<RealPayment>>(`/me/payments${toQuery({ contractId, perPage: 1 })}`);
+      const latest = page.items[0];
+      return latest ? mapPayment(latest) : null;
+    }),
 };
 
+/* Xabarlar/chat — real backendda Message modeli yo'q */
 export const messagesService: MessagesService = {
-  list: (id) => call(() => mock.getMessages(id)),
-  listMine: () => call(mock.getAllMessages),
-  send: (id, body, image, attachments) => call(() => mock.sendMessage(id, body, image, attachments)),
-  getReadStatus: () => call(mock.getThreadReads),
-  markRead: (id) => call(() => mock.markThreadRead(id)),
+  list: () => disabled(),
+  listMine: () => disabled(),
+  send: () => disabled(),
+  getReadStatus: () => disabled(),
+  markRead: () => disabled(),
 };
 
+/* Ichki bildirishnoma feed — real backendda yo'q (Outbox tashqi kanallarga — SMS/email — yetkazadi, UI feed emas) */
 export const notificationsService: NotificationsService = {
-  list: () => call(mock.getNotifications),
-  markRead: (id) => call(() => mock.markNotificationRead(id)),
-  markAllRead: () => call(mock.markAllNotificationsRead),
+  list: () => disabled(),
+  markRead: () => disabled(),
+  markAllRead: () => disabled(),
 };
 
+/* Sharhlar — real backendda Review modeli yo'q */
 export const reviewsService: ReviewsService = {
-  listMine: () => call(mock.getReviews),
-  getForContract: (id) => call(() => mock.getReviewByContract(id)),
-  create: (id, rating, comment) => call(() => mock.createReview(id, rating, comment)),
+  listMine: () => call(async () => []),
+  getForContract: () => call(async () => null),
+  create: () => disabled(),
 };
 
+/* ==========================================================================
+   DISPUTES — real backend oqimi.
+   ========================================================================== */
 export const disputesService: DisputesService = {
-  getForContract: (id) => call(() => mock.getDisputeByContract(id)),
-  open: (contractId, input) => call(() => mock.openDispute(contractId, input)),
-  withdraw: (contractId) => call(() => mock.withdrawDispute(contractId)),
+  getForContract: (contractId) =>
+    call(async () => {
+      const page = await http<Page<RealDispute>>(`/me/disputes${toQuery({ perPage: 100 })}`);
+      const match = page.items.find((d) => d.contractId === contractId);
+      return match ? mapDispute(match) : null;
+    }),
+  open: (contractId, input) =>
+    call(async () => {
+      const d = await http<RealDispute>(`/me/contracts/${contractId}/disputes`, {
+        method: "POST",
+        body: { reason: input.reason.toUpperCase(), description: input.description },
+        idempotencyKey: crypto.randomUUID(),
+      });
+      return mapDispute(d);
+    }),
+  withdraw: (contractId) =>
+    call(async () => {
+      const page = await http<Page<RealDispute>>(`/me/disputes${toQuery({ perPage: 100 })}`);
+      const match = page.items.find((d) => d.contractId === contractId);
+      if (!match) throw new Error("DISPUTE_NOT_FOUND");
+      await http(`/me/disputes/${match.id}/cancel`, { method: "POST" });
+    }),
 };
 
+export const sellerApplicationService: SellerApplicationService = {
+  getCurrent: () =>
+    call(async () => {
+      try {
+        const app = await http<RealSellerApplication>("/me/seller-application");
+        return {
+          status: mapSellerApplicationStatus(app.status),
+          legalName: app.legalName,
+          displayName: app.displayName,
+          description: asStr(app.description),
+          rejectionReason: asStr(app.rejectionReason),
+        };
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
+        throw e;
+      }
+    }),
+  submit: (input) =>
+    call(async () => {
+      await http("/me/seller-application", { method: "POST", body: input });
+    }),
+};
+
+/* KYC — real backendda yo'q */
 export const verificationService: VerificationService = {
-  getMine: () => call(mock.getVerification),
-  submit: (input) => call(() => mock.submitVerification(input)),
+  getMine: () => disabled(),
+  submit: () => disabled(),
 };
 
+/* Support ticketlar (mock) — real backendda yo'q. `supportRequestService`
+   (pastda) BUTUNLAY BOSHQA, allaqachon real (/api/support) — bu bilan
+   ALMASHTIRILMAYDI. */
 export const supportService: SupportService = {
-  listMine: () => call(mock.getSupportTickets),
-  listReplies: (ticketId) => call(() => mock.getSupportReplies(ticketId)),
-  create: (input) => call(() => mock.createSupportTicket(input)),
+  listMine: () => disabled(),
+  listReplies: () => disabled(),
+  create: () => disabled(),
 };
 
-/* Yagona haqiqiy backend-integratsiyalangan service — boshqalaridan farqli,
-   mock-api'ga emas, /api/support route handler'ga (u yerdan Telegram Bot
-   API'ga) haqiqiy fetch qiladi. Token bu faylga ham, brauzerga ham chiqmaydi —
-   faqat server-side route handler process.env'dan o'qiydi. */
+/* Yagona haqiqiy backend-integratsiyalangan service — mock-api'ga emas,
+   /api/support route handler'ga (u yerdan Telegram Bot API'ga) haqiqiy
+   fetch qiladi. Token bu faylga ham, brauzerga ham chiqmaydi. */
 export const supportRequestService: SupportRequestService = {
   submit: (input) =>
     call(async () => {
@@ -197,9 +587,12 @@ export const supportRequestService: SupportRequestService = {
 };
 
 /**
- * Ma'lumot o'zgargani haqidagi signal — ekranlar shu hodisada qayta o'qiydi.
- * Hozir mock adapter localStorage yozuvidan keyin chiqaradi; backend'da bu
- * websocket/SSE push yoki kesh invalidatsiyasi bilan almashtiriladi.
+ * Ma'lumot o'zgargani haqidagi signal. Real backend'da WebSocket/SSE yo'q
+ * (bo'lim 91-K — "soxta realtime yo'q"), shuning uchun bu endi hech qachon
+ * chiqarilmaydi — ekranlar `reload()`/fokusda qayta yuklash yoki bounded
+ * polling bilan yangilanadi. `DATA_CHANGED_EVENT` nomi eski chaqiruv
+ * joylari (`window.addEventListener(DATA_CHANGED_EVENT, ...)`) buzilmasin
+ * deb saqlangan — hodisa shunchaki hech qachon `dispatchEvent` qilinmaydi.
  */
-export const DATA_CHANGED_EVENT = mock.DATA_CHANGED_EVENT;
-export const resetDemoData = mock.resetDemoData;
+export const DATA_CHANGED_EVENT = "bobododa:data-changed";
+export const resetDemoData = (): void => {};

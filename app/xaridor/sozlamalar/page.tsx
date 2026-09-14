@@ -12,7 +12,6 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Modal } from "@/components/ui/Modal";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
@@ -75,11 +74,7 @@ export default function XaridorSozlamalarPage() {
   const [currency, setCurrency] = useState<"UZS" | "USD">("UZS");
 
   // Account state
-  const [exporting, setExporting] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteText, setDeleteText] = useState("");
-  const [deleting, setDeleting] = useState(false);
 
   // General lifecycle
   const [loading, setLoading] = useState(true);
@@ -90,7 +85,10 @@ export default function XaridorSozlamalarPage() {
     setLoadError(null);
     Promise.all([
       usersService.getCurrent(),
-      paymentsService.getCards(),
+      /* Bosqich 17 — real backendda karta boshqaruvi yo'q: butun sahifani
+         yiqitmasin deb bo'sh ro'yxatga tushadi (Billing tabi nav'dan olib
+         tashlangan, shuning uchun bu ko'rinmas holat). */
+      paymentsService.getCards().catch(() => []),
       usersService.getPreferences().catch(() => DEFAULT_PREFERENCES),
     ])
       .then(([user, cardList, prefs]) => {
@@ -123,14 +121,7 @@ export default function XaridorSozlamalarPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const tabParam = new URLSearchParams(window.location.search).get("tab");
-    const validTabs: SettingsTab[] = [
-      "profile",
-      "billing",
-      "security",
-      "notifications",
-      "preferences",
-      "account",
-    ];
+    const validTabs: SettingsTab[] = ["profile", "security", "preferences", "account"];
     if (tabParam && validTabs.includes(tabParam as SettingsTab)) {
       setActiveTab(tabParam as SettingsTab);
     }
@@ -248,46 +239,6 @@ export default function XaridorSozlamalarPage() {
     }
   }
 
-  // Export Data
-  async function handleExportData() {
-    setExporting(true);
-    try {
-      const data = await usersService.exportData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `bobododa-xaridor-export-${new Date().toISOString().slice(0, 10)}.json`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-      toast(t("privacy.exported"));
-    } catch {
-      toast(t("common.error"), "error");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  // Delete Account
-  async function handleDeleteAccount() {
-    if (deleteText !== t("privacy.deleteWord")) return;
-    setDeleting(true);
-    try {
-      await usersService.deleteAccount();
-      router.replace("/kirish");
-    } catch (error) {
-      toast(
-        error instanceof Error && error.message === "ACTIVE_CONTRACTS"
-          ? t("privacy.activeContracts")
-          : t("common.error"),
-        "error"
-      );
-      setDeleting(false);
-    }
-  }
-
   function handleLogout() {
     authService.logout();
     router.push("/kirish");
@@ -321,23 +272,10 @@ export default function XaridorSozlamalarPage() {
       icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
     },
     {
-      id: "billing",
-      label: t("bset.tabBilling"),
-      description: "Kartalar, balans va invoyslar",
-      badge: cards.length > 0 ? cards.length : undefined,
-      icon: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
-    },
-    {
       id: "security",
       label: t("bset.tabSecurity"),
       description: "Parol, Google va Telegram",
       icon: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
-    },
-    {
-      id: "notifications",
-      label: t("bset.tabNotifications"),
-      description: "Loyiha va chat bildirishnomalari",
-      icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
     },
     {
       id: "preferences",
@@ -382,24 +320,13 @@ export default function XaridorSozlamalarPage() {
                 <h1 className="font-heading text-xl font-extrabold text-ink sm:text-2xl">
                   {companyName || fullName || t("settings.title")}
                 </h1>
-                {currentUser?.verified ? (
+                {currentUser?.verified && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 border border-emerald-500/20">
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                       <path d="M13.5 4.5l-7 7L3 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                     {t("bset.verifiedEmployer")}
                   </span>
-                ) : (
-                  <Link
-                    href="/xaridor/verifikatsiya"
-                    className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-700 border border-amber-500/20 hover:bg-amber-500/15 transition-colors"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M8 5v3m0 3h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                    </svg>
-                    Verifikatsiyadan o&apos;tish
-                  </Link>
                 )}
               </div>
               <p className="mt-1 text-xs text-muted sm:text-sm">
@@ -408,28 +335,6 @@ export default function XaridorSozlamalarPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/xaridor/xarajatlar"
-              className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors hover:border-primary hover:bg-card-hover"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 3h10a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.3" />
-                <path d="M2 7h12M5 10h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              {t("bset.viewInvoices")}
-            </Link>
-            <Link
-              href="/xaridor/verifikatsiya"
-              className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors hover:border-primary hover:bg-card-hover"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M8 1.5 13.5 4v3.6c0 3.3-2.3 6.1-5.5 6.9-3.2-.8-5.5-3.6-5.5-6.9V4L8 1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-                <path d="m6 8 1.5 1.5 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {t("nav.verification")}
-            </Link>
-          </div>
         </div>
       </div>
 
@@ -1171,31 +1076,6 @@ export default function XaridorSozlamalarPage() {
           {/* TAB 6: ACCOUNT MANAGEMENT */}
           {activeTab === "account" && (
             <div className="flex flex-col gap-6">
-              {/* Data Export */}
-              <Card padding="lg">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="font-heading text-base font-bold text-ink">
-                      {t("privacy.dataTitle")}
-                    </h2>
-                    <p className="text-xs text-muted mt-1 max-w-lg">
-                      {t("bset.exportHint")}
-                    </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    loading={exporting}
-                    onClick={handleExportData}
-                    className="shrink-0"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="mr-2">
-                      <path d="M8 2v8m0 0l-3-3m3 3l3-3M2 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    {t("privacy.export")}
-                  </Button>
-                </div>
-              </Card>
-
               {/* Logout Card */}
               <Card padding="lg">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1221,27 +1101,6 @@ export default function XaridorSozlamalarPage() {
                   </Button>
                 </div>
               </Card>
-
-              {/* Danger Zone: Account Deletion */}
-              <Card padding="lg" className="border-danger/25 bg-danger/5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="font-heading text-base font-bold text-danger-deep">
-                      {t("bset.dangerSection")}
-                    </h2>
-                    <p className="text-xs text-muted mt-1 max-w-lg">
-                      {t("bset.deleteHint")}
-                    </p>
-                  </div>
-                  <Button
-                    variant="danger"
-                    onClick={() => setDeleteOpen(true)}
-                    className="shrink-0"
-                  >
-                    {t("privacy.delete")}
-                  </Button>
-                </div>
-              </Card>
             </div>
           )}
         </main>
@@ -1258,41 +1117,6 @@ export default function XaridorSozlamalarPage() {
         onConfirm={handleLogout}
         onCancel={() => setLogoutOpen(false)}
       />
-
-      {/* Delete Account Modal */}
-      <Modal
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        title={t("privacy.deleteTitle")}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="danger"
-              loading={deleting}
-              disabled={deleteText !== t("privacy.deleteWord")}
-              onClick={handleDeleteAccount}
-            >
-              {t("privacy.delete")}
-            </Button>
-          </>
-        }
-      >
-        <p className="mb-4 text-xs text-muted leading-relaxed">
-          {t("privacy.deleteDesc")}
-        </p>
-        <Input
-          label={t("privacy.deleteConfirmLabel").replace(
-            "{word}",
-            t("privacy.deleteWord")
-          )}
-          value={deleteText}
-          onChange={(event) => setDeleteText(event.target.value)}
-          placeholder={t("privacy.deleteWord")}
-        />
-      </Modal>
     </div>
   );
 }

@@ -7,41 +7,35 @@ import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { TagInput } from "@/components/ui/TagInput";
-import { LocationPicker } from "@/components/ui/LocationPicker";
 import { useToast } from "@/components/ui/Toast";
-import { CATEGORIES } from "@/lib/category-fields";
-import { getSelectableCategories } from "@/lib/categories";
-import type { ServiceCategory } from "@/lib/types";
-import { usersService } from "@/lib/api";
+import { sellerApplicationService, usersService } from "@/lib/api";
+import { ApiError } from "@/lib/api/errors";
 import { useT } from "@/lib/i18n";
 import { LIMITS } from "@/lib/validate";
 
 interface Errors {
   fullName?: string;
-  bio?: string;
-  skills?: string;
-  categories?: string;
-  location?: string;
+  legalName?: string;
+  displayName?: string;
+  description?: string;
 }
 
+/**
+ * Bosqich 17 — real backendda boy sotuvchi profili (bio/skills/kategoriya/
+ * joylashuv/portfolio) YO'Q, faqat: (1) `fullName` (`profileDone` gate'i
+ * shuni talab qiladi) va (2) sotuvchi arizasi (`legalName`/`displayName`/
+ * `description` — real faoliyat huquqi shundan keladi). Boshqa mock
+ * maydonlar (skills/categories/location) real backendda saqlanmaydi.
+ */
 export default function RoyxatPage() {
   const { t } = useT();
   const router = useRouter();
   const { toast } = useToast();
 
-  /* Admin o'chirgan kategoriyada yangi ish yaratib bo'lmaydi. Ro'yxat mount'dan
-     KEYIN toraytiriladi: server render'ida `localStorage` yo'q, shuning uchun
-     darhol filtrlansa hidratsiya mos kelmasdi. */
-  const [selectableCategories, setSelectableCategories] =
-    useState<ServiceCategory[]>(CATEGORIES);
-  useEffect(() => setSelectableCategories(getSelectableCategories()), []);
-
   const [fullName, setFullName] = useState("");
-  const [bio, setBio] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [location, setLocation] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [description, setDescription] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -51,27 +45,23 @@ export default function RoyxatPage() {
     usersService
       .getCurrent()
       .then((user) => {
-        if (user?.fullName) setFullName(user.fullName);
+        if (user?.fullName) {
+          setFullName(user.fullName);
+          setDisplayName((prev) => prev || user.fullName);
+        }
       })
       .catch(setLoadError);
   }, []);
 
   useEffect(load, [load]);
 
-  function toggleCategory(cat: string) {
-    setCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
-  }
-
   function validate(): boolean {
     const next: Errors = {};
     if (!fullName.trim()) next.fullName = t("onboard.errName");
-    if (bio.trim().length < 20) next.bio = t("onboard.errBio");
-    if (bio.trim().length > LIMITS.bio) next.bio = t("onboard.errBioLong");
-    if (!skills.length) next.skills = t("onboard.errSkills");
-    if (!categories.length) next.categories = t("onboard.errCategories");
-    if (!location.trim()) next.location = t("onboard.errLocation");
+    if (!legalName.trim()) next.legalName = t("onboard.errName");
+    if (!displayName.trim()) next.displayName = t("onboard.errName");
+    if (description.trim().length > 0 && description.trim().length < 20) next.description = t("onboard.errBio");
+    if (description.trim().length > LIMITS.bio) next.description = t("onboard.errBioLong");
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -81,15 +71,21 @@ export default function RoyxatPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await usersService.completeSellerProfile({
-        fullName: fullName.trim(),
-        bio: bio.trim(),
-        skills,
-        categories,
-        location: location.trim(),
-      });
+      await usersService.updateName(fullName.trim());
+      try {
+        await sellerApplicationService.submit({
+          legalName: legalName.trim(),
+          displayName: displayName.trim(),
+          description: description.trim() || undefined,
+        });
+      } catch (err) {
+        /* Ariza allaqachon yuborilgan (masalan orqaga qaytib qayta submit
+           qilingan) — bu xato emas, davom etiladi. */
+        const alreadyApplied = err instanceof ApiError && err.message === "SELLER_APPLICATION_ALREADY_PENDING";
+        if (!alreadyApplied) throw err;
+      }
       toast(t("settings.saved"));
-      router.push("/kirish/tasdiqlash");
+      router.push("/mutaxassis");
     } catch {
       toast(t("common.error"), "error");
       setLoading(false);
@@ -100,10 +96,8 @@ export default function RoyxatPage() {
 
   return (
     <Card padding="lg">
-      <h1 className="font-heading text-xl font-bold text-ink">
-        {t("onboard.title")}
-      </h1>
-      <p className="mt-2 text-sm text-muted">{t("onboard.subtitle")}</p>
+      <h1 className="font-heading text-xl font-bold text-ink">{t("onboard.title")}</h1>
+      <p className="mt-2 text-sm text-muted">{t("onboard.applicationSubtitle")}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4" noValidate>
         <Input
@@ -113,67 +107,32 @@ export default function RoyxatPage() {
           placeholder={t("onboard.fullNamePh")}
           error={errors.fullName}
         />
+        <Input
+          label={t("onboard.legalName")}
+          value={legalName}
+          onChange={(e) => setLegalName(e.target.value)}
+          placeholder={t("onboard.fullNamePh")}
+          error={errors.legalName}
+        />
+        <Input
+          label={t("onboard.displayName")}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder={t("onboard.displayNamePh")}
+          error={errors.displayName}
+        />
         <Textarea
           label={t("onboard.bio")}
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder={t("onboard.bioPh")}
-          error={errors.bio}
+          error={errors.description}
           maxLength={LIMITS.bio}
-          hint={`${bio.length}/${LIMITS.bio}`}
-        />
-        <TagInput
-          label={t("onboard.skills")}
-          value={skills}
-          onChange={setSkills}
-          placeholder={t("onboard.skillsPh")}
-          error={errors.skills}
-        />
-
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">
-            {t("onboard.categories")}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {selectableCategories.map((cat) => {
-              const selected = categories.includes(cat);
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => toggleCategory(cat)}
-                  aria-pressed={selected}
-                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors duration-150 ${
-                    selected
-                      ? "border-primary bg-primary/15 font-medium text-ink"
-                      : "border-line bg-card text-muted hover:text-ink"
-                  }`}
-                >
-                  {t(`cat.${cat}`)}
-                </button>
-              );
-            })}
-          </div>
-          {errors.categories && (
-            <p className="text-2xs text-danger" role="alert">
-              {errors.categories}
-            </p>
-          )}
-        </div>
-
-        <LocationPicker
-          label={t("onboard.location")}
-          value={location}
-          onChange={(val) => {
-            setLocation(val);
-            if (errors.location) setErrors((prev) => ({ ...prev, location: undefined }));
-          }}
-          error={errors.location}
-          required
+          hint={`${description.length}/${LIMITS.bio}`}
         />
 
         <Button type="submit" size="lg" loading={loading} className="mt-2 w-full">
-          {t("onboard.submit")}
+          {t("onboard.submitApplication")}
         </Button>
       </form>
     </Card>
