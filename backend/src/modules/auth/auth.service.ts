@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import type { Role } from '@prisma/client';
+import { Prisma, type AuthIntent, type Role } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
-import { DomainError, ForbiddenError } from '@/common/errors/domain-error';
+import { ConflictError, DomainError, ForbiddenError, NotFoundError } from '@/common/errors/domain-error';
 import { OtpService } from './otp.service';
 import { TokenService } from './token.service';
 import { RefreshTokenService, type RequestMeta } from './refresh-token.service';
 import type { AccessTokenPayload } from './types/token-payload';
+
+const PRISMA_UNIQUE_VIOLATION = 'P2002';
 
 export interface AuthResult {
   accessToken: string;
@@ -32,17 +34,53 @@ export class AuthService {
     private readonly refreshTokens: RefreshTokenService,
   ) {}
 
-  async requestOtp(phone: string, ip?: string): Promise<void> {
-    await this.otp.requestOtp(phone, ip);
+  async requestOtp(phone: string, intent: AuthIntent, ip?: string): Promise<void> {
+    await this.otp.requestOtp(phone, intent, ip);
   }
 
-  async verifyOtpAndLogin(rawPhone: string, code: string, meta?: RequestMeta): Promise<AuthResult> {
-    const { phone } = await this.otp.verifyOtp(rawPhone, code);
+  /**
+   * Bosqich 20 — LOGIN faqat MAVJUD hisobni autentifikatsiya qiladi.
+   * Hech qachon `User` yaratmaydi: telefon topilmasa `USER_NOT_FOUND`
+   * (frontend "Ro'yxatdan o'tishni xohlaysizmi?" CTA'sini shu bilan
+   * ko'rsatadi). Bu ma'lumot faqat VALID OTP orqali telefon egaligi
+   * isbotlangandan keyin beriladi — enumeration xavfsiz (`requestOtp`
+   * hali ham generic javob qaytaradi).
+   */
+  async login(rawPhone: string, code: string, meta?: RequestMeta): Promise<AuthResult> {
+    const { phone } = await this.otp.verifyOtp(rawPhone, code, 'LOGIN');
 
-    let user = await this.prisma.user.findUnique({ where: { phone } });
-    let isNewUser = false;
+    const user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user) {
-      isNewUser = true;
+      throw new NotFoundError('Bu raqam bilan hisob topilmadi', 'USER_NOT_FOUND');
+    }
+
+    // Ko'p rolli qaytgan foydalanuvchi uchun oxirgi tanlangan kontekst;
+    // rol hali tanlanmagan bo'lsa — `null` ("pending onboarding" sessiya).
+    const activeRole = user.roleChosen ? (user.lastActiveRole ?? null) : null;
+
+    return this.issueSession(user.id, activeRole, {
+      roleChosen: user.roleChosen,
+      profileDone: user.profileDone,
+      isNewUser: false,
+      meta,
+    });
+  }
+
+  /**
+   * Bosqich 20 — REGISTER foydalanuvchi yaratishning YAGONA yo'li.
+   * Telefon allaqachon ro'yxatdan o'tgan bo'lsa `PHONE_EXISTS` (frontend
+   * "Kirishni xohlaysizmi?" CTA'sini shu bilan ko'rsatadi) — YANGI User
+   * yaratilmaydi. Race-safe: parallel so'rovlar `User.phone`dagi DB
+   * darajasidagi UNIQUE cheklovga tayanadi (`findUnique`+`create` emas —
+   * to'g'ridan-to'g'ri `create`, P2002'ni ushlaymiz), shuning uchun bir
+   * xil telefon uchun 10 ta parallel REGISTER ham FAQAT bitta qator
+   * yaratadi.
+   */
+  async register(rawPhone: string, code: string, meta?: RequestMeta): Promise<AuthResult> {
+    const { phone } = await this.otp.verifyOtp(rawPhone, code, 'REGISTER');
+
+    let user;
+    try {
       user = await this.prisma.user.create({
         data: {
           id: this.ids.next(),
@@ -53,16 +91,17 @@ export class AuthService {
           verified: true,
         },
       });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === PRISMA_UNIQUE_VIOLATION) {
+        throw new ConflictError('PHONE_EXISTS', 'Bu raqam bilan hisob allaqachon mavjud');
+      }
+      throw err;
     }
 
-    // Ko'p rolli qaytgan foydalanuvchi uchun oxirgi tanlangan kontekst;
-    // rol hali tanlanmagan bo'lsa — `null` ("pending onboarding" sessiya).
-    const activeRole = user.roleChosen ? (user.lastActiveRole ?? null) : null;
-
-    return this.issueSession(user.id, activeRole, {
-      roleChosen: user.roleChosen,
-      profileDone: user.profileDone,
-      isNewUser,
+    return this.issueSession(user.id, null, {
+      roleChosen: false,
+      profileDone: false,
+      isNewUser: true,
       meta,
     });
   }

@@ -80,11 +80,13 @@ export async function seedAdminTestData(): Promise<{
   const buyerPhone = freshPhone();
   const sellerPhone = freshPhone();
 
+  // Bosqich 20 — `freshPhone()` bilan chaqirilgani uchun (har doim YANGI
+  // raqam) bu funksiya har doim REGISTER, LOGIN emas.
   async function otpLoginToken(phone: string): Promise<string> {
     const reqRes = await fetch(`${ADMIN_API_BASE}/auth/otp/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, intent: "REGISTER" }),
     });
     if (reqRes.status !== 200) throw new Error(`otp/request ${phone}: ${reqRes.status} ${await reqRes.text()}`);
     await new Promise((r) => setTimeout(r, 500));
@@ -92,7 +94,7 @@ export async function seedAdminTestData(): Promise<{
     const verifyRes = await fetch(`${ADMIN_API_BASE}/auth/otp/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, code }),
+      body: JSON.stringify({ phone, code, intent: "REGISTER" }),
     });
     const session = (await verifyRes.json()) as { accessToken?: string };
     if (!session.accessToken) throw new Error(`otp/verify ${phone}: ${JSON.stringify(session)}`);

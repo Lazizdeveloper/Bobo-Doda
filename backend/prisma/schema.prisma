@@ -573,23 +573,34 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-/// OTP kodi — telefon+OTP autentifikatsiyasi (Bosqich 2). Append-only EMAS:
-/// `attempts`/`consumedAt` tekshirishda yangilanadi. Kod HECH QACHON ochiq
-/// matnda saqlanmaydi — faqat `codeHash` (argon2id).
+/// Bosqich 20 — bitta OTP challenge FAQAT bitta niyat (LOGIN yoki REGISTER)
+/// uchun yaroqli. LOGIN uchun so'ralgan kod REGISTER'ni tasdiqlay olmaydi
+/// va aksincha (`OtpService.verifyOtp` `intent`ni `WHERE`ga qo'shadi).
+enum AuthIntent {
+  LOGIN
+  REGISTER
+}
+
+/// OTP kodi — telefon+OTP autentifikatsiyasi (Bosqich 2, Bosqich 20 — LOGIN/
+/// REGISTER ajratilishi). Append-only EMAS: `attempts`/`consumedAt`
+/// tekshirishda yangilanadi. Kod HECH QACHON ochiq matnda saqlanmaydi —
+/// faqat `codeHash` (argon2id).
 model OtpCode {
-  id         String    @id @db.Uuid
+  id         String     @id @db.Uuid
   /// E.164 (masalan +998901234567) — `phone.util.ts` normallashtiradi.
   phone      String
+  /// Bosqich 20 — challenge qaysi oqim uchun yaratilganini bog'laydi.
+  intent     AuthIntent
   codeHash   String
-  attempts   Int       @default(0)
+  attempts   Int        @default(0)
   /// Muvaffaqiyatli tasdiqlangan YOKI 5-xato urinishda "kuygan" vaqt —
   /// ikkalasida ham kod qayta ishlatib bo'lmaydi.
-  consumedAt DateTime? @db.Timestamptz(6)
+  consumedAt DateTime?  @db.Timestamptz(6)
   ip         String?
-  expiresAt  DateTime  @db.Timestamptz(6)
-  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt  DateTime   @db.Timestamptz(6)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
 
-  @@index([phone, createdAt])
+  @@index([phone, intent, createdAt])
   @@index([expiresAt])
   @@map("otp_codes")
 }

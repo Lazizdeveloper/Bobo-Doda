@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
+import type { AuthIntent } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
 import { HashService } from '@/common/security/hash.service';
@@ -25,10 +26,15 @@ import {
  *
  * `requestOtp` ATAYLAB `User` jadvaliga UMUMAN tegmaydi — shu bilan
  * enumeration-safe: ro'yxatdan o'tgan yoki o'tmagan telefon uchun bir xil
- * javob (controller ham bir xil generic xabar qaytaradi). Ro'yxatdan
- * o'tmagan foydalanuvchini avto-yaratish `verifyOtp`dan KEYIN,
- * `AuthService`da (bu servis faqat OTP haqiqiyligini biladi, User haqida
- * qaror qabul qilmaydi — bitta mas'uliyat).
+ * javob (controller ham bir xil generic xabar qaytaradi). Foydalanuvchini
+ * yaratish/topish qarori `verifyOtp`dan KEYIN, `AuthService`da (bu servis
+ * faqat OTP haqiqiyligini biladi, User haqida qaror qabul qilmaydi —
+ * bitta mas'uliyat).
+ *
+ * Bosqich 20 — `intent` (LOGIN | REGISTER) HAR bir challenge'ga bog'lanadi:
+ * LOGIN uchun so'ralgan kod REGISTER'ni tasdiqlay olmaydi va aksincha
+ * (`verifyOtp`ning `WHERE`i `intent`ni ham talab qiladi — boshqa intent
+ * uchun yaratilgan qator UMUMAN topilmaydi, xuddi mavjud bo'lmagandek).
  */
 @Injectable()
 export class OtpService {
@@ -40,11 +46,16 @@ export class OtpService {
     @InjectQueue(OTP_SMS_QUEUE) private readonly smsQueue: Queue<OtpSmsJobData>,
   ) {}
 
-  async requestOtp(rawPhone: string, ip?: string): Promise<void> {
+  async requestOtp(rawPhone: string, intent: AuthIntent, ip?: string): Promise<void> {
     const phone = normalizePhone(rawPhone);
 
+    // Cooldown INTENT bo'yicha ajratilgan — "hisob topilmadi/mavjud" CTA'dan
+    // keyin foydalanuvchi ikkinchi oqimga darhol o'tishi kerak (60s kutmasdan).
+    // Kunlik/IP chegara esa ATAYLAB umumiy (pastga qarang) — aks holda bitta
+    // telefon LOGIN+REGISTER orasida almashtirib jami SMS hajmini ikki
+    // baravar oshirardi (xavfsizlik siyosati zaiflashmasin degan talab).
     const cooldownOk = await this.limiter.cooldown(
-      `otp:cooldown:${phone}`,
+      `otp:cooldown:${phone}:${intent}`,
       OTP_RESEND_COOLDOWN_SECONDS,
     );
     if (!cooldownOk) {
@@ -68,6 +79,7 @@ export class OtpService {
       data: {
         id: this.ids.next(),
         phone,
+        intent,
         codeHash: await this.hash.hash(code),
         ip,
         expiresAt: new Date(Date.now() + OTP_EXPIRY_SECONDS * 1000),
@@ -80,11 +92,11 @@ export class OtpService {
   }
 
   /** Muvaffaqiyatli bo'lsa normallashtirilgan telefonni qaytaradi. */
-  async verifyOtp(rawPhone: string, code: string): Promise<{ phone: string }> {
+  async verifyOtp(rawPhone: string, code: string, intent: AuthIntent): Promise<{ phone: string }> {
     const phone = normalizePhone(rawPhone);
 
     const otp = await this.prisma.otpCode.findFirst({
-      where: { phone, consumedAt: null, expiresAt: { gt: new Date() } },
+      where: { phone, intent, consumedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
     if (!otp || otp.attempts >= OTP_MAX_ATTEMPTS) {

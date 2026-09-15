@@ -5217,10 +5217,19 @@
           "phone": {
             "type": "string",
             "example": "+998901234567"
+          },
+          "intent": {
+            "type": "string",
+            "enum": [
+              "LOGIN",
+              "REGISTER"
+            ],
+            "example": "LOGIN"
           }
         },
         "required": [
-          "phone"
+          "phone",
+          "intent"
         ]
       },
       "VerifyOtpDto": {
@@ -5234,11 +5243,20 @@
             "type": "string",
             "example": "482913",
             "description": "6 xonali OTP kodi"
+          },
+          "intent": {
+            "type": "string",
+            "enum": [
+              "LOGIN",
+              "REGISTER"
+            ],
+            "example": "LOGIN"
           }
         },
         "required": [
           "phone",
-          "code"
+          "code",
+          "intent"
         ]
       },
       "AuthSessionDto": {

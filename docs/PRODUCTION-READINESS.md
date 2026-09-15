@@ -434,3 +434,41 @@ faqat Yordam modali), Payme'ning o'z 3DS/OTP oqimi (tashqi provayder).
 ### CODE_RELEASE_CANDIDATE: **PASS** (o'zgarmadi, yangi audit bilan mustahkamlandi)
 
 REAL_PRODUCTION_READY holati §16dagi bilan bir xil — o'zgarmadi.
+
+## 18. Bosqich 20 — Login va Registration ajratilishi
+
+**O'zgarish**: avvalgi combined `/kirish` oqimi (OTP tasdiqlansa mavjud
+bo'lmagan telefon uchun AVTO-CREATE) olib tashlandi. Endi ikkita
+mustaqil sahifa/niyat: `/kirish` (LOGIN — faqat mavjud hisob, User
+HECH QACHON yaratilmaydi) va `/royxatdan-otish` (REGISTER — User
+yaratishning yagona yo'li, mavjud hisobga HECH QACHON ustidan
+yozmaydi). Ikkalasi ham SMS OTP orqali — §19dagi SMS-only siyosat
+o'zgarmadi. To'liq tafsilot — RUNBOOK §20.
+
+| Tekshiruv | Natija |
+|---|---|
+| Backend `npm run lint` | ✅ PASS |
+| Backend `npm run typecheck` | ✅ PASS |
+| Backend `npm test` (unit) | ✅ **380/380 PASS**, 39 suite |
+| Backend `npm run test:e2e` (Jest, real Postgres+Redis) | ✅ **319/319 PASS**, 19 suite |
+| Backend `npm run build` | ✅ PASS |
+| `npm run generate:contracts` | ✅ PASS, `AuthIntent` enum qo'shildi, drift = 0 |
+| Frontend `eslint .` | ✅ PASS |
+| Frontend `tsc --noEmit` | ✅ PASS |
+| Frontend `next build` | ✅ PASS (2 yangi route: `/royxatdan-otish`, `/royxatdan-otish/tasdiqlash`) |
+| Playwright (auth+buyer+seller+purchase+disputes+admin) | ✅ **27 PASS, 1 SKIP (TOTP UI yo'q), 0 FAIL** |
+
+**Schema o'zgarishi**: `OtpCode.intent` (`AuthIntent` enum — `LOGIN`/
+`REGISTER`) — migration `20260915120000_stage20_auth_intent`, real
+Postgres'ga qo'llangan (dev + isolated e2e), race-safe (`User.phone`
+DB unique constraint — 10 ta parallel verify real e2e testda tasdiqlangan).
+
+**Xato taksonomiyasi**: duplikat kod YARATILMADI — mavjud
+`USER_NOT_FOUND` (404) va `PHONE_EXISTS` (409) qayta ishlatildi
+(`ERROR_CODES`da allaqachon bor edi).
+
+**Tegilmagan (ataylab)**: staff/admin TOTP autentifikatsiyasi, rol
+tanlash mantiqi (`/rol-tanlash`), seller eligibility/application
+workflow (Bosqich 3) — hech biriga tegilmadi.
+
+### CODE_RELEASE_CANDIDATE: **PASS**

@@ -1939,6 +1939,11 @@ export interface components {
         RequestOtpDto: {
             /** @example +998901234567 */
             phone: string;
+            /**
+             * @example LOGIN
+             * @enum {string}
+             */
+            intent: "LOGIN" | "REGISTER";
         };
         VerifyOtpDto: {
             /** @example +998901234567 */
@@ -1948,6 +1953,11 @@ export interface components {
              * @example 482913
              */
             code: string;
+            /**
+             * @example LOGIN
+             * @enum {string}
+             */
+            intent: "LOGIN" | "REGISTER";
         };
         AuthSessionDto: {
             /** @description Qisqa umrli JWT — `Authorization: Bearer <token>` */

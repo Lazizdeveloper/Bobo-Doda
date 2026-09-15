@@ -14,6 +14,17 @@ export const PAYMENT_TEST_WEBHOOK_SECRET =
   process.env.PAYMENT_TEST_WEBHOOK_SECRET || "test-only-insecure-secret-change-me";
 export const API_BASE = process.env.E2E_API_URL || "http://localhost:4000/api/v1";
 export const CATEGORY_ID = process.env.E2E_CATEGORY_ID || "01a092fb-037e-740b-9b72-83002432b73c"; // phase4-design (lokal seed)
+export const REDIS_CLI =
+  process.env.E2E_REDIS_CLI || "redis-cli -h 127.0.0.1 -p 6379";
+
+/** Bosqich 20 — bitta telefon+intent uchun `/otp/request` cooldown 60s
+    (`OtpService`). Bir xil intentda haqiqiy UI orqali IKKI MARTA so'rashni
+    sinash uchun (masalan "allaqachon ro'yxatdan o'tgan telefon bilan yana
+    ro'yxatdan o'tishga urinish") 60s real kutish shart emas — kalitni
+    to'g'ridan-to'g'ri Redis'dan o'chiramiz. */
+export function flushOtpCooldown(phone: string, intent: "LOGIN" | "REGISTER"): void {
+  execSync(`${REDIS_CLI} DEL "ratelimit:cd:otp:cooldown:${phone}:${intent}"`);
+}
 
 /**
  * DIQQAT — nega bu suite `storageState` snapshot'ini FAYLGA yozib, uni bir
@@ -47,10 +58,30 @@ export function latestOtpFor(phone: string): string {
   return m[1];
 }
 
-/** Haqiqiy `/kirish` UI oqimi orqali kiradi (shorcut EMAS — bu ham login
-    ekranining o'zini sinaydi). Chaqiruvchi keyin `page.context().storageState()`
-    bilan sessiyani saqlashi mumkin. */
-export async function otpLogin(page: Page, phone: string): Promise<void> {
+/** Bosqich 20 — haqiqiy `/royxatdan-otish` UI oqimi orqali YANGI hisob
+    yaratadi (shortcut EMAS — bu ham register ekranining o'zini sinaydi).
+    `freshPhone()` bilan chaqirilgani uchun (har doim YANGI raqam) — bu
+    funksiya har doim REGISTER, LOGIN emas (LOGIN endi yangi raqamda
+    ACCOUNT_NOT_FOUND bilan yiqiladi). Chaqiruvchi keyin
+    `page.context().storageState()` bilan sessiyani saqlashi mumkin. */
+export async function registerViaUi(page: Page, phone: string): Promise<void> {
+  await page.goto("/royxatdan-otish", { waitUntil: "networkidle" });
+  const local = phone.replace("+998", "");
+  await page.locator("input").first().fill(local);
+  await page.getByRole("button", { name: /Kod yuborish/i }).click();
+  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
+  await page.waitForTimeout(700); // backend log flush uchun
+  const code = latestOtpFor(phone);
+  await page.locator("input").first().fill(code);
+  await page.getByRole("button", { name: /Tasdiqlash/i }).click();
+  await page.waitForURL((url) => !url.pathname.includes("tasdiqlash"), { timeout: 10_000 });
+}
+
+/** Haqiqiy `/kirish` UI oqimi orqali MAVJUD hisobga kiradi — telefon
+    oldindan (masalan `registerViaUi` bilan) ro'yxatdan o'tgan bo'lishi
+    SHART, aks holda "hisob topilmadi" CTA chiqadi (`auth.spec.ts`da shu
+    holat alohida sinaladi). */
+export async function loginViaUi(page: Page, phone: string): Promise<void> {
   await page.goto("/kirish", { waitUntil: "networkidle" });
   const local = phone.replace("+998", "");
   await page.locator("input").first().fill(local);
@@ -116,7 +147,7 @@ export async function loginBuyer(browser: Browser): Promise<{ context: BrowserCo
   const phone = freshPhone();
   const context = await browser.newContext();
   const page = await context.newPage();
-  await otpLogin(page, phone);
+  await registerViaUi(page, phone);
   await chooseRole(page, "Xaridor");
   return { context, page, phone };
 }
@@ -132,7 +163,7 @@ export async function setupApprovedSeller(
   const phone = freshPhone();
   const context = await browser.newContext();
   const page = await context.newPage();
-  await otpLogin(page, phone);
+  await registerViaUi(page, phone);
   await chooseRole(page, "Mutaxassis");
 
   runDbCommand(

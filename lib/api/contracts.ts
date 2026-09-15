@@ -55,10 +55,31 @@ export interface AuthService {
    * Haqiqiy tekshiruv har so'rovda server tomonida bo'ladi.
    */
   getSession(): Model.Session | null;
-  /** `POST /auth/otp/request` — har doim `{sent:true}` (enumeration himoyasi) */
-  requestOtp(phone: string): Promise<{ sent: true }>;
-  /** `POST /auth/otp/verify` — httpOnly refresh cookie o'rnatadi, sessiya yozadi */
-  verifyOtp(phone: string, code: string): Promise<Model.Session>;
+  /**
+   * Bosqich 20 — LOGIN va REGISTER ALOHIDA niyat (`intent: "LOGIN" |
+   * "REGISTER"`, backend `POST /auth/otp/request`/`verify`ga shu maydon
+   * bilan yuboriladi — bu KANAL EMAS, OTP hamon faqat SMS orqali).
+   *
+   * `requestLoginOtp`/`requestRegisterOtp` — har doim `{sent:true}`
+   * (enumeration himoyasi, intentdan qat'iy nazar).
+   */
+  requestLoginOtp(phone: string): Promise<{ sent: true }>;
+  requestRegisterOtp(phone: string): Promise<{ sent: true }>;
+  /**
+   * `verifyLoginOtp` — FAQAT mavjud hisobni autentifikatsiya qiladi,
+   * User HECH QACHON yaratmaydi. Hisob topilmasa `ApiError.message ===
+   * "USER_NOT_FOUND"` bilan tashlanadi (sahifa "Ro'yxatdan o'tish" CTA
+   * ko'rsatadi) — bu ma'lumot faqat VALID OTP tasdiqlangandan keyin
+   * beriladi.
+   */
+  verifyLoginOtp(phone: string, code: string): Promise<Model.Session>;
+  /**
+   * `verifyRegisterOtp` — foydalanuvchi yaratishning YAGONA yo'li. Telefon
+   * allaqachon ro'yxatdan o'tgan bo'lsa `ApiError.message === "PHONE_EXISTS"`
+   * bilan tashlanadi (sahifa "Kirish" CTA ko'rsatadi), YANGI User
+   * yaratilmaydi.
+   */
+  verifyRegisterOtp(phone: string, code: string): Promise<Model.Session>;
   chooseRole(role: Model.UserRole): Promise<Model.Session>;
   /**
    * Access token'ni yangilaydi (`POST /auth/refresh`).

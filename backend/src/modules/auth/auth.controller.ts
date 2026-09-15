@@ -39,15 +39,24 @@ export class AuthController {
    * Har doim generic `{ sent: true }` qaytaradi — ro'yxatdan o'tgan/
    * o'tmagan telefon farqlanmaydi (enumeration himoyasi). Haqiqiy
    * xato FAQAT rate-limit (`RATE_LIMITED`) yoki noto'g'ri format bo'lsa chiqadi.
+   * `dto.intent` — LOGIN yoki REGISTER (OTP yetkazish baribir SMS-only,
+   * `intent` kanal EMAS).
    */
   @Public()
   @Post('otp/request')
   @HttpCode(200)
   async requestOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<{ sent: true }> {
-    await this.auth.requestOtp(dto.phone, req.ip);
+    await this.auth.requestOtp(dto.phone, dto.intent, req.ip);
     return { sent: true };
   }
 
+  /**
+   * Bosqich 20 — `dto.intent` LOGIN/REGISTER'ga qarab `AuthService.login`/
+   * `register`ga tarqatiladi: LOGIN hech qachon User yaratmaydi
+   * (`USER_NOT_FOUND`), REGISTER hech qachon mavjud hisobga tegmaydi
+   * (`PHONE_EXISTS`) — ikkalasi ham faqat VALID OTP'dan keyin oshkor
+   * bo'ladi.
+   */
   @Public()
   @Post('otp/verify')
   @HttpCode(200)
@@ -57,7 +66,10 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthSessionDto> {
-    const result = await this.auth.verifyOtpAndLogin(dto.phone, dto.code, requestMeta(req));
+    const result =
+      dto.intent === 'REGISTER'
+        ? await this.auth.register(dto.phone, dto.code, requestMeta(req))
+        : await this.auth.login(dto.phone, dto.code, requestMeta(req));
     this.setCookie(res, result.refreshToken);
     return toSessionDto(result);
   }

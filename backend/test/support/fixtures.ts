@@ -43,18 +43,23 @@ export interface UserSession {
   accessToken: string;
 }
 
-/** OTP orqali yangi marketplace foydalanuvchi yaratadi va (ixtiyoriy) rolni tanlaydi. */
+/** OTP orqali yangi marketplace foydalanuvchi yaratadi va (ixtiyoriy) rolni tanlaydi.
+    Bosqich 20 — `intent: 'REGISTER'` majburiy: bu funksiya har doim YANGI
+    User yaratadi, LOGIN esa hech qachon yaratmaydi. */
 export async function loginNewUser(
   app: INestApplication,
   sms: CapturingSmsProvider,
   role?: 'BUYER' | 'SELLER',
 ): Promise<UserSession> {
   const phone = uniquePhone();
-  await request(app.getHttpServer()).post('/api/v1/auth/otp/request').send({ phone }).expect(200);
+  await request(app.getHttpServer())
+    .post('/api/v1/auth/otp/request')
+    .send({ phone, intent: 'REGISTER' })
+    .expect(200);
   await waitFor(() => sms.lastPhone === phone && !!sms.lastCode, { label: 'otp sms' });
   const verify = await request(app.getHttpServer())
     .post('/api/v1/auth/otp/verify')
-    .send({ phone, code: sms.lastCode })
+    .send({ phone, code: sms.lastCode, intent: 'REGISTER' })
     .expect(200);
   let accessToken = verify.body.accessToken as string;
   let userId = '';

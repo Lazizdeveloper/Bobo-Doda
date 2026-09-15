@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
-export default function TasdiqlashPage() {
+export default function RoyxatdanOtishTasdiqlashPage() {
   const { t } = useT();
   const router = useRouter();
   const pathname = usePathname();
@@ -18,10 +18,10 @@ export default function TasdiqlashPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  /* Valid OTP tasdiqlangandan KEYIN — hisob shu raqam bilan topilmadi.
-     Bu holatda generic xato o'rniga aniq CTA ko'rsatiladi ("Ro'yxatdan
-     o'tishni xohlaysizmi?") — bosqich 6 talabi. */
-  const [accountNotFound, setAccountNotFound] = useState(false);
+  /* Valid OTP tasdiqlangandan KEYIN — bu raqam bilan hisob ALLAQACHON bor.
+     Generic xato o'rniga aniq CTA ("Kirishni xohlaysizmi?") — bosqich 7
+     talabi. */
+  const [accountAlreadyExists, setAccountAlreadyExists] = useState(false);
 
   useEffect(() => {
     const session = authService.getSession();
@@ -30,9 +30,9 @@ export default function TasdiqlashPage() {
       if (pathname !== dest) router.replace(dest);
       return;
     }
-    const stored = window.sessionStorage.getItem("bd_login_otp_phone");
+    const stored = window.sessionStorage.getItem("bd_register_otp_phone");
     if (!stored) {
-      router.replace("/kirish");
+      router.replace("/royxatdan-otish");
       return;
     }
     setPhone(stored);
@@ -41,23 +41,23 @@ export default function TasdiqlashPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    setAccountNotFound(false);
+    setAccountAlreadyExists(false);
     if (!/^\d{6}$/.test(code)) {
       setError(t("auth.codeError"));
       return;
     }
     setLoading(true);
     try {
-      const session = await authService.verifyLoginOtp(phone, code);
-      window.sessionStorage.removeItem("bd_login_otp_phone");
+      const session = await authService.verifyRegisterOtp(phone, code);
+      window.sessionStorage.removeItem("bd_register_otp_phone");
       router.push(!session.role ? "/rol-tanlash" : session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
     } catch (err) {
       const errCode = err instanceof Error ? err.message : "";
-      if (errCode === "USER_NOT_FOUND") {
+      if (errCode === "PHONE_EXISTS") {
         // Telefon egaligi ENDI isbotlangan (OTP valid edi) — shuning uchun
-        // "hisob yo'q" ma'lumotini shu bosqichda ko'rsatish enumeration
-        // xavfsizligini buzmaydi.
-        setAccountNotFound(true);
+        // "hisob allaqachon bor" ma'lumotini shu bosqichda ko'rsatish
+        // enumeration xavfsizligini buzmaydi.
+        setAccountAlreadyExists(true);
         window.sessionStorage.setItem("bd_prefill_phone", phone);
         setLoading(false);
         return;
@@ -71,7 +71,7 @@ export default function TasdiqlashPage() {
     setResending(true);
     setError("");
     try {
-      await authService.requestLoginOtp(phone);
+      await authService.requestRegisterOtp(phone);
     } catch {
       /* jimgina — foydalanuvchi baribir kodni qayta kiritishga urinadi */
     } finally {
@@ -82,25 +82,25 @@ export default function TasdiqlashPage() {
   return (
     <div className="rounded-3xl sm:rounded-[32px] border border-line/80 bg-card p-7 sm:p-12 lg:p-14 shadow-2xl shadow-black/5">
       <div className="mb-5">
-        <BackButton href="/kirish" label={t("auth.backToLogin")} />
+        <BackButton href="/royxatdan-otish" label={t("auth.tabRegister")} />
       </div>
       <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-primary">
         <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
         {t("auth.finalStep")}
       </span>
       <h1 className="mt-2.5 font-heading text-2xl sm:text-3xl lg:text-4xl font-black text-ink tracking-tight">
-        {t("auth.confirmLoginTitle")}
+        {t("auth.confirmRegisterTitle")}
       </h1>
       <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed">
         {t("auth.otpSentTo")} <strong className="text-ink">{phone}</strong>
       </p>
 
-      {accountNotFound ? (
+      {accountAlreadyExists ? (
         <div className="mt-8 rounded-2xl border border-line bg-surface p-5 text-center">
-          <p className="text-sm text-ink">{t("auth.accountNotFound")}</p>
-          <Link href="/royxatdan-otish" className="mt-4 inline-block">
+          <p className="text-sm text-ink">{t("auth.accountAlreadyExists")}</p>
+          <Link href="/kirish" className="mt-4 inline-block">
             <Button size="lg" className="!h-12 !text-sm font-bold !rounded-xl">
-              {t("auth.tabRegister")}
+              {t("auth.tabLogin")}
             </Button>
           </Link>
         </div>

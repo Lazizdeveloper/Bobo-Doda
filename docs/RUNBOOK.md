@@ -1616,3 +1616,126 @@ cd backend && nix-shell --run "npx jest src/modules/auth/otp-policy.audit.spec.t
 # cooldown/IP-limit/channel-whitelist) — E2E_SUPERUSER_URL §18/19dagidek
 cd backend && nix-shell --run 'E2E_SUPERUSER_URL="postgresql://bobododa@127.0.0.1:5432/postgres" npm run test:e2e'
 ```
+
+## 20. Login va Registration ajratilishi (Bosqich 20)
+
+**O'zgarish**: avvalgi combined oqim (`/kirish` — telefon → SMS OTP →
+verify → mavjud bo'lmasa AVTO-CREATE) olib tashlandi. Endi **LOGIN va
+REGISTER ikkita alohida sahifa/niyat**:
+
+```text
+LOGIN    = FAQAT mavjud User'ni autentifikatsiya qiladi. HECH QACHON
+           yangi User yaratmaydi.
+REGISTER = User yaratishning YAGONA yo'li. HECH QACHON mavjud hisobga
+           ustidan yozmaydi.
+Ikkalasi ham = SMS OTP orqali (parol yo'q, email/Telegram OTP yo'q —
+           §19dagi SMS-ONLY siyosat o'zgarmadi).
+```
+
+### Arxitektura qarorlari
+
+- **API — bitta endpoint juftligi, `intent` maydoni bilan** (yangi endpoint
+  juftligi EMAS): `POST /auth/otp/request` va `POST /auth/otp/verify`
+  ikkalasi ham endi majburiy `intent: "LOGIN" | "REGISTER"` (Prisma
+  `AuthIntent` enum) qabul qiladi. Bu **kanal EMAS** (§19dagi "channel"
+  taqiqi bilan chalkashtirilmasin) — OTP yetkazilishi baribir 100% SMS,
+  `intent` faqat "bu challenge qaysi oqim uchun" ma'nosini bildiradi.
+  Sabab: alohida `/auth/login/*`/`/auth/register/*` endpoint juftligi
+  OTP mexanikasining (rate-limit/hash/single-use) 95%ini ikki marta
+  takrorlagan bo'lardi — overengineering.
+- **`OtpCode.intent` — yangi ustun** (`AuthIntent` enum, migration
+  `20260915120000_stage20_auth_intent`). `OtpService.verifyOtp`ning
+  `WHERE`i endi `{phone, intent, consumedAt: null, expiresAt: {gt: now}}`
+  — LOGIN uchun so'ralgan challenge REGISTER verify'da **UMUMAN
+  topilmaydi** (INVALID_CODE, xuddi mavjud bo'lmagandek), va aksincha.
+- **Cooldown — `phone+intent` bo'yicha ajratilgan**, kunlik/IP chegara
+  esa **umumiy** (faqat `phone`/`ip`): "hisob topilmadi → Ro'yxatdan
+  o'tish" CTA'sidan keyin foydalanuvchi 60s kutmasdan REGISTER kodini
+  olishi kerak (UX), lekin kunlik/soatlik hajm chegarasi LOGIN/REGISTER
+  almashtirib IKKI BARAVAR oshirilmasin (xavfsizlik — `otp.service.ts`
+  izohi).
+- **`AuthService.login`/`register`** — avvalgi yagona
+  `verifyOtpAndLogin` ikkiga bo'lindi:
+  - `login()`: `User` topilmasa `NotFoundError('...', 'USER_NOT_FOUND')`
+    — **mavjud** xato kodi (`ERROR_CODES.USER_NOT_FOUND`, 404),
+    duplikat taksonomiya YARATILMADI (§21 talabi).
+  - `register()`: `prisma.user.create()` to'g'ridan-to'g'ri chaqiriladi
+    (avval `findUnique`+`create` EMAS) — DB `User.phone @unique`
+    cheklovi RACE-SAFE yagona haqiqat manbai. `Prisma.
+    PrismaClientKnownRequestError` `P2002`ni ushlab `ConflictError('
+    PHONE_EXISTS', ...)`ga tarjima qiladi (loyihada allaqachon 8+ joyda
+    ishlatiladigan naqsh — `category.service.ts` va h.k.). Boshqa
+    Prisma xatosi QAYTA TASHLANADI (yutilmaydi).
+- **Enumeration xavfsizligi saqlanadi**: `USER_NOT_FOUND`/`PHONE_EXISTS`
+  faqat **VALID OTP tasdiqlangandan KEYIN** (`verify` bosqichida)
+  oshkor bo'ladi — `request` bosqichi hamon har doim generic
+  `{sent:true}` qaytaradi (telefon mavjud/mavjud emasligidan qat'iy
+  nazar).
+
+### Yangi frontend routes
+
+```text
+/kirish                    — LOGIN: telefon → SMS OTP → mavjud hisobga
+/kirish/tasdiqlash         — LOGIN OTP verify; USER_NOT_FOUND → "Hisob
+                              topilmadi. Ro'yxatdan o'tishni xohlaysiz-
+                              mi?" CTA (/royxatdan-otish, prefill bilan)
+/royxatdan-otish            — REGISTER: telefon → SMS OTP → yangi hisob
+/royxatdan-otish/tasdiqlash — REGISTER OTP verify; PHONE_EXISTS →
+                              "Hisob allaqachon mavjud. Kirishni
+                              xohlaysizmi?" CTA (/kirish, prefill bilan)
+```
+
+Muvaffaqiyatli REGISTER → `/rol-tanlash` (rol tanlash FAQAT bu yerda —
+mavjud foydalanuvchi LOGIN qilganda hech qachon qayta so'ralmaydi,
+chunki uning `roleChosen`/`lastActiveRole`i allaqachon bor). Muvaffaqiyatli
+LOGIN → to'g'ridan-to'g'ri kabinet (yoki onboarding davom etadi, sessiya
+holatidan aniqlanadi — o'zgarmagan mantiq).
+
+`sessionStorage` — ikkala oqim MUSTAQIL kalit ishlatadi
+(`bd_login_otp_phone` / `bd_register_otp_phone`), intent chalkashib
+ketmasin deb ATAYLAB (§18/19 talabi — sensitive OTP context xavfsiz
+saqlanishi). "Hisob topilmadi"/"allaqachon mavjud" CTA'lari
+`bd_prefill_phone` orqali telefonni ikkinchi sahifaga oldindan
+to'ldiradi (kichik UX yaxshilanishi — majburiy emas edi, lekin CTA'ning
+o'zi past-friction pivotni nazarda tutadi).
+
+Redirect xavfsizligi: hech qaysi sahifa query-param orqali arbitrary
+`redirect=`ni qabul qilmaydi — muvaffaqiyatli login/register'dan keyingi
+yo'naltirish har doim FIXED, ichki marshrutlar (`/xaridor`, `/mutaxassis`,
+`/mutaxassis/royxat`, `/rol-tanlash`) orasidan sessiya holatiga qarab
+hisoblanadi — open redirect yuzasi yo'q.
+
+### Testlar
+
+- **Backend unit** (`auth.service.spec.ts`, fake Prisma/OtpService):
+  LOGIN mavjud/mavjud-emas, LOGIN hech qachon `create` chaqirmaydi,
+  REGISTER yangi/mavjud (P2002→PHONE_EXISTS), P2002-dan-boshqa xato
+  qayta tashlanadi, yaroqsiz OTP User yaratmaydi.
+- **Backend e2e** (`test/auth.e2e-spec.ts`, real Postgres+Redis, 37 test):
+  yuqoridagilar + intent-binding (LOGIN OTP REGISTER'da ishlamaydi va
+  aksincha) + **10 ta parallel verify (bir xil kod) → FAQAT bitta User**
+  (real DB unique constraint ostida) + cooldown intent-ajratilgan +
+  kunlik chegara intent-umumiy (bypass qilib bo'lmaydi) + eski
+  regressiyalar (refresh rotatsiya/reuse, rol tanlash, sessiya egaligi).
+- **Frontend Playwright** (`tests/e2e/auth.spec.ts`, 6 test): to'liq
+  REGISTER oqimi (noto'g'ri kod → to'g'ri kod → rol tanlash →
+  dashboard), to'liq LOGIN oqimi, "hisob topilmadi" CTA + prefill,
+  "hisob allaqachon mavjud" CTA + prefill, ikkala sahifada email/
+  Telegram/Google variant yo'qligi (§19 regressiya tekshiruvi).
+  `tests/e2e/helpers.ts#registerViaUi`/`loginViaUi` — avvalgi
+  `otpLogin()` (har doim yangi telefon bilan chaqirilardi, ya'ni aslida
+  REGISTER semantikasi) ikkiga aniq bo'lindi;
+  `tests/e2e/admin-helpers.ts#otpLoginToken` ham `intent: "REGISTER"`
+  bilan yangilandi (u ham har doim `freshPhone()` bilan chaqiriladi).
+
+### Migratsiya (dev DB ownership anomaliyasi)
+
+`otp_codes`/`sms_logs` jadvallari lokal dev DB'da (aniqlanmagan tarixiy
+sabab bilan) `bobododa_migrator` o'rniga superuser `bobododa`ga tegishli
+edi (boshqa BARCHA jadval to'g'ri `bobododa_migrator`da) — bu Bosqich
+20 migratsiyasini `bobododa_migrator` bilan (standart `prisma migrate
+deploy` yo'li) qo'llashni bloklagan (`must be owner of table
+otp_codes`). Tuzatildi: `ALTER TABLE otp_codes OWNER TO
+bobododa_migrator;` (superuser bilan, bir martalik). Bu FAQAT lokal dev
+anomaliyasi edi — yangi/boshqa muhitlarda takrorlanmasligi kerak
+(`roles.sql` barcha jadvalni to'g'ri rolga yaratadi).

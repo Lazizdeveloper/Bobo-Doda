@@ -8,7 +8,10 @@ import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 
-export default function KirishPage() {
+/** Bosqich 20 — Login'dan ALOHIDA oqim: bu sahifa FAQAT yangi hisob
+    yaratadi (`authService.requestRegisterOtp`). Parol yo'q, OTP faqat
+    SMS orqali (`/kirish/tasdiqlash`dagi bilan bir xil xavfsizlik). */
+export default function RoyxatdanOtishPage() {
   const { t } = useT();
   const router = useRouter();
   const pathname = usePathname();
@@ -22,7 +25,7 @@ export default function KirishPage() {
   useEffect(() => {
     const session = authService.getSession();
     if (!session) {
-      // "Hisob allaqachon mavjud" CTA'dan kelgan bo'lsa telefon oldindan to'ldiriladi.
+      // "Hisob topilmadi" CTA'dan kelgan bo'lsa telefon oldindan to'ldiriladi.
       const prefill = window.sessionStorage.getItem("bd_prefill_phone");
       if (prefill) {
         setPhone(prefill);
@@ -46,9 +49,9 @@ export default function KirishPage() {
     setLoading(true);
     setError("");
     try {
-      await authService.requestLoginOtp(phone.trim());
-      window.sessionStorage.setItem("bd_login_otp_phone", phone.trim());
-      router.push("/kirish/tasdiqlash");
+      await authService.requestRegisterOtp(phone.trim());
+      window.sessionStorage.setItem("bd_register_otp_phone", phone.trim());
+      router.push("/royxatdan-otish/tasdiqlash");
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
       setError(code === "RATE_LIMITED" ? t("auth.errRateLimited") : t("common.error"));
@@ -64,13 +67,13 @@ export default function KirishPage() {
         <span className="font-heading font-black text-lg tracking-tight text-ink">BOBO&amp;DODA</span>
       </Link>
       <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-black text-ink tracking-tight">
-        {t("auth.loginTitle")}
+        {t("auth.registerTitle")}
       </h1>
       <p className="mt-2.5 text-sm sm:text-base text-muted leading-relaxed">{t("auth.otpIntro")}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5" noValidate>
         <CountryPhoneInput
-          id="otp-phone"
+          id="register-otp-phone"
           value={phone}
           label={t("auth.regPhone")}
           error={error}
@@ -86,9 +89,9 @@ export default function KirishPage() {
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
-        {t("auth.noAccount")}{" "}
-        <Link href="/royxatdan-otish" className="font-semibold text-primary hover:underline">
-          {t("auth.tabRegister")}
+        {t("auth.haveAccount")}{" "}
+        <Link href="/kirish" className="font-semibold text-primary hover:underline">
+          {t("auth.tabLogin")}
         </Link>
       </p>
 

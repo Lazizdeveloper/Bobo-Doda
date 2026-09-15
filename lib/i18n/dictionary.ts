@@ -564,8 +564,17 @@ export const dictionary: Record<string, Entry> = {
   "auth.backToLogin": { uz: "Kirishga qaytish", ru: "Вернуться ко входу" },
   "auth.noAccount": { uz: "Akkountingiz yo'qmi?", ru: "Нет аккаунта?" },
   "auth.haveAccount": { uz: "Akkountingiz bormi?", ru: "Уже есть аккаунт?" },
+  "auth.accountNotFound": {
+    uz: "Bu telefon raqam bilan hisob topilmadi. Ro'yxatdan o'tishni xohlaysizmi?",
+    ru: "Аккаунт с этим номером телефона не найден. Хотите зарегистрироваться?",
+  },
+  "auth.accountAlreadyExists": {
+    uz: "Bu telefon raqam bilan hisob allaqachon mavjud. Kirishni xohlaysizmi?",
+    ru: "Аккаунт с этим номером телефона уже существует. Хотите войти?",
+  },
   "auth.finalStep": { uz: "Yakuniy bosqich", ru: "Последний шаг" },
-  "auth.confirmTitle": { uz: "Akkountni tasdiqlang", ru: "Подтвердите аккаунт" },
+  "auth.confirmLoginTitle": { uz: "Kirishni tasdiqlash", ru: "Подтверждение входа" },
+  "auth.confirmRegisterTitle": { uz: "Akkountni tasdiqlang", ru: "Подтвердите аккаунт" },
   "auth.otpIntro": {
     uz: "Telefon raqamingizni kiriting — SMS orqali bir martalik kod yuboramiz.",
     ru: "Введите номер телефона — мы отправим одноразовый код по SMS.",

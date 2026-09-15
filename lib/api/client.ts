@@ -120,22 +120,31 @@ async function hydrateContract(c: RealContract, role: Model.UserRole | null): Pr
 /* ==========================================================================
    AUTH — OTP asosida (parol YO'Q). Sessiya snapshot `lib/api/http.ts`da.
    ========================================================================== */
+function requestOtp(phone: string, intent: "LOGIN" | "REGISTER"): Promise<{ sent: true }> {
+  return call(async () => http<{ sent: true }>("/auth/otp/request", { method: "POST", body: { phone, intent } }));
+}
+
+function verifyOtp(phone: string, code: string, intent: "LOGIN" | "REGISTER"): Promise<Model.Session> {
+  return call(async () => {
+    const res = await http<RealAuthSession>("/auth/otp/verify", { method: "POST", body: { phone, code, intent } });
+    setAccessToken(res.accessToken);
+    const session: Model.Session = {
+      userId: decodeJwtSub(res.accessToken),
+      role: roleToUz(res.activeRole),
+      profileDone: res.profileDone,
+      verified: true,
+    };
+    sessionStore.write(session);
+    return session;
+  });
+}
+
 export const authService: AuthService = {
   getSession: sessionStore.read,
-  requestOtp: (phone) => call(async () => http<{ sent: true }>("/auth/otp/request", { method: "POST", body: { phone } })),
-  verifyOtp: (phone, code) =>
-    call(async () => {
-      const res = await http<RealAuthSession>("/auth/otp/verify", { method: "POST", body: { phone, code } });
-      setAccessToken(res.accessToken);
-      const session: Model.Session = {
-        userId: decodeJwtSub(res.accessToken),
-        role: roleToUz(res.activeRole),
-        profileDone: res.profileDone,
-        verified: true,
-      };
-      sessionStore.write(session);
-      return session;
-    }),
+  requestLoginOtp: (phone) => requestOtp(phone, "LOGIN"),
+  requestRegisterOtp: (phone) => requestOtp(phone, "REGISTER"),
+  verifyLoginOtp: (phone, code) => verifyOtp(phone, code, "LOGIN"),
+  verifyRegisterOtp: (phone, code) => verifyOtp(phone, code, "REGISTER"),
   chooseRole: (role) =>
     call(async () => {
       const res = await http<RealAuthSession>("/me/roles/choose", { method: "POST", body: { role: roleToReal(role) } });
