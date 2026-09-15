@@ -18,6 +18,9 @@ const DB_CMD =
 const WEBHOOK_SECRET = process.env.PAYMENT_TEST_WEBHOOK_SECRET || "test-only-insecure-secret-change-me";
 
 export const E2E_STAFF_PASSWORD = process.env.E2E_STAFF_PASSWORD || "E2eTest#2026Pass";
+/** Bosqich 21 — `seedAdminTestData`dagi xaridor/sotuvchi fixture hisoblari
+    uchun (staff parolidan MUSTAQIL — marketplace User, StaffMember emas). */
+const E2E_FIXTURE_PASSWORD = "E2eFixturePass1!";
 export const SUPER_ADMIN_EMAIL = "super@e2e.test";
 export const RESET_ADMIN_EMAIL = "reset@e2e.test";
 export const RESTRICTED_ADMIN_EMAIL = "restricted@e2e.test";
@@ -80,29 +83,42 @@ export async function seedAdminTestData(): Promise<{
   const buyerPhone = freshPhone();
   const sellerPhone = freshPhone();
 
-  // Bosqich 20 — `freshPhone()` bilan chaqirilgani uchun (har doim YANGI
-  // raqam) bu funksiya har doim REGISTER, LOGIN emas.
-  async function otpLoginToken(phone: string): Promise<string> {
-    const reqRes = await fetch(`${ADMIN_API_BASE}/auth/otp/request`, {
+  // Bosqich 21 — `freshPhone()` bilan chaqirilgani uchun (har doim YANGI
+  // raqam) bu funksiya har doim to'liq REGISTER oqimi (request-otp →
+  // verify-otp → complete, parol bilan — login endi SMS ishtirokisiz).
+  async function registerFixtureToken(phone: string): Promise<string> {
+    const reqRes = await fetch(`${ADMIN_API_BASE}/auth/register/request-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, intent: "REGISTER" }),
+      body: JSON.stringify({ phone }),
     });
-    if (reqRes.status !== 200) throw new Error(`otp/request ${phone}: ${reqRes.status} ${await reqRes.text()}`);
+    if (reqRes.status !== 200) throw new Error(`register/request-otp ${phone}: ${reqRes.status} ${await reqRes.text()}`);
     await new Promise((r) => setTimeout(r, 500));
     const code = latestOtpFor(phone);
-    const verifyRes = await fetch(`${ADMIN_API_BASE}/auth/otp/verify`, {
+    const verifyRes = await fetch(`${ADMIN_API_BASE}/auth/register/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, code, intent: "REGISTER" }),
+      body: JSON.stringify({ phone, code }),
     });
-    const session = (await verifyRes.json()) as { accessToken?: string };
-    if (!session.accessToken) throw new Error(`otp/verify ${phone}: ${JSON.stringify(session)}`);
+    const grant = (await verifyRes.json()) as { registrationToken?: string };
+    if (!grant.registrationToken) throw new Error(`register/verify-otp ${phone}: ${JSON.stringify(grant)}`);
+
+    const completeRes = await fetch(`${ADMIN_API_BASE}/auth/register/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        registrationToken: grant.registrationToken,
+        password: E2E_FIXTURE_PASSWORD,
+        confirmPassword: E2E_FIXTURE_PASSWORD,
+      }),
+    });
+    const session = (await completeRes.json()) as { accessToken?: string };
+    if (!session.accessToken) throw new Error(`register/complete ${phone}: ${JSON.stringify(session)}`);
     return session.accessToken;
   }
 
-  const buyerTokenPre = await otpLoginToken(buyerPhone);
-  const sellerTokenPre = await otpLoginToken(sellerPhone);
+  const buyerTokenPre = await registerFixtureToken(buyerPhone);
+  const sellerTokenPre = await registerFixtureToken(sellerPhone);
 
   // `/me/roles/choose` YANGI accessToken qaytaradi (`activeRole` endi
   // to'ldirilgan) — eski (rol tanlanmagan) token bilan davom etilsa

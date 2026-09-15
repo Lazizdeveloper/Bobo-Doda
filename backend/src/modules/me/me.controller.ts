@@ -14,6 +14,7 @@ import { MeService } from './me.service';
 import { MeResponseDto } from './dto/me-response.dto';
 import { SessionDto } from './dto/session.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 function toSessionDto(result: AuthResult): AuthSessionDto {
   return {
@@ -85,6 +86,20 @@ export class MeController {
   @ApiOkResponse({ type: SessionDto, isArray: true })
   async listSessions(@CurrentUser() user: AccessTokenPayload): Promise<SessionDto[]> {
     return this.me.listSessions(user.sub, user.familyId);
+  }
+
+  /** Bosqich 21 — joriy parolni bilgan holda almashtirish (recovery EMAS,
+      `AuthService.completePasswordReset`dan farqli — boshqa sessiyalar
+      bekor QILINMAYDI). */
+  @Post('change-password')
+  @UseGuards(AccountStatusGuard)
+  @HttpCode(200)
+  async changePassword(
+    @CurrentUser() user: AccessTokenPayload,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<{ ok: true }> {
+    await this.auth.changePassword(user.sub, dto.currentPassword, dto.newPassword);
+    return { ok: true };
   }
 
   /** Bitta sessiyani tugatish — FAQAT o'ziniki (`MeService.revokeSession` query-scoping). */

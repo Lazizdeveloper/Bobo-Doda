@@ -36,7 +36,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/otp/request": {
+    "/auth/register/request-otp": {
         parameters: {
             query?: never;
             header?: never;
@@ -45,14 +45,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AuthController_requestOtp"];
+        post: operations["AuthController_requestRegisterOtp"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/otp/verify": {
+    "/auth/register/verify-otp": {
         parameters: {
             query?: never;
             header?: never;
@@ -61,7 +61,87 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AuthController_verifyOtp"];
+        post: operations["AuthController_verifyRegisterOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/register/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthController_completeRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset/request-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthController_requestPasswordResetOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset/verify-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthController_verifyPasswordResetOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthController_completePasswordReset"];
         delete?: never;
         options?: never;
         head?: never;
@@ -175,6 +255,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["MeController_revokeAllSessions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MeController_changePassword"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1939,11 +2035,6 @@ export interface components {
         RequestOtpDto: {
             /** @example +998901234567 */
             phone: string;
-            /**
-             * @example LOGIN
-             * @enum {string}
-             */
-            intent: "LOGIN" | "REGISTER";
         };
         VerifyOtpDto: {
             /** @example +998901234567 */
@@ -1953,11 +2044,12 @@ export interface components {
              * @example 482913
              */
             code: string;
-            /**
-             * @example LOGIN
-             * @enum {string}
-             */
-            intent: "LOGIN" | "REGISTER";
+        };
+        CompleteRegistrationDto: {
+            /** @description `verify-otp` javobidagi qisqa umrli token */
+            registrationToken: string;
+            password: string;
+            confirmPassword: string;
         };
         AuthSessionDto: {
             /** @description Qisqa umrli JWT — `Authorization: Bearer <token>` */
@@ -1970,6 +2062,17 @@ export interface components {
             roleChosen: boolean;
             profileDone: boolean;
             isNewUser: boolean;
+        };
+        LoginDto: {
+            /** @example +998901234567 */
+            phone: string;
+            password: string;
+        };
+        CompletePasswordResetDto: {
+            /** @description `verify-otp` javobidagi qisqa umrli token */
+            resetToken: string;
+            password: string;
+            confirmPassword: string;
         };
         MeResponseDto: {
             id: string;
@@ -2020,6 +2123,10 @@ export interface components {
             /** @description Shu so‘rovni yuborgan tokenning o‘zi shu sessiyagami */
             current: boolean;
         };
+        ChangePasswordDto: {
+            currentPassword: string;
+            newPassword: string;
+        };
         StaffLoginDto: {
             /** @example admin@bobododa.uz */
             email: string;
@@ -2044,10 +2151,6 @@ export interface components {
             permissions: ("DASHBOARD" | "USERS" | "SERVICES" | "JOBS" | "ORDERS" | "KYC" | "DISPUTES" | "PAYMENTS" | "REPORTS" | "APPEALS" | "REVIEWS" | "SUPPORT" | "CATEGORIES" | "SETTINGS" | "AUDIT" | "STAFF")[];
             mfaEnabled: boolean;
             mustChangePassword: boolean;
-        };
-        ChangePasswordDto: {
-            currentPassword: string;
-            newPassword: string;
         };
         TotpEnrollResponseDto: {
             secret: string;
@@ -2758,7 +2861,7 @@ export interface operations {
             };
         };
     };
-    AuthController_requestOtp: {
+    AuthController_requestRegisterOtp: {
         parameters: {
             query?: never;
             header?: never;
@@ -2779,7 +2882,7 @@ export interface operations {
             };
         };
     };
-    AuthController_verifyOtp: {
+    AuthController_verifyRegisterOtp: {
         parameters: {
             query?: never;
             header?: never;
@@ -2796,9 +2899,116 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content?: never;
+            };
+        };
+    };
+    AuthController_completeRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteRegistrationDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["AuthSessionDto"];
                 };
+            };
+        };
+    };
+    AuthController_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionDto"];
+                };
+            };
+        };
+    };
+    AuthController_requestPasswordResetOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestOtpDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_verifyPasswordResetOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyOtpDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_completePasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompletePasswordResetDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2953,6 +3163,27 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeController_changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

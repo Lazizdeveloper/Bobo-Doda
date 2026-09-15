@@ -9,19 +9,22 @@ import { Input } from "@/components/ui/Input";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
-export default function TasdiqlashPage() {
+/** Bosqich 21 — ro'yxatdan o'tishning YAKUNIY bosqichi: OTP tasdiqlangan
+    (`registrationToken` sessionStorage'da), endi parol so'raladi. Muvaffaqi-
+    yatli bo'lsa `completeRegistration` User yaratadi + sessiya ochadi
+    (atomik, backend tomonida). Telefon allaqachon ro'yxatdan o'tgan bo'lsa
+    (`PHONE_EXISTS`) — bu ma'lumot FAQAT shu yerda, VALID OTP'dan keyin
+    oshkor bo'ladi (enumeration-safe). */
+export default function RoyxatdanOtishParolPage() {
   const { t } = useT();
   const router = useRouter();
   const pathname = usePathname();
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
+  const [registrationToken, setRegistrationToken] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
-  /* Valid OTP tasdiqlangandan KEYIN — hisob shu raqam bilan topilmadi.
-     Bu holatda generic xato o'rniga aniq CTA ko'rsatiladi ("Ro'yxatdan
-     o'tishni xohlaysizmi?") — bosqich 6 talabi. */
-  const [accountNotFound, setAccountNotFound] = useState(false);
+  const [accountAlreadyExists, setAccountAlreadyExists] = useState(false);
 
   useEffect(() => {
     const session = authService.getSession();
@@ -30,104 +33,99 @@ export default function TasdiqlashPage() {
       if (pathname !== dest) router.replace(dest);
       return;
     }
-    const stored = window.sessionStorage.getItem("bd_login_otp_phone");
+    const stored = window.sessionStorage.getItem("bd_registration_token");
     if (!stored) {
-      router.replace("/kirish");
+      router.replace("/royxatdan-otish");
       return;
     }
-    setPhone(stored);
+    setRegistrationToken(stored);
   }, [router, pathname]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    setAccountNotFound(false);
-    if (!/^\d{6}$/.test(code)) {
-      setError(t("auth.codeError"));
+    setAccountAlreadyExists(false);
+    if (password.length < 8 || !/\S/.test(password)) {
+      setError(t("security.passwordRules"));
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(t("auth.errPasswordMatch"));
       return;
     }
     setLoading(true);
     try {
-      const session = await authService.verifyLoginOtp(phone, code);
-      window.sessionStorage.removeItem("bd_login_otp_phone");
+      const session = await authService.completeRegistration(registrationToken, password, confirmPassword);
+      window.sessionStorage.removeItem("bd_registration_token");
+      window.sessionStorage.removeItem("bd_register_otp_phone");
       router.push(!session.role ? "/rol-tanlash" : session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
     } catch (err) {
       const errCode = err instanceof Error ? err.message : "";
-      if (errCode === "USER_NOT_FOUND") {
-        // Telefon egaligi ENDI isbotlangan (OTP valid edi) — shuning uchun
-        // "hisob yo'q" ma'lumotini shu bosqichda ko'rsatish enumeration
-        // xavfsizligini buzmaydi.
-        setAccountNotFound(true);
-        window.sessionStorage.setItem("bd_prefill_phone", phone);
+      if (errCode === "PHONE_EXISTS") {
+        setAccountAlreadyExists(true);
         setLoading(false);
         return;
       }
-      setError(errCode === "RATE_LIMITED" ? t("auth.errRateLimited") : t("auth.codeError"));
+      if (errCode === "TOKEN_EXPIRED") {
+        window.sessionStorage.removeItem("bd_registration_token");
+        router.replace("/royxatdan-otish");
+        return;
+      }
+      setError(t("common.error"));
       setLoading(false);
-    }
-  }
-
-  async function handleResend() {
-    setResending(true);
-    setError("");
-    try {
-      await authService.requestLoginOtp(phone);
-    } catch {
-      /* jimgina — foydalanuvchi baribir kodni qayta kiritishga urinadi */
-    } finally {
-      setResending(false);
     }
   }
 
   return (
     <div className="rounded-3xl sm:rounded-[32px] border border-line/80 bg-card p-7 sm:p-12 lg:p-14 shadow-2xl shadow-black/5">
       <div className="mb-5">
-        <BackButton href="/kirish" label={t("auth.backToLogin")} />
+        <BackButton href="/royxatdan-otish" label={t("auth.tabRegister")} />
       </div>
       <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-primary">
         <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
         {t("auth.finalStep")}
       </span>
       <h1 className="mt-2.5 font-heading text-2xl sm:text-3xl lg:text-4xl font-black text-ink tracking-tight">
-        {t("auth.confirmLoginTitle")}
+        {t("auth.createPasswordTitle")}
       </h1>
-      <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed">
-        {t("auth.otpSentTo")} <strong className="text-ink">{phone}</strong>
-      </p>
+      <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed">{t("auth.createPasswordIntro")}</p>
 
-      {accountNotFound ? (
+      {accountAlreadyExists ? (
         <div className="mt-8 rounded-2xl border border-line bg-surface p-5 text-center">
-          <p className="text-sm text-ink">{t("auth.accountNotFound")}</p>
-          <Link href="/royxatdan-otish" className="mt-4 inline-block">
+          <p className="text-sm text-ink">{t("auth.accountAlreadyExists")}</p>
+          <Link href="/kirish" className="mt-4 inline-block">
             <Button size="lg" className="!h-12 !text-sm font-bold !rounded-xl">
-              {t("auth.tabRegister")}
+              {t("auth.tabLogin")}
             </Button>
           </Link>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
           <Input
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            placeholder="••••••"
-            aria-label={t("auth.verifyTitle")}
-            error={error}
-            className="!h-16 sm:!h-20 text-center text-2xl sm:text-3xl font-black tracking-[0.5em] !rounded-2xl"
+            type="password"
+            autoComplete="new-password"
+            label={t("auth.newPassword")}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (error) setError("");
+            }}
             autoFocus
           />
+          <Input
+            type="password"
+            autoComplete="new-password"
+            label={t("auth.confirmPassword")}
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              if (error) setError("");
+            }}
+            error={error}
+          />
           <Button type="submit" size="lg" loading={loading} className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl">
-            {t("auth.verifyBtn")}
+            {t("auth.createAccountBtn")}
           </Button>
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resending}
-            className="text-xs sm:text-sm font-semibold text-primary hover:underline py-1 disabled:opacity-50"
-          >
-            {resending ? t("common.loading") : t("auth.resendCode")}
-          </button>
         </form>
       )}
 

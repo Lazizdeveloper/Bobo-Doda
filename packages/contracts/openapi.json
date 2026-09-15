@@ -53,9 +53,9 @@
         ]
       }
     },
-    "/auth/otp/request": {
+    "/auth/register/request-otp": {
       "post": {
-        "operationId": "AuthController_requestOtp",
+        "operationId": "AuthController_requestRegisterOtp",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -77,9 +77,9 @@
         ]
       }
     },
-    "/auth/otp/verify": {
+    "/auth/register/verify-otp": {
       "post": {
-        "operationId": "AuthController_verifyOtp",
+        "operationId": "AuthController_verifyRegisterOtp",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -87,6 +87,30 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/register/complete": {
+      "post": {
+        "operationId": "AuthController_completeRegistration",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteRegistrationDto"
               }
             }
           }
@@ -101,6 +125,109 @@
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password-reset/request-otp": {
+      "post": {
+        "operationId": "AuthController_requestPasswordResetOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password-reset/verify-otp": {
+      "post": {
+        "operationId": "AuthController_verifyPasswordResetOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password-reset/complete": {
+      "post": {
+        "operationId": "AuthController_completePasswordReset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePasswordResetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
           }
         },
         "tags": [
@@ -283,6 +410,30 @@
       "delete": {
         "operationId": "MeController_revokeAllSessions",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/change-password": {
+      "post": {
+        "operationId": "MeController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -5217,19 +5368,10 @@
           "phone": {
             "type": "string",
             "example": "+998901234567"
-          },
-          "intent": {
-            "type": "string",
-            "enum": [
-              "LOGIN",
-              "REGISTER"
-            ],
-            "example": "LOGIN"
           }
         },
         "required": [
-          "phone",
-          "intent"
+          "phone"
         ]
       },
       "VerifyOtpDto": {
@@ -5243,20 +5385,33 @@
             "type": "string",
             "example": "482913",
             "description": "6 xonali OTP kodi"
-          },
-          "intent": {
-            "type": "string",
-            "enum": [
-              "LOGIN",
-              "REGISTER"
-            ],
-            "example": "LOGIN"
           }
         },
         "required": [
           "phone",
-          "code",
-          "intent"
+          "code"
+        ]
+      },
+      "CompleteRegistrationDto": {
+        "type": "object",
+        "properties": {
+          "registrationToken": {
+            "type": "string",
+            "description": "`verify-otp` javobidagi qisqa umrli token"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "confirmPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "registrationToken",
+          "password",
+          "confirmPassword"
         ]
       },
       "AuthSessionDto": {
@@ -5290,6 +5445,44 @@
           "roleChosen",
           "profileDone",
           "isNewUser"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+998901234567"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone",
+          "password"
+        ]
+      },
+      "CompletePasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "resetToken": {
+            "type": "string",
+            "description": "`verify-otp` javobidagi qisqa umrli token"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "confirmPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resetToken",
+          "password",
+          "confirmPassword"
         ]
       },
       "MeResponseDto": {
@@ -5462,6 +5655,23 @@
           "current"
         ]
       },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
       "StaffLoginDto": {
         "type": "object",
         "properties": {
@@ -5602,23 +5812,6 @@
           "permissions",
           "mfaEnabled",
           "mustChangePassword"
-        ]
-      },
-      "ChangePasswordDto": {
-        "type": "object",
-        "properties": {
-          "currentPassword": {
-            "type": "string"
-          },
-          "newPassword": {
-            "type": "string",
-            "minLength": 10,
-            "maxLength": 128
-          }
-        },
-        "required": [
-          "currentPassword",
-          "newPassword"
         ]
       },
       "TotpEnrollResponseDto": {

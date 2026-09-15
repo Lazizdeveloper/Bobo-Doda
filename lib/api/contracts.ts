@@ -56,30 +56,46 @@ export interface AuthService {
    */
   getSession(): Model.Session | null;
   /**
-   * Bosqich 20 — LOGIN va REGISTER ALOHIDA niyat (`intent: "LOGIN" |
-   * "REGISTER"`, backend `POST /auth/otp/request`/`verify`ga shu maydon
-   * bilan yuboriladi — bu KANAL EMAS, OTP hamon faqat SMS orqali).
+   * Bosqich 21 — parol bilan login. SMS xarajatini kamaytirish uchun: OTP
+   * FAQAT ro'yxatdan o'tish va parolni tiklashda (telefon egaligini
+   * isbotlash), ODDIY LOGIN'da SMS UMUMAN ishtirok etmaydi.
    *
-   * `requestLoginOtp`/`requestRegisterOtp` — har doim `{sent:true}`
-   * (enumeration himoyasi, intentdan qat'iy nazar).
+   * REGISTRATION: phone → `requestRegisterOtp` → SMS kod →
+   * `verifyRegisterOtp` (qisqa umrli `registrationToken` qaytaradi,
+   * User HALI yaratilmagan) → `completeRegistration` (parol + grant →
+   * User yaratiladi + sessiya ochiladi).
+   *
+   * `requestRegisterOtp` har doim `{sent:true}` (enumeration himoyasi).
    */
-  requestLoginOtp(phone: string): Promise<{ sent: true }>;
   requestRegisterOtp(phone: string): Promise<{ sent: true }>;
+  /** Telefon allaqachon ro'yxatdan o'tgan bo'lsa ENDI xato bermaydi (bu
+      tekshiruv `completeRegistration`da) — bu yerda faqat OTP haqiqiyligi
+      tekshiriladi. */
+  verifyRegisterOtp(phone: string, code: string): Promise<{ registrationToken: string }>;
   /**
-   * `verifyLoginOtp` — FAQAT mavjud hisobni autentifikatsiya qiladi,
-   * User HECH QACHON yaratmaydi. Hisob topilmasa `ApiError.message ===
-   * "USER_NOT_FOUND"` bilan tashlanadi (sahifa "Ro'yxatdan o'tish" CTA
-   * ko'rsatadi) — bu ma'lumot faqat VALID OTP tasdiqlangandan keyin
-   * beriladi.
+   * Grant + parol mos bo'lsa: User yaratiladi, sessiya ochiladi. Telefon
+   * allaqachon ro'yxatdan o'tgan bo'lsa `ApiError.message ===
+   * "PHONE_EXISTS"` bilan tashlanadi (sahifa "Kirish" CTA ko'rsatadi).
    */
-  verifyLoginOtp(phone: string, code: string): Promise<Model.Session>;
+  completeRegistration(registrationToken: string, password: string, confirmPassword: string): Promise<Model.Session>;
   /**
-   * `verifyRegisterOtp` — foydalanuvchi yaratishning YAGONA yo'li. Telefon
-   * allaqachon ro'yxatdan o'tgan bo'lsa `ApiError.message === "PHONE_EXISTS"`
-   * bilan tashlanadi (sahifa "Kirish" CTA ko'rsatadi), YANGI User
-   * yaratilmaydi.
+   * LOGIN: telefon + parol → sessiya. `SmsProvider` HECH QACHON
+   * chaqirilmaydi (asosiy invariant — SMS xarajati faqat register/reset'da).
+   * Noto'g'ri telefon va noto'g'ri parol bir xil `ApiError.message ===
+   * "INVALID_CREDENTIALS"` bilan tashlanadi (enumeration-safe).
    */
-  verifyRegisterOtp(phone: string, code: string): Promise<Model.Session>;
+  login(phone: string, password: string): Promise<Model.Session>;
+  /**
+   * FORGOT PASSWORD: phone → `requestPasswordResetOtp` → SMS kod (FAQAT
+   * hisob mavjud bo'lsa haqiqatan yuboriladi — javob baribir bir xil) →
+   * `verifyPasswordResetOtp` (qisqa umrli `resetToken`) →
+   * `completePasswordReset` (yangi parol — BARCHA eski sessiyalar bekor
+   * qilinadi, foydalanuvchi keyin `login()` bilan qaytadan kiradi —
+   * sessiya AVTOMATIK ochilmaydi).
+   */
+  requestPasswordResetOtp(phone: string): Promise<{ sent: true }>;
+  verifyPasswordResetOtp(phone: string, code: string): Promise<{ resetToken: string }>;
+  completePasswordReset(resetToken: string, password: string, confirmPassword: string): Promise<{ ok: true }>;
   chooseRole(role: Model.UserRole): Promise<Model.Session>;
   /**
    * Access token'ni yangilaydi (`POST /auth/refresh`).

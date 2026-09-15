@@ -1,12 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type AuthIntent, type Role } from '@prisma/client';
+import { Prisma, type Role } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
-import { ConflictError, DomainError, ForbiddenError, NotFoundError } from '@/common/errors/domain-error';
+import { HashService } from '@/common/security/hash.service';
+import { RateLimiterService } from '@/common/security/rate-limiter.service';
+import { AuditService } from '@/common/audit/audit.service';
+import { generateOpaqueToken } from '@/common/security/opaque-token.util';
+import {
+  ConflictError,
+  DomainError,
+  ForbiddenError,
+  UnauthenticatedError,
+  ValidationDomainError,
+} from '@/common/errors/domain-error';
 import { OtpService } from './otp.service';
+import { AuthGrantService } from './auth-grant.service';
 import { TokenService } from './token.service';
 import { RefreshTokenService, type RequestMeta } from './refresh-token.service';
 import type { AccessTokenPayload } from './types/token-payload';
+import {
+  LOGIN_IP_MAX_ATTEMPTS,
+  LOGIN_IP_WINDOW_SECONDS,
+  LOGIN_PHONE_MAX_ATTEMPTS,
+  LOGIN_PHONE_WINDOW_SECONDS,
+} from './constants/otp.constants';
 
 const PRISMA_UNIQUE_VIOLATION = 'P2002';
 
@@ -19,65 +36,77 @@ export interface AuthResult {
   isNewUser: boolean;
 }
 
+function assertPasswordsMatch(password: string, confirmPassword: string): void {
+  if (password !== confirmPassword) {
+    throw new ValidationDomainError({ confirmPassword: 'Parollar mos emas' });
+  }
+}
+
 /**
- * Marketplace auth orkestratori — `OtpService` (kod haqiqiyligi),
+ * Marketplace auth orkestratori — Bosqich 21: telefon+PAROL bilan login
+ * (SMS ishtirok etmaydi), SMS FAQAT ro'yxatdan o'tish va parolni tiklashda
+ * (telefon egaligini isbotlash). `OtpService` (kod haqiqiyligi),
+ * `AuthGrantService` (OTP-dan-keyingi qisqa umrli grant),
  * `RefreshTokenService` (sessiya/rotatsiya) va `TokenService` (JWT)ni
- * birlashtiradi. Bitta joyda: "OTP to'g'ri bo'lsa nima qilamiz" qarori.
+ * birlashtiradi.
  */
 @Injectable()
 export class AuthService {
+  /** Telefon topilmaganda ham HAQIQIY argon2id hisoblash vaqtini sarflash
+      uchun — bir marta yasalib keshlanadi (timing-orqali enumeration
+      himoyasi, `StaffAuthService`dagi bilan bir xil naqsh). */
+  private dummyHash: Promise<string> | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly ids: IdFactory,
+    private readonly hash: HashService,
+    private readonly limiter: RateLimiterService,
+    private readonly audit: AuditService,
     private readonly otp: OtpService,
+    private readonly grants: AuthGrantService,
     private readonly tokens: TokenService,
     private readonly refreshTokens: RefreshTokenService,
   ) {}
 
-  async requestOtp(phone: string, intent: AuthIntent, ip?: string): Promise<void> {
-    await this.otp.requestOtp(phone, intent, ip);
+  private getDummyHash(): Promise<string> {
+    this.dummyHash ??= this.hash.hash(generateOpaqueToken());
+    return this.dummyHash;
   }
 
-  /**
-   * Bosqich 20 — LOGIN faqat MAVJUD hisobni autentifikatsiya qiladi.
-   * Hech qachon `User` yaratmaydi: telefon topilmasa `USER_NOT_FOUND`
-   * (frontend "Ro'yxatdan o'tishni xohlaysizmi?" CTA'sini shu bilan
-   * ko'rsatadi). Bu ma'lumot faqat VALID OTP orqali telefon egaligi
-   * isbotlangandan keyin beriladi — enumeration xavfsiz (`requestOtp`
-   * hali ham generic javob qaytaradi).
-   */
-  async login(rawPhone: string, code: string, meta?: RequestMeta): Promise<AuthResult> {
-    const { phone } = await this.otp.verifyOtp(rawPhone, code, 'LOGIN');
+  /* ── REGISTER — telefon → SMS OTP → grant → parol → User ────────────── */
 
-    const user = await this.prisma.user.findUnique({ where: { phone } });
-    if (!user) {
-      throw new NotFoundError('Bu raqam bilan hisob topilmadi', 'USER_NOT_FOUND');
-    }
-
-    // Ko'p rolli qaytgan foydalanuvchi uchun oxirgi tanlangan kontekst;
-    // rol hali tanlanmagan bo'lsa — `null` ("pending onboarding" sessiya).
-    const activeRole = user.roleChosen ? (user.lastActiveRole ?? null) : null;
-
-    return this.issueSession(user.id, activeRole, {
-      roleChosen: user.roleChosen,
-      profileDone: user.profileDone,
-      isNewUser: false,
-      meta,
-    });
+  async requestRegisterOtp(phone: string, ip?: string): Promise<void> {
+    await this.otp.requestOtp(phone, 'REGISTER', { ip });
   }
 
-  /**
-   * Bosqich 20 — REGISTER foydalanuvchi yaratishning YAGONA yo'li.
-   * Telefon allaqachon ro'yxatdan o'tgan bo'lsa `PHONE_EXISTS` (frontend
-   * "Kirishni xohlaysizmi?" CTA'sini shu bilan ko'rsatadi) — YANGI User
-   * yaratilmaydi. Race-safe: parallel so'rovlar `User.phone`dagi DB
-   * darajasidagi UNIQUE cheklovga tayanadi (`findUnique`+`create` emas —
-   * to'g'ridan-to'g'ri `create`, P2002'ni ushlaymiz), shuning uchun bir
-   * xil telefon uchun 10 ta parallel REGISTER ham FAQAT bitta qator
-   * yaratadi.
-   */
-  async register(rawPhone: string, code: string, meta?: RequestMeta): Promise<AuthResult> {
+  /** OTP valid bo'lsa User DARHOL yaratilmaydi — o'rniga qisqa umrli
+      `registrationToken` (bo'lim 4). */
+  async verifyRegisterOtp(rawPhone: string, code: string): Promise<{ registrationToken: string }> {
     const { phone } = await this.otp.verifyOtp(rawPhone, code, 'REGISTER');
+    const registrationToken = await this.grants.issue('REGISTER', phone);
+    return { registrationToken };
+  }
+
+  /**
+   * Bo'lim 5 — grant valid, parol mos bo'lsa ATOMIK: User yaratiladi +
+   * parol hash'lanadi + sessiya ochiladi. Telefon allaqachon ro'yxatdan
+   * o'tgan bo'lsa `PHONE_EXISTS` (frontend "Kirishni xohlaysizmi?" CTA'sini
+   * shu bilan ko'rsatadi) — YANGI User yaratilmaydi. Race-safe: to'g'ridan-
+   * to'g'ri `create` (avval `findUnique` emas), DB `User.phone` UNIQUE
+   * cheklovi P2002 orqali ushlanadi — bir xil telefon uchun bir nechta
+   * PARALLEL `complete` (har biri O'Z grant'i bilan) FAQAT bitta qator
+   * yaratadi (bo'lim 23).
+   */
+  async completeRegistration(
+    registrationToken: string,
+    password: string,
+    confirmPassword: string,
+    meta?: RequestMeta,
+  ): Promise<AuthResult> {
+    assertPasswordsMatch(password, confirmPassword);
+    const { phone } = await this.grants.consume(registrationToken, 'REGISTER');
+    const passwordHash = await this.hash.hash(password);
 
     let user;
     try {
@@ -85,9 +114,10 @@ export class AuthService {
         data: {
           id: this.ids.next(),
           phone,
+          passwordHash,
           roles: [],
-          // OTP — telefon egaligini isbotlaydi; Telegram/Google'ning o'rnini
-          // bosadi (frontend'dagi "verified" bosqichi shu).
+          // OTP — telefon egaligini isbotlaydi (Telegram/Google'ning o'rnini
+          // bosadi — frontend'dagi "verified" bosqichi shu).
           verified: true,
         },
       });
@@ -105,6 +135,155 @@ export class AuthService {
       meta,
     });
   }
+
+  /* ── LOGIN — telefon + PAROL, SMS YO'Q ───────────────────────────────── */
+
+  /**
+   * Bo'lim 9/10/11 — asosiy invariant: bu metod `OtpService`ni HECH QACHON
+   * chaqirmaydi (SMS soni = 0). Noto'g'ri telefon va noto'g'ri parol bir
+   * xil generic `INVALID_CREDENTIALS`ga tushadi (enumeration-safe) — telefon
+   * topilmasa ham argon2id vaqti sarflanadi (`getDummyHash`), timing orqali
+   * "bu raqam bor/yo'q"ni bilib bo'lmaydi.
+   */
+  async login(rawPhone: string, password: string, meta?: RequestMeta): Promise<AuthResult> {
+    const phone = rawPhone.trim();
+
+    // Bo'lim 12 — brute-force himoya: IP (telefon haqiqiyligidan qat'i
+    // nazar — enumeration signal bermasin) VA telefon bo'yicha, PAROL
+    // tekshirishdan OLDIN.
+    if (meta?.ip) {
+      const perIp = await this.limiter.hit(`login:ip:${meta.ip}`, LOGIN_IP_WINDOW_SECONDS);
+      if (perIp.count > LOGIN_IP_MAX_ATTEMPTS) {
+        throw new DomainError('RATE_LIMITED', "So'rovlar chegarasiga yetdingiz");
+      }
+    }
+    const perPhone = await this.limiter.hit(`login:phone:${phone}`, LOGIN_PHONE_WINDOW_SECONDS);
+    if (perPhone.count > LOGIN_PHONE_MAX_ATTEMPTS) {
+      throw new DomainError('RATE_LIMITED', "So'rovlar chegarasiga yetdingiz");
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { phone } });
+    // `passwordHash` NULL — hali register/reset qilinmagan eski hisob
+    // (bo'lim 25/26): xuddi "topilmadi"dek ko'rinadi, `Parolni unutdim`
+    // orqali tiklanadi.
+    const passwordOk =
+      user?.passwordHash != null
+        ? await this.hash.verify(user.passwordHash, password)
+        : await this.hash.verify(await this.getDummyHash(), password);
+    if (!user || !passwordOk) {
+      throw new UnauthenticatedError("Telefon raqami yoki parol noto'g'ri", 'INVALID_CREDENTIALS');
+    }
+
+    // Bo'lim 13 — to'g'ri parol bo'lsa ham bloklangan/vaqtincha cheklangan
+    // hisob kirolmaydi (`AccountStatusGuard` bilan bir xil siyosat — u
+    // faqat POST-auth marshrutlarda ishlaydi, login esa undan OLDIN).
+    if (user.status === 'BLOCKED') {
+      throw new ForbiddenError('Hisob bloklangan', 'ACCOUNT_BLOCKED');
+    }
+    if (user.status === 'SUSPENDED') {
+      const expired = user.suspendedUntil !== null && user.suspendedUntil <= new Date();
+      if (!expired) {
+        throw new ForbiddenError('Hisob vaqtincha cheklangan', 'ACCOUNT_SUSPENDED');
+      }
+      await this.prisma.user.updateMany({
+        where: { id: user.id, status: 'SUSPENDED', suspendedUntil: user.suspendedUntil },
+        data: { status: 'ACTIVE', suspendedUntil: null, statusReason: null, statusChangedAt: new Date() },
+      });
+    }
+
+    const activeRole = user.roleChosen ? (user.lastActiveRole ?? null) : null;
+    return this.issueSession(user.id, activeRole, {
+      roleChosen: user.roleChosen,
+      profileDone: user.profileDone,
+      isNewUser: false,
+      meta,
+    });
+  }
+
+  /* ── FORGOT PASSWORD — telefon → SMS OTP → grant → yangi parol ──────── */
+
+  /**
+   * Bo'lim 15/16 — enumeration-safe VA SMS-tejamkor: noma'lum telefon
+   * uchun HAM bir xil javob, lekin haqiqiy SMS yuborilmaydi (`skipDelivery`)
+   * — rate-limit esa baribir TO'LIQ qo'llanadi (`OtpService.requestOtp`
+   * ichida, mavjudlikdan qat'i nazar), aks holda "cheklovga tegmayapti"
+   * o'zi signal bo'lardi.
+   */
+  async requestPasswordResetOtp(phone: string, ip?: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { phone: phone.trim() }, select: { id: true } });
+    await this.otp.requestOtp(phone, 'PASSWORD_RESET', { ip, skipDelivery: !user });
+  }
+
+  /** OTP valid bo'lsa User TOPILISHI SHART (aks holda `skipDelivery` tufayli
+      real OTP qatori umuman yaratilmagan bo'lardi — bu holat `verifyOtp`
+      darajasida allaqachon INVALID_CODE bilan yopiladi). */
+  async verifyPasswordResetOtp(rawPhone: string, code: string): Promise<{ resetToken: string }> {
+    const { phone } = await this.otp.verifyOtp(rawPhone, code, 'PASSWORD_RESET');
+    const user = await this.prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+      // Kamdan-kam holat: OTP so'ralgandan keyin hisob o'chirilgan. Boshqa
+      // har qanday xato bilan bir xil generic javob.
+      throw new UnauthenticatedError('Muddati tugagan yoki noto‘g‘ri so‘rov — qaytadan boshlang', 'TOKEN_EXPIRED');
+    }
+    const resetToken = await this.grants.issue('PASSWORD_RESET', phone, user.id);
+    return { resetToken };
+  }
+
+  /**
+   * Bo'lim 20 — ATOMIK: parol yangilanadi + BARCHA mavjud refresh
+   * sessiyalar bekor qilinadi (eski telefon/laptop faol qolmasin) + audit
+   * yozuvi — bitta tranzaksiyada. Grant CAS-iste'moli allaqachon
+   * `consume()`da bo'lgan (tranzaksiyadan TASHQARIDA, chunki u o'z
+   * CAS-shartiga ega — lekin muvaffaqiyatsiz tranzaksiya grant'ni
+   * "yoqib" qo'ygan bo'lsa ham xavfsiz, chunki natija baribir "qaytadan
+   * so'rang").
+   */
+  async completePasswordReset(resetToken: string, password: string, confirmPassword: string): Promise<void> {
+    assertPasswordsMatch(password, confirmPassword);
+    const { userId } = await this.grants.consume(resetToken, 'PASSWORD_RESET');
+    if (!userId) {
+      throw new UnauthenticatedError('Muddati tugagan yoki noto‘g‘ri so‘rov — qaytadan boshlang', 'TOKEN_EXPIRED');
+    }
+    const passwordHash = await this.hash.hash(password);
+
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+      await tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await this.audit.record(
+        {
+          actor: { id: userId, type: 'USER', name: user.fullName ?? user.phone },
+          action: 'USER_PASSWORD_RESET',
+          resourceType: 'USER',
+          resourceId: userId,
+        },
+        tx,
+      );
+    });
+  }
+
+  /**
+   * Bosqich 21, bo'lim 44 — logged-in foydalanuvchi uchun (joriy parolni
+   * bilgan holda) parol almashtirish. `Parolni unutdim` (recovery)dan
+   * FARQLI — hozirgi sessiya (va boshqa qurilmalar) BEKOR QILINMAYDI,
+   * chunki foydalanuvchi allaqachon autentifikatsiyalangan va bu yerda
+   * shubhali "kompromess" belgisi yo'q.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const currentOk = user.passwordHash
+      ? await this.hash.verify(user.passwordHash, currentPassword)
+      : await this.hash.verify(await this.getDummyHash(), currentPassword);
+    if (!currentOk) {
+      throw new UnauthenticatedError("Joriy parol noto'g'ri", 'INVALID_CURRENT_PASSWORD');
+    }
+    const passwordHash = await this.hash.hash(newPassword);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  }
+
+  /* ── Sessiya (o'zgarmagan) ────────────────────────────────────────────── */
 
   async refresh(rawRefreshToken: string, meta?: RequestMeta): Promise<AuthResult> {
     const { raw, record } = await this.refreshTokens.rotate(rawRefreshToken, meta);

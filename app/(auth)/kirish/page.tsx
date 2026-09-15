@@ -6,8 +6,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
 
+/** Bosqich 21 — telefon + PAROL, SMS ISHTIROK ETMAYDI (asosiy invariant:
+    oddiy login uchun SMS soni = 0). Noto'g'ri telefon va noto'g'ri parol
+    bir xil generic `INVALID_CREDENTIALS`ga tushadi (enumeration-safe) —
+    qaysi biri xato ekanini frontend ham bilmaydi/ko'rsatmaydi. */
 export default function KirishPage() {
   const { t } = useT();
   const router = useRouter();
@@ -15,6 +20,7 @@ export default function KirishPage() {
 
   const [phone, setPhone] = useState("+998");
   const [phoneValid, setPhoneValid] = useState(false);
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -46,12 +52,17 @@ export default function KirishPage() {
     setLoading(true);
     setError("");
     try {
-      await authService.requestLoginOtp(phone.trim());
-      window.sessionStorage.setItem("bd_login_otp_phone", phone.trim());
-      router.push("/kirish/tasdiqlash");
+      const session = await authService.login(phone.trim(), password);
+      router.push(!session.role ? "/rol-tanlash" : session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
-      setError(code === "RATE_LIMITED" ? t("auth.errRateLimited") : t("common.error"));
+      setError(
+        code === "RATE_LIMITED"
+          ? t("auth.errRateLimited")
+          : code === "ACCOUNT_BLOCKED" || code === "ACCOUNT_SUSPENDED"
+            ? t("auth.errAccountBlocked")
+            : t("auth.errCredentials"),
+      );
       setLoading(false);
     }
   }
@@ -66,24 +77,40 @@ export default function KirishPage() {
       <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-black text-ink tracking-tight">
         {t("auth.loginTitle")}
       </h1>
-      <p className="mt-2.5 text-sm sm:text-base text-muted leading-relaxed">{t("auth.otpIntro")}</p>
+      <p className="mt-2.5 text-sm sm:text-base text-muted leading-relaxed">{t("auth.loginSubtitle")}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5" noValidate>
         <CountryPhoneInput
-          id="otp-phone"
+          id="login-phone"
           value={phone}
           label={t("auth.regPhone")}
-          error={error}
           onChange={(fullNum, isValid) => {
             setPhone(fullNum);
             setPhoneValid(isValid);
             if (error) setError("");
           }}
         />
+        <Input
+          type="password"
+          autoComplete="current-password"
+          label={t("auth.password")}
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (error) setError("");
+          }}
+          error={error}
+        />
         <Button type="submit" size="lg" loading={loading} className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl">
-          {t("auth.sendCode")}
+          {t("auth.loginBtn")}
         </Button>
       </form>
+
+      <p className="mt-4 text-center text-sm">
+        <Link href="/parolni-unutdim" className="font-semibold text-primary hover:underline">
+          {t("auth.forgotPassword")}
+        </Link>
+      </p>
 
       <p className="mt-6 text-center text-sm text-muted">
         {t("auth.noAccount")}{" "}

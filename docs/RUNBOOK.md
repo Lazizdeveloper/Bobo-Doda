@@ -1739,3 +1739,143 @@ otp_codes`). Tuzatildi: `ALTER TABLE otp_codes OWNER TO
 bobododa_migrator;` (superuser bilan, bir martalik). Bu FAQAT lokal dev
 anomaliyasi edi — yangi/boshqa muhitlarda takrorlanmasligi kerak
 (`roles.sql` barcha jadvalni to'g'ri rolga yaratadi).
+
+## 21. Parol bilan login (Bosqich 21)
+
+**Asosiy maqsad**: SMS xarajatini kamaytirish. **SMS telefon egaligini
+isbotlash uchun, HAR BIR login uchun EMAS.**
+
+```text
+REGISTRATION = 1 SMS  (telefon → OTP → parol → User)
+LOGIN         = 0 SMS  (telefon + parol → sessiya)
+FORGOT PASS   = 1 SMS  (telefon → OTP → yangi parol)
+```
+
+Bosqich 20'dagi combined "LOGIN OTP" arxitekturasi BUTUNLAY olib
+tashlandi — endi login OTP bilan UMUMAN ishlamaydi.
+
+### Arxitektura
+
+- **`OtpPurpose` enum** (`AuthIntent`ning o'rnini bosadi, migration
+  `20260915150000_stage21_password_auth`): `REGISTER` | `PASSWORD_RESET`.
+  `LOGIN` qiymati OLIB TASHLANDI — login endi OTP bilan aloqasi yo'q.
+  `OtpCode.intent` ustuni `OtpCode.purpose`ga qayta nomlandi (semantik
+  aniqlik uchun).
+- **`AuthGrant` — yangi model** (bir xil jadval, ikkala maqsad uchun ham):
+  OTP tasdiqlangandan KEYIN, yakuniy amal (User yaratish / parol
+  almashtirish) bajarilgunga qadar berilgan qisqa umrli (10 daqiqa),
+  bir martalik "grant". `RefreshToken`/`StaffSession` bilan BIR XIL
+  naqsh — xom token DB'da saqlanmaydi (faqat SHA-256, `hashOpaqueToken`),
+  `consumedAt` CAS bilan bir martalik iste'mol qilinadi. `PASSWORD_RESET`
+  uchun `userId` bog'langan, `REGISTER` uchun `userId=null` (User hali yo'q).
+- **Uchta yangi endpoint guruhi** (eski `/auth/otp/request`+`/verify`
+  o'rniga, `intent`siz — endi marshrut o'zi maqsadni bildiradi):
+  ```text
+  POST /auth/register/request-otp   {phone}
+  POST /auth/register/verify-otp    {phone, code} → {registrationToken}
+  POST /auth/register/complete      {registrationToken, password, confirmPassword} → sessiya
+
+  POST /auth/login                  {phone, password} → sessiya (SMS YO'Q)
+
+  POST /auth/password-reset/request-otp  {phone}
+  POST /auth/password-reset/verify-otp   {phone, code} → {resetToken}
+  POST /auth/password-reset/complete     {resetToken, password, confirmPassword} → {ok:true} (sessiya YO'Q)
+  ```
+- **`AuthService.login`** — `StaffAuthService.login`dagi AYNAN bir xil
+  naqsh: IP+telefon rate-limit (parol tekshirishdan OLDIN), keyin
+  `dummyHash` orqali timing-parity (telefon topilmasa HAM argon2id
+  hisoblanadi — enumeration-safe), keyin `AccountStatusGuard`dagi bilan
+  bir xil BLOCKED/SUSPENDED(lazy-expiry) tekshiruvi (guard faqat
+  POST-auth marshrutlarda ishlaydi, login esa undan OLDIN — shuning
+  uchun bu yerda QAYTA yozilgan, xuddi shu siyosat bilan).
+- **SMS-tejash (`requestPasswordResetOtp`)**: `User`ni oldindan tekshiradi
+  — mavjud bo'lsa `OtpService.requestOtp(..., skipDelivery:false)`,
+  mavjud bo'lmasa `skipDelivery:true`. `OtpService` HAR IKKALA holatda
+  ham TO'LIQ rate-limit (cooldown+kunlik+IP) qo'llaydi — faqat OTP qatori
+  yaratish+SMS-navbat bosqichi o'tkazib yuboriladi. Bu MUHIM: agar
+  rate-limit shartli bo'lganda, "cheklovga tegmayapti" holatining o'zi
+  telefon mavjudligini oshkor qilardi (timing/behavior side-channel).
+  Response HAR DOIM bir xil `{sent:true}`.
+- **Xato taksonomiyasi — duplikat YARATILMADI**: `INVALID_CREDENTIALS`
+  (login, mavjud), `ACCOUNT_BLOCKED`/`ACCOUNT_SUSPENDED` (mavjud),
+  `PHONE_EXISTS` (mavjud, Bosqich 20'dan), `TOKEN_EXPIRED` (mavjud,
+  avval faqat refresh token uchun — endi grant uchun ham qayta
+  ishlatiladi, xuddi shunday "qaytadan boshlang" semantikasi).
+- **`POST /me/change-password`** — YANGI, lekin YANGI FEATURE EMAS:
+  frontend `AccountSecurity.tsx` va `usersService.changePassword()`
+  ALLAQACHON to'liq yozilgan edi (`INVALID_CURRENT_PASSWORD` xato kodi
+  ALLAQACHON `ERROR_CODES`da bor edi) — Bosqich 2'dan beri `disabled()`
+  bilan stub qilib qo'yilgan, chunki almashtiradigan parol umuman yo'q
+  edi. Endi `AuthService.changePassword` bilan bog'landi (parolni
+  UNUTGAN emas, BILGAN holda almashtirish — reset'dan farqli, boshqa
+  sessiyalar bekor QILINMAYDI). Frontend validatsiyasi ham backend bilan
+  moslashtirildi (composition-qoidalar olib tashlandi, faqat min-8 +
+  whitespace-only tekshiruvi qoldi).
+
+### Frontend routes
+
+```text
+/kirish                      — LOGIN: telefon + parol (SMS YO'Q)
+/parolni-unutdim              — FORGOT: telefon → SMS OTP so'raladi
+/parolni-unutdim/tasdiqlash   — FORGOT: OTP tasdiqlash → resetToken
+/parolni-unutdim/parol        — FORGOT: yangi parol → complete → /kirish
+                                 (sessiya AVTOMATIK OCHILMAYDI)
+
+/royxatdan-otish              — REGISTER: telefon → SMS OTP so'raladi
+/royxatdan-otish/tasdiqlash   — REGISTER: OTP tasdiqlash → registrationToken
+/royxatdan-otish/parol        — REGISTER: parol → complete → /rol-tanlash
+                                 (PHONE_EXISTS → "Kirishni xohlaysizmi?" CTA)
+```
+
+Eski `/kirish/tasdiqlash` (login OTP verify) sahifasi BUTUNLAY o'chirildi
+— login endi OTP bosqichisiz. `app/xaridor/layout.tsx`/
+`app/mutaxassis/layout.tsx`/`app/(auth)/rol-tanlash/page.tsx`dagi
+`session.verified` tekshiruvlari (bu sahifaga yo'naltirar edi) ham olib
+tashlandi — yangi arxitekturada `verified` HAR DOIM `true` (tasdiqlash
+hisob yaratishning o'zida sodir bo'ladi), demak bu shoxobchalar
+ERISHIB BO'LMAYDIGAN (dead) kod edi.
+
+`sessionStorage` kalitlari (ikkala oqim ham mustaqil, intent
+chalkashib ketmasin): `bd_register_otp_phone`/`bd_registration_token`
+(REGISTER), `bd_reset_otp_phone`/`bd_reset_token` (FORGOT),
+`bd_prefill_phone` (CTA'lar orasidagi telefon prefill — o'zgarmagan).
+
+### Testlar
+
+- **Backend unit** (`auth.service.spec.ts`, fake Prisma/Otp/Grant/Hash):
+  register (request/verify/complete, parollar mos emas, grant eskirgan,
+  P2002→PHONE_EXISTS), login (to'g'ri, noto'g'ri parol, mavjud emas
+  telefon dummy-hash bilan, legacy passwordHash=null, BLOCKED,
+  SUSPENDED muddatli/muddatsiz, rate-limit parolni UMUMAN tekshirmaydi),
+  password-reset (skipDelivery mavjud/mavjud emas, grant userId bilan,
+  complete — sessiya bekor qilinishi + audit).
+- **Backend e2e** (`test/auth.e2e-spec.ts`, real Postgres+Redis, 48 test):
+  aniq SMS SONI tekshiruvi (register=1, 5×login=0 qo'shimcha, reset=1),
+  **10 ta MUSTAQIL grant bilan parallel `/register/complete` → FAQAT
+  bitta User** (haqiqiy DB unique constraint ostida — Bosqich 20'dagi
+  "bir xil kod" testidan KO'RA to'g'ridan-to'g'ri P2002 shoxobchasini
+  sinaydi, chunki har bir grant o'z tokeni bo'yicha MUSTAQIL topiladi),
+  grant single-use/expiry, purpose-binding (REGISTER OTP reset'da
+  ishlamaydi), reset'dan keyin eski refresh sessiya ishlamay qolishi,
+  legacy (passwordHash=null) user login VA forgot-password orqali
+  onboarding sifatida ishlashi, login rate-limit, eski regressiyalar
+  (refresh rotatsiya/reuse, rol tanlash, sessiya egaligi).
+- **Frontend Playwright** (`tests/e2e/auth.spec.ts`, 7 test): to'liq
+  REGISTER (OTP→parol→rol tanlash→dashboard), to'liq LOGIN (OTP
+  sahifasiga UMUMAN o'tilmasligi tasdiqlangan), noto'g'ri parol,
+  "hisob allaqachon mavjud" CTA (parol bosqichida), to'liq FORGOT
+  PASSWORD (eski parol ishlamay qolishi, yangisi ishlashi).
+  `tests/e2e/helpers.ts#registerViaUi` 3-bosqichli oqimga yangilandi,
+  `loginViaUi` endi parol bilan; `tests/e2e/admin-helpers.ts#
+  registerFixtureToken` (avvalgi `otpLoginToken`) ham to'liq
+  request-otp→verify-otp→complete zanjiriga o'tkazildi.
+
+### SMS xarajat modeli (tasdiqlangan)
+
+| Amal | SMS soni |
+|---|---|
+| Yangi ro'yxatdan o'tish | 1 |
+| Oddiy login | 0 |
+| 5 marta ketma-ket login | 0 (qo'shimcha) |
+| Parolni unutish | 1 |
+| Parolni unutish (noma'lum telefon) | 0 (public javob bir xil) |

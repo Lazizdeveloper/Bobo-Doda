@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
-import type { AuthIntent } from '@prisma/client';
+import type { OtpPurpose } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
 import { HashService } from '@/common/security/hash.service';
@@ -22,19 +22,25 @@ import {
 } from './constants/otp.constants';
 
 /**
- * OTP so'rash/tasdiqlash — telefon+OTP autentifikatsiyasining yuragi.
+ * OTP so'rash/tasdiqlash — telefon egaligini isbotlashning yuragi.
+ * Bosqich 21 — oddiy LOGIN endi parol bilan (`AuthService.login`), bu servis
+ * UMUMAN ishtirok etmaydi. OTP FAQAT ikki maqsadda: REGISTER (yangi hisob)
+ * va PASSWORD_RESET (parolni tiklash).
  *
  * `requestOtp` ATAYLAB `User` jadvaliga UMUMAN tegmaydi — shu bilan
  * enumeration-safe: ro'yxatdan o'tgan yoki o'tmagan telefon uchun bir xil
  * javob (controller ham bir xil generic xabar qaytaradi). Foydalanuvchini
- * yaratish/topish qarori `verifyOtp`dan KEYIN, `AuthService`da (bu servis
- * faqat OTP haqiqiyligini biladi, User haqida qaror qabul qilmaydi —
- * bitta mas'uliyat).
+ * yaratish/topish qarori bu servisdan TASHQARIDA, `AuthService`da (bu servis
+ * faqat OTP haqiqiyligini biladi, User haqida qaror qabul qilmaydi — bitta
+ * mas'uliyat). PASSWORD_RESET uchun "SMS haqiqatan yuborilsinmi" qarori
+ * ham `AuthService` tomonidan `skipDelivery` orqali beriladi (bo'lim
+ * 16 — noma'lum telefon uchun SMS xarajatini tejash, lekin rate-limit
+ * baribir TO'LIQ ishlaydi — pastga qarang).
  *
- * Bosqich 20 — `intent` (LOGIN | REGISTER) HAR bir challenge'ga bog'lanadi:
- * LOGIN uchun so'ralgan kod REGISTER'ni tasdiqlay olmaydi va aksincha
- * (`verifyOtp`ning `WHERE`i `intent`ni ham talab qiladi — boshqa intent
- * uchun yaratilgan qator UMUMAN topilmaydi, xuddi mavjud bo'lmagandek).
+ * `purpose` (REGISTER | PASSWORD_RESET) HAR bir challenge'ga bog'lanadi:
+ * REGISTER uchun so'ralgan kod PASSWORD_RESET'ni tasdiqlay olmaydi va
+ * aksincha (`verifyOtp`ning `WHERE`i `purpose`ni ham talab qiladi — boshqa
+ * maqsad uchun yaratilgan qator UMUMAN topilmaydi, xuddi mavjud bo'lmagandek).
  */
 @Injectable()
 export class OtpService {
@@ -46,16 +52,31 @@ export class OtpService {
     @InjectQueue(OTP_SMS_QUEUE) private readonly smsQueue: Queue<OtpSmsJobData>,
   ) {}
 
-  async requestOtp(rawPhone: string, intent: AuthIntent, ip?: string): Promise<void> {
+  /**
+   * `skipDelivery` — `true` bo'lsa, RATE LIMIT BARIBIR TO'LIQ qo'llanadi
+   * (aks holda noma'lum telefon uchun cheklov UMUMAN ishlamay qolib,
+   * "cheklovga tegmayapti" degan o'zi bir enumeration signali bo'lardi),
+   * lekin OTP qatori yaratilmaydi va SMS navbatga qo'yilmaydi — chaqiruvchi
+   * (`AuthService`, PASSWORD_RESET uchun telefon mavjud emasligini
+   * bilganda) shu bilan haqiqiy SMS xarajatidan qochadi. Bu — "reasonable"
+   * (mukammal emas) timing-himoya: DB yozuv + navbat operatsiyasi vaqti
+   * farq qiladi, lekin soxta yozuv yasash ortiqcha murakkablik bo'lardi.
+   */
+  async requestOtp(
+    rawPhone: string,
+    purpose: OtpPurpose,
+    opts: { ip?: string; skipDelivery?: boolean } = {},
+  ): Promise<void> {
     const phone = normalizePhone(rawPhone);
+    const { ip, skipDelivery = false } = opts;
 
-    // Cooldown INTENT bo'yicha ajratilgan — "hisob topilmadi/mavjud" CTA'dan
-    // keyin foydalanuvchi ikkinchi oqimga darhol o'tishi kerak (60s kutmasdan).
-    // Kunlik/IP chegara esa ATAYLAB umumiy (pastga qarang) — aks holda bitta
-    // telefon LOGIN+REGISTER orasida almashtirib jami SMS hajmini ikki
-    // baravar oshirardi (xavfsizlik siyosati zaiflashmasin degan talab).
+    // Cooldown MAQSAD bo'yicha ajratilgan — masalan parolni tiklashdan
+    // keyin darhol ro'yxatdan o'tishga urinish 60s kutmasdan ishlashi
+    // kerak. Kunlik/IP chegara esa ATAYLAB umumiy (pastga qarang) — aks
+    // holda bitta telefon REGISTER+PASSWORD_RESET orasida almashtirib
+    // jami SMS hajmini ikki baravar oshirardi.
     const cooldownOk = await this.limiter.cooldown(
-      `otp:cooldown:${phone}:${intent}`,
+      `otp:cooldown:${phone}:${purpose}`,
       OTP_RESEND_COOLDOWN_SECONDS,
     );
     if (!cooldownOk) {
@@ -74,12 +95,14 @@ export class OtpService {
       }
     }
 
+    if (skipDelivery) return;
+
     const code = generateOtpCode();
     await this.prisma.otpCode.create({
       data: {
         id: this.ids.next(),
         phone,
-        intent,
+        purpose,
         codeHash: await this.hash.hash(code),
         ip,
         expiresAt: new Date(Date.now() + OTP_EXPIRY_SECONDS * 1000),
@@ -92,11 +115,11 @@ export class OtpService {
   }
 
   /** Muvaffaqiyatli bo'lsa normallashtirilgan telefonni qaytaradi. */
-  async verifyOtp(rawPhone: string, code: string, intent: AuthIntent): Promise<{ phone: string }> {
+  async verifyOtp(rawPhone: string, code: string, purpose: OtpPurpose): Promise<{ phone: string }> {
     const phone = normalizePhone(rawPhone);
 
     const otp = await this.prisma.otpCode.findFirst({
-      where: { phone, intent, consumedAt: null, expiresAt: { gt: new Date() } },
+      where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
     if (!otp || otp.attempts >= OTP_MAX_ATTEMPTS) {

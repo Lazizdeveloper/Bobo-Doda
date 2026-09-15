@@ -43,9 +43,15 @@ export interface UserSession {
   accessToken: string;
 }
 
-/** OTP orqali yangi marketplace foydalanuvchi yaratadi va (ixtiyoriy) rolni tanlaydi.
-    Bosqich 20 — `intent: 'REGISTER'` majburiy: bu funksiya har doim YANGI
-    User yaratadi, LOGIN esa hech qachon yaratmaydi. */
+/** `loginNewUser` fixture hisoblari uchun bir xil parol — hech qaysi test
+    bu qiymatga o'zi bog'liq emas (faqat sessiya kerak), shuning uchun
+    umumiy konstanta yetarli. */
+export const FIXTURE_PASSWORD = 'E2eFixturePass1!';
+
+/** Bosqich 21 — SMS OTP orqali (telefon egaligini isbotlash) + parol bilan
+    yangi marketplace foydalanuvchi yaratadi va (ixtiyoriy) rolni tanlaydi:
+    request-otp → verify-otp → complete (3 bosqichli REGISTER oqimi, parol
+    login endi SMS ishtirokisiz). */
 export async function loginNewUser(
   app: INestApplication,
   sms: CapturingSmsProvider,
@@ -53,13 +59,21 @@ export async function loginNewUser(
 ): Promise<UserSession> {
   const phone = uniquePhone();
   await request(app.getHttpServer())
-    .post('/api/v1/auth/otp/request')
-    .send({ phone, intent: 'REGISTER' })
+    .post('/api/v1/auth/register/request-otp')
+    .send({ phone })
     .expect(200);
   await waitFor(() => sms.lastPhone === phone && !!sms.lastCode, { label: 'otp sms' });
+  const verifyOtp = await request(app.getHttpServer())
+    .post('/api/v1/auth/register/verify-otp')
+    .send({ phone, code: sms.lastCode })
+    .expect(200);
   const verify = await request(app.getHttpServer())
-    .post('/api/v1/auth/otp/verify')
-    .send({ phone, code: sms.lastCode, intent: 'REGISTER' })
+    .post('/api/v1/auth/register/complete')
+    .send({
+      registrationToken: verifyOtp.body.registrationToken,
+      password: FIXTURE_PASSWORD,
+      confirmPassword: FIXTURE_PASSWORD,
+    })
     .expect(200);
   let accessToken = verify.body.accessToken as string;
   let userId = '';

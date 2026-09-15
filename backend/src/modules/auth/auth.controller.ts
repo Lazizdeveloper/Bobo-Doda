@@ -6,6 +6,9 @@ import { UnauthenticatedError } from '@/common/errors/domain-error';
 import { AuthService, type AuthResult } from './auth.service';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { LoginDto } from './dto/login.dto';
+import { CompleteRegistrationDto } from './dto/complete-registration.dto';
+import { CompletePasswordResetDto } from './dto/complete-password-reset.dto';
 import { AuthSessionDto } from './dto/auth-session.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -27,6 +30,13 @@ function toSessionDto(result: AuthResult): AuthSessionDto {
   };
 }
 
+/**
+ * Bosqich 21 — parol bilan login. `POST /auth/login` — asosiy invariant:
+ * SMS UMUMAN ishtirok etmaydi (`AuthService.login` `OtpService`ni hech
+ * qachon chaqirmaydi). SMS FAQAT ro'yxatdan o'tish (`/register/*`) va
+ * parolni tiklashda (`/password-reset/*`) — telefon egaligini isbotlash
+ * uchun.
+ */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -35,44 +45,99 @@ export class AuthController {
     private readonly config: AppConfigService,
   ) {}
 
-  /**
-   * Har doim generic `{ sent: true }` qaytaradi — ro'yxatdan o'tgan/
-   * o'tmagan telefon farqlanmaydi (enumeration himoyasi). Haqiqiy
-   * xato FAQAT rate-limit (`RATE_LIMITED`) yoki noto'g'ri format bo'lsa chiqadi.
-   * `dto.intent` — LOGIN yoki REGISTER (OTP yetkazish baribir SMS-only,
-   * `intent` kanal EMAS).
-   */
+  /* ── REGISTER ─────────────────────────────────────────────────────────── */
+
+  /** Har doim generic `{ sent: true }` (enumeration himoyasi — bu marshrut
+      istisno emas, har doim SMS yuboradi, chunki istalgan telefon
+      ro'yxatdan o'tishi mumkin). */
   @Public()
-  @Post('otp/request')
+  @Post('register/request-otp')
   @HttpCode(200)
-  async requestOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<{ sent: true }> {
-    await this.auth.requestOtp(dto.phone, dto.intent, req.ip);
+  async requestRegisterOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<{ sent: true }> {
+    await this.auth.requestRegisterOtp(dto.phone, req.ip);
     return { sent: true };
   }
 
-  /**
-   * Bosqich 20 — `dto.intent` LOGIN/REGISTER'ga qarab `AuthService.login`/
-   * `register`ga tarqatiladi: LOGIN hech qachon User yaratmaydi
-   * (`USER_NOT_FOUND`), REGISTER hech qachon mavjud hisobga tegmaydi
-   * (`PHONE_EXISTS`) — ikkalasi ham faqat VALID OTP'dan keyin oshkor
-   * bo'ladi.
-   */
+  /** OTP valid bo'lsa User DARHOL yaratilmaydi — o'rniga qisqa umrli
+      `registrationToken` (10 daqiqa, bir martalik). */
   @Public()
-  @Post('otp/verify')
+  @Post('register/verify-otp')
+  @HttpCode(200)
+  async verifyRegisterOtp(@Body() dto: VerifyOtpDto): Promise<{ registrationToken: string }> {
+    return this.auth.verifyRegisterOtp(dto.phone, dto.code);
+  }
+
+  /** Grant valid + parol mos bo'lsa: User yaratiladi, sessiya ochiladi.
+      Telefon allaqachon ro'yxatdan o'tgan bo'lsa `PHONE_EXISTS` (409). */
+  @Public()
+  @Post('register/complete')
   @HttpCode(200)
   @ApiOkResponse({ type: AuthSessionDto })
-  async verifyOtp(
-    @Body() dto: VerifyOtpDto,
+  async completeRegistration(
+    @Body() dto: CompleteRegistrationDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthSessionDto> {
-    const result =
-      dto.intent === 'REGISTER'
-        ? await this.auth.register(dto.phone, dto.code, requestMeta(req))
-        : await this.auth.login(dto.phone, dto.code, requestMeta(req));
+    const result = await this.auth.completeRegistration(
+      dto.registrationToken,
+      dto.password,
+      dto.confirmPassword,
+      requestMeta(req),
+    );
     this.setCookie(res, result.refreshToken);
     return toSessionDto(result);
   }
+
+  /* ── LOGIN — telefon + parol, SMS YO'Q ───────────────────────────────── */
+
+  @Public()
+  @Post('login')
+  @HttpCode(200)
+  @ApiOkResponse({ type: AuthSessionDto })
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthSessionDto> {
+    const result = await this.auth.login(dto.phone, dto.password, requestMeta(req));
+    this.setCookie(res, result.refreshToken);
+    return toSessionDto(result);
+  }
+
+  /* ── FORGOT PASSWORD ──────────────────────────────────────────────────── */
+
+  /** Har doim generic `{ sent: true }` — noma'lum telefon uchun ham bir xil
+      javob, lekin haqiqiy SMS yuborilmaydi (`AuthService.
+      requestPasswordResetOtp` ichida `skipDelivery`, SMS xarajatini
+      tejash uchun; rate-limit baribir to'liq qo'llanadi). */
+  @Public()
+  @Post('password-reset/request-otp')
+  @HttpCode(200)
+  async requestPasswordResetOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<{ sent: true }> {
+    await this.auth.requestPasswordResetOtp(dto.phone, req.ip);
+    return { sent: true };
+  }
+
+  /** OTP valid bo'lsa qisqa umrli `resetToken` (10 daqiqa, bir martalik). */
+  @Public()
+  @Post('password-reset/verify-otp')
+  @HttpCode(200)
+  async verifyPasswordResetOtp(@Body() dto: VerifyOtpDto): Promise<{ resetToken: string }> {
+    return this.auth.verifyPasswordResetOtp(dto.phone, dto.code);
+  }
+
+  /** Grant valid + parol mos bo'lsa: parol yangilanadi, BARCHA mavjud
+      sessiyalar bekor qilinadi. Sessiya AVTOMATIK OCHILMAYDI — foydalanuvchi
+      yangi parol bilan `/auth/login`ga qaytadi (bo'lim 20/39). */
+  @Public()
+  @Post('password-reset/complete')
+  @HttpCode(200)
+  async completePasswordReset(@Body() dto: CompletePasswordResetDto): Promise<{ ok: true }> {
+    await this.auth.completePasswordReset(dto.resetToken, dto.password, dto.confirmPassword);
+    return { ok: true };
+  }
+
+  /* ── Sessiya (o'zgarmagan) ────────────────────────────────────────────── */
 
   @Public()
   @Post('refresh')

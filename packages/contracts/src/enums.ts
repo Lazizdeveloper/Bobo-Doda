@@ -262,9 +262,9 @@ export const LedgerTransactionType = {
 export type LedgerTransactionType = (typeof LedgerTransactionType)[keyof typeof LedgerTransactionType];
 export const LedgerTransactionTypeValues = ['PAYMENT_FUNDING', 'CONTRACT_SETTLEMENT', 'REFUND', 'PAYOUT_RESERVATION', 'PAYOUT_RELEASE', 'DISPUTE_HOLD', 'DISPUTE_RESOLUTION', 'DISPUTE_HOLD_RELEASE'] as const;
 
-export const AuthIntent = {
-  LOGIN: 'LOGIN',
+export const OtpPurpose = {
   REGISTER: 'REGISTER',
+  PASSWORD_RESET: 'PASSWORD_RESET',
 } as const;
-export type AuthIntent = (typeof AuthIntent)[keyof typeof AuthIntent];
-export const AuthIntentValues = ['LOGIN', 'REGISTER'] as const;
+export type OtpPurpose = (typeof OtpPurpose)[keyof typeof OtpPurpose];
+export const OtpPurposeValues = ['REGISTER', 'PASSWORD_RESET'] as const;

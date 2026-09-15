@@ -475,7 +475,7 @@ export const dictionary: Record<string, Entry> = {
   "security.current": { uz: "Joriy parol", ru: "Текущий пароль" },
   "security.new": { uz: "Yangi parol", ru: "Новый пароль" },
   "security.confirm": { uz: "Yangi parolni takrorlang", ru: "Повторите новый пароль" },
-  "security.passwordRules": { uz: "Parol kamida 8 belgi, harf va raqamdan iborat bo'lsin", ru: "Пароль должен содержать минимум 8 символов, букву и цифру" },
+  "security.passwordRules": { uz: "Parol kamida 8 belgidan iborat bo'lsin", ru: "Пароль должен содержать минимум 8 символов" },
   "security.passwordMismatch": { uz: "Yangi parollar bir xil emas", ru: "Новые пароли не совпадают" },
   "security.currentInvalid": { uz: "Joriy parol noto'g'ri", ru: "Неверный текущий пароль" },
   "security.change": { uz: "Parolni o'zgartirish", ru: "Изменить пароль" },
@@ -543,8 +543,8 @@ export const dictionary: Record<string, Entry> = {
     ru: "Введите номер телефона — мы отправим код подтверждения",
   },
   "auth.resetSendCode": { uz: "Tiklash kodini yuborish", ru: "Отправить код восстановления" },
-  "auth.resetNewPassword": { uz: "Yangi parol", ru: "Новый пароль" },
-  "auth.resetConfirmPassword": {
+  "auth.newPassword": { uz: "Yangi parol", ru: "Новый пароль" },
+  "auth.confirmPassword": {
     uz: "Yangi parolni takrorlang",
     ru: "Повторите новый пароль",
   },
@@ -573,6 +573,19 @@ export const dictionary: Record<string, Entry> = {
     ru: "Аккаунт с этим номером телефона уже существует. Хотите войти?",
   },
   "auth.finalStep": { uz: "Yakuniy bosqich", ru: "Последний шаг" },
+  "auth.stepOtp": { uz: "SMS tasdiqlash", ru: "Подтверждение по SMS" },
+  "auth.createPasswordTitle": { uz: "Parol yarating", ru: "Придумайте пароль" },
+  "auth.createPasswordIntro": {
+    uz: "Hisobingizni himoya qilish uchun parol o'rnating",
+    ru: "Установите пароль для защиты аккаунта",
+  },
+  "auth.createAccountBtn": { uz: "Hisob yaratish", ru: "Создать аккаунт" },
+  "auth.confirmResetTitle": { uz: "Parolni tiklashni tasdiqlash", ru: "Подтверждение восстановления пароля" },
+  "auth.newPasswordTitle": { uz: "Yangi parol o'rnating", ru: "Установите новый пароль" },
+  "auth.newPasswordIntro": {
+    uz: "Hisobingiz uchun yangi parol o'rnating",
+    ru: "Установите новый пароль для аккаунта",
+  },
   "auth.confirmLoginTitle": { uz: "Kirishni tasdiqlash", ru: "Подтверждение входа" },
   "auth.confirmRegisterTitle": { uz: "Akkountni tasdiqlang", ru: "Подтвердите аккаунт" },
   "auth.otpIntro": {

@@ -6,16 +6,16 @@ import { buildTestApp } from './support/build-app';
 import { waitFor } from './support/wait-for';
 import { SMS_PROVIDER, type SmsProvider, type SmsSendResult } from '@/infra/sms/sms-provider.interface';
 import { RedisService } from '@/infra/redis/redis.service';
+import { IdFactory } from '@/common/id/id.factory';
 
 /**
- * Bosqich 2 — marketplace OTP auth + refresh rotatsiya/reuse-detection +
- * rol tanlash/almashtirish + sessiya boshqaruvi (e2e, real Postgres + Redis
- * + BullMQ). Bosqich 20 — LOGIN va REGISTER alohida niyat (`intent`):
- * LOGIN hech qachon User yaratmaydi, REGISTER hech qachon mavjud
- * telefonga ustidan yozmaydi. `SMS_PROVIDER` — `CapturingSmsProvider`
- * bilan almashtiriladi (haqiqiy kodni argon2id orqali DB'dan qayta
- * o'qib bo'lmaydi — faqat "yuborilgan" nusxadan bilamiz, xuddi haqiqiy
- * SMS provayder logidan tekshirganday).
+ * Bosqich 21 — parol bilan login. Oddiy LOGIN endi telefon+PAROL (SMS
+ * ISHTIROK ETMAYDI); SMS FAQAT ro'yxatdan o'tish (REGISTER) va parolni
+ * tiklashda (PASSWORD_RESET) — telefon egaligini isbotlash uchun.
+ * `SMS_PROVIDER` — `CapturingSmsProvider` bilan almashtiriladi (haqiqiy
+ * kodni argon2id orqali DB'dan qayta o'qib bo'lmaydi — faqat "yuborilgan"
+ * nusxadan bilamiz, xuddi haqiqiy SMS provayder logidan tekshirganday).
+ * `sms.calls` — bo'lim 36'dagi "aniq SMS soni" testlari uchun.
  */
 class CapturingSmsProvider implements SmsProvider {
   lastCode: string | undefined;
@@ -31,6 +31,7 @@ class CapturingSmsProvider implements SmsProvider {
 }
 
 const DB = 'health_e2e';
+const TEST_PASSWORD = 'E2eTestPass1!';
 let phoneCounter = 0;
 /**
  * Har testga UNIKAL, haqiqatan valid O'zbekiston raqami. ATAYLAB faqat
@@ -70,25 +71,29 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       await fn();
     });
 
-  async function requestAndGetCode(phone: string, intent: 'LOGIN' | 'REGISTER'): Promise<string> {
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone, intent })
-      .expect(200, { sent: true });
+  async function requestAndGetCode(phone: string, purpose: 'REGISTER' | 'PASSWORD_RESET'): Promise<string> {
+    const path = purpose === 'REGISTER' ? '/api/v1/auth/register/request-otp' : '/api/v1/auth/password-reset/request-otp';
+    await request(app!.getHttpServer()).post(path).send({ phone }).expect(200, { sent: true });
     await waitFor(() => sms.lastPhone === phone && !!sms.lastCode, { label: 'otp sms' });
     return sms.lastCode!;
   }
 
-  /** Yangi telefon uchun to'liq REGISTER oqimi — pastdagi testlarning
-      ko'pchiligiga "menga shunchaki autentifikatsiyalangan sessiya kerak"
-      degan holatni ta'minlaydi (refresh rotatsiya, rol tanlash va h.k.
-      LOGIN/REGISTER farqiga bog'liq emas). */
+  /** To'liq REGISTER oqimi (request-otp → verify-otp → complete, doim BIR
+      XIL `TEST_PASSWORD` bilan) — pastdagi testlarning ko'pchiligiga
+      "menga shunchaki autentifikatsiyalangan sessiya kerak" degan holatni
+      ta'minlaydi (refresh rotatsiya, rol tanlash va h.k. parol siyosatiga
+      bog'liq emas). */
   async function registerFresh(): Promise<{ accessToken: string; refreshCookie: string; phone: string }> {
     const phone = uniquePhone();
     const code = await requestAndGetCode(phone, 'REGISTER');
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+    const registrationToken = verify.body.registrationToken as string;
     const res = await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'REGISTER' })
+      .post('/api/v1/auth/register/complete')
+      .send({ registrationToken, password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD })
       .expect(200);
     const setCookie = res.headers['set-cookie'] as unknown as string[];
     const refreshCookie = setCookie[0]!.split(';')[0]!;
@@ -104,15 +109,49 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     }
   }
 
-  // ── REGISTER — yagona User yaratish yo'li ────────────────────────────────
+  async function withDb<T>(fn: (db: PrismaClient) => Promise<T>): Promise<T> {
+    const db = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
+    try {
+      return await fn(db);
+    } finally {
+      await db.$disconnect();
+    }
+  }
 
-  t('REGISTER: yangi telefon → User yaratiladi, activeRole=null, refresh cookie', async () => {
+  /** Faqat cooldown kalitlarini tozalaydi — real 60s kutmasdan bir xil
+      telefon+maqsad uchun qayta so'rash sinaladi. */
+  async function flushCooldownOnly(): Promise<void> {
+    const redis = app!.get(RedisService).client;
+    const keys = await redis.keys('ratelimit:cd:otp:cooldown:*');
+    if (keys.length) await redis.del(...keys);
+  }
+
+  /** Faqat umumiy IP soatlik hisoblagichini tozalaydi — bir nechta test
+      BIR XIL test-jarayoni IP'sidan bir nechta muvaffaqiyatli so'rov
+      yuboradi, bu ularning maqsadiga aloqasi yo'q yon ta'sir. */
+  async function flushIpCounter(): Promise<void> {
+    const redis = app!.get(RedisService).client;
+    const keys = await redis.keys('ratelimit:hit:otp:ip:*');
+    if (keys.length) await redis.del(...keys);
+  }
+
+  // ── REGISTER — telefon → SMS OTP → grant → parol → User ──────────────────
+
+  t('REGISTER: yangi telefon → aniq 1 ta SMS, verify+complete → User yaratiladi, sessiya', async () => {
     const phone = uniquePhone();
+    const callsBefore = sms.calls;
     const code = await requestAndGetCode(phone, 'REGISTER');
+    expect(sms.calls).toBe(callsBefore + 1);
+
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+    expect(typeof verify.body.registrationToken).toBe('string');
 
     const res = await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'REGISTER' })
+      .post('/api/v1/auth/register/complete')
+      .send({ registrationToken: verify.body.registrationToken, password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD })
       .expect(200);
 
     expect(res.body.isNewUser).toBe(true);
@@ -122,142 +161,438 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     const cookie = res.headers['set-cookie'];
     expect(cookie?.[0]).toMatch(/^refresh_token=.+HttpOnly.+SameSite=Strict/);
     expect(await userCount(phone)).toBe(1);
+    expect(sms.calls).toBe(callsBefore + 1); // complete bosqichi SMS yubormaydi
   });
 
-  t('REGISTER: allaqachon ro‘yxatdan o‘tgan telefon → PHONE_EXISTS, YANGI User yaratilmaydi', async () => {
+  t('REGISTER complete: parollar mos emas → VALIDATION, User yaratilmaydi', async () => {
+    const phone = uniquePhone();
+    const code = await requestAndGetCode(phone, 'REGISTER');
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/complete')
+      .send({ registrationToken: verify.body.registrationToken, password: TEST_PASSWORD, confirmPassword: 'Boshqa1!' })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('VALIDATION'));
+
+    expect(await userCount(phone)).toBe(0);
+  });
+
+  t('Registration grant — bir martalik: ikkinchi complete SAME token bilan rad etiladi', async () => {
+    const phone = uniquePhone();
+    const code = await requestAndGetCode(phone, 'REGISTER');
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+    const registrationToken = verify.body.registrationToken as string;
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/complete')
+      .send({ registrationToken, password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD })
+      .expect(200);
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/complete')
+      .send({ registrationToken, password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD })
+      .expect(401)
+      .expect((r) => expect(r.body.code).toBe('TOKEN_EXPIRED'));
+
+    expect(await userCount(phone)).toBe(1); // ikkinchi urinish YANGI User yaratmagan
+  });
+
+  t('Registration grant — muddati tugagan bo‘lsa rad etiladi', async () => {
+    const phone = uniquePhone();
+    const code = await requestAndGetCode(phone, 'REGISTER');
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+    const registrationToken = verify.body.registrationToken as string;
+
+    await withDb((db) =>
+      db.authGrant.updateMany({
+        where: { purpose: 'REGISTER', consumedAt: null },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      }),
+    );
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/complete')
+      .send({ registrationToken, password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD })
+      .expect(401)
+      .expect((r) => expect(r.body.code).toBe('TOKEN_EXPIRED'));
+
+    expect(await userCount(phone)).toBe(0);
+  });
+
+  t('REGISTER: allaqachon ro‘yxatdan o‘tgan telefon → complete’da PHONE_EXISTS, YANGI User yaratilmaydi', async () => {
     const { phone } = await registerFresh();
     expect(await userCount(phone)).toBe(1);
 
     // `registerFresh()` shu telefon+REGISTER uchun cooldown'ni ALLAQACHON
     // ishlatgan (bir necha millisekund oldin) — real 60s kutmasdan yana
-    // so'rash uchun tozalaymiz (production'da foydalanuvchi haqiqatan
-    // 60s kutgan bo'lardi, testda vaqt real emas).
+    // so'rash uchun tozalaymiz.
     await flushCooldownOnly();
     const code = await requestAndGetCode(phone, 'REGISTER');
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+
     await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'REGISTER' })
+      .post('/api/v1/auth/register/complete')
+      .send({ registrationToken: verify.body.registrationToken, password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD })
       .expect(409)
       .expect((r) => expect(r.body.code).toBe('PHONE_EXISTS'));
 
     expect(await userCount(phone)).toBe(1); // dublikat yo'q
   });
 
-  // ── LOGIN — faqat MAVJUD hisobni autentifikatsiya qiladi ─────────────────
-
-  t('LOGIN: mavjud telefon → sessiya (isNewUser=false), User qayta yaratilmaydi', async () => {
-    const { phone } = await registerFresh();
-
-    const code = await requestAndGetCode(phone, 'LOGIN');
-    const res = await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'LOGIN' })
-      .expect(200);
-
-    expect(res.body.isNewUser).toBe(false);
-    expect(typeof res.body.accessToken).toBe('string');
-    expect(await userCount(phone)).toBe(1);
-  });
-
-  t('LOGIN: mavjud bo‘lmagan telefon → USER_NOT_FOUND, User YARATILMAYDI', async () => {
-    const phone = uniquePhone();
-    const code = await requestAndGetCode(phone, 'LOGIN');
-
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'LOGIN' })
-      .expect(404)
-      .expect((r) => expect(r.body.code).toBe('USER_NOT_FOUND'));
-
-    expect(await userCount(phone)).toBe(0); // ATAYLAB avto-create YO'Q
-  });
-
-  // ── Intent binding — LOGIN OTP != REGISTER OTP context ───────────────────
-
-  t('Intent binding: LOGIN uchun so‘ralgan kod REGISTER verify’da ishlamaydi', async () => {
-    const { phone } = await registerFresh();
-    const loginCode = await requestAndGetCode(phone, 'LOGIN');
-
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code: loginCode, intent: 'REGISTER' })
-      .expect(422)
-      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
-
-    // O'ziniki intent bilan hali ham yaroqli — challenge INTENT bo'yicha
-    // FARQLANADI, kod umuman "yonib ketgan" emas.
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code: loginCode, intent: 'LOGIN' })
-      .expect(200);
-  });
-
-  t('Intent binding: REGISTER uchun so‘ralgan kod LOGIN verify’da ishlamaydi', async () => {
-    const phone = uniquePhone();
-    const registerCode = await requestAndGetCode(phone, 'REGISTER');
-
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code: registerCode, intent: 'LOGIN' })
-      .expect(422)
-      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
-    expect(await userCount(phone)).toBe(0); // LOGIN urinishi User yaratmagan
-
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code: registerCode, intent: 'REGISTER' })
-      .expect(200);
-  });
-
   // ── Concurrency — DB unique constraint YAGONA haqiqat manbai ─────────────
 
   /**
-   * Bitta haqiqiy kod, 10 ta chinakam PARALLEL (double-submit/retry-storm)
-   * HTTP so'rov — real dunyoda "tugmani ikki marta bosish" yoki tarmoq
-   * qayta urinishi. `OtpService.verifyOtp`ning CAS (`updateMany WHERE
-   * consumedAt: null`)i FAQAT bitta so'rovni "iste'mol qilishga" o'tkazadi
-   * — qolgan 9tasi hech qachon `User.create()`ga yetib bormaydi. Bu
-   * User-yaratish darajasidagi DB unique constraint'ning O'ZI emas
-   * (o'sha shoxobcha — `AuthService.register`dagi `P2002` ushlash —
-   * `auth.service.spec.ts`da FAKE Prisma bilan alohida sinaladi, chunki
-   * OTP single-use himoyasi allaqachon bir xil kodni ikkinchi marta
-   * `create()`ga yetkazib bermaydi — DB unique constraint shu bilan
-   * birga IKKINCHI qatlam himoya). Bu yerdagi muhim invariant —
-   * FOYDALANUVCHIGA ko'rinadigan natija: 10 ta parallel urinish HAM
-   * FAQAT bitta User yaratadi.
+   * Bo'lim 23 — 10 ta MUSTAQIL, haqiqiy grant (har biri O'ZINING
+   * `registrationToken`i bilan, bir xil telefon uchun) 10 ta chinakam
+   * PARALLEL `/register/complete` so'roviga yuboriladi. Har bir grant
+   * mustaqil ravishda CAS-iste'mol qilinadi (hech qanday kontensiya yo'q
+   * — grant token bo'yicha qidiriladi, "eng so'nggi" emas), shuning uchun
+   * BARCHA 10tasi `User.create()`ga PARALLEL yetib boradi — bu DB
+   * `User.phone` UNIQUE cheklovining O'ZINI (P2002 ushlash) sinaydi.
    */
-  t('REGISTER: bir xil kod bilan 10 ta parallel verify → FAQAT bitta User yaratiladi', async () => {
+  t('REGISTER: bir xil telefon uchun 10 ta MUSTAQIL grant bilan parallel complete → FAQAT bitta User', async () => {
     const phone = uniquePhone();
-    const code = await requestAndGetCode(phone, 'REGISTER');
+    const tokens: string[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const code = await requestAndGetCode(phone, 'REGISTER');
+      const verify = await request(app!.getHttpServer())
+        .post('/api/v1/auth/register/verify-otp')
+        .send({ phone, code })
+        .expect(200);
+      tokens.push(verify.body.registrationToken as string);
+      await flushCooldownOnly(); // keyingi so'rov 60s kutmasdan
+    }
 
     const results = await Promise.all(
-      Array.from({ length: 10 }, () =>
+      tokens.map((registrationToken) =>
         request(app!.getHttpServer())
-          .post('/api/v1/auth/otp/verify')
-          .send({ phone, code, intent: 'REGISTER' }),
+          .post('/api/v1/auth/register/complete')
+          .send({ registrationToken, password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD }),
       ),
     );
 
     const succeeded = results.filter((r) => r.status === 200);
+    const conflicted = results.filter((r) => r.status === 409 && r.body.code === 'PHONE_EXISTS');
     expect(succeeded.length).toBe(1);
+    expect(conflicted.length).toBe(9);
+    expect(await userCount(phone)).toBe(1);
+    await flushIpCounter(); // bu test 10 ta so'rov yuborgan, keyingi testlar uchun tiklaymiz
+  });
+
+  // ── LOGIN — telefon + PAROL, SMS YO'Q ─────────────────────────────────────
+
+  t('LOGIN: to‘g‘ri telefon+parol → sessiya, SMS SONI O‘ZGARMAYDI', async () => {
+    const { phone } = await registerFresh();
+    const callsBefore = sms.calls;
+
+    const res = await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: TEST_PASSWORD })
+      .expect(200);
+
+    expect(res.body.isNewUser).toBe(false);
+    expect(typeof res.body.accessToken).toBe('string');
+    expect(sms.calls).toBe(callsBefore); // login HECH QANDAY SMS yubormaydi
+  });
+
+  t('LOGIN: 5 marta ketma-ket muvaffaqiyatli login → 0 QO‘SHIMCHA SMS', async () => {
+    const { phone } = await registerFresh();
+    const callsBefore = sms.calls;
+
+    for (let i = 0; i < 5; i += 1) {
+      await request(app!.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ phone, password: TEST_PASSWORD })
+        .expect(200);
+    }
+
+    expect(sms.calls).toBe(callsBefore);
+  });
+
+  t('LOGIN: noto‘g‘ri parol → INVALID_CREDENTIALS', async () => {
+    const { phone } = await registerFresh();
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: 'NotoGriParol1' })
+      .expect(401)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CREDENTIALS'));
+  });
+
+  t('LOGIN: mavjud bo‘lmagan telefon → HAM INVALID_CREDENTIALS (enumeration-safe)', async () => {
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone: uniquePhone(), password: 'AnyPassword1' })
+      .expect(401)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CREDENTIALS'));
+  });
+
+  t('LOGIN: legacy foydalanuvchi (passwordHash=null) → INVALID_CREDENTIALS, User buzilmaydi', async () => {
+    const phone = uniquePhone();
+    await withDb(async (db) => {
+      const ids = app!.get(IdFactory);
+      await db.user.create({ data: { id: ids.next(), phone, roles: [], verified: true } });
+    });
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: 'AnyPassword1' })
+      .expect(401)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CREDENTIALS'));
+
+    // Legacy hisob "Parolni unutdim" orqali tiklanadi — pastdagi FORGOT
+    // bo'limida shu XUDDI shu turdagi hisob bilan sinaladi.
     expect(await userCount(phone)).toBe(1);
   });
 
-  // ── Enumeration himoyasi ─────────────────────────────────────────────────
+  t('LOGIN: bloklangan hisob — to‘g‘ri parol bo‘lsa ham ACCOUNT_BLOCKED', async () => {
+    const { phone } = await registerFresh();
+    await withDb((db) => db.user.update({ where: { phone }, data: { status: 'BLOCKED' } }));
 
-  t('Ro‘yxatdan o‘tmagan/o‘tgan telefon uchun /otp/request bir xil javob qaytaradi (enumeration himoyasi)', async () => {
-    const unregistered = uniquePhone();
-    const res1 = await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone: unregistered, intent: 'LOGIN' });
-    expect(res1.status).toBe(200);
-    expect(res1.body).toEqual({ sent: true });
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: TEST_PASSWORD })
+      .expect(403)
+      .expect((r) => expect(r.body.code).toBe('ACCOUNT_BLOCKED'));
+  });
 
-    const res2 = await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone: unregistered, intent: 'REGISTER' });
-    expect(res2.status).toBe(200);
-    expect(res2.body).toEqual({ sent: true });
+  t('LOGIN: vaqtincha cheklangan (muddati o‘tmagan) — ACCOUNT_SUSPENDED', async () => {
+    const { phone } = await registerFresh();
+    await withDb((db) =>
+      db.user.update({
+        where: { phone },
+        data: { status: 'SUSPENDED', suspendedUntil: new Date(Date.now() + 60_000) },
+      }),
+    );
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: TEST_PASSWORD })
+      .expect(403)
+      .expect((r) => expect(r.body.code).toBe('ACCOUNT_SUSPENDED'));
+  });
+
+  t('LOGIN rate limit — bitta telefon uchun urinishlar chegarasi bor', async () => {
+    const { phone } = await registerFresh();
+    const results: number[] = [];
+    for (let i = 0; i < 12; i += 1) {
+      const res = await request(app!.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ phone, password: 'NotoGriParol1' });
+      results.push(res.status);
+    }
+    expect(results.filter((s) => s === 429).length).toBeGreaterThan(0);
+  });
+
+  // ── Parolni bilgan holda almashtirish (bo'lim 44 — AccountSecurity.tsx) ──
+
+  t('CHANGE PASSWORD: joriy parol to‘g‘ri bo‘lsa yangilanadi, sessiya BEKOR QILINMAYDI', async () => {
+    const { phone, accessToken, refreshCookie } = await registerFresh();
+    const newPassword = 'AlmashtirilganParol1!';
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/me/change-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: TEST_PASSWORD, newPassword })
+      .expect(200, { ok: true });
+
+    // Joriy refresh sessiya HALI ishlaydi (change-password reset'dan farqli
+    // — boshqa sessiyalarni bekor qilmaydi).
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', refreshCookie)
+      .expect(200);
+
+    // Eski parol endi ishlamaydi, yangisi ishlaydi.
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: TEST_PASSWORD })
+      .expect(401);
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: newPassword })
+      .expect(200);
+  });
+
+  t('CHANGE PASSWORD: joriy parol noto‘g‘ri bo‘lsa INVALID_CURRENT_PASSWORD, parol o‘zgarmaydi', async () => {
+    const { phone, accessToken } = await registerFresh();
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/me/change-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ currentPassword: 'NotoGriParol1', newPassword: 'YangiParol1!' })
+      .expect(401)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CURRENT_PASSWORD'));
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: TEST_PASSWORD })
+      .expect(200);
+    // Ikkala CHANGE PASSWORD testi ham `registerFresh()` orqali umumiy IP
+    // byudjetini iste'mol qildi — pastdagi testlarga aloqasi yo'q yon
+    // ta'sir, tiklaymiz.
+    await flushIpCounter();
+  });
+
+  // ── FORGOT PASSWORD ────────────────────────────────────────────────────────
+
+  t('FORGOT: mavjud foydalanuvchi → 1 ta SMS → verify → yangi parol → eski parol ISHLAMAYDI, yangisi ISHLAYDI, eski sessiyalar bekor', async () => {
+    const { phone, refreshCookie } = await registerFresh();
+    const callsBefore = sms.calls;
+
+    const code = await requestAndGetCode(phone, 'PASSWORD_RESET');
+    expect(sms.calls).toBe(callsBefore + 1);
+
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+    const resetToken = verify.body.resetToken as string;
+
+    const newPassword = 'YangiParol2!';
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/complete')
+      .send({ resetToken, password: newPassword, confirmPassword: newPassword })
+      .expect(200, { ok: true });
+
+    // Eski parol endi ishlamaydi.
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: TEST_PASSWORD })
+      .expect(401);
+
+    // Yangi parol ishlaydi.
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: newPassword })
+      .expect(200);
+
+    // Reset OLDIDAN mavjud bo'lgan refresh sessiya endi ishlamaydi.
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', refreshCookie)
+      .expect(401);
+  });
+
+  t('FORGOT: legacy foydalanuvchi (passwordHash=null) uchun ham onboarding sifatida ishlaydi', async () => {
+    const phone = uniquePhone();
+    await withDb(async (db) => {
+      const ids = app!.get(IdFactory);
+      await db.user.create({ data: { id: ids.next(), phone, roles: [], verified: true } });
+    });
+
+    const code = await requestAndGetCode(phone, 'PASSWORD_RESET');
+    const verify = await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+
+    const newPassword = 'YangiParol3!';
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/complete')
+      .send({ resetToken: verify.body.resetToken, password: newPassword, confirmPassword: newPassword })
+      .expect(200, { ok: true });
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ phone, password: newPassword })
+      .expect(200);
+  });
+
+  t('FORGOT: noma’lum telefon → bir xil {sent:true} javob, lekin HAQIQIY SMS YUBORILMAYDI', async () => {
+    const phone = uniquePhone();
+    const callsBefore = sms.calls;
+
+    const res = await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/request-otp')
+      .send({ phone })
+      .expect(200);
+    expect(res.body).toEqual({ sent: true });
+
+    // Rate-limit hodisasi Redis'ga yozilishi uchun ozgina kutamiz — SMS esa
+    // UMUMAN yuborilmagani uchun `waitFor` qo'llab bo'lmaydi (hech qachon
+    // rost bo'lmaydi), shuning uchun belgilangan kutish.
+    await new Promise((r) => setTimeout(r, 300));
+    expect(sms.calls).toBe(callsBefore);
+  });
+
+  t('FORGOT: reset OTP noto‘g‘ri → INVALID_CODE', async () => {
+    const { phone } = await registerFresh();
+    await flushCooldownOnly();
+    const code = await requestAndGetCode(phone, 'PASSWORD_RESET');
+    const wrong = code === '000000' ? '111111' : '000000';
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code: wrong })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+  });
+
+  t('FORGOT: reset OTP muddati tugagan → INVALID_CODE', async () => {
+    const { phone } = await registerFresh();
+    await flushCooldownOnly();
+    const code = await requestAndGetCode(phone, 'PASSWORD_RESET');
+    await withDb((db) =>
+      db.otpCode.updateMany({
+        where: { phone, purpose: 'PASSWORD_RESET', consumedAt: null },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      }),
+    );
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+  });
+
+  t('FORGOT: reset OTP bir martalik — ikkinchi verify rad etiladi', async () => {
+    const { phone } = await registerFresh();
+    await flushCooldownOnly();
+    const code = await requestAndGetCode(phone, 'PASSWORD_RESET');
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code })
+      .expect(200);
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+  });
+
+  // ── Purpose binding — REGISTER OTP != PASSWORD_RESET OTP context ─────────
+
+  t('Purpose binding: REGISTER uchun so‘ralgan kod password-reset/verify-otp’da ishlamaydi', async () => {
+    const phone = uniquePhone();
+    const code = await requestAndGetCode(phone, 'REGISTER');
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+  });
+
+  // ── OTP siyosati (mavjud, SMS-only) ───────────────────────────────────────
+
+  t('OTP siyosati — request-otp "channel"/"purpose" maydonini qabul qilmaydi (whitelist rad etadi)', async () => {
+    const phone = uniquePhone();
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/request-otp')
+      .send({ phone, channel: 'email' })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('VALIDATION'));
   });
 
   t('Noto‘g‘ri kod 5 marta → kod “kuyadi”, keyin TO‘G‘RI kod ham ishlamaydi', async () => {
@@ -267,165 +602,82 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
 
     for (let i = 0; i < 5; i += 1) {
       await request(app!.getHttpServer())
-        .post('/api/v1/auth/otp/verify')
-        .send({ phone, code: wrong, intent: 'REGISTER' })
+        .post('/api/v1/auth/register/verify-otp')
+        .send({ phone, code: wrong })
         .expect(422)
         .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
     }
 
-    // Kod kuygan — endi TO'G'RI kod ham rad etiladi.
     await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'REGISTER' })
-      .expect(422)
-      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
-  });
-
-  t('Muddati tugagan kod rad etiladi (expiresAt o‘tmishga suriladi)', async () => {
-    const phone = uniquePhone();
-    const code = await requestAndGetCode(phone, 'REGISTER');
-
-    const db = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
-    try {
-      await db.otpCode.updateMany({
-        where: { phone, intent: 'REGISTER', consumedAt: null },
-        data: { expiresAt: new Date(Date.now() - 1000) },
-      });
-    } finally {
-      await db.$disconnect();
-    }
-
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'REGISTER' })
-      .expect(422)
-      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
-  });
-
-  t('Bir marta ishlatilgan kod ikkinchi marta rad etiladi (single-use)', async () => {
-    const phone = uniquePhone();
-    const code = await requestAndGetCode(phone, 'REGISTER');
-
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'REGISTER' })
-      .expect(200);
-
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone, code, intent: 'REGISTER' })
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code })
       .expect(422)
       .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
   });
 
   t('Telefon formati normallashadi — so‘rash E.164’da, tasdiqlash milliy formatda BIR XIL OTP’ni topadi', async () => {
-    // Ikkalasi bir xil raqam bo'lsa ham IKKI marta /otp/request qilinmaydi —
-    // 60s cooldown (ataylab, spam himoyasi) shuni bloklardi. Shu sabab bitta
-    // so'rov ichida "yozish E.164, o'qish milliy format" orqali sinaladi —
-    // agar normalizatsiya ikkala uchida bir xil bo'lmasa, `verify` kodni
-    // UMUMAN topolmasdi (INVALID_CODE bilan yiqilardi).
     const national = `90${(Date.now() % 10_000_000).toString().padStart(7, '0')}`;
     const e164 = `+998${national}`;
 
     const code = await requestAndGetCode(e164, 'REGISTER');
     const res = await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/verify')
-      .send({ phone: national, code, intent: 'REGISTER' }) // ATAYLAB milliy formatda — request'dan farqli
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone: national, code }) // ATAYLAB milliy formatda — request'dan farqli
       .expect(200);
-    expect(res.body.isNewUser).toBe(true);
-
-    const db = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
-    try {
-      const user = await db.user.findUnique({ where: { phone: e164 } });
-      expect(user).not.toBeNull(); // DB'da doim TO'LIQ E.164 saqlanadi
-    } finally {
-      await db.$disconnect();
-    }
+    expect(typeof res.body.registrationToken).toBe('string');
   });
 
-  t('OTP siyosati — /otp/request "channel" (email/telegram) maydonini qabul qilmaydi (whitelist rad etadi)', async () => {
+  t('Qayta so‘rash cooldown ichida RATE_LIMITED qaytaradi', async () => {
     const phone = uniquePhone();
     await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone, intent: 'LOGIN', channel: 'email' })
-      .expect(422)
-      .expect((r) => expect(r.body.code).toBe('VALIDATION'));
-  });
-
-  t('Qayta so‘rash cooldown ichida RATE_LIMITED qaytaradi (bir xil intent)', async () => {
-    const phone = uniquePhone();
-    await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone, intent: 'LOGIN' })
+      .post('/api/v1/auth/register/request-otp')
+      .send({ phone })
       .expect(200);
     const res = await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone, intent: 'LOGIN' });
+      .post('/api/v1/auth/register/request-otp')
+      .send({ phone });
     expect(res.status).toBe(429);
     expect(res.body.code).toBe('RATE_LIMITED');
   });
 
-  t('Cooldown INTENT bo‘yicha ajratilgan — LOGIN so‘ralgach darhol REGISTER so‘rash bloklanmaydi', async () => {
-    // "Hisob topilmadi → Ro'yxatdan o'tish" CTA bosilgach foydalanuvchi
-    // 60s kutmasdan REGISTER kodini olishi kerak (UX talabi) — lekin
-    // kunlik/IP chegara baribir umumiy qoladi (pastdagi test).
+  t('Cooldown MAQSAD bo‘yicha ajratilgan — REGISTER so‘ralgach darhol PASSWORD_RESET so‘rash bloklanmaydi', async () => {
+    // Yuqoridagi testlar jamlanib IP soatlik byudjetini tugatgan bo'lishi
+    // mumkin — bu test o'ziga xos budjet bilan mustaqil ishlashi kerak.
+    await flushIpCounter();
     const phone = uniquePhone();
+    await withDb(async (db) => {
+      const ids = app!.get(IdFactory);
+      await db.user.create({ data: { id: ids.next(), phone, roles: [], verified: true } });
+    });
     await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone, intent: 'LOGIN' })
+      .post('/api/v1/auth/register/request-otp')
+      .send({ phone })
       .expect(200);
     await request(app!.getHttpServer())
-      .post('/api/v1/auth/otp/request')
-      .send({ phone, intent: 'REGISTER' })
+      .post('/api/v1/auth/password-reset/request-otp')
+      .send({ phone })
       .expect(200);
-    await flushIpCounter(); // pastdagi testlar uchun umumiy IP byudjetini tiklaydi
-  });
-
-  t('Kunlik chegara INTENT’dan qat’iy nazar umumiy — LOGIN/REGISTER almashtirib bypass qilinmaydi', async () => {
-    const phone = uniquePhone();
-    const results: number[] = [];
-    for (let i = 0; i < 11; i += 1) {
-      const intent = i % 2 === 0 ? 'LOGIN' : 'REGISTER';
-      const res = await request(app!.getHttpServer())
-        .post('/api/v1/auth/otp/request')
-        .send({ phone, intent });
-      results.push(res.status);
-      await flushCooldownOnly(); // cooldown har safar 60s bo'lmasin — faqat kunlik hisoblagich sinaladi
-    }
-    expect(results.filter((s) => s === 429).length).toBeGreaterThan(0);
-    // Bu test 10 ta muvaffaqiyatli so'rov yuboradi — hammasi BIR XIL test
-    // jarayoni IP'sidan, shuning uchun umumiy `otp:ip:*` hisoblagichini ham
-    // oshiradi. Pastdagi (oxirgi, ATAYLAB IP kvotasini "kuydiruvchi") test
-    // ANIQ 20 ta so'rovga tayanadi — shu sabab bu yerda tiklaymiz.
     await flushIpCounter();
   });
 
-  /** Faqat cooldown kalitlarini tozalaydi (`ratelimit:cd:otp:cooldown:*`) —
-      kunlik hisoblagich (`ratelimit:hit:otp:day:*`) TEGILMAYDI, aks holda
-      kunlik chegara testi hech qachon 429'ga yetolmasdi (cooldown har
-      safar oraliqda bo'lmasa, alternativ intent'lar bir-birini bloklab
-      qo'yardi va daily counter'ga yetib bormasdan oldin cooldown 429
-      chiqarardi — bu daily limit emas, boshqa narsani sinagan bo'lardi). */
-  async function flushCooldownOnly(): Promise<void> {
-    const redis = app!.get(RedisService).client;
-    const keys = await redis.keys('ratelimit:cd:otp:cooldown:*');
-    if (keys.length) await redis.del(...keys);
-  }
+  t('Kunlik chegara MAQSAD’dan qat’iy nazar umumiy — REGISTER/PASSWORD_RESET almashtirib bypass qilinmaydi', async () => {
+    const phone = uniquePhone();
+    await withDb(async (db) => {
+      const ids = app!.get(IdFactory);
+      await db.user.create({ data: { id: ids.next(), phone, roles: [], verified: true } });
+    });
+    const results: number[] = [];
+    for (let i = 0; i < 11; i += 1) {
+      const path = i % 2 === 0 ? '/api/v1/auth/register/request-otp' : '/api/v1/auth/password-reset/request-otp';
+      const res = await request(app!.getHttpServer()).post(path).send({ phone });
+      results.push(res.status);
+      await flushCooldownOnly();
+    }
+    expect(results.filter((s) => s === 429).length).toBeGreaterThan(0);
+    await flushIpCounter();
+  });
 
-  /** Faqat umumiy IP soatlik hisoblagichini (`ratelimit:hit:otp:ip:*`)
-      tozalaydi — yuqoridagi ikki test (INTENT ajratilgan cooldown, kunlik
-      chegara) BIR NECHTA muvaffaqiyatli `/otp/request` yuboradi, hammasi
-      BIR XIL test-jarayoni IP'sidan. Bu ularning maqsadiga aloqasi yo'q
-      yon ta'sir — tozalamasa, faylning OXIRIDAGI ATAYLAB IP kvotasini
-      "kuydiruvchi" test (va undan oldingi boshqa har qanday test) noto'g'ri
-      vaqtda 429 olardi. */
-  async function flushIpCounter(): Promise<void> {
-    const redis = app!.get(RedisService).client;
-    const keys = await redis.keys('ratelimit:hit:otp:ip:*');
-    if (keys.length) await redis.del(...keys);
-  }
-
-  // ── Refresh rotatsiya + reuse detection ──────────────────────────────────
+  // ── Refresh rotatsiya + reuse detection (o'zgarmagan mexanika) ────────────
 
   t('Refresh — rotatsiya: eski cookie qayta kelsa TOKEN_REUSED va butun oila bekor bo‘ladi', async () => {
     const { refreshCookie } = await registerFresh();
@@ -437,14 +689,12 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     const newCookie = (rotated.headers['set-cookie'] as unknown as string[])[0]!.split(';')[0]!;
     expect(newCookie).not.toBe(refreshCookie);
 
-    // Eski (allaqachon rotatsiya qilingan) cookie qayta kelsa — REUSE.
     const reuse = await request(app!.getHttpServer())
       .post('/api/v1/auth/refresh')
       .set('Cookie', refreshCookie);
     expect(reuse.status).toBe(401);
     expect(reuse.body.code).toBe('TOKEN_REUSED');
 
-    // Yangi (rotatsiyadan chiqqan) token ham endi ishlamaydi — oila yopilgan.
     const afterFamily = await request(app!.getHttpServer())
       .post('/api/v1/auth/refresh')
       .set('Cookie', newCookie);
@@ -460,14 +710,11 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       request(app!.getHttpServer()).post('/api/v1/auth/refresh').set('Cookie', refreshCookie),
     ]);
     const statuses = [r1.status, r2.status].sort();
-    // Ikkalasi ham 200 bo'lishi MUMKIN EMAS — CAS faqat bittasini o'tkazadi.
     expect(statuses).toEqual([200, 401]);
 
     const winner = r1.status === 200 ? r1 : r2;
     const winnerCookie = (winner.headers['set-cookie'] as unknown as string[])[0]!.split(';')[0]!;
 
-    // G'olib chiqqan tokenning O'ZI ham endi ishlamasin — chunki bu "parallel
-    // ishlatilish" o'zi shubhali hisoblanadi va butun oila yopiladi.
     const after = await request(app!.getHttpServer())
       .post('/api/v1/auth/refresh')
       .set('Cookie', winnerCookie);
@@ -475,7 +722,7 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     expect(after.body.code).toBe('TOKEN_REUSED');
   });
 
-  // ── Rol tanlash / almashtirish ───────────────────────────────────────────
+  // ── Rol tanlash / almashtirish (o'zgarmagan) ──────────────────────────────
 
   t('roles/choose → keyingi choose BAD_STATE, switch faqat egallagan rolga', async () => {
     const { accessToken } = await registerFresh();
@@ -489,7 +736,6 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     expect(chosen.body.roleChosen).toBe(true);
     const newAccess = chosen.body.accessToken as string;
 
-    // Ikkinchi marta tanlash — allaqachon tanlangan.
     await request(app!.getHttpServer())
       .post('/api/v1/me/roles/choose')
       .set('Authorization', `Bearer ${newAccess}`)
@@ -497,7 +743,6 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect(409)
       .expect((r) => expect(r.body.code).toBe('BAD_STATE'));
 
-    // Ega bo'lmagan rolga switch — NOT_ALLOWED.
     await request(app!.getHttpServer())
       .post('/api/v1/me/roles/switch')
       .set('Authorization', `Bearer ${newAccess}`)
@@ -505,7 +750,6 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect(403)
       .expect((r) => expect(r.body.code).toBe('NOT_ALLOWED'));
 
-    // O'ziga qaytish (ega bo'lgan rol) — ishlaydi.
     await request(app!.getHttpServer())
       .post('/api/v1/me/roles/switch')
       .set('Authorization', `Bearer ${newAccess}`)
@@ -516,7 +760,6 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
 
   t('RolesGuard — rol tanlanmagan (activeRole=null) himoyalangan marshrutga kirolmaydi', async () => {
     const { accessToken } = await registerFresh();
-    // `/me` himoyalanmagan (rol talab qilmaydi) — shu bilan ishlaydi.
     await request(app!.getHttpServer())
       .get('/api/v1/me')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -524,7 +767,7 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect((r) => expect(r.body.activeRole).toBeNull());
   });
 
-  // ── Sessiya egaligi ───────────────────────────────────────────────────────
+  // ── Sessiya egaligi (o'zgarmagan) ─────────────────────────────────────────
 
   t('Sessiyalar ro‘yxati + bitta sessiyani tugatish (o‘ziniki) + boshqa foydalanuvchining sessiyasi NOT_FOUND', async () => {
     const userA = await registerFresh();
@@ -544,19 +787,16 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect(200);
     const userBSessionId = listB.body[0].id as string;
 
-    // B — A'ning sessiyasini o'chira olmaydi (egalik: query-scoping → NOT_FOUND).
     await request(app!.getHttpServer())
       .delete(`/api/v1/me/sessions/${userASessionId}`)
       .set('Authorization', `Bearer ${userB.accessToken}`)
       .expect(404);
 
-    // B — o'zinikini o'chira oladi.
     await request(app!.getHttpServer())
       .delete(`/api/v1/me/sessions/${userBSessionId}`)
       .set('Authorization', `Bearer ${userB.accessToken}`)
       .expect(200);
 
-    // Endi B'ning refresh cookie'si ishlamaydi.
     await request(app!.getHttpServer())
       .post('/api/v1/auth/refresh')
       .set('Cookie', userB.refreshCookie)
@@ -590,15 +830,17 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect((r) => expect(r.body.code).toBe('UNAUTHENTICATED'));
   });
 
-  // Sanity: OTP kodi hech qachon DB'da ochiq matnda saqlanmaydi.
-  t('OtpCode.codeHash — xom kod EMAS (argon2id format)', async () => {
-    const phone = uniquePhone();
-    const code = await requestAndGetCode(phone, 'REGISTER');
+  // Sanity: OTP kodi VA parol hech qachon DB'da ochiq matnda saqlanmaydi.
+  t('OtpCode.codeHash / User.passwordHash — xom qiymat EMAS (argon2id format)', async () => {
+    const { phone } = await registerFresh();
     const db = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
     try {
       const row = await db.otpCode.findFirst({ where: { phone }, orderBy: { createdAt: 'desc' } });
-      expect(row?.codeHash).not.toBe(code);
       expect(row?.codeHash).toMatch(/^\$argon2id\$/);
+
+      const user = await db.user.findUnique({ where: { phone } });
+      expect(user?.passwordHash).not.toBe(TEST_PASSWORD);
+      expect(user?.passwordHash).toMatch(/^\$argon2id\$/);
     } finally {
       await db.$disconnect();
     }
@@ -610,8 +852,8 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     const results: number[] = [];
     for (let i = 0; i < 21; i += 1) {
       const res = await request(app!.getHttpServer())
-        .post('/api/v1/auth/otp/request')
-        .send({ phone: uniquePhone(), intent: 'LOGIN' });
+        .post('/api/v1/auth/register/request-otp')
+        .send({ phone: uniquePhone() });
       results.push(res.status);
     }
     expect(results.filter((s) => s === 429).length).toBeGreaterThan(0);

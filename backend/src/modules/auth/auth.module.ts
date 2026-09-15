@@ -4,6 +4,7 @@ import { TokenModule } from './token.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { OtpService } from './otp.service';
+import { AuthGrantService } from './auth-grant.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -20,7 +21,7 @@ import { RolesGuard } from './guards/roles.guard';
 @Module({
   imports: [SmsModule, TokenModule],
   controllers: [AuthController],
-  providers: [AuthService, OtpService, RefreshTokenService, JwtAuthGuard, RolesGuard],
+  providers: [AuthService, OtpService, AuthGrantService, RefreshTokenService, JwtAuthGuard, RolesGuard],
   exports: [AuthService, RefreshTokenService, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}

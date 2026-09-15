@@ -27,7 +27,6 @@ export default function RolTanlashPage() {
       if (pathname !== "/kirish") router.replace("/kirish");
       return;
     }
-    if (!session.verified) return;
 
     let dest = null;
     if (session.role === "xaridor") dest = "/xaridor";
@@ -49,8 +48,10 @@ export default function RolTanlashPage() {
       if (role === "mutaxassis") {
         router.push(session?.profileDone ? "/mutaxassis" : "/mutaxassis/royxat");
       } else {
-        /* Xaridor uchun alohida profil bosqichi yo'q — to'g'ridan-to'g'ri tasdiqlashga */
-        router.push(session?.verified ? "/xaridor" : "/kirish/tasdiqlash");
+        /* Xaridor uchun alohida profil bosqichi yo'q — to'g'ridan-to'g'ri kabinetga.
+           (Bosqich 21 — tasdiqlash SMS OTP orqali hisob yaratishning o'zida
+           sodir bo'ladi, alohida post-login verifikatsiya bosqichi yo'q.) */
+        router.push("/xaridor");
       }
     } catch (error) {
       const code = error instanceof Error ? error.message : "";

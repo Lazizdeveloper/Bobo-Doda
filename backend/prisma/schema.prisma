@@ -465,10 +465,13 @@ enum LedgerTransactionType {
 model User {
   id           String  @id @db.Uuid
   phone        String  @unique
-  /// Bosqich 2 — auth FAQAT telefon+OTP. Parol yo'q, ustun shuning uchun
-  /// NULL bo'lib qoladi (kelajakdagi parol-fallback ehtiyoji uchun saqlangan
-  /// — Phase 2 review'ida qayd etilgan ziddiyat: eski mock parol talab
-  /// qilardi, yangi spetsifikatsiya OTP-only).
+  /// Bosqich 21 — parol bilan login (SMS faqat telefon egaligini isbotlash
+  /// uchun: ro'yxatdan o'tish va parolni tiklashda, ODDIY login'da EMAS).
+  /// Argon2id (`HashService`, `AuthService.register`/`resetPassword`
+  /// yozadi). NULL — hali register/reset qilinmagan eski (Bosqich 2-20
+  /// davridagi) hisob; `AuthService.login` buni oddiy INVALID_CREDENTIALS
+  /// sifatida ko'radi (`Parolni unutdim` orqali tiklanadi — ayni vaqtda bu
+  /// eski hisoblar uchun onboarding yo'li).
   passwordHash String?
   /// OTP tasdiqlangan zahoti (`AuthService.verifyOtpAndLogin`) foydalanuvchi
   /// hali ismini kiritmagan — shuning uchun NULL bilan yaratiladi. Profil
@@ -532,6 +535,7 @@ model User {
   ledgerAccounts     LedgerAccount[]
   payouts            Payout[]
   disputesOpened     Dispute[]
+  authGrants         AuthGrant[]
 
   @@index([createdAt])
   // Bosqich 11, bo'lim 57 — `GET /staff/users`/`GET /staff/sellers`
@@ -573,24 +577,28 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-/// Bosqich 20 — bitta OTP challenge FAQAT bitta niyat (LOGIN yoki REGISTER)
-/// uchun yaroqli. LOGIN uchun so'ralgan kod REGISTER'ni tasdiqlay olmaydi
-/// va aksincha (`OtpService.verifyOtp` `intent`ni `WHERE`ga qo'shadi).
-enum AuthIntent {
-  LOGIN
+/// Bosqich 21 — SMS OTP FAQAT ikki maqsadda yuboriladi: telefon egaligini
+/// ro'yxatdan o'tishda YOKI parolni tiklashda isbotlash. Oddiy LOGIN endi
+/// parol bilan (`AuthService.login`) — OTP UMUMAN ishtirok etmaydi, shuning
+/// uchun avvalgi `LOGIN` qiymati olib tashlandi (Bosqich 20'dagi `AuthIntent`
+/// ning o'rnini bosadi). Bitta OTP challenge FAQAT bitta maqsad uchun yaroqli
+/// — REGISTER uchun so'ralgan kod PASSWORD_RESET'ni tasdiqlay olmaydi va
+/// aksincha (`OtpService.verifyOtp` `purpose`ni `WHERE`ga qo'shadi).
+enum OtpPurpose {
   REGISTER
+  PASSWORD_RESET
 }
 
-/// OTP kodi — telefon+OTP autentifikatsiyasi (Bosqich 2, Bosqich 20 — LOGIN/
-/// REGISTER ajratilishi). Append-only EMAS: `attempts`/`consumedAt`
-/// tekshirishda yangilanadi. Kod HECH QACHON ochiq matnda saqlanmaydi —
-/// faqat `codeHash` (argon2id).
+/// OTP kodi — telefon egaligini isbotlash (Bosqich 2, Bosqich 21 — parolga
+/// o'tish bilan REGISTER/PASSWORD_RESET'ga toraytirildi). Append-only EMAS:
+/// `attempts`/`consumedAt` tekshirishda yangilanadi. Kod HECH QACHON ochiq
+/// matnda saqlanmaydi — faqat `codeHash` (argon2id).
 model OtpCode {
   id         String     @id @db.Uuid
   /// E.164 (masalan +998901234567) — `phone.util.ts` normallashtiradi.
   phone      String
-  /// Bosqich 20 — challenge qaysi oqim uchun yaratilganini bog'laydi.
-  intent     AuthIntent
+  /// Challenge qaysi maqsad uchun yaratilganini bog'laydi.
+  purpose    OtpPurpose
   codeHash   String
   attempts   Int        @default(0)
   /// Muvaffaqiyatli tasdiqlangan YOKI 5-xato urinishda "kuygan" vaqt —
@@ -600,9 +608,39 @@ model OtpCode {
   expiresAt  DateTime   @db.Timestamptz(6)
   createdAt  DateTime   @default(now()) @db.Timestamptz(6)
 
-  @@index([phone, intent, createdAt])
+  @@index([phone, purpose, createdAt])
   @@index([expiresAt])
   @@map("otp_codes")
+}
+
+/// Bosqich 21 — OTP tasdiqlangandan KEYIN, YAKUNIY amal (User yaratish /
+/// parolni almashtirish) bajarilgunga qadar berilgan qisqa umrli, bir
+/// martalik "grant". OTP kodining O'ZI frontendda qayta ishlatilmaydi —
+/// `verify-otp` uni bitta marta (`OtpService.verifyOtp` CAS bilan)
+/// iste'mol qiladi va o'rniga shu grant'ni qaytaradi.
+///
+/// `RefreshToken`/`StaffSession` bilan BIR XIL naqsh: xom token DB'da
+/// SAQLANMAYDI — faqat SHA-256 (`hashOpaqueToken`, past-entropiyali SIR
+/// EMAS, 256 bitli tasodifiy qiymat — qidiruv tezligi muhim, argon2id shart
+/// emas). `consumedAt` — CAS bilan bir martalik iste'mol (10 ta parallel
+/// `/register/complete` FAQAT bittasini o'tkazadi).
+model AuthGrant {
+  id         String     @id @db.Uuid
+  purpose    OtpPurpose
+  /// E.164 — REGISTER uchun hali User yo'q, shuning uchun bog'lovchi
+  /// maydon shu (userId EMAS).
+  phone      String
+  /// PASSWORD_RESET uchun MAJBURIY (qaysi hisobning paroli tiklanadi).
+  /// REGISTER uchun NULL — User hali yaratilmagan.
+  userId     String?    @db.Uuid
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String     @unique
+  consumedAt DateTime?  @db.Timestamptz(6)
+  expiresAt  DateTime   @db.Timestamptz(6)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@index([expiresAt])
+  @@map("auth_grants")
 }
 
 /// SMS yuborish jurnali — hisob-kitob va suiiste'molni aniqlash uchun.

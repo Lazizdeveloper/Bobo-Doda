@@ -17,14 +17,17 @@ export const CATEGORY_ID = process.env.E2E_CATEGORY_ID || "01a092fb-037e-740b-9b
 export const REDIS_CLI =
   process.env.E2E_REDIS_CLI || "redis-cli -h 127.0.0.1 -p 6379";
 
-/** Bosqich 20 — bitta telefon+intent uchun `/otp/request` cooldown 60s
-    (`OtpService`). Bir xil intentda haqiqiy UI orqali IKKI MARTA so'rashni
+/** Bosqich 21 — bitta telefon+maqsad uchun request-otp cooldown 60s
+    (`OtpService`). Bir xil maqsadda haqiqiy UI orqali IKKI MARTA so'rashni
     sinash uchun (masalan "allaqachon ro'yxatdan o'tgan telefon bilan yana
     ro'yxatdan o'tishga urinish") 60s real kutish shart emas — kalitni
     to'g'ridan-to'g'ri Redis'dan o'chiramiz. */
-export function flushOtpCooldown(phone: string, intent: "LOGIN" | "REGISTER"): void {
-  execSync(`${REDIS_CLI} DEL "ratelimit:cd:otp:cooldown:${phone}:${intent}"`);
+export function flushOtpCooldown(phone: string, purpose: "REGISTER" | "PASSWORD_RESET"): void {
+  execSync(`${REDIS_CLI} DEL "ratelimit:cd:otp:cooldown:${phone}:${purpose}"`);
 }
+
+/** `registerViaUi`/E2E fixture hisoblari uchun bir xil parol. */
+export const E2E_PASSWORD = "E2eTestPass1!";
 
 /**
  * DIQQAT — nega bu suite `storageState` snapshot'ini FAYLGA yozib, uni bir
@@ -58,12 +61,13 @@ export function latestOtpFor(phone: string): string {
   return m[1];
 }
 
-/** Bosqich 20 — haqiqiy `/royxatdan-otish` UI oqimi orqali YANGI hisob
-    yaratadi (shortcut EMAS — bu ham register ekranining o'zini sinaydi).
-    `freshPhone()` bilan chaqirilgani uchun (har doim YANGI raqam) — bu
-    funksiya har doim REGISTER, LOGIN emas (LOGIN endi yangi raqamda
-    ACCOUNT_NOT_FOUND bilan yiqiladi). Chaqiruvchi keyin
-    `page.context().storageState()` bilan sessiyani saqlashi mumkin. */
+/** Bosqich 21 — haqiqiy `/royxatdan-otish` UI oqimi orqali YANGI hisob
+    yaratadi: telefon → SMS OTP → parol (3 bosqich, shortcut EMAS — bu ham
+    register ekranlarining o'zini sinaydi). `freshPhone()` bilan chaqirilgani
+    uchun (har doim YANGI raqam) — bu funksiya har doim REGISTER. Doim BIR
+    XIL `E2E_PASSWORD` bilan yaratadi (chaqiruvchiga keyin `loginViaUi`
+    bilan qaytadan kirish kerak bo'lsa shu parol ishlatiladi). Chaqiruvchi
+    keyin `page.context().storageState()` bilan sessiyani saqlashi mumkin. */
 export async function registerViaUi(page: Page, phone: string): Promise<void> {
   await page.goto("/royxatdan-otish", { waitUntil: "networkidle" });
   const local = phone.replace("+998", "");
@@ -74,24 +78,25 @@ export async function registerViaUi(page: Page, phone: string): Promise<void> {
   const code = latestOtpFor(phone);
   await page.locator("input").first().fill(code);
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
-  await page.waitForURL((url) => !url.pathname.includes("tasdiqlash"), { timeout: 10_000 });
+  await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
+
+  const passwordInputs = page.locator('input[type="password"]');
+  await passwordInputs.nth(0).fill(E2E_PASSWORD);
+  await passwordInputs.nth(1).fill(E2E_PASSWORD);
+  await page.getByRole("button", { name: /Hisob yaratish/i }).click();
+  await page.waitForURL((url) => !url.pathname.includes("/royxatdan-otish"), { timeout: 10_000 });
 }
 
-/** Haqiqiy `/kirish` UI oqimi orqali MAVJUD hisobga kiradi — telefon
-    oldindan (masalan `registerViaUi` bilan) ro'yxatdan o'tgan bo'lishi
-    SHART, aks holda "hisob topilmadi" CTA chiqadi (`auth.spec.ts`da shu
-    holat alohida sinaladi). */
-export async function loginViaUi(page: Page, phone: string): Promise<void> {
+/** Haqiqiy `/kirish` UI oqimi orqali MAVJUD hisobga kiradi (telefon+parol,
+    SMS ISHTIROK ETMAYDI) — telefon oldindan (masalan `registerViaUi`
+    bilan) ro'yxatdan o'tgan bo'lishi SHART. */
+export async function loginViaUi(page: Page, phone: string, password: string = E2E_PASSWORD): Promise<void> {
   await page.goto("/kirish", { waitUntil: "networkidle" });
   const local = phone.replace("+998", "");
   await page.locator("input").first().fill(local);
-  await page.getByRole("button", { name: /Kod yuborish/i }).click();
-  await page.waitForURL("**/kirish/tasdiqlash", { timeout: 10_000 });
-  await page.waitForTimeout(700); // backend log flush uchun
-  const code = latestOtpFor(phone);
-  await page.locator("input").first().fill(code);
-  await page.getByRole("button", { name: /Tasdiqlash/i }).click();
-  await page.waitForURL((url) => !url.pathname.includes("tasdiqlash"), { timeout: 10_000 });
+  await page.locator('input[type="password"]').fill(password);
+  await page.getByRole("button", { name: /^Kirish$/i }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/kirish"), { timeout: 10_000 });
 }
 
 export async function chooseRole(page: Page, label: "Xaridor" | "Mutaxassis"): Promise<void> {

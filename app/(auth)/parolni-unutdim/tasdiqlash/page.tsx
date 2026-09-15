@@ -8,12 +8,9 @@ import { Input } from "@/components/ui/Input";
 import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
-/** Bosqich 21 — OTP tasdiqlangach User HALI yaratilmaydi: `verifyRegisterOtp`
-    qisqa umrli `registrationToken` qaytaradi, u sessionStorage'da saqlanib
-    `/royxatdan-otish/parol`ga (parol yaratish bosqichi) o'tiladi. Telefon
-    allaqachon ro'yxatdan o'tganligi ENDI bu yerda emas, parol bosqichida
-    (`completeRegistration`) tekshiriladi. */
-export default function RoyxatdanOtishTasdiqlashPage() {
+/** Bosqich 21 — OTP tasdiqlangach `resetToken` (qisqa umrli, bir martalik)
+    sessionStorage'da saqlanib `/parolni-unutdim/parol`ga o'tiladi. */
+export default function ParolniUnutdimTasdiqlashPage() {
   const { t } = useT();
   const router = useRouter();
   const pathname = usePathname();
@@ -30,9 +27,9 @@ export default function RoyxatdanOtishTasdiqlashPage() {
       if (pathname !== dest) router.replace(dest);
       return;
     }
-    const stored = window.sessionStorage.getItem("bd_register_otp_phone");
+    const stored = window.sessionStorage.getItem("bd_reset_otp_phone");
     if (!stored) {
-      router.replace("/royxatdan-otish");
+      router.replace("/parolni-unutdim");
       return;
     }
     setPhone(stored);
@@ -47,9 +44,9 @@ export default function RoyxatdanOtishTasdiqlashPage() {
     }
     setLoading(true);
     try {
-      const { registrationToken } = await authService.verifyRegisterOtp(phone, code);
-      window.sessionStorage.setItem("bd_registration_token", registrationToken);
-      router.push("/royxatdan-otish/parol");
+      const { resetToken } = await authService.verifyPasswordResetOtp(phone, code);
+      window.sessionStorage.setItem("bd_reset_token", resetToken);
+      router.push("/parolni-unutdim/parol");
     } catch (err) {
       const errCode = err instanceof Error ? err.message : "";
       setError(errCode === "RATE_LIMITED" ? t("auth.errRateLimited") : t("auth.codeError"));
@@ -61,7 +58,7 @@ export default function RoyxatdanOtishTasdiqlashPage() {
     setResending(true);
     setError("");
     try {
-      await authService.requestRegisterOtp(phone);
+      await authService.requestPasswordResetOtp(phone);
     } catch {
       /* jimgina — foydalanuvchi baribir kodni qayta kiritishga urinadi */
     } finally {
@@ -72,14 +69,14 @@ export default function RoyxatdanOtishTasdiqlashPage() {
   return (
     <div className="rounded-3xl sm:rounded-[32px] border border-line/80 bg-card p-7 sm:p-12 lg:p-14 shadow-2xl shadow-black/5">
       <div className="mb-5">
-        <BackButton href="/royxatdan-otish" label={t("auth.tabRegister")} />
+        <BackButton href="/parolni-unutdim" label={t("common.back")} />
       </div>
       <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-primary">
         <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
         {t("auth.stepOtp")}
       </span>
       <h1 className="mt-2.5 font-heading text-2xl sm:text-3xl lg:text-4xl font-black text-ink tracking-tight">
-        {t("auth.confirmRegisterTitle")}
+        {t("auth.confirmResetTitle")}
       </h1>
       <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed">
         {t("auth.otpSentTo")} <strong className="text-ink">{phone}</strong>
@@ -109,14 +106,6 @@ export default function RoyxatdanOtishTasdiqlashPage() {
           {resending ? t("common.loading") : t("auth.resendCode")}
         </button>
       </form>
-
-      <div className="mt-10 pt-6 border-t border-line/60 flex items-center justify-center gap-2.5 text-xs sm:text-sm text-muted">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary shrink-0" aria-hidden="true">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-        <span>{t("auth.trustBadgeEscrow")}</span>
-      </div>
     </div>
   );
 }

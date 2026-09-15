@@ -471,4 +471,59 @@ DB unique constraint — 10 ta parallel verify real e2e testda tasdiqlangan).
 tanlash mantiqi (`/rol-tanlash`), seller eligibility/application
 workflow (Bosqich 3) — hech biriga tegilmadi.
 
+### CODE_RELEASE_CANDIDATE: **PASS** (Bosqich 20, o'zgarmadi)
+
+## 19. Bosqich 21 — Parol bilan login (SMS xarajatini kamaytirish)
+
+**Asosiy o'zgarish**: Bosqich 20'dagi combined "LOGIN OTP" arxitekturasi
+BUTUNLAY olib tashlandi. Endi:
+
+```text
+REGISTER  = 1 SMS  (telefon → OTP → parol → User)
+LOGIN     = 0 SMS  (telefon + parol → sessiya)
+FORGOT    = 1 SMS  (telefon → OTP → yangi parol; sessiya avtomatik
+                     OCHILMAYDI — foydalanuvchi /kirish orqali qaytadi)
+```
+
+To'liq tafsilot — RUNBOOK §21.
+
+| Tekshiruv | Natija |
+|---|---|
+| Backend `npm run lint` | ✅ PASS |
+| Backend `npm run typecheck` | ✅ PASS |
+| Backend `npm test` (unit) | ✅ **392/392 PASS**, 39 suite |
+| Backend `npm run test:e2e` (Jest, real Postgres+Redis) | ✅ **332/332 PASS**, 19 suite |
+| Backend `npm run build` | ✅ PASS |
+| `npm run generate:contracts` | ✅ PASS, `OtpPurpose` enum + 8 yangi `/auth/*`+`/me/change-password` endpoint, drift = 0 |
+| Frontend `eslint .` | ✅ PASS |
+| Frontend `tsc --noEmit` | ✅ PASS |
+| Frontend `next build` | ✅ PASS (6 yangi route: `/parolni-unutdim`+2, `/royxatdan-otish/parol`; `/kirish/tasdiqlash` o'chirildi) |
+| Playwright (auth+buyer+seller+purchase+disputes+admin) | ✅ **28 PASS, 1 SKIP (TOTP UI yo'q), 0 FAIL** |
+
+**Schema o'zgarishi**: `AuthIntent` → `OtpPurpose` (`LOGIN` qiymati olib
+tashlandi, `REGISTER`/`PASSWORD_RESET` qoldi), `OtpCode.intent` →
+`OtpCode.purpose`, yangi `AuthGrant` modeli (OTP-dan-keyingi qisqa umrli
+grant, `RefreshToken` bilan bir xil opaque-token naqshi) — migration
+`20260915150000_stage21_password_auth`, real Postgres'ga qo'llangan
+(dev + isolated e2e).
+
+**Xato taksonomiyasi**: duplikat kod YARATILMADI — mavjud
+`INVALID_CREDENTIALS`, `ACCOUNT_BLOCKED`, `ACCOUNT_SUSPENDED`,
+`PHONE_EXISTS`, `TOKEN_EXPIRED`, `INVALID_CURRENT_PASSWORD` qayta
+ishlatildi (barchasi `ERROR_CODES`da allaqachon bor edi).
+
+**Tugallangan, ilgari stub qilingan feature**: `POST /me/change-password`
+— frontend `AccountSecurity.tsx`/`usersService.changePassword()`
+ALLAQACHON to'liq yozilgan edi (Bosqich 2'dan `disabled()` bilan stub),
+endi haqiqiy `User.passwordHash` bilan ishlaydi. Yangi feature EMAS —
+mavjud, tayyor turgan UI backendga bog'landi.
+
+**SMS xarajat modeli (real e2e testda tasdiqlangan)**: register=1 SMS,
+5×login=0 qo'shimcha SMS, forgot-password=1 SMS (noma'lum telefon uchun
+0 — haqiqiy SMS yuborilmaydi, faqat bir xil public javob).
+
+**Tegilmagan (ataylab)**: staff/admin TOTP, rol tanlash mantiqi,
+seller eligibility/application workflow, OTP siyosati (SMS-only,
+Bosqich 19) — hech biriga tegilmadi.
+
 ### CODE_RELEASE_CANDIDATE: **PASS**

@@ -118,33 +118,57 @@ async function hydrateContract(c: RealContract, role: Model.UserRole | null): Pr
 }
 
 /* ==========================================================================
-   AUTH — OTP asosida (parol YO'Q). Sessiya snapshot `lib/api/http.ts`da.
+   AUTH — Bosqich 21: parol bilan login. SMS FAQAT register/reset'da.
+   Sessiya snapshot `lib/api/http.ts`da.
    ========================================================================== */
-function requestOtp(phone: string, intent: "LOGIN" | "REGISTER"): Promise<{ sent: true }> {
-  return call(async () => http<{ sent: true }>("/auth/otp/request", { method: "POST", body: { phone, intent } }));
-}
-
-function verifyOtp(phone: string, code: string, intent: "LOGIN" | "REGISTER"): Promise<Model.Session> {
-  return call(async () => {
-    const res = await http<RealAuthSession>("/auth/otp/verify", { method: "POST", body: { phone, code, intent } });
-    setAccessToken(res.accessToken);
-    const session: Model.Session = {
-      userId: decodeJwtSub(res.accessToken),
-      role: roleToUz(res.activeRole),
-      profileDone: res.profileDone,
-      verified: true,
-    };
-    sessionStore.write(session);
-    return session;
-  });
+function writeSession(res: RealAuthSession): Model.Session {
+  setAccessToken(res.accessToken);
+  const session: Model.Session = {
+    userId: decodeJwtSub(res.accessToken),
+    role: roleToUz(res.activeRole),
+    profileDone: res.profileDone,
+    verified: true,
+  };
+  sessionStore.write(session);
+  return session;
 }
 
 export const authService: AuthService = {
   getSession: sessionStore.read,
-  requestLoginOtp: (phone) => requestOtp(phone, "LOGIN"),
-  requestRegisterOtp: (phone) => requestOtp(phone, "REGISTER"),
-  verifyLoginOtp: (phone, code) => verifyOtp(phone, code, "LOGIN"),
-  verifyRegisterOtp: (phone, code) => verifyOtp(phone, code, "REGISTER"),
+  requestRegisterOtp: (phone) =>
+    call(async () => http<{ sent: true }>("/auth/register/request-otp", { method: "POST", body: { phone } })),
+  verifyRegisterOtp: (phone, code) =>
+    call(async () =>
+      http<{ registrationToken: string }>("/auth/register/verify-otp", { method: "POST", body: { phone, code } }),
+    ),
+  completeRegistration: (registrationToken, password, confirmPassword) =>
+    call(async () => {
+      const res = await http<RealAuthSession>("/auth/register/complete", {
+        method: "POST",
+        body: { registrationToken, password, confirmPassword },
+      });
+      return writeSession(res);
+    }),
+  login: (phone, password) =>
+    call(async () => {
+      const res = await http<RealAuthSession>("/auth/login", { method: "POST", body: { phone, password } });
+      return writeSession(res);
+    }),
+  requestPasswordResetOtp: (phone) =>
+    call(async () =>
+      http<{ sent: true }>("/auth/password-reset/request-otp", { method: "POST", body: { phone } }),
+    ),
+  verifyPasswordResetOtp: (phone, code) =>
+    call(async () =>
+      http<{ resetToken: string }>("/auth/password-reset/verify-otp", { method: "POST", body: { phone, code } }),
+    ),
+  completePasswordReset: (resetToken, password, confirmPassword) =>
+    call(async () =>
+      http<{ ok: true }>("/auth/password-reset/complete", {
+        method: "POST",
+        body: { resetToken, password, confirmPassword },
+      }),
+    ),
   chooseRole: (role) =>
     call(async () => {
       const res = await http<RealAuthSession>("/me/roles/choose", { method: "POST", body: { role: roleToReal(role) } });
@@ -204,7 +228,12 @@ export const usersService: UsersService = {
   setAvailability: () => disabled(),
   getPreferences: () => disabled(),
   savePreferences: () => disabled(),
-  changePassword: () => disabled(),
+  // Bosqich 21 — `User.passwordHash` endi haqiqiy (avval OTP-only edi,
+  // almashtiradigan parol umuman yo'q edi).
+  changePassword: (currentPassword, newPassword) =>
+    call(async () => {
+      await http("/me/change-password", { method: "POST", body: { currentPassword, newPassword } });
+    }),
   exportData: () => disabled(),
   deleteAccount: () => disabled(),
 };
