@@ -245,6 +245,19 @@ export const envSchema = z
           message: "production'da PAYMENT_PROVIDER=TEST IMKONSIZ (fail closed)",
         });
       }
+      // OTP policy audit — user-facing OTP FAQAT SMS orqali yuborilishi
+      // shart (email/Telegram OTP kanali YO'Q, bo'lishi ham mumkin emas).
+      // `SMS_PROVIDER` sukuti `CONSOLE` (kodni backend stdout'iga yozadi —
+      // faqat lokal dev uchun) production'da chindan yetkazib bermaydi,
+      // shuning uchun PAYMENT_PROVIDER bilan bir xil fail-closed falsafa:
+      // real SMS provider ulanmaguncha production umuman ko'tarilmaydi.
+      if (env.SMS_PROVIDER === 'CONSOLE') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['SMS_PROVIDER'],
+          message: "production'da SMS_PROVIDER=CONSOLE IMKONSIZ (fail closed) — OTP faqat real SMS provider orqali yuborilishi shart",
+        });
+      }
       // Bosqich 7 — Payout uchun hozircha Zod darajasida DUBLIKAT qilinmadi
       // (PAYME/CLICK'dan farqli, `PAYOUT_PROVIDER` enum'ida "kelajakda
       // implement qilinadigan, lekin hozir Zod'dan o'tadigan" haqiqiy qiymat

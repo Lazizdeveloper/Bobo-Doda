@@ -19,6 +19,15 @@ const paymeCreds = {
   PAYME_CHECKOUT_URL: 'https://test.paycom.uz',
 };
 
+// Bosqich 13 — SMS_PROVIDER=PLAYMOBILE tanlansa 4 ta maydon HAM majburiy.
+const playMobileCreds = {
+  SMS_PROVIDER: 'PLAYMOBILE',
+  PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
+  PLAYMOBILE_LOGIN: 'test-login',
+  PLAYMOBILE_PASSWORD: 'test-password',
+  PLAYMOBILE_SENDER: 'BoboDoda',
+};
+
 describe('validateEnv', () => {
   it('minimal majburiy env bilan o’tadi va default’larni to’ldiradi', () => {
     const env = validateEnv({ ...base });
@@ -83,6 +92,7 @@ describe('validateEnv', () => {
     const env = validateEnv({
       ...base,
       ...paymeCreds,
+      ...playMobileCreds,
       NODE_ENV: 'production',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
@@ -116,6 +126,7 @@ describe('validateEnv', () => {
     const env = validateEnv({
       ...base,
       ...paymeCreds,
+      ...playMobileCreds,
       NODE_ENV: 'production',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
@@ -137,6 +148,7 @@ describe('validateEnv', () => {
     const env = validateEnv({
       ...base,
       ...paymeCreds,
+      ...playMobileCreds,
       NODE_ENV: 'production',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
@@ -222,6 +234,24 @@ describe('validateEnv', () => {
         PLAYMOBILE_SENDER: 'TooLongSenderName',
       }),
     ).toThrow(/PLAYMOBILE_SENDER/);
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=CONSOLE (sukut) rad etiladi (fail closed)', () => {
+    expect(() =>
+      validateEnv({ ...base, ...paymeCreds, NODE_ENV: 'production', SWAGGER_ENABLED: 'false', PAYMENT_PROVIDER: 'PAYME' }),
+    ).toThrow(/SMS_PROVIDER/);
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=PLAYMOBILE to‘liq credential bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.SMS_PROVIDER).toBe('PLAYMOBILE');
   });
 
   it('Bosqich 10 — OUTBOX_* sukut qiymatlari', () => {

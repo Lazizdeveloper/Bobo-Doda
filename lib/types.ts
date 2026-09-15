@@ -20,9 +20,6 @@ export interface User {
   location?: string;
   bio?: string;
   email?: string;
-  telegramUsername?: string;
-  googleConnected?: boolean;
-  telegramConnected?: boolean;
 }
 
 export type TrustBadge = "yangi" | "ishonchli" | "top_mutaxassis";

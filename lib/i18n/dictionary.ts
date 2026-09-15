@@ -543,32 +543,6 @@ export const dictionary: Record<string, Entry> = {
     ru: "Введите номер телефона — мы отправим код подтверждения",
   },
   "auth.resetSendCode": { uz: "Tiklash kodini yuborish", ru: "Отправить код восстановления" },
-  "auth.resetMethodDesc": {
-    uz: "Tiklash kodini qaysi xizmat orqali qabul qilmoqchisiz?",
-    ru: "Через какой сервис вы хотите получить код восстановления?",
-  },
-  "auth.resetViaGoogle": { uz: "Google Email", ru: "Google Email" },
-  "auth.resetViaTelegram": { uz: "Telegram", ru: "Telegram" },
-  "auth.resetGoogleNotice": {
-    uz: "Tasdiqlangan Google pochtangizga tiklash kodi yuborildi:",
-    ru: "Код восстановления отправлен на подтвержденный Google Email:",
-  },
-  "auth.resetTelegramNotice": {
-    uz: "Telegram akkauntingizga tiklash kodi yuborildi:",
-    ru: "Код восстановления отправлен в ваш Telegram:",
-  },
-  "auth.resetGoogleHint": {
-    uz: "Google pochtangizni tekshirib, 6 xonali tiklash kodini kiriting.",
-    ru: "Проверьте почту Google и введите 6-значный код восстановления.",
-  },
-  "auth.resetTelegramHint": {
-    uz: "Telegram ilovangizga yuborilgan 6 xonali tiklash kodini kiriting.",
-    ru: "Введите 6-значный код восстановления, отправленный в Telegram.",
-  },
-  "auth.resetSwitchMethod": {
-    uz: "Boshqa usul orqali kod olish:",
-    ru: "Получить код другим способом:",
-  },
   "auth.resetNewPassword": { uz: "Yangi parol", ru: "Новый пароль" },
   "auth.resetConfirmPassword": {
     uz: "Yangi parolni takrorlang",
@@ -590,10 +564,6 @@ export const dictionary: Record<string, Entry> = {
   "auth.backToLogin": { uz: "Kirishga qaytish", ru: "Вернуться ко входу" },
   "auth.noAccount": { uz: "Akkountingiz yo'qmi?", ru: "Нет аккаунта?" },
   "auth.haveAccount": { uz: "Akkountingiz bormi?", ru: "Уже есть аккаунт?" },
-  "auth.regVerifyNote": {
-    uz: "Akkountingizni oxirida Telegram orqali tasdiqlaysiz",
-    ru: "Аккаунт вы подтвердите через Telegram в самом конце",
-  },
   "auth.finalStep": { uz: "Yakuniy bosqich", ru: "Последний шаг" },
   "auth.confirmTitle": { uz: "Akkountni tasdiqlang", ru: "Подтвердите аккаунт" },
   "auth.otpIntro": {
@@ -605,47 +575,15 @@ export const dictionary: Record<string, Entry> = {
     uz: "Juda ko'p urinish. Iltimos, biroz kutib qayta urinib ko'ring.",
     ru: "Слишком много попыток. Подождите немного и повторите попытку.",
   },
-  "auth.otpSentTo": { uz: "Kod shu raqamga yuborildi:", ru: "Код отправлен на номер:" },
+  "auth.otpSentTo": { uz: "SMS kod shu raqamga yuborildi:", ru: "SMS-код отправлен на номер:" },
   "auth.resendCode": { uz: "Kodni qayta yuborish", ru: "Отправить код повторно" },
-  "auth.confirmIntro": {
-    uz: "Akkountingizni faollashtirish uchun Telegram bot orqali tasdiqlang. Bu — himoyalangan hisob va bosqichli to'lov kafolatining kaliti.",
-    ru: "Активируйте аккаунт, подтвердив его через Telegram-бот. Это ключ к защищённому аккаунту и поэтапной гарантии оплаты.",
-  },
-  "auth.telegramBtn": { uz: "Telegram orqali tasdiqlash", ru: "Подтвердить через Telegram" },
-  "auth.redirecting": { uz: "Botga yo'naltirilyapsiz...", ru: "Перенаправляем в бот..." },
   "auth.verifyTitle": { uz: "Kodni kiriting", ru: "Введите код" },
-  "auth.verifyHint": {
-    uz: "Telegram botga yuborilgan 6 xonali kodni kiriting",
-    ru: "Введите 6-значный код, отправленный в Telegram-бот",
-  },
   "auth.verifyBtn": { uz: "Tasdiqlash", ru: "Подтвердить" },
   "auth.codeError": { uz: "Kod 6 xonali raqam bo'lishi kerak", ru: "Код должен состоять из 6 цифр" },
-  "auth.mockNote": {
-    uz: "Sinov rejimi: istalgan 6 xonali raqam qabul qilinadi",
-    ru: "Тестовый режим: принимается любое 6-значное число",
-  },
   "auth.trustBadgeEscrow": {
     uz: "100% Kafolatlangan xavfsiz to'lov va Escrow shartnoma tizimi",
     ru: "100% Гарантия безопасной оплаты и система Escrow договоров",
   },
-  "auth.fastLogin": { uz: "Tezkor kirish usuli", ru: "Быстрый вход" },
-  "auth.orDivider": { uz: "yoki telefon orqali", ru: "или через телефон" },
-  "auth.loginWithTelegram": { uz: "Telegram orqali kirish", ru: "Войти через Telegram" },
-  "auth.loginWithGoogle": { uz: "Google orqali kirish", ru: "Войти через Google" },
-  "auth.verifyMethodTitle": { uz: "Tasdiqlash usulini tanlang", ru: "Выберите способ подтверждения" },
-  "auth.verifyMethodDesc": {
-    uz: "Hisobingizni faollashtirish uchun o'zingizga qulay tasdiqlash usulini tanlang",
-    ru: "Выберите удобный для вас способ подтверждения и активации аккаунта",
-  },
-  "auth.tabTelegram": { uz: "Telegram orqali", ru: "Через Telegram" },
-  "auth.tabGoogle": { uz: "Google orqali", ru: "Через Google" },
-  "auth.googleVerifyIntro": {
-    uz: "Google akkountingizni bir klikda ulab, hisobingizni tasdiqlang va darhol platformada ish boshlang.",
-    ru: "Привяжите ваш Google аккаунт в один клик для мгновенной активации и начните работу.",
-  },
-  "auth.googleBtn": { uz: "Google orqali tasdiqlash", ru: "Подтвердить через Google" },
-  "auth.googleConnecting": { uz: "Google hisobiga ulanmoqda...", ru: "Подключение к Google..." },
-  "auth.directTelegramVerify": { uz: "Telegram bilan tezkor tasdiqlash", ru: "Быстрое подтверждение через Telegram" },
   "auth.alreadyHaveAccount": { uz: "Allaqachon hisobingiz bormi?", ru: "Уже есть аккаунт?" },
   "auth.alreadyHaveAccountDesc": {
     uz: "Tizimga kiring va loyihalaringiz hamda shartnomalaringizni davom ettiring.",
@@ -663,12 +601,6 @@ export const dictionary: Record<string, Entry> = {
   },
   "auth.termsLink": { uz: "Foydalanish shartlari", ru: "Условия использования" },
   "auth.privacyLink": { uz: "Maxfiylik siyosati", ru: "Политика конфиденциальности" },
-  "auth.orSocialLogin": { uz: "Yoki quyidagilar orqali kiring", ru: "Или войдите через" },
-  "auth.orSocialRegister": { uz: "Yoki quyidagilar orqali ro'yxatdan o'ting", ru: "Или зарегистрируйтесь через" },
-  "auth.regVerificationNotice": {
-    uz: "Ro'yxatdan o'tgach, akkountingizni Telegram yoki Google orqali tasdiqlaysiz",
-    ru: "После регистрации вы подтвердите аккаунт через Telegram или Google",
-  },
   "auth.roleTitle": { uz: "Kim sifatida davom etasiz?", ru: "Как вы хотите продолжить?" },
   "auth.roleSubtitle": {
     uz: "Bitta hisob faqat bitta rolga tegishli bo'ladi",
@@ -2082,12 +2014,6 @@ export const dictionary: Record<string, Entry> = {
   "bset.bioPh": { uz: "Kompaniyangiz yoki faoliyatingiz haqida qisqacha ma'lumot (mutaxassislar taklif yuborishda ko'rishadi)", ru: "Кратко о компании или вашей деятельности (видят специалисты при отклике)" },
   "bset.avatarUpload": { uz: "Logotip yoki Avatar", ru: "Логотип или Аватар" },
   "bset.avatarHint": { uz: "PNG, JPG yoki WebP formatida, 2MB gacha", ru: "Формат PNG, JPG или WebP, до 2МБ" },
-  "bset.connectedAccounts": { uz: "Ulangan tasdiqlash hisoblari", ru: "Привязанные аккаунты" },
-  "bset.connectedHint": { uz: "1-klikda tezkor kirish va hisobni xavfsiz tiklash uchun xizmatlar", ru: "Сервисы для быстрого входа в 1 клик и восстановления аккаунта" },
-  "bset.connected": { uz: "Ulangan", ru: "Подключено" },
-  "bset.notConnected": { uz: "Ulanmagan", ru: "Не подключено" },
-  "bset.connect": { uz: "Ulash", ru: "Подключить" },
-  "bset.disconnect": { uz: "Uzish", ru: "Отключить" },
   "bset.verifiedEmployer": { uz: "Tasdiqlangan Ish Beruvchi", ru: "Проверенный Заказчик" },
   "bset.escrowSecurityTitle": { uz: "100% Escrow xavfsiz to'lov kafolati", ru: "100% Escrow гарантия безопасной оплаты" },
   "bset.escrowSecurityDesc": { uz: "Mablag'ingiz faqat siz tasdiqlagan shartnoma bosqichi uchun muzlatiladi va ish to'liq topshirilmaguncha mutaxassisga berilmaydi.", ru: "Средства замораживаются только на одобренные этапы и не выплачиваются до сдачи работы." },

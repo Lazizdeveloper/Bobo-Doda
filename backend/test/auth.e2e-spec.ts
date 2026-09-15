@@ -125,6 +125,43 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
   });
 
+  t('Muddati tugagan kod rad etiladi (expiresAt o‘tmishga suriladi)', async () => {
+    const phone = uniquePhone();
+    const code = await requestAndGetCode(phone);
+
+    const db = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
+    try {
+      await db.otpCode.updateMany({
+        where: { phone, consumedAt: null },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      });
+    } finally {
+      await db.$disconnect();
+    }
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/otp/verify')
+      .send({ phone, code })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+  });
+
+  t('Bir marta ishlatilgan kod ikkinchi marta rad etiladi (single-use)', async () => {
+    const phone = uniquePhone();
+    const code = await requestAndGetCode(phone);
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/otp/verify')
+      .send({ phone, code })
+      .expect(200);
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/otp/verify')
+      .send({ phone, code })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+  });
+
   t('Telefon formati normallashadi — so‘rash E.164’da, tasdiqlash milliy formatda BIR XIL OTP’ni topadi', async () => {
     // Ikkalasi bir xil raqam bo'lsa ham IKKI marta /otp/request qilinmaydi —
     // 60s cooldown (ataylab, spam himoyasi) shuni bloklardi. Shu sabab bitta
@@ -148,6 +185,15 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     } finally {
       await db.$disconnect();
     }
+  });
+
+  t('OTP siyosati — /otp/request "channel" (email/telegram) maydonini qabul qilmaydi (whitelist rad etadi)', async () => {
+    const phone = uniquePhone();
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/otp/request')
+      .send({ phone, channel: 'email' })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('VALIDATION'));
   });
 
   t('Qayta so‘rash cooldown ichida RATE_LIMITED qaytaradi', async () => {

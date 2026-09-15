@@ -1535,3 +1535,84 @@ alohida Redis'ga ulang). Bosqich 18'da bu aynan shu sababdan 197/308 test
 yiqilgan (kontaminatsiyalangan, 1076s) va dev backend to'xtatilgach
 308/308 PASS (toza, 149s) natija berdi — **ilova kodida hech qanday
 regressiya yo'q edi**, sof test-muhit izolyatsiyasi masalasi.
+
+## 19. OTP siyosati audit — SMS ONLY (Bosqich 19)
+
+**Qoida (o'zgarmas): foydalanuvchiga yuboriladigan HAR QANDAY OTP kod
+FAQAT SMS orqali yetkaziladi.** Email OTP yo'q, Telegram OTP yo'q, frontend
+yoki backend'da kanal tanlash (`channel`) parametri yo'q. Bu bo'lim to'liq
+repo auditining natijasi va uni qayta tekshirish uchun yo'l-yo'riq.
+
+### Nima topildi va nima o'zgardi
+
+- **Yopilgan production gap**: `backend/src/config/env.schema.ts`dagi
+  `superRefine` fail-closed blokiga `SMS_PROVIDER === 'CONSOLE'` tekshiruvi
+  qo'shildi — ilgari `SWAGGER_ENABLED`/`DB_ROLE_ASSERTION`/`PAYMENT_PROVIDER`
+  uchun bor edi, `SMS_PROVIDER` uchun YO'Q edi. Demak, production oldin
+  CONSOLE provider (faqat stdout'ga yozadi, hech kimga yetkazmaydi) bilan
+  jimgina ko'tarilishi MUMKIN edi. Endi `SMS_PROVIDER=CONSOLE` bilan
+  production `validateEnv()` xato tashlab boot bo'lmaydi — real PLAYMOBIL
+  credential (`PLAYMOBILE_API_URL`/`LOGIN`/`PASSWORD`/`SENDER`) SHART.
+- **Olib tashlangan o'lik/soxta kod** (mock-era, production'da ishlamagan):
+  `app/xaridor/sozlamalar/page.tsx`dagi "Connected Accounts" bloki —
+  Google/Telegram "ulash" tugmalari faqat local state'ni almashtirar,
+  hech qanday haqiqiy backend chaqiruvi yo'q edi (soxta UI). Shu bilan
+  birga `lib/types.ts`dan `googleConnected`/`telegramConnected`/
+  `telegramUsername` maydonlari va `lib/mock-api/index.ts`dan 4 ta o'lik
+  funksiya (`loginWithTelegram`/`loginWithGoogle`/`verifyTelegram`/
+  `verifyGoogle`) o'chirildi — bular eski (Bosqich 17'gacha) mock
+  arxitekturasidan qolgan, real backend'da HECH QACHON chaqirilmagan.
+- **Tuzatilgan noto'g'ri kontent**: `lib/faq-content.ts` va
+  `lib/help-articles.ts`dagi ro'yxatdan o'tish tavsifi avval "Telegram
+  orqali tasdiqlash"ni oxirgi bosqich sifatida tasvirlar edi — bu HECH
+  QACHON to'g'ri bo'lmagan (real oqim: telefon → SMS OTP → rol, parolsiz).
+  Help-markaz maqolasi `"telegram-orqali-tasdiqlash"` → `"sms-orqali-
+  tasdiqlash"` slug'iga ko'chirildi, matn to'g'rilandi (uz/ru/en).
+- **UX matni aniqlashtirildi**: `auth.otpSentTo` ("Kod shu raqamga
+  yuborildi:") → **"SMS kod shu raqamga yuborildi:"** (uz/ru/en) — OTP
+  sahifasida SMS kanali endi ANIQ aytiladi, ilgari faqat `auth.otpIntro`
+  (so'rash sahifasi) aytardi, tasdiqlash sahifasi aytmasdi.
+- **Yangi testlar** (`backend/test/auth.e2e-spec.ts`): muddati tugagan kod
+  rad etiladi (`expiresAt` o'tmishga surilib tekshiriladi), bir marta
+  ishlatilgan kod ikkinchi marta rad etiladi (single-use CAS), va
+  `/otp/request` `{"channel":"email"}` kabi whitelist'dan tashqari maydonni
+  rad etadi (422 VALIDATION — global `ValidationPipe({whitelist:true,
+  forbidNonWhitelisted:true})` tufayli, kanal selektori arxitektura
+  darajasida IMKONSIZ). Yangi statik audit spec:
+  `backend/src/modules/auth/otp-policy.audit.spec.ts` — `src/` ostidagi
+  HAR BIR faylni email/Telegram-OTP kalit so'zlarga (`EmailOtpService`,
+  `sendOtpEmail`, `sendOtpToTelegram`, `telegramVerification`,
+  `EMAIL_OTP`, `TELEGRAM_OTP` va h.k.) qidiradi va `RequestOtpDto`
+  manbasida `channel` so'zi yo'qligini tasdiqlaydi — kelajakda kimdir
+  email/Telegram OTP yo'lini qayta qo'shsa, bu test qizil bo'ladi.
+
+### Ataylab TEGILMAGAN (legitim, OTP'ga aloqasi yo'q)
+
+- **Staff/admin TOTP** (authenticator-app 2FA, `staff-auth` moduli) —
+  bu **BOSHQA xavfsizlik mexanizmi**, marketplace-foydalanuvchi SMS
+  OTP'idan mustaqil. Email+parol+ixtiyoriy TOTP — SMS'ga aylantirilmaydi,
+  aylantirilishi ham kerak emas (TOTP standart, provayderga bog'liq emas,
+  SMS'dan XAVFSIZROQ). §11ga qarang.
+- **Telegram support** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_SUPPORT_CHAT_ID`,
+  frontend `app/api/support/route.ts`) — sayt ichidagi Yordam modalining
+  xabarlarini Telegram'ga uzatadi, OTP bilan HECH QANDAY aloqasi yo'q.
+  Ikkala `.env.example` faylida ham endi aniq "bu OTP kanali emas" izohi
+  bor.
+- **Payme'ning o'z 3DS/OTP oqimi** — tashqi provayder javobgarligi,
+  loyiha kodiga umuman kirmaydi, tegilmadi.
+- Anti-circumvention ogohlantirish matni (shartnoma tuzilmagunча telefon/
+  Telegram almashmaslik haqida, `ProposalChat.tsx` va h.k.) va
+  `lib/chat-filter.ts` — bular aloqa ma'lumotini ANIQLASH xavfsizlik
+  xususiyati, OTP yetkazish emas.
+
+### Qayta tekshirish uchun
+
+```bash
+# Backend: SMS_PROVIDER=CONSOLE production'da rad etiladi
+cd backend && nix-shell --run "npx jest src/config/env.schema.spec.ts"
+# Statik audit — email/Telegram OTP kod yo'li yo'q
+cd backend && nix-shell --run "npx jest src/modules/auth/otp-policy.audit.spec.ts"
+# To'liq OTP xavfsizlik xossalari (expiry/single-use/attempt-limit/
+# cooldown/IP-limit/channel-whitelist) — E2E_SUPERUSER_URL §18/19dagidek
+cd backend && nix-shell --run 'E2E_SUPERUSER_URL="postgresql://bobododa@127.0.0.1:5432/postgres" npm run test:e2e'
+```

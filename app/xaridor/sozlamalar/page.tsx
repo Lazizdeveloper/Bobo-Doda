@@ -62,10 +62,6 @@ export default function XaridorSozlamalarPage() {
   // Billing state
   const [cards, setCards] = useState<PaymentCard[]>([]);
 
-  // Security connected accounts
-  const [googleConnected, setGoogleConnected] = useState(true);
-  const [telegramConnected, setTelegramConnected] = useState(false);
-
   // Notifications state
   const [preferences, setPreferences] = useState<AccountPreferences>(DEFAULT_PREFERENCES);
   const [savingPreferences, setSavingPreferences] = useState(false);
@@ -102,8 +98,6 @@ export default function XaridorSozlamalarPage() {
           setLocation(user.location || "");
           setBio(user.bio || "");
           setAvatarUrl(user.avatarUrl || "");
-          setGoogleConnected(user.googleConnected ?? true);
-          setTelegramConnected(user.telegramConnected ?? false);
         }
         setCards(cardList || []);
         setPreferences({
@@ -171,8 +165,6 @@ export default function XaridorSozlamalarPage() {
         location: location.trim(),
         bio: bio.trim(),
         avatarUrl,
-        googleConnected,
-        telegramConnected,
       });
       setCurrentUser((prev) =>
         prev
@@ -185,8 +177,6 @@ export default function XaridorSozlamalarPage() {
               location: location.trim(),
               bio: bio.trim(),
               avatarUrl,
-              googleConnected,
-              telegramConnected,
             }
           : null
       );
@@ -195,34 +185,6 @@ export default function XaridorSozlamalarPage() {
       toast(t("common.error"), "error");
     } finally {
       setSavingProfile(false);
-    }
-  }
-
-  // Connected accounts toggle
-  async function toggleGoogle() {
-    const nextState = !googleConnected;
-    setGoogleConnected(nextState);
-    try {
-      await usersService.updateUserProfile({ googleConnected: nextState });
-      toast(nextState ? "Google akkaunti ulandi" : "Google akkaunti uzildi");
-    } catch {
-      setGoogleConnected(!nextState);
-      toast(t("common.error"), "error");
-    }
-  }
-
-  async function toggleTelegram() {
-    const nextState = !telegramConnected;
-    setTelegramConnected(nextState);
-    try {
-      await usersService.updateUserProfile({
-        telegramConnected: nextState,
-        telegramUsername: nextState ? "@user_telegram" : undefined,
-      });
-      toast(nextState ? "Telegram akkaunti ulandi" : "Telegram akkaunti uzildi");
-    } catch {
-      setTelegramConnected(!nextState);
-      toast(t("common.error"), "error");
     }
   }
 
@@ -274,7 +236,7 @@ export default function XaridorSozlamalarPage() {
     {
       id: "security",
       label: t("bset.tabSecurity"),
-      description: "Parol, Google va Telegram",
+      description: "Hisob va tasdiqlash",
       icon: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
     },
     {
@@ -769,99 +731,6 @@ export default function XaridorSozlamalarPage() {
                   >
                     {t("bset.verificationOpen")}
                   </Link>
-                </div>
-              </Card>
-
-              {/* Connected Accounts Card */}
-              <Card padding="lg">
-                <div className="border-b border-line/60 pb-4 mb-6">
-                  <h2 className="font-heading text-base font-bold text-ink">
-                    {t("bset.connectedAccounts")}
-                  </h2>
-                  <p className="text-xs text-muted mt-1">
-                    {t("bset.connectedHint")}
-                  </p>
-                </div>
-
-                <div className="flex flex-col divide-y divide-line/60">
-                  {/* Google Row */}
-                  <div className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-card border border-line shadow-sm">
-                        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                          <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
-                          <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" />
-                          <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z" />
-                          <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-ink">Google</p>
-                          <span
-                            className={`rounded-full px-2 py-0.2 text-[10px] font-semibold ${
-                              googleConnected
-                                ? "bg-emerald-500/15 text-emerald-700"
-                                : "bg-surface text-muted"
-                            }`}
-                          >
-                            {googleConnected ? t("bset.connected") : t("bset.notConnected")}
-                          </span>
-                        </div>
-                        <p className="text-2xs text-muted">
-                          {googleConnected
-                            ? "Tezkor kirish va parolni xavfsiz tiklash uchun faol"
-                            : "Parolni unutganda Google orqali tezkor tiklash"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      variant={googleConnected ? "ghost" : "secondary"}
-                      size="sm"
-                      onClick={toggleGoogle}
-                    >
-                      {googleConnected ? t("bset.disconnect") : t("bset.connect")}
-                    </Button>
-                  </div>
-
-                  {/* Telegram Row */}
-                  <div className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#229ED9]/10 text-[#229ED9] border border-[#229ED9]/20 shadow-sm">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-ink">Telegram</p>
-                          <span
-                            className={`rounded-full px-2 py-0.2 text-[10px] font-semibold ${
-                              telegramConnected
-                                ? "bg-emerald-500/15 text-emerald-700"
-                                : "bg-surface text-muted"
-                            }`}
-                          >
-                            {telegramConnected ? t("bset.connected") : t("bset.notConnected")}
-                          </span>
-                        </div>
-                        <p className="text-2xs text-muted">
-                          {telegramConnected
-                            ? "Telegram bot orqali bildirishnomalar va tasdiqlash yoqilgan"
-                            : "Loyiha yangilanishlarini Telegram botda qabul qilish"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      variant={telegramConnected ? "ghost" : "secondary"}
-                      size="sm"
-                      onClick={toggleTelegram}
-                    >
-                      {telegramConnected ? t("bset.disconnect") : t("bset.connect")}
-                    </Button>
-                  </div>
                 </div>
               </Card>
 

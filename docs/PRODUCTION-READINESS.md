@@ -393,3 +393,44 @@ hali yo'q. Qolgan production to'siqlar (§1/§14 bilan bir xil):
 Bu ikki status ATAYLAB ALOHIDA: CODE_RELEASE_CANDIDATE kod haqida, u
 PASS; REAL_PRODUCTION_READY infratuzilma haqida, u hali BLOCKED — ular
 aralashtirilmasin.
+
+## 17. Bosqich 19 — OTP siyosati audit (SMS ONLY)
+
+**Siyosat**: foydalanuvchiga yuboriladigan HAR QANDAY OTP kod FAQAT SMS
+orqali yetkaziladi. Email OTP yo'q, Telegram OTP yo'q, kanal tanlash
+parametri yo'q. To'liq tafsilot — RUNBOOK §19. Bu bo'lim faqat yakuniy
+tasdiqlangan natijalar.
+
+| Tekshiruv | Natija |
+|---|---|
+| Backend `npm run lint` | ✅ PASS |
+| Backend `npm run typecheck` | ✅ PASS |
+| Backend `npm test` (unit) | ✅ **373/373 PASS**, 38 suite |
+| Backend `npm run test:e2e` (Jest, real Postgres+Redis) | ✅ **311/311 PASS**, 19 suite |
+| Backend `npm run build` | ✅ PASS |
+| `npm run generate:contracts` | ✅ PASS, drift = 0 |
+| Frontend `eslint .` | ✅ PASS |
+| Frontend `tsc --noEmit` | ✅ PASS |
+| Frontend `next build` | ✅ PASS |
+| Playwright (auth+buyer+seller+purchase+disputes+admin) | ✅ **23 PASS, 1 SKIP (TOTP UI yo'q), 0 FAIL** |
+
+**Yopilgan production gap**: `SMS_PROVIDER=CONSOLE` bilan production endi
+fail-closed rad etiladi (`env.schema.ts`, `PAYMENT_PROVIDER`/
+`SWAGGER_ENABLED`/`DB_ROLE_ASSERTION` bilan bir xil naqsh) — ilgari
+production CONSOLE provider (faqat stdout, hech kimga yetkazmaydi) bilan
+jimgina ko'tarilishi mumkin edi.
+
+**Olib tashlangan soxta/o'lik kod**: xaridor Sozlamalar sahifasidagi
+ishlamaydigan Google/Telegram "Connected Accounts" bloki (faqat local
+state, real backend chaqiruvi yo'q edi) va 4 ta o'lik mock-auth funksiyasi
+(`loginWithTelegram`/`loginWithGoogle`/`verifyTelegram`/`verifyGoogle`).
+Noto'g'ri FAQ/help-markaz kontenti (ro'yxatdan o'tishni Telegram
+tasdiqlash bilan tasvirlagan) to'g'rilandi.
+
+**Tegilmagan (ataylab)**: staff/admin TOTP (boshqa, mustaqil xavfsizlik
+mexanizmi), Telegram support integratsiyasi (OTP'ga aloqasi yo'q,
+faqat Yordam modali), Payme'ning o'z 3DS/OTP oqimi (tashqi provayder).
+
+### CODE_RELEASE_CANDIDATE: **PASS** (o'zgarmadi, yangi audit bilan mustahkamlandi)
+
+REAL_PRODUCTION_READY holati §16dagi bilan bir xil — o'zgarmadi.
