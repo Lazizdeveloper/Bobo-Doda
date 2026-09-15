@@ -85,9 +85,13 @@ export default function ParolniUnutdimTasdiqlashPage() {
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onChange={(e) => {
+            setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+            if (error) setError("");
+          }}
           inputMode="numeric"
           autoComplete="one-time-code"
+          maxLength={6}
           placeholder="••••••"
           aria-label={t("auth.verifyTitle")}
           error={error}

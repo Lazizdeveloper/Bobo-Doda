@@ -26,6 +26,63 @@ test("register sahifasi to'g'ri render bo'ladi", async ({ page }) => {
   await expect(page.getByText(/Google|Telegram|Email/i)).toHaveCount(0);
 });
 
+/* Bug fix regressiyasi — OTP input state HAR DOIM string (JS number emas):
+   `/^\d{6}$/` validatsiyasi, bosh nolli kodlar buzilmaydi, stale xato
+   to'g'ri kod kiritilgach darhol tozalanadi. SMS so'ralmaydi — sessionStorage
+   to'g'ridan-to'g'ri to'ldiriladi (bu testlar faqat input/validatsiya
+   xatti-harakatini sinaydi, real OTP round-trip emas). */
+test.describe("OTP input validatsiyasi (bug fix — bosh nol, stale xato)", () => {
+  async function gotoTasdiqlash(page: import("@playwright/test").Page): Promise<void> {
+    const phone = freshPhone();
+    await page.goto("/royxatdan-otish/tasdiqlash");
+    await page.evaluate((p) => window.sessionStorage.setItem("bd_register_otp_phone", p), phone);
+    await page.reload({ waitUntil: "networkidle" });
+  }
+
+  test("olti xonali kod (345654) — input string sifatida to'g'ri saqlanadi, oldindan xato yo'q", async ({ page }) => {
+    await gotoTasdiqlash(page);
+    const input = page.locator("input").first();
+    await input.fill("345654");
+    await expect(input).toHaveValue("345654");
+    await expect(page.locator("p[role='alert']")).toHaveCount(0);
+  });
+
+  test("bosh nolli kod (012345) — yetakchi nol YO'QOLMAYDI (JS Number emas)", async ({ page }) => {
+    await gotoTasdiqlash(page);
+    const input = page.locator("input").first();
+    await input.fill("012345");
+    await expect(input).toHaveValue("012345"); // "12345" EMAS
+  });
+
+  test("harf aralash (12a456) — harf olib tashlanadi, raqam bo'lmagan belgi saqlanib qolmaydi", async ({ page }) => {
+    await gotoTasdiqlash(page);
+    const input = page.locator("input").first();
+    await input.fill("12a456");
+    await expect(input).toHaveValue("12456"); // "a" olib tashlangan, 5 xonali qoladi
+  });
+
+  test("7 xonali kiritish (1234567) — 6 xonagacha kesiladi", async ({ page }) => {
+    await gotoTasdiqlash(page);
+    const input = page.locator("input").first();
+    await input.fill("1234567");
+    await expect(input).toHaveValue("123456");
+  });
+
+  test("stale xato: qisqa kod bilan yuborilgach, to'g'ri 6 xonaga tuzatilsa xato DARHOL yo'qoladi", async ({ page }) => {
+    await gotoTasdiqlash(page);
+    const input = page.locator("input").first();
+
+    await input.fill("123");
+    await page.getByRole("button", { name: /Tasdiqlash/i }).click();
+    await expect(page.getByText("Kod 6 xonali raqam bo'lishi kerak")).toBeVisible();
+
+    await input.fill("345654");
+    // Muvaffaqiyatsiz urinishdan qolgan eski xato ENDI ko'rinmasligi kerak —
+    // joriy qiymat valid bo'lishi bilanoq (bug: onChange xatoni tozalamas edi).
+    await expect(page.getByText("Kod 6 xonali raqam bo'lishi kerak")).toHaveCount(0);
+  });
+});
+
 test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanlash → dashboard", async ({ page }) => {
   const phone = freshPhone();
   await page.goto("/royxatdan-otish");
@@ -36,6 +93,9 @@ test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanla
 
   const code = latestOtpFor(phone);
   await page.locator("input").first().fill(code);
+  // Bug fix regressiyasi: haqiqiy 6 xonali kod kiritilgandan keyin
+  // "Kod 6 xonali raqam bo'lishi kerak" xatosi UMUMAN ko'rinmasligi kerak.
+  await expect(page.getByText("Kod 6 xonali raqam bo'lishi kerak")).toHaveCount(0);
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
   await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
 
