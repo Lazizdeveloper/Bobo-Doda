@@ -10,12 +10,18 @@ node_modules/
 
 # testing
 /coverage
-# Playwright E2E — real sessiya holati (httpOnly cookie + storageState JSON,
-# tests/e2e/global-setup.ts yozadi) va HTML hisobot. Hech qachon commit
-# qilinmasin — real (garchi lokal test hisobi bo'lsa-da) refresh token bor.
+# Playwright E2E — HTML hisobot va trace/screenshot arxivi. Hech qachon
+# commit qilinmasin.
 /test-results/
 /playwright-report/
 /tests/e2e/.auth/
+
+# Bosqich 18 — isolated admin E2E infra (throwaway Postgres data dir +
+# Redis + jonli loglar, scratch/e2e-infra/). Ishga tushirish skripti:
+# backend/scripts/e2e-stack-up.sh (RUNBOOK §18) — bu papkaning o'zi HECH
+# QACHON commit qilinmaydi (binary DB fayllari + jonli sessiya loglari).
+scratch/e2e-infra/
+scratch/*.log
 
 # next.js
 /.next/

@@ -6,162 +6,46 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
-import { RadioGroup } from "@/components/ui/RadioGroup";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
-import { useToast } from "@/components/ui/Toast";
-import { CardPicker } from "@/components/shared/cards";
-import { WithdrawalRequests } from "@/components/shared/WithdrawalRequests";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
-import { ApiError, contractsService, milestonesService, paymentsService } from "@/lib/api";
-import type { Contract, Milestone, PaymentCard, WithdrawalRequest } from "@/lib/types";
-import { formatAmount, formatDate, formatMoney } from "@/lib/format";
-import { getPlatformSettings } from "@/lib/platform-settings";
+import { contractsService, milestonesService } from "@/lib/api";
+import type { Contract, Milestone } from "@/lib/types";
+import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 const ESCROW_STATUSES = ["mablaglangan", "topshirildi", "ozgartirish_soraldi"];
 
 export default function XarajatlarPage() {
   const { t, lang } = useT();
-  const { toast } = useToast();
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [balance, setBalance] = useState(0);
-  const [pendingWithdrawal, setPendingWithdrawal] = useState(0);
-  /* Eng kam yechish summasi admin sozlamasidan */
-  const [minPayout, setMinPayout] = useState(0);
-  const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
-  const [cards, setCards] = useState<PaymentCard[]>([]);
-  const [cardId, setCardId] = useState("");
-  const [payoutMethod, setPayoutMethod] = useState<"card" | "bank_account">("card");
-  const [bankAccountNumber, setBankAccountNumber] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [bankMfo, setBankMfo] = useState("");
-  const [bankInnPinfl, setBankInnPinfl] = useState("");
-  const [bankRecipient, setBankRecipient] = useState("");
-  const [bankError, setBankError] = useState("");
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [amountError, setAmountError] = useState("");
+  /* Bosqich 18 — YAGONA haqiqiy balans manbasi: `GET /seller/balance`
+     (faqat sotuvchi uchun, xaridorda doim 0 — `lib/api/client.ts`
+     `getBalance()`). Pul yechish (karta/bank hisob-raqami) real payout
+     rail hali tanlanmagani uchun XAVFSIZ o'chirilgan — shuning uchun bu
+     sahifada "yechish" tugmasi UMUMAN yo'q (avval bor edi, lekin bosishi
+     doim xato bilan tugardi — chiqarib tashlandi). Muhim tuzatish: bu
+     sahifaning `load()`i avval `getCards`/`getPendingWithdrawalTotal`/
+     `listMyWithdrawalRequests` (uchalasi ham o'chirilgan) bilan bitta
+     `Promise.all`da edi — ya'ni ULAR har doim rad etilib, HAQIQIY
+     ma'lumot (jami to'lov, escrow, to'lovlar tarixi) HECH QACHON
+     ko'rinmasdi, sahifa doim `<ErrorState>` ko'rsatardi. */
   const [receiptMilestone, setReceiptMilestone] = useState<Milestone | null>(null);
-  const [withdrawing, setWithdrawing] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
 
   const load = useCallback(() => {
     setLoadError(null);
-    Promise.all([
-      milestonesService.listMine(),
-      contractsService.list(),
-      paymentsService.getBalance(),
-      paymentsService.getCards(),
-      paymentsService.getPendingWithdrawalTotal(),
-      paymentsService.listMyWithdrawalRequests(),
-    ])
-      .then(([milestoneList, contractList, balanceValue, cardList, pending, requestList]) => {
-        setPendingWithdrawal(pending);
-        setMinPayout(getPlatformSettings().minPayoutAmount);
-        setRequests(requestList);
+    Promise.all([milestonesService.listMine(), contractsService.list()])
+      .then(([milestoneList, contractList]) => {
         setMilestones(milestoneList);
         setContracts(contractList);
-        setBalance(balanceValue);
-        setCards(cardList);
-        if (cardList[0]) setCardId(cardList[0].id);
       })
       /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
       .catch(setLoadError);
   }, []);
 
   useEffect(load, [load]);
-
-  const withdrawableBalance = Math.max(0, balance - pendingWithdrawal);
-
-  function openWithdrawModal() {
-    setWithdrawAmount(String(withdrawableBalance));
-    setAmountError("");
-    setBankError("");
-    setWithdrawOpen(true);
-  }
-
-  function handleSelectPercent(pct: number) {
-    const calculated = Math.floor(withdrawableBalance * (pct / 100));
-    setWithdrawAmount(String(calculated));
-    setAmountError("");
-  }
-
-  async function handleWithdraw() {
-    const num = Number(withdrawAmount.replace(/\s/g, ""));
-    if (isNaN(num) || num <= 0) {
-      setAmountError(t("wd.amountLabel"));
-      return;
-    }
-    if (num > withdrawableBalance) {
-      setAmountError(t("wd.errExceeds"));
-      return;
-    }
-    if (minPayout > 0 && num < minPayout) {
-      setAmountError(t("wd.errBelowMin").replace("{min}", formatAmount(minPayout)));
-      return;
-    }
-
-    if (payoutMethod === "card") {
-      if (!cardId) {
-        setAmountError(t("pay.pickCard"));
-        return;
-      }
-    } else {
-      const cleanAcc = bankAccountNumber.replace(/\s/g, "");
-      if (!cleanAcc || cleanAcc.length < 20) {
-        setBankError("20 xonali to'liq bank hisob-raqamini kiriting (masalan: 20208000...)");
-        return;
-      }
-      if (!bankMfo.trim() || bankMfo.length !== 5) {
-        setBankError("5 xonali bank MFO kodini kiriting (masalan: 01088)");
-        return;
-      }
-      if (!bankRecipient.trim()) {
-        setBankError("Qabul qiluvchi korxona yoki shaxs nomini kiriting");
-        return;
-      }
-      setBankError("");
-    }
-
-    setWithdrawing(true);
-    try {
-      if (payoutMethod === "card") {
-        await paymentsService.withdrawBalance({ type: "card", cardId }, num);
-      } else {
-        await paymentsService.withdrawBalance(
-          {
-            type: "bank_account",
-            bankAccount: {
-              accountNumber: bankAccountNumber.replace(/\s/g, ""),
-              bankName: bankName.trim() || "ATB Kapitalbank",
-              mfo: bankMfo.trim(),
-              innOrPinfl: bankInnPinfl.trim(),
-              recipientName: bankRecipient.trim(),
-            },
-          },
-          num
-        );
-      }
-      /* Pul darhol yechilmaydi — admin tasdig'iga so'rov ketadi. Balans
-         joyida qoladi, lekin so'ralgan summa "band" bo'ladi. */
-      setPendingWithdrawal(await paymentsService.getPendingWithdrawalTotal());
-      setRequests(await paymentsService.listMyWithdrawalRequests());
-      toast(t("wd.requested"));
-      setWithdrawOpen(false);
-    } catch (err) {
-      const code = err instanceof ApiError ? err.code : "";
-      toast(
-        code === "BELOW_MINIMUM" ? t("wd.belowMin") : t("common.error"),
-        "error"
-      );
-    } finally {
-      setWithdrawing(false);
-    }
-  }
 
   const contractById = new Map(contracts.map((c) => [c.id, c]));
 
@@ -202,24 +86,18 @@ export default function XarajatlarPage() {
             <span className="text-lg">🛡️</span>
             <span>Kafolatlangan To&apos;lov (Escrow) va Mablag&apos; qaytarish tartibi</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-muted mt-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-muted mt-1">
             <div className="rounded-input border border-line/60 bg-card p-3">
               <p className="font-semibold text-ink mb-1 flex items-center gap-1.5">
                 <span>1️⃣</span> Shartnoma to&apos;lovi (Escrow)
               </p>
-              <p>Har bir loyiha uchun to&apos;lov karta (ekvayring) yoki bank to&apos;lov topshirig&apos;i (B2B wire) orqali amalga oshiriladi va platforma hisobida muzlatiladi.</p>
+              <p>Har bir loyiha uchun to&apos;lov Payme orqali amalga oshiriladi va platforma hisobida muzlatiladi.</p>
             </div>
             <div className="rounded-input border border-line/60 bg-card p-3">
               <p className="font-semibold text-ink mb-1 flex items-center gap-1.5">
                 <span>2️⃣</span> Qaytarilgan mablag&apos; (Refund)
               </p>
-              <p>Agar shartnoma bekor qilinsa yoki nizo xaridor foydasiga yechilsa, mablag&apos; bir zumda sizning Bobo&Doda balansingizga qaytariladi.</p>
-            </div>
-            <div className="rounded-input border border-line/60 bg-card p-3">
-              <p className="font-semibold text-ink mb-1 flex items-center gap-1.5">
-                <span>3️⃣</span> Qayta ishlatish yoki Yechish
-              </p>
-              <p>Qaytarilgan mablag&apos;ni yangi shartnomalarni 1 click&apos;da to&apos;lashga ishlatishingiz yoki kartangizga / bank hisob-raqamingizga yechib olishingiz mumkin.</p>
+              <p>Agar shartnoma bekor qilinsa yoki nizo xaridor foydasiga yechilsa, mablag&apos; sizga qaytariladi.</p>
             </div>
           </div>
         </div>
@@ -256,47 +134,6 @@ export default function XarajatlarPage() {
           </>
         )}
       </div>
-
-      {/* Bobo&Doda hisobi — qaytarilgan mablag' (balans bo'lsa ko'rinadi) */}
-      {balance > 0 && (
-        <Card padding="lg" className="border-success/25 bg-success/5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-2xs font-medium uppercase tracking-wide text-faint">
-                {t("spend.balance")}
-              </p>
-              <p className="mt-1 font-heading text-2xl font-bold text-success">
-                {formatMoney(balance, lang)}
-              </p>
-              <p className="mt-1 text-2xs text-muted">{t("spend.balanceHint")}</p>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                onClick={openWithdrawModal}
-                disabled={withdrawableBalance < Math.max(1, minPayout)}
-              >
-                {t("spend.withdraw")}
-              </Button>
-              {pendingWithdrawal > 0 && (
-                <span className="text-2xs text-warning-deep">
-                  {t("wd.pending")}: {formatMoney(pendingWithdrawal, lang)}
-                </span>
-              )}
-              {minPayout > 0 && withdrawableBalance > 0 &&
-                withdrawableBalance < minPayout && (
-                  <span className="text-2xs text-warning-deep">
-                    {t("wd.minPayout")}: {formatMoney(minPayout, lang)}
-                  </span>
-                )}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Yechish so'rovlari — admin tasdig'i kutilayotganlar ham shu yerda */}
-      {(requests.length > 0 || balance > 0) && (
-        <WithdrawalRequests requests={requests} />
-      )}
 
       {/* So'nggi to'lovlar */}
       <section className="flex flex-col gap-3">
@@ -411,205 +248,6 @@ export default function XarajatlarPage() {
           />
         )}
       </section>
-
-      {/* Kartaga yechish modali (mock) */}
-      <Modal
-        open={withdrawOpen}
-        onClose={() => setWithdrawOpen(false)}
-        title={t("spend.withdrawTitle")}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => setWithdrawOpen(false)}
-              disabled={withdrawing}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              loading={withdrawing}
-              onClick={handleWithdraw}
-              disabled={payoutMethod === "card" ? !cardId : !bankAccountNumber || !bankRecipient}
-            >
-              {t("spend.withdraw")}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between rounded-input border border-line bg-surface p-3">
-            <span className="text-xs text-muted">{t("spend.balance")}</span>
-            <span className="font-heading text-base font-bold text-success">
-              {formatMoney(withdrawableBalance, lang)}
-            </span>
-          </div>
-
-          {/* Summa kiritish va foiz tugmalari */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium text-muted">{t("wd.amountLabel")}</label>
-            <div className="relative">
-              <Input
-                value={withdrawAmount}
-                onChange={(e) => {
-                  setWithdrawAmount(e.target.value.replace(/[^\d]/g, ""));
-                  setAmountError("");
-                }}
-                placeholder={t("wd.amountPh")}
-                error={amountError}
-                inputMode="numeric"
-                className="font-mono text-base font-bold pr-14"
-              />
-              <span className="absolute right-3 top-2.5 text-xs font-semibold text-muted">
-                so&apos;m
-              </span>
-            </div>
-
-            {/* Foiz tugmalari: 25%, 50%, 75%, 100% */}
-            <div className="flex items-center gap-2 pt-1">
-              {[25, 50, 75].map((pct) => (
-                <button
-                  key={pct}
-                  type="button"
-                  onClick={() => handleSelectPercent(pct)}
-                  className="rounded-btn border border-line bg-surface hover:bg-card-hover px-2.5 py-1 text-xs font-medium text-ink transition"
-                >
-                  {pct}%
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => handleSelectPercent(100)}
-                className="rounded-btn border border-line bg-surface hover:bg-card-hover px-2.5 py-1 text-xs font-medium text-primary transition"
-              >
-                {t("wd.all")}
-              </button>
-            </div>
-
-            {/* Qoladigan balans ko'rsatkichi */}
-            <div className="mt-1 flex items-center justify-between rounded-input border border-line/60 bg-surface/50 p-2 text-2xs">
-              <span className="text-muted">{t("wd.remainingBalance")}:</span>
-              <span className="font-mono font-semibold text-ink">
-                {formatMoney(
-                  Math.max(0, withdrawableBalance - (Number(withdrawAmount.replace(/\s/g, "")) || 0)),
-                  lang
-                )}
-              </span>
-            </div>
-          </div>
-
-          {/* Usul tanlash: Karta yoki Bank hisob-raqami */}
-          <div>
-            <p className="mb-2 text-xs font-medium text-muted">Mablag&apos;ni qabul qilish usuli</p>
-            <RadioGroup
-              options={[
-                {
-                  value: "card",
-                  label: "Plastik karta (Uzcard / Humo / Visa)",
-                  description: "Tezkor B2C Payout — admin tasdiqlagach kartangizga o'tkaziladi",
-                },
-                {
-                  value: "bank_account",
-                  label: "Bank hisob-raqami (B2B Wire / Korporativ)",
-                  description: "Kompaniya yoki shaxsiy 20-xonali bank hisob-raqamingizga to'lov topshirig'i bilan o'tkaziladi",
-                },
-              ]}
-              value={payoutMethod}
-              onChange={(val) => {
-                setPayoutMethod(val as "card" | "bank_account");
-                setBankError("");
-              }}
-            />
-          </div>
-
-          <p className="text-2xs text-faint">{t("wd.pendingHint")}</p>
-
-          {payoutMethod === "card" ? (
-            <div>
-              <p className="mb-2 text-xs font-medium text-muted">
-                {t("card.selectTitle")}
-              </p>
-              <CardPicker
-                cards={cards}
-                value={cardId}
-                onChange={setCardId}
-                onCardAdded={(card) => setCards((prev) => [card, ...prev])}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 rounded-input border border-line bg-surface/60 p-3 text-xs">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-ink">
-                <span>🏦</span> Bank hisob-raqami rekvizitlari
-              </div>
-              <div>
-                <label className="text-2xs font-medium text-muted mb-1 block">Hisob-raqam (20 xonali H/r)</label>
-                <Input
-                  value={bankAccountNumber}
-                  onChange={(e) => {
-                    setBankAccountNumber(e.target.value.replace(/[^\d]/g, "").slice(0, 20));
-                    setBankError("");
-                  }}
-                  placeholder="2020 8000 ... yoki 2021 6000 ..."
-                  className="font-mono text-sm"
-                  maxLength={20}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label className="text-2xs font-medium text-muted mb-1 block">Bank MFO (5 xona)</label>
-                  <Input
-                    value={bankMfo}
-                    onChange={(e) => {
-                      setBankMfo(e.target.value.replace(/[^\d]/g, "").slice(0, 5));
-                      setBankError("");
-                    }}
-                    placeholder="01088"
-                    className="font-mono text-sm"
-                    maxLength={5}
-                  />
-                </div>
-                <div>
-                  <label className="text-2xs font-medium text-muted mb-1 block">STIR (INN) yoki JShShIR</label>
-                  <Input
-                    value={bankInnPinfl}
-                    onChange={(e) => {
-                      setBankInnPinfl(e.target.value.replace(/[^\d]/g, "").slice(0, 14));
-                      setBankError("");
-                    }}
-                    placeholder="309876543"
-                    className="font-mono text-sm"
-                    maxLength={14}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-2xs font-medium text-muted mb-1 block">Bank filiali nomi</label>
-                <Input
-                  value={bankName}
-                  onChange={(e) => {
-                    setBankName(e.target.value);
-                    setBankError("");
-                  }}
-                  placeholder='ATB "Kapitalbank" Toshkent sh.'
-                />
-              </div>
-              <div>
-                <label className="text-2xs font-medium text-muted mb-1 block">Qabul qiluvchi (F.I.O. yoki MChJ/YaTT)</label>
-                <Input
-                  value={bankRecipient}
-                  onChange={(e) => {
-                    setBankRecipient(e.target.value);
-                    setBankError("");
-                  }}
-                  placeholder='OOO "Tech Ventures" yoki Sardor Rahimov'
-                />
-              </div>
-              {bankError && (
-                <p className="text-2xs text-danger font-medium">{bankError}</p>
-              )}
-            </div>
-          )}
-        </div>
-      </Modal>
 
       {/* Rasmiy to'lov kvitansiyasi modali */}
       <ReceiptModal

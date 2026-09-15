@@ -1,3 +1,10 @@
+/**
+ * ESKIRGAN — Bosqich 17 (real backend integratsiyasi)dan beri BUZILGAN.
+ * Sabab va o'rnini bosuvchi — `scripts/lifecycle-test.cjs` boshidagi izohga
+ * qarang (`npm run test:e2e:live`, `tests/e2e/`, RUNBOOK §14). Axe a11y
+ * tekshiruvi o'zi hali qimmatli — real sahifalarga `tests/e2e/` orqali
+ * (haqiqiy login bilan) qayta ulash keyingi bosqich uchun qoldirilgan.
+ */
 const { chromium } = require("playwright");
 const AxeBuilder = require("@axe-core/playwright").default;
 

@@ -36,4 +36,22 @@ test.describe.serial("xaridor: bozor va sozlamalar", () => {
     await page.waitForTimeout(500);
     expect(consoleErrors, "sahifa JS xatosiz render bo'lishi kerak").toEqual([]);
   });
+
+  /**
+   * Regressiya (Bosqich 18): bu sahifaning `Promise.all()`i ilgari HAQIQIY
+   * (jami to'lov/escrow/tarix) chaqiruvlarni UCHTA o'chirilgan chaqiruv
+   * (`getCards`/`getPendingWithdrawalTotal`/`listMyWithdrawalRequests`)
+   * bilan bitta bloqda ushlardi — birortasi rad etilishi HAMMASINI
+   * yiqitardi, ya'ni sahifa HAR BIR xaridor uchun DOIM `<ErrorState>`
+   * ko'rsatardi, real ma'lumot HECH QACHON ko'rinmasdi. Tuzatildi:
+   * o'chirilgan chaqiruvlar butunlay olib tashlandi.
+   */
+  test("Xarajatlar: haqiqiy ma'lumot yuklanadi, doimiy ErrorState YO'Q (regressiya)", async () => {
+    await page.goto("/xaridor/xarajatlar", { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: "Xarajatlar" })).toBeVisible({ timeout: 8000 });
+    // ErrorState o'rniga real statistika kartalari ko'rinishi kerak
+    await expect(page.getByText("Jami to'langan")).toBeVisible();
+    await expect(page.getByText("So'nggi to'lovlar")).toBeVisible();
+    await expect(page.getByRole("button", { name: /qayta urinish|retry/i })).toHaveCount(0);
+  });
 });

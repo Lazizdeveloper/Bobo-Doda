@@ -192,17 +192,11 @@ regressiyadan himoyalangan, RUNBOOK §14):
    ya'ni admin panelning nizo-hal-qilish va qaytarish-yaratish amallari
    ham xuddi shunday har doim muvaffaqiyatsiz bo'lardi.
 
-**Formal Playwright E2E to'plami YOZILDI VA TIRIK TASDIQLANDI** —
-`playwright.config.ts` + `tests/e2e/` (6 spec fayl, 11 test: auth, bozor,
-to'liq xarid-to'lov-yakunlanish tsikli, nizo, sotuvchi xizmatlari, admin —
-oxirgisi staff credential berilmasa tushunarli sabab bilan skip qilinadi).
-`npm run test:e2e:live`. **10/10 ishlaydigan test (admin tashqari) real
-Postgres+Redis'ga ulangan backend bilan to'liq o'tdi** — jumladan to'liq
-xarid→to'lov→topshirish→yakunlanish tsikli va nizo oqimi ikkalasi ham
-uchdan-uchgacha real HTTP orqali tasdiqlandi (webhook qo'lda imzolanib).
-
-Birinchi tirik ishga tushirishda **YANA IKKITA muammo** (endi tuzatilgan)
-suite'ning O'ZIDA (ilova kodida EMAS) topildi:
+Formal Playwright E2E to'plami yozildi (`playwright.config.ts` +
+`tests/e2e/`). **Bosqich 18'da admin panel HAM real staff login orqali
+to'liq qamrovga kiritildi** (izolyatsiyalangan test muhitida — pastga,
+§16'ga qarang) — quyidagi ikkita muammo (endi tuzatilgan) shu jarayonda
+topildi, ikkalasi ham suite'ning O'ZIDA edi (ilova kodida emas):
 - `storageState` snapshot'ini bir nechta mustaqil brauzer kontekst/fayl
   orasida qayta ishlatish refresh token bir martalik ekanini hisobga
   olmagan edi (rotatsiya + qayta-ishlatish aniqlash — to'g'ri xavfsizlik
@@ -213,37 +207,189 @@ suite'ning O'ZIDA (ilova kodida EMAS) topildi:
 - Xizmat yaratish wizard testi "Bajarish muddati" maydonini to'ldirmagan
   edi (faqat narxni) — validatsiya to'g'ri bloklagan, test noto'g'ri yozilgan.
 
-**REAL OTP IP-soatlik chegarasi bu suite'ni qanday shakllantirgani** —
-o'quv ahamiyatga ega: backend IP bo'yicha soatiga 20 ta
-`/auth/otp/request`ni cheklaydi (barcha telefon raqamlari birgalikda
-hisoblanadi, konfiguratsiya qilinmaydi) + har bir raqam kuniga 10 tagacha.
-Qo'lda tirik test paytida bu ikkala chegaraga ham urilib to'xtab qolindi —
-suite shu tajribadan qurilgan: har fayl FAQAT bitta (yoki ikkita, ikki
-aktyor kerak bo'lsa) real login qiladi, to'liq suite ~7 ta OTP so'rov
-sarflaydi (soatiga ~2-3 marta ishga tushirish mumkin).
+To'liq yakuniy natija, admin qamrovi va REAL_PRODUCTION_READY holati —
+**§16 (Bosqich 18 — Release Candidate yopilishi)**.
 
-**Tekshirilmagan/ochiq qolgan qismlar:**
-- **Staff/admin login brauzerda TASDIQLANMAGAN.** Lokal DB'dagi yagona
-  staff hisobi (`ops-phase4@bobododa.uz`) paroli noma'lum (oldingi
-  sessiyada qo'lda yaratilgan, hujjatlashtirilmagan) — parol hash'ini
-  bilib turib qayta yozish (yoki yangi hisob uchun yangi hash yaratish)
-  avtomatik ravishda "secret-store write" sifatida BLOKLANDI (to'g'ri
-  ehtiyot chorasi, ikki marta qayta urinilmadi), shuning uchun bu qadam
-  ATAYLAB bajarilmadi. Real production'da bu muammo emas — har bir
-  SUPER_ADMIN birinchi login'da `mustChangePassword` orqali o'z parolini
-  o'zi qo'yadi (RUNBOOK §11). `tests/e2e/admin.spec.ts` shu sabab bilan
-  skip holatda qoladi (`E2E_STAFF_EMAIL`/`E2E_STAFF_PASSWORD` berilguncha).
-- **OTP rate-limit — real, hujjatlashtirilgan kashfiyot.** Backend IP
-  bo'yicha soatiga 20 ta `/auth/otp/request`ni cheklaydi (barcha telefon
-  raqamlari birgalikda hisoblanadi, konfiguratsiya qilinmaydi) + har bir
-  raqam kunига 10 tagacha. Qo'lda tirik test paytida bu chegaraga ikki
-  marta urilib to'xtab qolindi (RUNBOOK §14) — E2E suite shuni hisobga
-  olib qurilgan (yuqoriga qarang), lekin real deploy/CI muhitida ham shu
-  chegara amal qiladi — ko'p marta ketma-ket smoke-test ishga tushirish
-  rejalashtirilsa shu bilan hisoblashish kerak.
+## 16. Bosqich 18 — Release Candidate yopilishi (yakuniy natija)
 
-**REAL_PRODUCTION_READY: BLOCKED_BY_INFRASTRUCTURE** (bo'lim 1/14 bilan
-bir xil sabab — real Payme/PlayMobile credential yo'q, real payout rail
-tanlanmagan). Frontend tomonidan qo'shimcha blokировка YO'Q — backend
-tayyor bo'lgach frontend kod o'zgarishisiz ishlaydi (`NEXT_PUBLIC_API_URL`
-production domenga almashadi, xolos).
+Bu bo'lim §15'dagi ishning YAKUNIY, to'liq tasdiqlangan holati — barcha
+raqamlar haqiqiy terminal chiqishidan olingan (taxmin qilinmagan).
+
+### Backend
+
+| Tekshiruv | Natija |
+|---|---|
+| `npm run lint` | ✅ PASS |
+| `npm run typecheck` | ✅ PASS |
+| `npm test` (unit) | ✅ **369/369 PASS**, 37 suite |
+| `npm run test:e2e` (Jest, real Postgres+Redis) | ✅ **308/308 PASS**, 19 suite |
+| `npm run build` | ✅ PASS |
+| `npm run generate:contracts` | ✅ PASS, drift = 0 |
+
+**Muhim metodologik topilma**: birinchi `test:e2e` urinishida 197/308 test
+"waitFor timeout (otp sms)" bilan yiqildi — SABAB ilova kodida emas, mening
+o'zimning uzoq muddat ishlab turgan asosiy dev backend jarayonim (`:4000`)
+Jest suite bilan BIR XIL Redis'ga (`:6379`) ulangan, ikkalasi ham
+`otp-sms` BullMQ navbatiga obuna bo'lgan edi — ikkala jarayon ham bir xil
+job'lar uchun RAQOBATLASHDI, Jest'ning o'z ichki `CapturingSmsProvider`si
+ko'p hollarda hech qachon kodni olmadi. Dev backend vaqtincha to'xtatilgach
+(Redis kontensiyasi yo'qolgach) suite **149 soniyada, 308/308 PASS** bilan
+tugadi (avvalgi kontaminatsiyalangan urinish — 1076 soniya, 197 xato).
+Xulosa: **haqiqiy backend regressiyasi YO'Q edi** — sof test-muhit
+izolyatsiyasi masalasi.
+
+### Frontend
+
+| Tekshiruv | Natija |
+|---|---|
+| `npx eslint .` | ✅ PASS |
+| `npx tsc --noEmit` | ✅ PASS |
+| `npm run check:csp` | ✅ PASS |
+| `NEXT_DIST_DIR=.next-check npm run build` | ✅ PASS, barcha 58+ marshrut |
+
+Loyihada frontend uchun alohida unit/integration test framework (Jest/
+Vitest) YO'Q — test qatlami butunlay Playwright E2E orqali (pastga qarang).
+Bitta ilova (`bobo-doda`, App Router) — "user app"/"partner app"/"admin
+app" fizik jihatdan bitta Next.js binarida, rol asosida marshrutlangan
+(`/xaridor`, `/mutaxassis`, `/admin`+`/rahbariyat`).
+
+### Playwright — YAKUNIY, BITTA to'liq ishga tushirishda
+
+```
+Running 24 tests using 1 worker
+...
+1 skipped
+23 passed (1.1m + 7.6s alohida qo'shilgan regressiya testi)
+```
+
+- **O'tgan: 23. Yiqilgan: 0. Skip: 1 (TOTP, sababi pastda).**
+- **Kritik oqimlarda 0 ta skip.**
+- Qamrov: `auth` (2), `buyer-marketplace` (4 — jumladan Xarajatlar
+  regressiyasi), `seller-services` (3), `purchase-lifecycle` (1, to'liq
+  xarid→to'lov→yakunlanish), `disputes` (1), `admin` (13, 1 skip bilan).
+
+**TOTP_BROWSER_E2E = SKIPPED.** Sababi: admin frontendda TOTP enroll/
+verify UI hali yo'q (`lib/api/admin.ts`da `staffEnrollTotp`/
+`staffVerifyTotp` funksiyalari bor, lekin ularni chaqiradigan sahifa yo'q).
+Yangi UI yozish "yangi feature yaratma" tamoyiliga zid — bu KRITIK
+integratsiya nosozligi emas, chunki bu funksiya hech qachon "UI orqali
+ishlaydi" deb da'vo qilinmagan. Backend'dagi mavjud TOTP test qamrovi
+(`staff-permission.guard.spec.ts`, `totp.util.spec.ts`,
+`totp-secret-cipher.util.spec.ts`) o'zgarishsiz qoladi.
+
+### Admin E2E — endi HAQIQIY, IZOLYATSIYALANGAN muhitda to'liq ishlaydi
+
+Bosqich 17'da bloklangan sabab (dev bazadagi yagona staff hisobi paroli
+noma'lum, yangi hash yaratish "secret-store write" sifatida bloklangan)
+Bosqich 18'da TO'G'RI yechildi: dev/prod parolini o'zgartirish/bypass
+qilish O'RNIGA, **butunlay alohida throwaway Postgres (`:55433`) + Redis
+(`:6390`) + backend (`:4010`, `NODE_ENV=test`) + frontend (`:3010`)**
+ko'tarildi (`backend/scripts/e2e-stack-up.sh`), va test-only staff
+hisoblari **real argon2id hashing kodi** orqali (`backend/scripts/
+e2e-staff-fixture.cjs` — `dist/common/security/hash.service.js`ni
+to'g'ridan-to'g'ri ishlatadi) shu ALOHIDA bazaga yaratildi. Dev/prod
+staff jadvaliga BITTA ham yozuv tegilmadi (skript `DATABASE_URL`da
+"bobododa_e2e" yo'q bo'lsa ATAYLAB rad etadi).
+
+Fake JWT, localStorage rol in'ektsiyasi, permission bypass, TOTP
+bypass — HECH BIRI ishlatilmadi. Barcha login `/staff/auth/login` real
+endpoint orqali, real staff session bilan.
+
+| Tekshiruv | Natija |
+|---|---|
+| Staff login (real, real parol hash) | ✅ PASS |
+| Dashboard | ✅ PASS |
+| Foydalanuvchilar (real sotuvchi qatori bilan) | ✅ PASS |
+| Shartnomalar (real shartnoma qatori bilan) | ✅ PASS |
+| To'lovlar (real SUCCEEDED to'lov bilan) | ✅ PASS |
+| Nizolar (real OCHIQ nizo bilan) | ✅ PASS |
+| Audit jurnali | ✅ PASS |
+| Xizmatlar (gated, graceful ErrorState) | ✅ PASS |
+| `mustChangePassword` hard gate (login→bloklangan→almashtirish→tiklangan) | ✅ PASS |
+| Ruxsat/403 (frontend Access Denied + mustaqil backend 403) | ✅ PASS |
+| Moliyaviy xavfsizlik (xavfli qo'lda-tugma YO'Q) | ✅ PASS |
+| Refund yaratish — Idempotency-Key header | ✅ PASS |
+| Nizo hal qilish — Idempotency-Key header | ✅ PASS |
+| TOTP enroll/verify | ⏭️ SKIPPED (UI yo'q, yuqoriga qarang) |
+
+### Bosqich 18'da topilgan va tuzatilgan qo'shimcha real xatolar
+
+1. **`tests/e2e/admin.spec.ts`ning o'zidagi Playwright API xato** — fayl
+   darajasida (test() tashqarisida) chaqirilgan `test.skip(true, ...)`
+   BUTUN FAYLDAGI 13 ta testni skip qilib yubordi (faqat TOTP testi emas).
+   Tuzatildi: `test.skip()` endi FAQAT o'sha test() callback'i ICHIDA.
+2. **Xaridor Xarajatlar sahifasi (`app/xaridor/xarajatlar/page.tsx`) —
+   HAQIQIY, JIDDIY regressiya**: sahifaning `Promise.all()`i HAQIQIY
+   ma'lumot (jami to'lov, escrow, to'lovlar tarixi) chaqiruvlarini UCHTA
+   o'chirilgan (`FEATURE_DISABLED`) chaqiruv bilan bitta bloqda ushlab
+   turardi — istalgan birining rad etilishi HAMMASINI yiqitardi, ya'ni bu
+   sahifa HAR BIR xaridor uchun DOIM `<ErrorState>` ko'rsatardi, real
+   ma'lumot HECH QACHON ko'rinmasdi. Tuzatildi: o'chirilgan chaqiruvlar
+   (`getCards`/`getPendingWithdrawalTotal`/`listMyWithdrawalRequests`) va
+   ular bilan bog'liq to'liq karta/bank-hisob yechish formasi (baribir
+   hech qachon muvaffaqiyatli bo'lolmasdi) olib tashlandi. Playwright
+   regressiya testi qo'shildi (`buyer-marketplace.spec.ts`).
+3. **`lib/feedback.ts`dagi soxta seed ma'lumot** — 3 ta o'ylab topilgan
+   ism/sana bilan fikr-mulohaza yozuvi real foydalanuvchilarga HAQIQIY
+   fikr sifatida ko'rsatilardi (`/admin/fikrlar`). Olib tashlandi.
+4. **O'lik kod tozalandi**: `components/shared/BankTransferPaymentModal.tsx`
+   (hech qayerda import qilinmagan, soxta SMS-tasdiqlash oqimi) va
+   `components/shared/WithdrawalRequests.tsx` (yagona ishlatuvchisi band
+   3'da olib tashlangan sahifa edi).
+5. Butun ilova bo'ylab tizimli tekshiruv o'tkazildi — "haqiqiy ma'lumot +
+   o'chirilgan chaqiruv bitta `Promise.all`da" naqshining BOSHQA hech
+   qanday nusxasi topilmadi (qolgan barcha shunga o'xshash sahifalar —
+   E'lonlarim/Xabarlar/Takliflarim/KYC/mutaxassis profili — yoki butun
+   sahifa maqsadi ATAYLAB o'chirilgan xususiyat, yoki o'chirilgan
+   chaqiruvlar allaqachon alohida `.catch()` bilan o'ralgan).
+
+### Xavfsizlik audit natijalari (Bosqich 18)
+
+- **Auth bypass**: yo'q — barcha E2E test login real `/auth/otp/verify`
+  yoki `/staff/auth/login` orqali, hech qanday fake token/session
+  fabrikatsiyasi ishlatilmagan.
+- **Sensitive logging**: `console.log`/`console.error` bo'ylab to'liq
+  audit — parol/OTP/JWT/refresh token/TOTP secret/Payme yoki PlayMobile
+  credential HECH QAYERDA log qilinmaydi (production kodda). Yagona server
+  tomonidagi log (`app/api/support/route.ts`) Telegram HTTP status/xato
+  matnini yozadi, bot token'ning O'ZI hech qachon log qilinmaydi.
+- **Production mock data**: yuqoridagi 3-bandda tuzatilgan (`lib/feedback.ts`)
+  dan tashqari topilmadi. `Math.random()` ishlatilgan joylar (lokal ID
+  suffiks, `crypto.randomUUID` zaxirasi) haqiqiy tashvish EMAS.
+- **Hardcoded localhost**: topilmadi — `lib/api/http.ts`/`staff-http.ts`
+  ikkalasi ham `NEXT_PUBLIC_API_URL`dan o'qiydi.
+- **CLICK**: production UI'da CLICK to'lov varianti UMUMAN yo'q (backend
+  ham `BLOCKED_BY_OFFICIAL_SPEC`, RUNBOOK §12).
+- **PAYOUTS_ENABLED=false**: mutaxassis Daromad sahifasida faol "yechish"
+  tugmasi yo'q (izohli, ataylab o'chirilgan); `lib/chat-filter.ts`ning
+  `reportCircumventionViolation()` orqali yozilgan anti-firibgarlik
+  hisobotlari hozircha hech qaysi real admin sahifasiga yetib bormaydi
+  (`/admin/shikoyatlar` Bosqich 17 qamrovidan tashqarida qoldi) — bu
+  DISCLOSED, kelgusi bosqich uchun ochiq gap, kod o'zgartirilmadi (yangi
+  admin sahifasi qurish "yangi feature" bo'lardi).
+
+### CODE_RELEASE_CANDIDATE: **PASS**
+
+Barcha mezon GREEN: backend lint/typecheck/unit/e2e/build, contracts
+drift=0, frontend lint/typecheck/build, xaridor+mutaxassis+admin
+Playwright (23/24 o'tdi, 1 ta hujjatlashtirilgan sabab bilan skip, 0 ta
+kritik skip), `mustChangePassword`, ruxsat/403, `fundedAt` regressiyasi,
+refund/nizo Idempotency-Key regressiyasi, Xarajatlar regressiyasi.
+
+### REAL_PRODUCTION_READY: **BLOCKED_BY_INFRASTRUCTURE** (o'zgarmadi)
+
+Bosqich 18 FAQAT kod/test darajasidagi tekshiruv edi — real infratuzilma
+hali yo'q. Qolgan production to'siqlar (§1/§14 bilan bir xil):
+1. Hosting (backend + frontend)
+2. Boshqariladigan (managed) PostgreSQL
+3. Boshqariladigan Redis
+4. Domen + DNS + TLS
+5. Real Payme sandbox/live credential tasdiqlanishi
+6. Real PlayMobile credential tasdiqlanishi
+7. Production SUPER_ADMIN bootstrap (RUNBOOK §13)
+8. Provайder-darajasidagi backup tasdiqlanishi
+9. Monitoring/alerting ulanishi
+
+Bu ikki status ATAYLAB ALOHIDA: CODE_RELEASE_CANDIDATE kod haqida, u
+PASS; REAL_PRODUCTION_READY infratuzilma haqida, u hali BLOCKED — ular
+aralashtirilmasin.

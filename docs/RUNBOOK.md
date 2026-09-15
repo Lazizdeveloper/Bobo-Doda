@@ -1389,3 +1389,149 @@ foydalanuvchi aniq tanlovi bilan (`AskUserQuestion`, Bosqich 17) — faqat
 Foydalanuvchilar/Nizolar/To'lovlar+Qaytarish/Shartnomalar/Audit jurnali
 real; Xizmatlar/Kategoriyalar/Pul chiqarish mutatsiyalari/Xodimlar
 boshqaruvi/Reconciliation/Outbox hozircha gated holatda qoladi.
+
+---
+
+## 18. Admin E2E — izolyatsiyalangan test muhiti (Bosqich 18)
+
+Admin panelining real browser E2E'si dev/prod Postgres+Redis'ga UMUMAN
+TEGMAYDI — o'zining butunlay alohida, throwaway stack'iga ega:
+
+| Komponent | Dev/prod | Isolated E2E |
+|---|---|---|
+| Postgres | `:5432` | `:55433` (`scratch/e2e-infra/pgdata`) |
+| Redis | `:6379` | `:6390` (`scratch/e2e-infra/redis-data`) |
+| Backend | `:4000` | `:4010` (`backend/.env.e2e`, `NODE_ENV=test`) |
+| Frontend | `:3000` | `:3010` (`NEXT_PUBLIC_API_URL=...4010/api/v1`) |
+
+### Ishga tushirish
+
+```bash
+# 1) Infra + backend + frontend — bir buyruq, idempotent (allaqachon
+#    ishlab turgan qismlarni qayta ko'tarmaydi)
+nix-shell backend/shell.nix --run 'bash backend/scripts/e2e-stack-up.sh'
+
+# 2) Test-only staff hisoblari — REAL argon2id hash kodi orqali
+#    (backend/scripts/e2e-staff-fixture.cjs, dist/common/security/
+#    hash.service.js'ni require qiladi — soxta/shortcut hash EMAS).
+#    Idempotent (email bo'yicha upsert) — mustChangePassword testidan
+#    keyin parolni asl holatiga qaytarish uchun QAYTA ishga tushiring.
+nix-shell backend/shell.nix --run '
+  DATABASE_URL="postgresql://bobododa_app:app@127.0.0.1:55433/bobododa_e2e?schema=public" \
+  node backend/scripts/e2e-staff-fixture.cjs
+'
+
+# 3) Admin E2E'ni ishga tushirish (xuddi §14dagi nix-shell+steam-run
+#    retsepti bilan)
+nix-shell -p nspr nss glib gtk3 pango cairo atk cups dbus expat libdrm \
+  libxkbcommon mesa udev alsa-lib at-spi2-atk at-spi2-core libxml2 libx11 \
+  libxcomposite libxdamage libxext libxfixes libxrandr --run '
+LDLP="$(nix-build "<nixpkgs>" -A nspr --no-out-link)/lib:$(nix-build "<nixpkgs>" -A nss --no-out-link)/lib:$LD_LIBRARY_PATH"
+steam-run env LD_LIBRARY_PATH="$LDLP" TMPDIR=/tmp npx playwright test admin.spec.ts
+'
+
+# To'xtatish (ma'lumot saqlanadi — tezroq qayta ishga tushirish uchun):
+bash backend/scripts/e2e-stack-down.sh
+# Butunlay tozalash (Postgres/Redis data dir o'chiriladi):
+bash backend/scripts/e2e-stack-down.sh --purge
+```
+
+### Test-only staff hisoblari (`backend/scripts/e2e-staff-fixture.cjs`)
+
+| Email | Rol | Huquq | mustChangePassword | Vazifasi |
+|---|---|---|---|---|
+| `super@e2e.test` | SUPER_ADMIN | barcha 16 ta | `false` | asosiy oqim, kritik ekranlar, refund/resolve |
+| `reset@e2e.test` | SUPER_ADMIN | barcha 16 ta | `true` | hard-gate stsenariysi (bo'lim 5) |
+| `restricted@e2e.test` | ADMIN | faqat `DASHBOARD` | `false` | ruxsat/403 stsenariysi (bo'lim 7) — ATAYLAB rol emas, HUQUQ orqali cheklangan, chunki `/admin/kirish`ning `expectedRole="admin"` tekshiruvidan o'tishi kerak (SUPER_ADMIN/`role="super_admin"` bo'lsa avtomatik FORBIDDEN bo'lardi — `AdminLoginForm`) |
+
+Parol — barchasida bir xil, `E2E_STAFF_PASSWORD` env (sukut
+`E2eTest#2026Pass`). **Hech qanday real secret emas** — bu login FAQAT
+`bobododa_e2e` bazasida ishlaydi (skript `DATABASE_URL`da "bobododa_e2e"
+so'zi yo'q bo'lsa ATAYLAB RAD ETADI — dev/prod bazasiga tasodifan yozib
+yuborish ehtimolidan himoya).
+
+### Test ma'lumotlari (`tests/e2e/admin-helpers.ts` — `seedAdminTestData()`)
+
+Har `admin.spec.ts` ishga tushishida REAL API orqali (brauzersiz, tez):
+xaridor+sotuvchi (OTP, isolated backend'ning O'Z rate-limit budjeti bilan
+— pastga qarang), 1 xizmat, 1 shartnoma (qabul qilingan + TEST webhook
+bilan to'langan), 1 OCHIQ nizo. Bular admin Foydalanuvchilar/Shartnomalar/
+To'lovlar/Nizolar sahifalarida HAQIQIY qator sifatida ko'rinadi (bo'sh
+ro'yxatni "ishlayapti" deb hisoblash xato bo'lardi).
+
+**DIQQAT — OTP budjeti bu yerda HAM amal qiladi** (§14dagi bilan bir xil
+mexanizm, lekin ALOHIDA IP-hisoblagich, chunki alohida Redis): bitta
+`seedAdminTestData()` chaqiruvi 2 ta OTP so'rov sarflaydi. Ushbu
+sessiyada izolyatsiyalangan muhitning o'zi ham to'liq 20/soat chegarasiga
+urilib to'xtadi (ko'p marta qo'lda qayta ishga tushirish debug jarayonida)
+— production/CI'da bitta oddiy ishga tushirish (soatiga 1 marta) bu bilan
+hech qachon to'qnashmaydi.
+
+### Nima uchun bunday (izolyatsiya qarori)
+
+Bosqich 17'da staff login sinovi shu SABABDAN bloklangan edi: yagona
+mavjud staff hisobi (`ops-phase4@bobododa.uz`, dev bazasida) parolini
+bilmasdim, va YANGI parol/hash yaratish (hatto yangi test hisob uchun ham)
+"secret-store write" sifatida avtomatik bloklandi. Bosqich 18'da bu
+TO'G'RI hal qilindi — dev/prod parolini reset qilish yoki bypass qilish
+O'RNIGA, butunlay ALOHIDA bazada, REAL production hashing kodi bilan,
+faqat shu bazaga yozadigan qattiq tekshiruv bilan test hisob yaratildi.
+Fake JWT/localStorage/TOTP bypass ISHLATILMAGAN — barcha login
+`/staff/auth/login` real endpoint orqali.
+
+### Yakuniy natija — 13 test (1 hujjatlashtirilgan skip), 0 muvaffaqiyatsiz
+
+To'liq izolyatsiyalangan muhitda YAKUNIY, toza ishga tushirish: **12 PASS,
+1 SKIP (TOTP — UI yo'q, pastga qarang), 0 FAIL**. Qamrov: dashboard,
+foydalanuvchilar (real sotuvchi qatori bilan), shartnomalar, to'lovlar
+(real SUCCEEDED to'lov), nizolar (real OCHIQ nizo), audit, xizmatlar
+(gated — graceful ErrorState), moliyaviy xavfsizlik (xavfli tugma yo'q),
+refund/nizo-hal-qilish Idempotency-Key, `mustChangePassword` hard gate,
+ruxsat/403 (frontend + mustaqil backend tekshiruvi). To'liq suite
+(`npx playwright test`, admin+xaridor+mutaxassis birga) — **23 PASS,
+1 SKIP, 0 FAIL, 24 jami**.
+
+Ishga tushirishlar orasida **fixture'larni qayta o'rnatish shart**
+(idempotent, lekin transaktsion ma'lumot yig'ilib boradi):
+```bash
+psql -h 127.0.0.1 -p 55433 -U bobododa -d bobododa_e2e -c \
+  "TRUNCATE TABLE disputes, payments, refunds, milestones, contracts, services, seller_applications CASCADE;"
+nix-shell backend/shell.nix --run '
+  DATABASE_URL="postgresql://bobododa_app:app@127.0.0.1:55433/bobododa_e2e?schema=public" \
+  node backend/scripts/e2e-staff-fixture.cjs
+'
+```
+(`TRUNCATE` — superuser `bobododa` bilan, `bobododa_app`da bu huquq YO'Q,
+append-only dizayn qasddan; `e2e-staff-fixture.cjs` — `mustChangePassword`
+testi `reset@e2e.test` parolini o'zgartirgani sabab, har safar qayta
+kerak.)
+
+### Playwright faylida `test.skip()` doiraси — haqiqiy xato, TUZATILDI
+
+Bosqich 18 yakuniy tekshiruvida: `test.skip(condition, reason)` FAYL
+DARAJASIDA (`test()` chaqiruvi TASHQARISIDA) chaqirilsa, Playwright BUTUN
+FAYLDAGI barcha keyingi testlarni skip qiladi — faqat maqsadli bitta
+testni emas. Bu `admin.spec.ts`da barcha 13 testni (TOTP ham, boshqa
+12 tasi ham) skip qilib yuborgan edi. To'g'ri naqsh: `test.skip()` FAQAT
+`test("...", async () => { test.skip(true, "sabab"); ... })` — test()
+callback'i ICHIDA chaqirilsin.
+
+### Muhim metodologik dars — `npm run test:e2e` (Jest, backend) va Redis kontensiyasi
+
+Backend'ning O'ZINING Jest e2e suite'i (`test/*.e2e-spec.ts`, Docker/
+Testcontainers EMAS — lokal `E2E_SUPERUSER_URL`/`E2E_REDIS_URL` orqali
+haqiqiy Postgres/Redis'ga ulanadi, standart qiymat mos kelmasa
+`postgresql://postgres:postgres@127.0.0.1:5432/postgres` — bu loyihada
+haqiqiy superuser `bobododa` (trust auth), shuning uchun
+`E2E_SUPERUSER_URL="postgresql://bobododa@127.0.0.1:5432/postgres"`
+berish kerak) uzoq muddat ishlab turgan ODDIY dev backend (`npm run
+start:dev`, `:4000`) bilan BIR XIL Redis'ga (`:6379`) ulanganda, ikkalasi
+ham `otp-sms` BullMQ navbatiga (`src/infra/sms/otp-sms.processor.ts`)
+obuna bo'ladi va JOB'LAR UCHUN RAQOBATLASHADI — Jest'ning o'z ichki
+`CapturingSmsProvider`si ko'p hollarda kodni HECH QACHON olmaydi ("waitFor
+timeout (otp sms)"). **Yechim: `npm run test:e2e`ni ishga tushirishdan
+oldin `:4000`dagi dev backend'ni vaqtincha to'xtating** (yoki butunlay
+alohida Redis'ga ulang). Bosqich 18'da bu aynan shu sababdan 197/308 test
+yiqilgan (kontaminatsiyalangan, 1076s) va dev backend to'xtatilgach
+308/308 PASS (toza, 149s) natija berdi — **ilova kodida hech qanday
+regressiya yo'q edi**, sof test-muhit izolyatsiyasi masalasi.
