@@ -195,6 +195,14 @@ export const envSchema = z
     PLAYMOBILE_PASSWORD: z.string().optional(),
     // Bo'lim 4 — rasmiy chegara: "не более, чем из 11 разрешенных символов".
     PLAYMOBILE_SENDER: z.string().max(11).optional(),
+    // Bosqich 22 — FAQAT lokal dev qulayligi: yoqilsa, `/auth/*/request-otp`
+    // javobida generatsiya qilingan kod `devOtp` maydonida qaytadi (frontend
+    // konsolni o'qimasdan sinash uchun). Sukut — HAR DOIM `false` (yoqib
+    // qo'yish ATAYLAB ishtirokchi tomonidan). Haqiqiy shart uchtasi BIRGA
+    // (`OtpService`da tekshiriladi, `dev-otp.util.ts`): NODE_ENV!=production
+    // HAMDA SMS_PROVIDER=CONSOLE HAMDA shu bayroq — uchtasidan BIRI yolg'on
+    // bo'lsa ham kod hech qachon javobga chiqmaydi (mustaqil qatlamlar).
+    DEV_EXPOSE_OTP: booleanish.default('false'),
 
     // ── Outbox notification delivery (Bosqich 10) ───────────────────────
     // Bo'lim 9/10 — PROCESSING holatda "qotib qolgan" qatorni boshqa worker

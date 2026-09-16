@@ -123,6 +123,14 @@ export const ERROR_CODES = {
   INVALID_HOLDER: { httpStatus: 422, retryable: false },
   INVALID_DATE: { httpStatus: 422, retryable: false },
   INVALID_CODE: { httpStatus: 422, retryable: false },
+  // Bosqich 22 — `INVALID_CODE`dan ATAYLAB ajratilgan: OTP qatori topildi,
+  // lekin muddati o'tgan/urinishlar tugagan — foydalanuvchiga "noto'g'ri
+  // kod kiritdingiz" emas, "yangi kod so'rang" ko'rsatilishi kerak.
+  // `INVALID_CODE` o'zi "kod topilmadi (hech qachon so'ralmagan/allaqachon
+  // ishlatilgan) yoki xato kiritildi" uchun qoladi — enumeration-safe
+  // (staff TOTP HAM shu kodni ishlatadi, BU YERDA o'zgartirilmagan).
+  OTP_EXPIRED: { httpStatus: 422, retryable: false },
+  OTP_ATTEMPTS_EXCEEDED: { httpStatus: 422, retryable: false },
   INVALID_CARD: { httpStatus: 422, retryable: false }, // GAP kod
   INVALID_EXPIRY: { httpStatus: 422, retryable: false }, // GAP kod
   INVALID_BANK_ACCOUNT: { httpStatus: 422, retryable: false }, // GAP kod

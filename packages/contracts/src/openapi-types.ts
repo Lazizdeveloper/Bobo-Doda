@@ -2036,6 +2036,15 @@ export interface components {
             /** @example +998901234567 */
             phone: string;
         };
+        RequestOtpResponseDto: {
+            /** @example true */
+            sent: boolean;
+            /**
+             * @description FAQAT DEVELOPMENT — productionda HECH QACHON qaytarilmaydi. Generatsiya qilingan OTP kodi, frontend backend konsolini o'qimasdan sinash uchun.
+             * @example 532123
+             */
+            devOtp?: string;
+        };
         VerifyOtpDto: {
             /** @example +998901234567 */
             phone: string;
@@ -2878,7 +2887,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RequestOtpResponseDto"];
+                };
             };
         };
     };
@@ -2966,7 +2977,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RequestOtpResponseDto"];
+                };
             };
         };
     };

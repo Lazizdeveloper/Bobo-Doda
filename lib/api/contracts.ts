@@ -66,8 +66,11 @@ export interface AuthService {
    * User yaratiladi + sessiya ochiladi).
    *
    * `requestRegisterOtp` har doim `{sent:true}` (enumeration himoyasi).
+   * `devOtp` — Bosqich 22, FAQAT development (`NODE_ENV!=production &&
+   * SMS_PROVIDER=CONSOLE && DEV_EXPOSE_OTP=true`) — productionda HECH
+   * QACHON kelmaydi.
    */
-  requestRegisterOtp(phone: string): Promise<{ sent: true }>;
+  requestRegisterOtp(phone: string): Promise<{ sent: true; devOtp?: string }>;
   /** Telefon allaqachon ro'yxatdan o'tgan bo'lsa ENDI xato bermaydi (bu
       tekshiruv `completeRegistration`da) — bu yerda faqat OTP haqiqiyligi
       tekshiriladi. */
@@ -93,7 +96,9 @@ export interface AuthService {
    * qilinadi, foydalanuvchi keyin `login()` bilan qaytadan kiradi —
    * sessiya AVTOMATIK ochilmaydi).
    */
-  requestPasswordResetOtp(phone: string): Promise<{ sent: true }>;
+  /** `devOtp` — Bosqich 22, FAQAT development (yuqoridagi `requestRegisterOtp`
+      bilan bir xil shart). */
+  requestPasswordResetOtp(phone: string): Promise<{ sent: true; devOtp?: string }>;
   verifyPasswordResetOtp(phone: string, code: string): Promise<{ resetToken: string }>;
   completePasswordReset(resetToken: string, password: string, confirmPassword: string): Promise<{ ok: true }>;
   chooseRole(role: Model.UserRole): Promise<Model.Session>;

@@ -5,6 +5,7 @@ import { AppConfigService } from '@/config/app-config.service';
 import { UnauthenticatedError } from '@/common/errors/domain-error';
 import { AuthService, type AuthResult } from './auth.service';
 import { RequestOtpDto } from './dto/request-otp.dto';
+import { RequestOtpResponseDto } from './dto/request-otp-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { LoginDto } from './dto/login.dto';
 import { CompleteRegistrationDto } from './dto/complete-registration.dto';
@@ -53,9 +54,10 @@ export class AuthController {
   @Public()
   @Post('register/request-otp')
   @HttpCode(200)
-  async requestRegisterOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<{ sent: true }> {
-    await this.auth.requestRegisterOtp(dto.phone, req.ip);
-    return { sent: true };
+  @ApiOkResponse({ type: RequestOtpResponseDto })
+  async requestRegisterOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<RequestOtpResponseDto> {
+    const { devOtp } = await this.auth.requestRegisterOtp(dto.phone, req.ip);
+    return devOtp ? { sent: true, devOtp } : { sent: true };
   }
 
   /** OTP valid bo'lsa User DARHOL yaratilmaydi — o'rniga qisqa umrli
@@ -113,9 +115,10 @@ export class AuthController {
   @Public()
   @Post('password-reset/request-otp')
   @HttpCode(200)
-  async requestPasswordResetOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<{ sent: true }> {
-    await this.auth.requestPasswordResetOtp(dto.phone, req.ip);
-    return { sent: true };
+  @ApiOkResponse({ type: RequestOtpResponseDto })
+  async requestPasswordResetOtp(@Body() dto: RequestOtpDto, @Req() req: Request): Promise<RequestOtpResponseDto> {
+    const { devOtp } = await this.auth.requestPasswordResetOtp(dto.phone, req.ip);
+    return devOtp ? { sent: true, devOtp } : { sent: true };
   }
 
   /** OTP valid bo'lsa qisqa umrli `resetToken` (10 daqiqa, bir martalik). */

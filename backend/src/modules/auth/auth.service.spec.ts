@@ -44,6 +44,7 @@ function fakeHash(): HashService {
 function buildService(opts: {
   findUniqueResult?: User | null;
   createImpl?: () => Promise<User>;
+  otpRequestImpl?: () => Promise<{ devOtp?: string }>;
   otpVerifyImpl?: () => Promise<{ phone: string }>;
   grantIssueImpl?: () => Promise<string>;
   grantConsumeImpl?: () => Promise<{ phone: string; userId: string | null }>;
@@ -70,7 +71,7 @@ function buildService(opts: {
   const auditRecord = jest.fn(async () => undefined);
   const audit = { record: auditRecord } as unknown as AuditService;
   const otp = {
-    requestOtp: jest.fn(async () => undefined),
+    requestOtp: jest.fn(opts.otpRequestImpl ?? (async () => ({}))),
     verifyOtp: jest.fn(opts.otpVerifyImpl ?? (async () => ({ phone: '+998901234567' }))),
   } as unknown as OtpService;
   const grants = {
@@ -95,6 +96,18 @@ describe('AuthService — parol bilan login (Bosqich 21)', () => {
       const { service, otp } = buildService();
       await service.requestRegisterOtp('+998901234567', '1.2.3.4');
       expect(otp.requestOtp).toHaveBeenCalledWith('+998901234567', 'REGISTER', { ip: '1.2.3.4' });
+    });
+
+    it('requestRegisterOtp — OtpService devOtp qaytarsa, chaqiruvchiga shu holicha uzatiladi', async () => {
+      const { service } = buildService({ otpRequestImpl: async () => ({ devOtp: '532123' }) });
+      const res = await service.requestRegisterOtp('+998901234567', '1.2.3.4');
+      expect(res).toEqual({ devOtp: '532123' });
+    });
+
+    it('requestRegisterOtp — OtpService devOtp qaytarmasa (production/PLAYMOBILE), bo‘sh natija', async () => {
+      const { service } = buildService({ otpRequestImpl: async () => ({}) });
+      const res = await service.requestRegisterOtp('+998901234567', '1.2.3.4');
+      expect(res).toEqual({});
     });
 
     it('verifyRegisterOtp — OTP valid bo‘lsa grant chiqaradi, User YARATILMAYDI', async () => {
@@ -241,6 +254,15 @@ describe('AuthService — parol bilan login (Bosqich 21)', () => {
         ip: '1.2.3.4',
         skipDelivery: false,
       });
+    });
+
+    it('requestPasswordResetOtp — OtpService devOtp qaytarsa, chaqiruvchiga shu holicha uzatiladi', async () => {
+      const { service } = buildService({
+        findUniqueResult: fakeUser(),
+        otpRequestImpl: async () => ({ devOtp: '841920' }),
+      });
+      const res = await service.requestPasswordResetOtp('+998901234567', '1.2.3.4');
+      expect(res).toEqual({ devOtp: '841920' });
     });
 
     it('requestPasswordResetOtp — noma’lum telefon uchun skipDelivery=true (SMS tejash), javob bir xil', async () => {

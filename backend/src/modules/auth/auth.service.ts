@@ -76,8 +76,8 @@ export class AuthService {
 
   /* ── REGISTER — telefon → SMS OTP → grant → parol → User ────────────── */
 
-  async requestRegisterOtp(phone: string, ip?: string): Promise<void> {
-    await this.otp.requestOtp(phone, 'REGISTER', { ip });
+  async requestRegisterOtp(phone: string, ip?: string): Promise<{ devOtp?: string }> {
+    return this.otp.requestOtp(phone, 'REGISTER', { ip });
   }
 
   /** OTP valid bo'lsa User DARHOL yaratilmaydi — o'rniga qisqa umrli
@@ -209,9 +209,9 @@ export class AuthService {
    * ichida, mavjudlikdan qat'i nazar), aks holda "cheklovga tegmayapti"
    * o'zi signal bo'lardi.
    */
-  async requestPasswordResetOtp(phone: string, ip?: string): Promise<void> {
+  async requestPasswordResetOtp(phone: string, ip?: string): Promise<{ devOtp?: string }> {
     const user = await this.prisma.user.findUnique({ where: { phone: phone.trim() }, select: { id: true } });
-    await this.otp.requestOtp(phone, 'PASSWORD_RESET', { ip, skipDelivery: !user });
+    return this.otp.requestOtp(phone, 'PASSWORD_RESET', { ip, skipDelivery: !user });
   }
 
   /** OTP valid bo'lsa User TOPILISHI SHART (aks holda `skipDelivery` tufayli

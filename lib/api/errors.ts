@@ -118,6 +118,12 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   INVALID_HOLDER: { code: "VALIDATION", status: 422, retryable: false },
   INVALID_DATE: { code: "VALIDATION", status: 422, retryable: false },
   INVALID_CODE: { code: "VALIDATION", status: 422, retryable: false },
+  /* Bosqich 22 — INVALID_CODE'dan ajratilgan aniq OTP holatlari: sahifalar
+     `err.message` (xom backend kodi) bo'yicha alohida matn ko'rsatadi
+     (`auth.codeExpired`/`auth.codeAttemptsExceeded`) — bu yerda faqat
+     umumiy VALIDATION guruhiga ro'yxatga olinadi. */
+  OTP_EXPIRED: { code: "VALIDATION", status: 422, retryable: false },
+  OTP_ATTEMPTS_EXCEEDED: { code: "VALIDATION", status: 422, retryable: false },
   INVALID_CARD: { code: "VALIDATION", status: 422, retryable: false },
   INVALID_EXPIRY: { code: "VALIDATION", status: 422, retryable: false },
   INVALID_BANK_ACCOUNT: { code: "VALIDATION", status: 422, retryable: false },

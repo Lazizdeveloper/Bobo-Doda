@@ -136,7 +136,9 @@ function writeSession(res: RealAuthSession): Model.Session {
 export const authService: AuthService = {
   getSession: sessionStore.read,
   requestRegisterOtp: (phone) =>
-    call(async () => http<{ sent: true }>("/auth/register/request-otp", { method: "POST", body: { phone } })),
+    call(async () =>
+      http<{ sent: true; devOtp?: string }>("/auth/register/request-otp", { method: "POST", body: { phone } }),
+    ),
   verifyRegisterOtp: (phone, code) =>
     call(async () =>
       http<{ registrationToken: string }>("/auth/register/verify-otp", { method: "POST", body: { phone, code } }),
@@ -156,7 +158,10 @@ export const authService: AuthService = {
     }),
   requestPasswordResetOtp: (phone) =>
     call(async () =>
-      http<{ sent: true }>("/auth/password-reset/request-otp", { method: "POST", body: { phone } }),
+      http<{ sent: true; devOtp?: string }>("/auth/password-reset/request-otp", {
+        method: "POST",
+        body: { phone },
+      }),
     ),
   verifyPasswordResetOtp: (phone, code) =>
     call(async () =>

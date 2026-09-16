@@ -602,6 +602,21 @@ export const dictionary: Record<string, Entry> = {
   "auth.verifyTitle": { uz: "Kodni kiriting", ru: "Введите код" },
   "auth.verifyBtn": { uz: "Tasdiqlash", ru: "Подтвердить" },
   "auth.codeError": { uz: "Kod 6 xonali raqam bo'lishi kerak", ru: "Код должен состоять из 6 цифр" },
+  /* Bosqich 22 — backend OTP_INVALID/OTP_EXPIRED/OTP_ATTEMPTS_EXCEEDED
+     xatolarining aniq matnlari (`auth.codeError` faqat FORMAT xatosi
+     uchun — kiritilgan qiymat /^\d{6}$/ ga mos kelmasa). */
+  "auth.codeInvalid": { uz: "Kod noto'g'ri", ru: "Неверный код" },
+  "auth.codeExpired": {
+    uz: "Kodning amal qilish muddati tugagan",
+    ru: "Срок действия кода истёк",
+  },
+  "auth.codeAttemptsExceeded": {
+    uz: "Urinishlar soni oshib ketdi. Yangi kod oling.",
+    ru: "Превышено количество попыток. Получите новый код.",
+  },
+  "auth.devOtpLabel": { uz: "DEV rejim", ru: "DEV режим" },
+  "auth.devOtpCode": { uz: "SMS kodi:", ru: "SMS-код:" },
+  "auth.devOtpFillBtn": { uz: "Kodni kiritish", ru: "Вставить код" },
   "auth.trustBadgeEscrow": {
     uz: "100% Kafolatlangan xavfsiz to'lov va Escrow shartnoma tizimi",
     ru: "100% Гарантия безопасной оплаты и система Escrow договоров",

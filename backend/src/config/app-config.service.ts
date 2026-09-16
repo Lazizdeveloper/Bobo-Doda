@@ -164,9 +164,12 @@ export class AppConfigService {
     };
   }
 
-  /** Bosqich 10 — `sms.module.ts` shundan provider'ni tanlaydi (Payment/Payout bilan bir xil naqsh). */
-  get sms(): { provider: Env['SMS_PROVIDER'] } {
-    return { provider: this.get('SMS_PROVIDER') };
+  /** Bosqich 10 — `sms.module.ts` shundan provider'ni tanlaydi (Payment/Payout bilan bir xil naqsh).
+      Bosqich 22 — `devExposeOtp` xom bayroq (yig'indi shart EMAS, faqat env
+      qiymati) — yakuniy "ko'rsatilsinmi" qarori `dev-otp.util.ts#shouldExposeDevOtp`da,
+      `isProduction` bilan birga, chaqiruvchi joyda hisoblanadi. */
+  get sms(): { provider: Env['SMS_PROVIDER']; devExposeOtp: boolean } {
+    return { provider: this.get('SMS_PROVIDER'), devExposeOtp: this.get('DEV_EXPOSE_OTP') };
   }
 
   /** Bosqich 13 — PlayMobile SMS-Broker. `SMS_PROVIDER=PLAYMOBILE` bo'lsa hammasi majburiy (env.schema.ts). */

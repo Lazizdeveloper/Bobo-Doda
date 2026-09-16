@@ -6,10 +6,12 @@ import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
 import { HashService } from '@/common/security/hash.service';
 import { RateLimiterService } from '@/common/security/rate-limiter.service';
+import { AppConfigService } from '@/config/app-config.service';
 import { generateOtpCode } from '@/common/security/otp-code.util';
 import { normalizePhone } from '@/common/security/phone.util';
 import { DomainError } from '@/common/errors/domain-error';
 import { OTP_SMS_QUEUE, type OtpSmsJobData } from '@/infra/sms/otp-sms.processor';
+import { shouldExposeDevOtp } from './dev-otp.util';
 import {
   OTP_EXPIRY_SECONDS,
   OTP_IP_HOURLY_LIMIT,
@@ -49,6 +51,7 @@ export class OtpService {
     private readonly ids: IdFactory,
     private readonly hash: HashService,
     private readonly limiter: RateLimiterService,
+    private readonly config: AppConfigService,
     @InjectQueue(OTP_SMS_QUEUE) private readonly smsQueue: Queue<OtpSmsJobData>,
   ) {}
 
@@ -66,7 +69,7 @@ export class OtpService {
     rawPhone: string,
     purpose: OtpPurpose,
     opts: { ip?: string; skipDelivery?: boolean } = {},
-  ): Promise<void> {
+  ): Promise<{ devOtp?: string }> {
     const phone = normalizePhone(rawPhone);
     const { ip, skipDelivery = false } = opts;
 
@@ -95,7 +98,7 @@ export class OtpService {
       }
     }
 
-    if (skipDelivery) return;
+    if (skipDelivery) return {};
 
     const code = generateOtpCode();
     await this.prisma.otpCode.create({
@@ -112,18 +115,54 @@ export class OtpService {
     // BullMQ orqali — OutboxEvent EMAS (`otp-sms.processor.ts` izohiga qarang:
     // OTP xom holda Postgres'ga yozilmasin).
     await this.smsQueue.add('send', { phone, code, template: OTP_SMS_TEMPLATE });
+
+    // Bosqich 22 — FAQAT lokal dev qulayligi (`dev-otp.util.ts`). Kodning
+    // o'zi HECH QACHON qayta o'qilmaydi (`codeHash` bir tomonlama) — shuning
+    // uchun bu yerda, hali xotirada turgan `code`dan qaror qilinishi shart.
+    const devOtp = shouldExposeDevOtp({
+      isProduction: this.config.isProduction,
+      smsProvider: this.config.sms.provider,
+      devExposeOtp: this.config.sms.devExposeOtp,
+    })
+      ? code
+      : undefined;
+    return devOtp ? { devOtp } : {};
   }
 
-  /** Muvaffaqiyatli bo'lsa normallashtirilgan telefonni qaytaradi. */
+  /**
+   * Muvaffaqiyatli bo'lsa normallashtirilgan telefonni qaytaradi.
+   *
+   * Bosqich 22 — xato taksonomiyasi ATAYLAB uch holatga ajratilgan (ilgari
+   * hammasi bitta `INVALID_CODE`ga tushardi, UI "noto'g'ri format" bilan
+   * "noto'g'ri kod"ni farqlay olmasdi):
+   *   • `INVALID_CODE` — bunday challenge UMUMAN topilmadi (hech qachon
+   *     so'ralmagan / boshqa `purpose` / allaqachon iste'mol qilingan) YOKI
+   *     kod noto'g'ri kiritildi. Ataylab BIR XIL kod — enumeration-safe
+   *     (topilmadi va noto'g'ri farqlansa, "bu telefon uchun challenge bor/
+   *     yo'q" signali chiqib qolardi).
+   *   • `OTP_EXPIRED` — qator topildi, lekin muddati o'tgan.
+   *   • `OTP_ATTEMPTS_EXCEEDED` — urinishlar soni tugagan (yangi kod olish
+   *     kerakligini aniq aytadi — "yana urinib ko'ring" chalg'ituvchi bo'lardi).
+   */
   async verifyOtp(rawPhone: string, code: string, purpose: OtpPurpose): Promise<{ phone: string }> {
     const phone = normalizePhone(rawPhone);
 
     const otp = await this.prisma.otpCode.findFirst({
-      where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+      where: { phone, purpose, consumedAt: null },
       orderBy: { createdAt: 'desc' },
     });
-    if (!otp || otp.attempts >= OTP_MAX_ATTEMPTS) {
-      throw new DomainError('INVALID_CODE', "Kod noto'g'ri yoki muddati tugagan");
+    if (!otp) {
+      throw new DomainError('INVALID_CODE', "Kod noto'g'ri");
+    }
+    if (otp.expiresAt <= new Date()) {
+      throw new DomainError('OTP_EXPIRED', 'Kodning amal qilish muddati tugagan');
+    }
+    // Himoya qatlami: odatda oxirgi noto'g'ri urinishning o'zi (pastda)
+    // darhol `consumedAt`ni belgilaydi, shuning uchun bu shart amalda
+    // deyarli hech qachon ishga tushmaydi — lekin CAS'siz holat qolib
+    // ketsa ham keyingi urinish baribir bloklanadi.
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+      throw new DomainError('OTP_ATTEMPTS_EXCEEDED', "Urinishlar soni oshib ketdi. Yangi kod oling.");
     }
 
     const valid = await this.hash.verify(otp.codeHash, code);
@@ -134,6 +173,9 @@ export class OtpService {
         where: { id: otp.id },
         data: { attempts, ...(burned ? { consumedAt: new Date() } : {}) },
       });
+      if (burned) {
+        throw new DomainError('OTP_ATTEMPTS_EXCEEDED', "Urinishlar soni oshib ketdi. Yangi kod oling.");
+      }
       throw new DomainError('INVALID_CODE', "Kod noto'g'ri");
     }
 

@@ -11,6 +11,14 @@
  * `db-role-assertion.e2e-spec` `health_e2e` DB'sini **`bobododa_app`** roli
  * bilan ishlatadi (F1 tekshiruvi shuni talab qiladi) — uni `beforeAll`
  * `provisionDb('health_e2e')` bilan yaratadi/rollarni sozlaydi.
+ *
+ * Bosqich 22 — `DEV_EXPOSE_OTP` ATAYLAB `'false'`ga PIN qilingan: lokal
+ * `backend/.env`da bu bayroq (dev qulayligi uchun) `true` bo'lishi mumkin,
+ * lekin `dotenv` allaqachon o'rnatilgan `process.env` kalitini QAYTA
+ * YOZMAYDI — shu yerda pin qilinmasa, e2e suite dasturchining shaxsiy
+ * `.env`iga qarab tasodifan `devOtp` bilan/siz javob olardi (`.expect(200,
+ * { sent: true })` qat'iy tengliklari shundan yiqiladi). E2E hamisha
+ * deterministik bo'lishi kerak — ambient `.env`ga bog'liq emas.
  */
 const SUPERUSER =
   process.env.E2E_SUPERUSER_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
@@ -23,3 +31,4 @@ process.env.DB_ROLE_ASSERTION = 'on';
 process.env.DATABASE_URL = `postgresql://bobododa_app:app@${host}/health_e2e?schema=public`;
 process.env.DATABASE_MIGRATION_URL = `postgresql://bobododa_migrator:migrator@${host}/health_e2e?schema=public`;
 process.env.REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6379';
+process.env.DEV_EXPOSE_OTP = 'false';

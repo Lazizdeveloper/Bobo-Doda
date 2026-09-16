@@ -7,6 +7,7 @@ import { authService } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
+import { stashDevOtp } from "@/lib/api/dev-otp-bridge";
 
 /** Bosqich 21 — Login'dan ALOHIDA oqim (login endi parol bilan, SMS
     ishtirok etmaydi). Bu sahifa FAQAT telefon egaligini isbotlaydi
@@ -51,7 +52,8 @@ export default function RoyxatdanOtishPage() {
     setLoading(true);
     setError("");
     try {
-      await authService.requestRegisterOtp(phone.trim());
+      const res = await authService.requestRegisterOtp(phone.trim());
+      stashDevOtp(res.devOtp);
       window.sessionStorage.setItem("bd_register_otp_phone", phone.trim());
       router.push("/royxatdan-otish/tasdiqlash");
     } catch (err) {

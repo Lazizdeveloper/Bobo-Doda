@@ -83,6 +83,53 @@ test.describe("OTP input validatsiyasi (bug fix — bosh nol, stale xato)", () =
   });
 });
 
+/* Bosqich 22 — FORMAT xatosi ("Kod 6 xonali...") va SERVER tasdiqlash
+   xatosi ("Kod noto'g'ri") ikki xil manba: birinchisi hech qanday so'rov
+   yubormaydi (frontend `/^\d{6}$/`), ikkinchisi FAQAT backend haqiqatan
+   chaqirilgandan keyin, `ApiError.message` (xom `INVALID_CODE` kodi)
+   bo'yicha ko'rsatiladi. Ular hech qachon aralashmasligi kerak. */
+test.describe("OTP tasdiqlash xato xaritalash (OTP_INVALID/format ajratilgan)", () => {
+  test("format xatosi ('123') → 'Kod 6 xonali...' ko'rinadi, backend'ga verify-otp so'rovi UMUMAN ketmaydi", async ({
+    page,
+  }) => {
+    const phone = freshPhone();
+    await page.goto("/royxatdan-otish/tasdiqlash");
+    await page.evaluate((p) => window.sessionStorage.setItem("bd_register_otp_phone", p), phone);
+    await page.reload({ waitUntil: "networkidle" });
+
+    let verifyRequested = false;
+    page.on("request", (req) => {
+      if (req.url().includes("/auth/register/verify-otp")) verifyRequested = true;
+    });
+
+    await page.locator("input").first().fill("123");
+    await page.getByRole("button", { name: /Tasdiqlash/i }).click();
+    await expect(page.getByText("Kod 6 xonali raqam bo'lishi kerak")).toBeVisible();
+    expect(verifyRequested).toBe(false);
+  });
+
+  test("olti xonali, lekin NOTO'G'RI OTP → so'rov ketadi, 'Kod noto'g'ri' ko'rsatiladi ('Kod 6 xonali...' EMAS)", async ({
+    page,
+  }) => {
+    const phone = freshPhone();
+    await page.goto("/royxatdan-otish");
+    await page.locator("input").first().fill(phone.replace("+998", ""));
+    await page.getByRole("button", { name: /Kod yuborish/i }).click();
+    await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
+    await page.waitForTimeout(700);
+
+    const realCode = latestOtpFor(phone);
+    const wrongCode = realCode === "000000" ? "111111" : "000000";
+    await page.locator("input").first().fill(wrongCode);
+    await page.getByRole("button", { name: /Tasdiqlash/i }).click();
+
+    await expect(page.getByText("Kod noto'g'ri")).toBeVisible();
+    await expect(page.getByText("Kod 6 xonali raqam bo'lishi kerak")).toHaveCount(0);
+    // Muvaffaqiyatsiz verify — hali tasdiqlash sahifasida qoladi, parol bosqichiga o'tmagan.
+    expect(page.url()).toContain("/royxatdan-otish/tasdiqlash");
+  });
+});
+
 test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanlash → dashboard", async ({ page }) => {
   const phone = freshPhone();
   await page.goto("/royxatdan-otish");
@@ -255,4 +302,76 @@ test("FORGOT PASSWORD: /kirish → Parolni unutdim → SMS OTP → yangi parol �
   await page.locator('input[type="password"]').fill(newPassword);
   await page.getByRole("button", { name: /^Kirish$/i }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/xaridor"), { timeout: 10_000 });
+});
+
+/* Bosqich 22 — DEV-only OTP ko'rsatish. Lokal `backend/.env`da
+   `DEV_EXPOSE_OTP=true` (SMS_PROVIDER sukut CONSOLE, NODE_ENV=development
+   bilan birga) — shu sabab bu ikki test FAQAT shu sozlamada o'tadi
+   (productionda/`DEV_EXPOSE_OTP=false` bo'lsa backend `devOtp`ni umuman
+   qaytarmaydi, "DEV rejim" bloki ko'rinmaydi — frontend HECH QACHON o'zi
+   kod o'ylab topmaydi, faqat backend javobini ko'rsatadi). */
+test.describe("DEV-only OTP ko'rsatish (DEV_EXPOSE_OTP=true)", () => {
+  test("REGISTER: request-otp devOtp qaytaradi → 'DEV rejim' bloki ko'rinadi → 'Kodni kiritish' bilan parol bosqichiga o'tiladi", async ({
+    page,
+  }) => {
+    const phone = freshPhone();
+    await page.goto("/royxatdan-otish");
+    await page.locator("input").first().fill(phone.replace("+998", ""));
+    await page.getByRole("button", { name: /Kod yuborish/i }).click();
+    await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
+    await page.waitForTimeout(700);
+
+    const realCode = latestOtpFor(phone);
+    await expect(page.getByText("DEV rejim")).toBeVisible();
+    await expect(page.getByText(realCode)).toBeVisible();
+
+    // "Kodni kiritish" FAQAT to'ldiradi — avtomatik yubormaydi.
+    await page.getByRole("button", { name: /Kodni kiritish/i }).click();
+    await expect(page.locator("input").first()).toHaveValue(realCode);
+    expect(page.url()).toContain("/royxatdan-otish/tasdiqlash");
+
+    await page.getByRole("button", { name: /Tasdiqlash/i }).click();
+    await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
+  });
+
+  test("FORGOT PASSWORD: request-otp devOtp qaytaradi → 'Kodni kiritish' bilan yangi parol bosqichiga o'tiladi", async ({
+    page,
+  }) => {
+    // Avval haqiqiy hisob kerak — parolni tiklash mavjud User talab qiladi.
+    const phone = freshPhone();
+    await page.goto("/royxatdan-otish");
+    await page.locator("input").first().fill(phone.replace("+998", ""));
+    await page.getByRole("button", { name: /Kod yuborish/i }).click();
+    await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
+    await page.waitForTimeout(700);
+    await page.locator("input").first().fill(latestOtpFor(phone));
+    await page.getByRole("button", { name: /Tasdiqlash/i }).click();
+    await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
+    const regInputs = page.locator('input[type="password"]');
+    await regInputs.nth(0).fill(E2E_PASSWORD);
+    await regInputs.nth(1).fill(E2E_PASSWORD);
+    await page.getByRole("button", { name: /Hisob yaratish/i }).click();
+    await page.waitForURL("**/rol-tanlash", { timeout: 10_000 });
+    await page.getByText("Xaridor", { exact: false }).first().click();
+    await page.waitForURL((url) => url.pathname.startsWith("/xaridor"), { timeout: 10_000 });
+    await page.evaluate(() => window.localStorage.clear());
+
+    await page.goto("/kirish");
+    await page.getByRole("link", { name: /Parolni unutdingizmi/i }).click();
+    await page.waitForURL("**/parolni-unutdim", { timeout: 10_000 });
+    await page.locator("input").first().fill(phone.replace("+998", ""));
+    await page.getByRole("button", { name: /Kod yuborish/i }).click();
+    await page.waitForURL("**/parolni-unutdim/tasdiqlash", { timeout: 10_000 });
+    await page.waitForTimeout(700);
+
+    const realCode = latestOtpFor(phone);
+    await expect(page.getByText("DEV rejim")).toBeVisible();
+    await expect(page.getByText(realCode)).toBeVisible();
+
+    await page.getByRole("button", { name: /Kodni kiritish/i }).click();
+    await expect(page.locator("input").first()).toHaveValue(realCode);
+
+    await page.getByRole("button", { name: /Tasdiqlash/i }).click();
+    await page.waitForURL("**/parolni-unutdim/parol", { timeout: 10_000 });
+  });
 });

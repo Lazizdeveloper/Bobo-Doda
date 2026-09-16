@@ -6,6 +6,8 @@ import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { authService } from "@/lib/api";
+import { mapOtpVerifyError } from "@/lib/api/otp-error";
+import { peekDevOtp } from "@/lib/api/dev-otp-bridge";
 import { useT } from "@/lib/i18n";
 
 /** Bosqich 21 — OTP tasdiqlangach `resetToken` (qisqa umrli, bir martalik)
@@ -19,6 +21,9 @@ export default function ParolniUnutdimTasdiqlashPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  /** Bosqich 22 — FAQAT development (`dev-otp-bridge.ts`), hech qachon
+      Storage'ga yozilmaydi. */
+  const [devOtp, setDevOtp] = useState<string | undefined>();
 
   useEffect(() => {
     const session = authService.getSession();
@@ -33,6 +38,7 @@ export default function ParolniUnutdimTasdiqlashPage() {
       return;
     }
     setPhone(stored);
+    setDevOtp(peekDevOtp());
   }, [router, pathname]);
 
   async function handleSubmit(e: FormEvent) {
@@ -48,8 +54,7 @@ export default function ParolniUnutdimTasdiqlashPage() {
       window.sessionStorage.setItem("bd_reset_token", resetToken);
       router.push("/parolni-unutdim/parol");
     } catch (err) {
-      const errCode = err instanceof Error ? err.message : "";
-      setError(errCode === "RATE_LIMITED" ? t("auth.errRateLimited") : t("auth.codeError"));
+      setError(mapOtpVerifyError(err, t));
       setLoading(false);
     }
   }
@@ -58,7 +63,8 @@ export default function ParolniUnutdimTasdiqlashPage() {
     setResending(true);
     setError("");
     try {
-      await authService.requestPasswordResetOtp(phone);
+      const res = await authService.requestPasswordResetOtp(phone);
+      setDevOtp(res.devOtp);
     } catch {
       /* jimgina — foydalanuvchi baribir kodni qayta kiritishga urinadi */
     } finally {
@@ -81,6 +87,25 @@ export default function ParolniUnutdimTasdiqlashPage() {
       <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed">
         {t("auth.otpSentTo")} <strong className="text-ink">{phone}</strong>
       </p>
+
+      {devOtp && (
+        <div className="mt-5 rounded-xl border border-dashed border-warning/50 bg-warning/10 p-3 text-xs sm:text-sm">
+          <p className="font-bold uppercase tracking-wide text-warning-deep">{t("auth.devOtpLabel")}</p>
+          <p className="mt-1 text-ink">
+            {t("auth.devOtpCode")} <span className="font-mono font-bold tracking-wider">{devOtp}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setCode(devOtp);
+              if (error) setError("");
+            }}
+            className="mt-1.5 text-xs font-semibold text-primary hover:underline"
+          >
+            {t("auth.devOtpFillBtn")}
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input

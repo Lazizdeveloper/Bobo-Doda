@@ -540,7 +540,7 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
   });
 
-  t('FORGOT: reset OTP muddati tugagan → INVALID_CODE', async () => {
+  t('FORGOT: reset OTP muddati tugagan → OTP_EXPIRED (Bosqich 22 — INVALID_CODE’dan ajratilgan)', async () => {
     const { phone } = await registerFresh();
     await flushCooldownOnly();
     const code = await requestAndGetCode(phone, 'PASSWORD_RESET');
@@ -554,7 +554,7 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .post('/api/v1/auth/password-reset/verify-otp')
       .send({ phone, code })
       .expect(422)
-      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+      .expect((r) => expect(r.body.code).toBe('OTP_EXPIRED'));
   });
 
   t('FORGOT: reset OTP bir martalik — ikkinchi verify rad etiladi', async () => {
@@ -595,12 +595,33 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect((r) => expect(r.body.code).toBe('VALIDATION'));
   });
 
-  t('Noto‘g‘ri kod 5 marta → kod “kuyadi”, keyin TO‘G‘RI kod ham ishlamaydi', async () => {
+  /**
+   * Bosqich 22 — `DEV_EXPOSE_OTP` bu test-jarayonda YOZILMAGAN (sukut
+   * `false`, `env.schema.ts`), shuning uchun bu YAGONA emas: yuqoridagi
+   * BARCHA `requestAndGetCode` chaqiruvi ham `.expect(200, { sent: true })`
+   * bilan tananing ANIQ (qat'iy) tengligini tekshiradi — `devOtp` qo'shilib
+   * qolsa ULARNING BARCHASI ham yiqilardi. Bu test shu invariantni ATAYLAB,
+   * o'z nomi bilan hujjatlashtiradi (real HTTP + Postgres + Redis — unit
+   * darajasidagi isbot `dev-otp.util.spec.ts`/`otp.service.spec.ts`da).
+   */
+  t('DEV_EXPOSE_OTP sukut (false) — request-otp javobida devOtp YO‘Q', async () => {
+    const phone = uniquePhone();
+    const res = await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/request-otp')
+      .send({ phone })
+      .expect(200);
+    expect(res.body).toEqual({ sent: true });
+    expect(res.body.devOtp).toBeUndefined();
+  });
+
+  t('Noto‘g‘ri kod 5 marta → kod “kuyadi” (5-chisi OTP_ATTEMPTS_EXCEEDED), keyin TO‘G‘RI kod ham ishlamaydi', async () => {
     const phone = uniquePhone();
     const code = await requestAndGetCode(phone, 'REGISTER');
     const wrong = code === '000000' ? '111111' : '000000';
 
-    for (let i = 0; i < 5; i += 1) {
+    // Bosqich 22 — birinchi 4 ta noto'g'ri urinish oddiy INVALID_CODE
+    // (hali urinish qolgan — "qaytadan kiriting" mantiqan to'g'ri).
+    for (let i = 0; i < 4; i += 1) {
       await request(app!.getHttpServer())
         .post('/api/v1/auth/register/verify-otp')
         .send({ phone, code: wrong })
@@ -608,6 +629,18 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
         .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
     }
 
+    // 5-chi (OXIRGI) noto'g'ri urinish — endi OTP_ATTEMPTS_EXCEEDED: shu
+    // urinishning o'zi kodni "kuydiradi", foydalanuvchiga aynan shu paytda
+    // "yangi kod oling" ko'rsatilishi kerak, keyingi so'rovni kutmasdan.
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code: wrong })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('OTP_ATTEMPTS_EXCEEDED'));
+
+    // Kod allaqachon "kuygan" (consumedAt yozilgan) — TO'G'RI kod bilan ham
+    // endi topilmaydi, generic INVALID_CODE (enumeration-safe: "kuygan" va
+    // "hech qachon so'ralmagan" bir xil ko'rinadi).
     await request(app!.getHttpServer())
       .post('/api/v1/auth/register/verify-otp')
       .send({ phone, code })

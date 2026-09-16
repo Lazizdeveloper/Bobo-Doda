@@ -7,6 +7,7 @@ import { useT } from "@/lib/i18n";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { CountryPhoneInput } from "@/components/shared/CountryPhoneInput";
+import { stashDevOtp } from "@/lib/api/dev-otp-bridge";
 
 /** Bosqich 21 — parolni tiklash: telefon → SMS OTP → yangi parol. Javob
     har doim generic `{sent:true}` (enumeration-safe — hisob mavjud/mavjud
@@ -40,7 +41,8 @@ export default function ParolniUnutdimPage() {
     setLoading(true);
     setError("");
     try {
-      await authService.requestPasswordResetOtp(phone.trim());
+      const res = await authService.requestPasswordResetOtp(phone.trim());
+      stashDevOtp(res.devOtp);
       window.sessionStorage.setItem("bd_reset_otp_phone", phone.trim());
       router.push("/parolni-unutdim/tasdiqlash");
     } catch (err) {

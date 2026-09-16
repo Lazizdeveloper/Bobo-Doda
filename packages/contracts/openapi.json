@@ -69,7 +69,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOtpResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -179,7 +186,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOtpResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5372,6 +5386,23 @@
         },
         "required": [
           "phone"
+        ]
+      },
+      "RequestOtpResponseDto": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "boolean",
+            "example": true
+          },
+          "devOtp": {
+            "type": "string",
+            "description": "FAQAT DEVELOPMENT — productionda HECH QACHON qaytarilmaydi. Generatsiya qilingan OTP kodi, frontend backend konsolini o'qimasdan sinash uchun.",
+            "example": "532123"
+          }
+        },
+        "required": [
+          "sent"
         ]
       },
       "VerifyOtpDto": {
