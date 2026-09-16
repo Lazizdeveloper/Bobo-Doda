@@ -583,6 +583,7 @@ export const sellerApplicationService: SellerApplicationService = {
           displayName: app.displayName,
           description: asStr(app.description),
           rejectionReason: asStr(app.rejectionReason),
+          submittedAt: asStr(app.submittedAt),
         };
       } catch (e) {
         if (e instanceof ApiError && e.code === "NOT_FOUND") return null;

@@ -402,6 +402,7 @@ export interface SellerApplicationService {
     displayName?: string;
     description?: string;
     rejectionReason?: string;
+    submittedAt?: string;
   } | null>;
   submit(input: { legalName: string; displayName: string; description?: string }): Promise<void>;
 }

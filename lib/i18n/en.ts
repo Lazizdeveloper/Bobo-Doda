@@ -401,6 +401,17 @@ export const en: Record<string, string> = {
   "onboard.errSkills": "Add at least one skill",
   "onboard.errCategories": "Select at least one category",
   "onboard.errLocation": "Enter your location",
+  "onboard.errNameShort": "Must be at least 2 characters",
+  "onboard.errNameLong": "Must be at most 100 characters",
+  "onboard.applicationSubmitted": "Your application has been submitted",
+  "onboard.applicationApproved": "Your application is approved",
+  "onboard.applicationApprovedDesc": "You're now a verified specialist — you can add services and accept contracts.",
+  "onboard.goToDashboard": "Go to dashboard",
+  "onboard.reapplyBtn": "Reapply",
+  "onboard.alreadyPending": "Your application has already been submitted.",
+  "onboard.stateChanged": "Your application status has changed.",
+  "onboard.submittedOn": "Submitted on:",
+  "onboard.rejectionReasonLabel": "Rejection reason:",
 
   /* Dashboard */
   "dash.title": "Dashboard",

@@ -84,6 +84,11 @@ export default function MutaxassisDashboardPage() {
           <p className="mt-1 text-xs text-muted">
             {applicationStatus === "rad_etilgan" ? t("dash.applicationRejectedDesc") : t("dash.applicationPendingDesc")}
           </p>
+          {applicationStatus === "rad_etilgan" && (
+            <Link href="/mutaxassis/royxat" className="mt-3 inline-block text-xs font-semibold text-primary hover:underline">
+              {t("onboard.reapplyBtn")}
+            </Link>
+          )}
         </Card>
       )}
 

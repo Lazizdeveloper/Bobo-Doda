@@ -28,7 +28,13 @@ process.env.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'silent';
 process.env.SWAGGER_ENABLED = 'true';
 process.env.DB_ROLE_ASSERTION = 'on';
-process.env.DATABASE_URL = `postgresql://bobododa_app:app@${host}/health_e2e?schema=public`;
+// Bosqich 23 — `connection_limit` ATAYLAB oshirilgan (Prisma sukuti
+// `num_cpus*2+1`, ba'zi mashinalarda ~5-9): 10 ta chinakam PARALLEL
+// `$transaction()` (masalan seller-application submit poyga testi) sukut
+// pool bilan ba'zan ECONNRESET beradi — so'rovlar bo'sh ulanish kutib,
+// HTTP darajasida vaqt tugaydi. Postgres `max_connections` (100+) buni
+// osongina ko'taradi.
+process.env.DATABASE_URL = `postgresql://bobododa_app:app@${host}/health_e2e?schema=public&connection_limit=20`;
 process.env.DATABASE_MIGRATION_URL = `postgresql://bobododa_migrator:migrator@${host}/health_e2e?schema=public`;
 process.env.REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6379';
 process.env.DEV_EXPOSE_OTP = 'false';

@@ -30,7 +30,10 @@ function freshPhone(): string {
   return `+998${digits}`;
 }
 
-function latestOtpFor(phone: string): string {
+/** Bosqich 23 — export qilingan: izolyatsiyalangan stack'da real UI orqali
+    ro'yxatdan o'tadigan boshqa suite'lar (masalan `seller-application.spec.ts`)
+    ham shu logdan (`:4010` backend) kod o'qishi kerak. */
+export function latestOtpFor(phone: string): string {
   const log = execSync(`grep "SMS DEV" "${OTP_LOG_PATH}" | grep "${phone}" | tail -1`).toString();
   const m = log.match(/code: '(\d{6})'/);
   if (!m) throw new Error(`OTP topilmadi (${phone}) — isolated backend logi: ${OTP_LOG_PATH}`);

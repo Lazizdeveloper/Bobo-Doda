@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import { dropDatabase, flushRedis, provisionDb, requireInfraOrSkip } from './support/e2e-infra';
 import { buildTestApp } from './support/build-app';
 import { SMS_PROVIDER } from '@/infra/sms/sms-provider.interface';
+import { RedisService } from '@/infra/redis/redis.service';
 import {
   CapturingSmsProvider,
   createApprovedSeller,
@@ -47,6 +48,17 @@ describe('Seller onboarding + Service lifecycle (e2e)', () => {
       if (!reachable) return;
       await fn();
     });
+
+  /** Bosqich 23 — bu faylga qo'shilgan yangi testlar (real user-holat
+      auditi) `loginNewUser`/`createApprovedSeller` orqali qo'shimcha
+      OTP so'rovlari yuboradi — umumiy IP-soatlik hisoblagichni (20/soat)
+      fayl davomida tugatib qo'yishi mumkin (`auth.e2e-spec.ts`dagi bilan
+      bir xil, avval kuzatilgan sinf muammosi). */
+  async function flushIpCounter(): Promise<void> {
+    const redis = app!.get(RedisService).client;
+    const keys = await redis.keys('ratelimit:hit:otp:ip:*');
+    if (keys.length) await redis.del(...keys);
+  }
 
   // ── SellerApplication ────────────────────────────────────────────────
 
@@ -201,6 +213,132 @@ describe('Seller onboarding + Service lifecycle (e2e)', () => {
     expect(['APPROVED', 'REJECTED']).toContain(final.status);
     // Faqat BITTA qaror — ikkalasi ham qo'llanmagan.
     expect(final.status === 'APPROVED' || final.status === 'REJECTED').toBe(true);
+  });
+
+  // ── Bosqich 23 — real foydalanuvchi holatlari to'liq auditi ─────────────
+  // (frontend /mutaxassis/royxat 409 bug'idan keyin: bu holatlarning
+  // HECH biri avval sinalmagan edi — faqat "yo'q → PENDING" va "PENDING →
+  // duplicate" qamrab olingan edi.)
+
+  t('APPROVED sotuvchi qayta ariza topshira olmaydi — BAD_STATE (409)', async () => {
+    const kyc = await createStaffSession(app!, db!, ['KYC']);
+    const seller = await createApprovedSeller(app!, sms, kyc.accessToken);
+
+    const res = await request(app!.getHttpServer())
+      .post('/api/v1/me/seller-application')
+      .set('Authorization', `Bearer ${seller.accessToken}`)
+      .send({ legalName: 'New Legal', displayName: 'New Display' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('BAD_STATE');
+
+    // Faqat 1 ta ariza qoldi — noto'g'ri urinish yangi qator yaratmadi.
+    const count = await db!.sellerApplication.count({ where: { userId: seller.userId } });
+    expect(count).toBe(1);
+  });
+
+  t('SUSPENDED sotuvchi qayta ariza topshira olmaydi — BAD_STATE (409)', async () => {
+    const kyc = await createStaffSession(app!, db!, ['KYC']);
+    const seller = await createApprovedSeller(app!, sms, kyc.accessToken);
+    await request(app!.getHttpServer())
+      .post(`/api/v1/staff/sellers/${seller.userId}/suspend`)
+      .set('Authorization', `Bearer ${kyc.accessToken}`)
+      .send({ reason: 'suspend for reapply test' })
+      .expect(200);
+
+    const res = await request(app!.getHttpServer())
+      .post('/api/v1/me/seller-application')
+      .set('Authorization', `Bearer ${seller.accessToken}`)
+      .send({ legalName: 'New Legal', displayName: 'New Display' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('BAD_STATE');
+  });
+
+  t('REJECTED ariza — qayta topshirish YANGI PENDING ariza yaratadi (reapply ruxsat etilgan)', async () => {
+    const kyc = await createStaffSession(app!, db!, ['KYC']);
+    const session = await loginNewUser(app!, sms, 'SELLER');
+    const app1 = await request(app!.getHttpServer())
+      .post('/api/v1/me/seller-application')
+      .set('Authorization', `Bearer ${session.accessToken}`)
+      .send({ legalName: 'First Legal', displayName: 'First Display' })
+      .expect(200);
+    await request(app!.getHttpServer())
+      .post(`/api/v1/staff/seller-applications/${app1.body.id}/reject`)
+      .set('Authorization', `Bearer ${kyc.accessToken}`)
+      .send({ reason: 'Hujjatlar yetarli emas' })
+      .expect(200);
+
+    const reapplied = await request(app!.getHttpServer())
+      .post('/api/v1/me/seller-application')
+      .set('Authorization', `Bearer ${session.accessToken}`)
+      .send({ legalName: 'Second Legal', displayName: 'Second Display' })
+      .expect(200);
+    expect(reapplied.body.status).toBe('PENDING');
+    expect(reapplied.body.id).not.toBe(app1.body.id);
+
+    // GET — ENG SO'NGGI (yangi PENDING) arizani qaytaradi, eski REJECTED emas.
+    const current = await request(app!.getHttpServer())
+      .get('/api/v1/me/seller-application')
+      .set('Authorization', `Bearer ${session.accessToken}`)
+      .expect(200);
+    expect(current.body.id).toBe(reapplied.body.id);
+    expect(current.body.status).toBe('PENDING');
+
+    // Ikkala ariza ham DB'da saqlanadi — audit trail, eskisi o'chirilmaydi.
+    const count = await db!.sellerApplication.count({ where: { userId: session.userId } });
+    expect(count).toBe(2);
+  });
+
+  t('10 ta PARALLEL submit — FAQAT bitta PENDING ariza yaratiladi, qolgan 9tasi deterministik konflikt', async () => {
+    const session = await loginNewUser(app!, sms, 'SELLER');
+    const payload = { legalName: 'Parallel Legal', displayName: 'Parallel Display' };
+    // 10 chinakam PARALLEL yozuv (`$transaction`) — to'liq test-jarayoni
+    // og'ir yuklangan paytda (uzoq e2e suite oxiri) supertest'ning
+    // in-process HTTP transporti bir martalik `ECONNRESET` berishi mumkin
+    // (bu — transport shovqini, DB constraint natijasi EMAS: izolyatsiyada
+    // va suite boshida bu hech qachon sodir bo'lmaydi). Shu SPETSIFIK
+    // transport xatosi uchun bitta qayta urinish — asosiy tasdiq (aniq 1
+    // muvaffaqiyat + 9 deterministik konflikt) qattiq qolaveradi.
+    async function submitWithRetry(): Promise<request.Response> {
+      try {
+        return await request(app!.getHttpServer())
+          .post('/api/v1/me/seller-application')
+          .set('Authorization', `Bearer ${session.accessToken}`)
+          .send(payload);
+      } catch (err) {
+        if (err instanceof Error && /ECONNRESET/.test(err.message)) {
+          return request(app!.getHttpServer())
+            .post('/api/v1/me/seller-application')
+            .set('Authorization', `Bearer ${session.accessToken}`)
+            .send(payload);
+        }
+        throw err;
+      }
+    }
+    const results = await Promise.all(Array.from({ length: 10 }, () => submitWithRetry()));
+    const succeeded = results.filter((r) => r.status === 200);
+    const conflicted = results.filter((r) => r.status === 409);
+    expect(succeeded.length).toBe(1);
+    expect(conflicted.length).toBe(9);
+    for (const r of conflicted) {
+      expect(r.body.code).toBe('SELLER_APPLICATION_ALREADY_PENDING');
+    }
+
+    const count = await db!.sellerApplication.count({ where: { userId: session.userId } });
+    expect(count).toBe(1);
+  });
+
+  t('Egalik: staff seller-application ro‘yxati marketplace JWT bilan kirilmaydi', async () => {
+    const session = await loginNewUser(app!, sms, 'SELLER');
+    const res = await request(app!.getHttpServer())
+      .get('/api/v1/staff/seller-applications')
+      .set('Authorization', `Bearer ${session.accessToken}`);
+    expect(res.status).toBe(401);
+  });
+
+  // Yuqoridagi bo'lim ko'p OTP so'rovi yubordi — quyidagi testlar uchun
+  // budjetni tiklaymiz (aks holda ular tasodifan RATE_LIMITED bilan yiqiladi).
+  t('(ip budjetini tiklash)', async () => {
+    await flushIpCounter();
   });
 
   // ── Seller eligibility (role != faol huquq) ─────────────────────────

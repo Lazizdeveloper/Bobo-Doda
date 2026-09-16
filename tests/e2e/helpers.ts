@@ -67,15 +67,25 @@ export function latestOtpFor(phone: string): string {
     uchun (har doim YANGI raqam) — bu funksiya har doim REGISTER. Doim BIR
     XIL `E2E_PASSWORD` bilan yaratadi (chaqiruvchiga keyin `loginViaUi`
     bilan qaytadan kirish kerak bo'lsa shu parol ishlatiladi). Chaqiruvchi
-    keyin `page.context().storageState()` bilan sessiyani saqlashi mumkin. */
-export async function registerViaUi(page: Page, phone: string): Promise<void> {
-  await page.goto("/royxatdan-otish", { waitUntil: "networkidle" });
+    keyin `page.context().storageState()` bilan sessiyani saqlashi mumkin.
+    Bosqich 23 — `opts.baseUrl`/`opts.getCode` ixtiyoriy: izolyatsiyalangan
+    admin E2E stack'ida (`:3010`, o'z OTP logi bilan) ham qayta ishlatish
+    uchun — sukut qiymatlar asosiy stack (`:3000`, `backend-mirror.log`)
+    bilan bir xil, mavjud chaqiruv joylari o'zgarmaydi. */
+export async function registerViaUi(
+  page: Page,
+  phone: string,
+  opts: { baseUrl?: string; getCode?: (phone: string) => string } = {},
+): Promise<void> {
+  const baseUrl = opts.baseUrl ?? "";
+  const getCode = opts.getCode ?? latestOtpFor;
+  await page.goto(`${baseUrl}/royxatdan-otish`, { waitUntil: "networkidle" });
   const local = phone.replace("+998", "");
   await page.locator("input").first().fill(local);
   await page.getByRole("button", { name: /Kod yuborish/i }).click();
   await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
   await page.waitForTimeout(700); // backend log flush uchun
-  const code = latestOtpFor(phone);
+  const code = getCode(phone);
   await page.locator("input").first().fill(code);
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
   await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });

@@ -695,6 +695,22 @@ export const dictionary: Record<string, Entry> = {
   "onboard.errSkills": { uz: "Kamida bitta ko'nikma qo'shing", ru: "Добавьте хотя бы один навык" },
   "onboard.errCategories": { uz: "Kamida bitta kategoriya tanlang", ru: "Выберите хотя бы одну категорию" },
   "onboard.errLocation": { uz: "Joylashuvni kiriting", ru: "Укажите местоположение" },
+  /* Bosqich 23 — sotuvchi arizasi lifecycle: backend DTO bilan bir xil
+     chegaralar (`@MinLength(2) @MaxLength(100)`, `legalName`/`displayName`). */
+  "onboard.errNameShort": { uz: "Kamida 2 belgidan iborat bo'lishi kerak", ru: "Должно содержать минимум 2 символа" },
+  "onboard.errNameLong": { uz: "Ko'pi bilan 100 belgidan iborat bo'lishi kerak", ru: "Не более 100 символов" },
+  "onboard.applicationSubmitted": { uz: "Arizangiz yuborildi", ru: "Ваша заявка отправлена" },
+  "onboard.applicationApproved": { uz: "Arizangiz tasdiqlangan", ru: "Ваша заявка одобрена" },
+  "onboard.applicationApprovedDesc": {
+    uz: "Siz endi tasdiqlangan mutaxassissiz — xizmat qo'shishingiz va shartnoma qabul qilishingiz mumkin.",
+    ru: "Вы подтверждённый специалист — можете добавлять услуги и принимать заказы.",
+  },
+  "onboard.goToDashboard": { uz: "Boshqaruv paneliga o'tish", ru: "Перейти в панель управления" },
+  "onboard.reapplyBtn": { uz: "Qayta ariza topshirish", ru: "Подать заявку повторно" },
+  "onboard.alreadyPending": { uz: "Arizangiz allaqachon yuborilgan.", ru: "Ваша заявка уже отправлена." },
+  "onboard.stateChanged": { uz: "Ariza holati yangilandi.", ru: "Статус заявки обновлён." },
+  "onboard.submittedOn": { uz: "Yuborilgan sana:", ru: "Дата отправки:" },
+  "onboard.rejectionReasonLabel": { uz: "Rad etilish sababi:", ru: "Причина отклонения:" },
 
   /* Dashboard */
   "dash.title": { uz: "Boshqaruv", ru: "Обзор" },
