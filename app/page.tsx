@@ -1497,7 +1497,14 @@ export default function LandingPage() {
                   <span>{tr("Kirish", "Войти", "Log in")}</span>
                 </Link>
 
-                <Link href="/mutaxassis/ish-elonlari" className="btn-find-work">
+                {/* Bosqich 24 — QA audit: ilgari `/mutaxassis/ish-elonlari`ga
+                    olib borardi — bu yo'l (Job/Proposal, "B yo'l") backend'da
+                    hech qachon ulanmagan, sahifa doim ErrorState ko'rsatardi
+                    (bosilsa doim ishlamaydigan tugma). Platformada mutaxassis
+                    ish topishning HAQIQIY yo'li ro'yxatdan o'tib bozorda
+                    ko'rinish (xaridor to'g'ridan-to'g'ri taklif yuboradi) —
+                    "Mutaxassis bo'lish" CTA'si bilan bir xil manzilga. */}
+                <Link href="/kirish?tab=register&role=mutaxassis" className="btn-find-work">
                   <span>{tr("Ish topish", "Найти работу", "Find jobs")}</span>
                   <span className="work-badge" aria-hidden="true">💼</span>
                 </Link>
@@ -1562,7 +1569,7 @@ export default function LandingPage() {
                       👤 {tr("Kirish", "Войти", "Log in")}
                     </Link>
                     <Link
-                      href="/mutaxassis/ish-elonlari"
+                      href="/kirish?tab=register&role=mutaxassis"
                       className="btn-outline"
                       style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46, borderColor: "rgba(20,20,20,0.15)", background: "#ffffff", fontWeight: 700 }}
                       onClick={() => setMenuOpen(false)}

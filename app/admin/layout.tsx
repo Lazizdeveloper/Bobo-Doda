@@ -172,9 +172,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       title: "Tizim",
       items: [
         { permission: "audit", href: "/admin/audit", label: "Audit Jurnali", icon: "audit" },
-        ...(admin?.role === "super_admin"
-          ? [{ permission: "admins" as AdminPermission, href: "/admin/super/adminlar", label: "Adminlar & Rollar", icon: "admins" as AdminIconName }]
-          : []),
+        // Bosqich 24 — QA audit: staff-boshqaruv backend'i (`getAdminAccounts`/
+        // `addAdmin`/...) hali real emas (`disabledAsync`) — bu yagona
+        // sidebar-havola bo'lib, super_admin uni bosganda doim xato
+        // ko'rardi. Boshqa "hali ulanmagan" bo'limlar (buyer/seller
+        // TopNav'dagi Ish e'lonlari/Takliflar/Xabarlar) bilan bir xil
+        // konvensiya: marshrut o'zi qoladi (to'g'ridan-to'g'ri URL orqali
+        // ochilsa ErrorState ko'rsatadi), faqat navigatsiyadan olib
+        // tashlanadi — real ulanmaguncha qayta qo'shilmasin.
       ],
     },
   ];

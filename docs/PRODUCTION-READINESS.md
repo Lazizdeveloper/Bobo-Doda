@@ -527,3 +527,89 @@ seller eligibility/application workflow, OTP siyosati (SMS-only,
 Bosqich 19) — hech biriga tegilmadi.
 
 ### CODE_RELEASE_CANDIDATE: **PASS**
+
+## 20. Bosqich 22 — Bug-fix: seller-application 409 + to'liq UI QA audit
+
+**Qism A — Seller-application 409 tuzatildi** (commit `db3ba6b`):
+`/mutaxassis/royxat` foydalanuvchining HAQIQIY ariza holatini (yo'q/
+kutilmoqda/tasdiqlangan/rad etilgan) tekshirmasdan doim yangi forma
+ko'rsatardi — mavjud PENDING/APPROVED arizasi bo'lgan foydalanuvchi
+"Yuborish"ni bossa, backend to'g'ri 409 qaytarardi, lekin frontend buni
+tushuntirmasdan xom xato sifatida ko'rsatardi. Backend allaqachon to'g'ri
+edi; tuzatish sahifani to'liq qayta yozishdan iborat — holat avval
+yuklanadi (`GET /me/seller-application`), keyin mos ekran (kutish/rad+
+qayta ariza/tasdiqlangan) chiziladi. Backend `DomainError.code`
+(HTTP status emas) frontendda tushunarli xabarga xaritalanadi. Yangi
+backend e2e testlar (parallel-race, egalik, admin reject/approve) +
+alohida Playwright suite (`seller-application.spec.ts`, 8 test).
+
+**Qism B — To'liq mahsulot QA auditi** (Bosqich 24, bu bo'lim raqami
+bilan bir xil emas — ikkala raqamlash mustaqil: kod-fayllardagi izohlar
+"Bosqich 24" deb yozilgan, bu hujjatdagi bo'lim raqami "Bosqich 22" —
+ikkalasi ham to'g'ri, faqat turli hisoblagich). To'liq route/control
+inventarizatsiyasi (74 sahifa, `find app -name page.tsx`) asosida
+qurilgan, taxmin emas — batafsil natija: `docs/FULL-UI-QA-MATRIX.md`.
+
+Topilgan va TUZATILGAN 3 ta xato (barchasi haqiqiy, ishlab chiqarishda
+ko'rinadigan "o'lik tugma"lar edi):
+1. Xaridor/mutaxassis header'ida ko'rinadigan "Chiqish" tugmasi yo'q edi
+   (faqat Sozlamalar ichida, uzoq scroll bilan) — ikkala `TopNav`ga
+   qo'shildi. Regressiya: `tests/e2e/logout.spec.ts` (yangi, 3 test).
+2. Landing sahifasining "Ish topish" CTA'si (2 joyda) doim xato
+   ko'rsatadigan `/mutaxassis/ish-elonlari`ga (Job/Proposal — hali real
+   backendga ko'chirilmagan) olib borardi — ishlaydigan
+   `/kirish?tab=register&role=mutaxassis`ga yo'naltirildi.
+3. Admin sidebar'idagi "Adminlar & Rollar" (super_admin) — sidebar orqali
+   ochiladigan YAGONA doim xato beradigan admin sahifa edi (xodim
+   boshqaruvi backendi hali ko'chirilmagan) — sidebar havolasi olib
+   tashlandi (xuddi xaridor/mutaxassis TopNav o'zining ko'chirilmagan
+   bo'limlari uchun ishlatgan konventsiya bilan bir xil); marshrut o'zi
+   tegilmagan (to'g'ridan-to'g'ri URL orqali hamon ochiladi, o'zining
+   ErrorState'ini ko'rsatadi).
+
+Qolgan ~27 marshrut (Job/Proposal/Offer/Xabarlar, KYC, xizmat/sharh/
+apellyatsiya/shikoyat moderatsiyasi, kategoriyalar CRUD, yordam
+ticketlari, xodim boshqaruvi) — hammasi Bosqich 17'dan buyon `disabled()`/
+`disabledAsync` orqali ATAYLAB o'chirilgan (backend hali yozilmagan),
+`docs/FULL-UI-QA-MATRIX.md`da `OUT_OF_SCOPE_FEATURE_GAP` deb aniq sabab
+bilan belgilangan — bu QA/bug-fix bosqichida yangi backend funksiya
+yozish doirasidan tashqarida.
+
+Statik xavfsizlik/gigiyena tekshiruvlari (barchasi TOZA, tuzatish shart
+bo'lmadi): hardcoded `localhost` yo'q, `lib/mock-api` production
+sahifalaridan chaqirilmaydi, localStorage/sessionStorage'da parol/OTP/
+JWT/refresh-token yo'q, pul harakatlantiruvchi mutatsiyalarda
+Idempotency-Key mavjud (tasdiqlangan).
+
+| Tekshiruv | Natija |
+|---|---|
+| Playwright to'liq suite — RUN #1 (bitta invokatsiya) | ✅ **48 PASS, 1 SKIP, 0 FAIL** |
+| Playwright to'liq suite — RUN #2 (3 ta kichik partiya, quyida sabab) | ✅ **48 PASS, 1 SKIP, 0 FAIL** (31+6+11) |
+| `npm run generate:contracts` | ✅ PASS, drift = 0 |
+
+**RUN #2 nega 3 partiyaga bo'lindi**: ikki marta ketma-ket bitta
+invokatsiyali to'liq suite umumiy mashina xotira bosimidan OOM bilan
+o'ldirildi (`free -h` — swap 100% to'la; `ps aux --sort=-%mem` —
+o'ldirishdan keyin mening jarayonlarimdan birortasi ham qolmagan,
+eng ko'p xotira sarflovchilar foydalanuvchining o'z desktop
+Chrome/VSCode jarayonlari edi — tashqi sabab, mening test/jarayon
+gigiyenamdan emas). Yechim: xuddi shu testlar, xuddi shu assertsiyalar
+(BIRORTASI ham yumshatilmagan), faqat 3 ta ketma-ket kichikroq
+`npx playwright test` chaqiruviga bo'lib yuborildi — natija RUN #1 bilan
+aynan bir xil (48 PASS/1 SKIP/0 FAIL).
+
+**BLOCKED_BY_INFRASTRUCTURE eslatmasi**: yuqoridagi OOM hodisasi shu
+maxsus umumiy mashinaning xotira sig'imiga tegishli, mahsulot kodidagi
+xatolik EMAS — lekin shuni ochiq aytish kerak: bu bosqichdagi to'liq
+QA FAQAT lokal muhitda (asosiy dev stack + izolyatsiyalangan e2e stack)
+o'tkazildi. `FULL_PRODUCT_UI_QA = PASS` shu doirada (74 marshrutning
+hammasi TESTED yoki aniq sabab bilan N/A/OUT_OF_SCOPE); bu **avtomatik
+ravishda** `REAL_PRODUCTION_READY`ni anglatmaydi — production infratuzilma
+(real Postgres/Redis klasteri, TLS, monitoring, backup) alohida
+tasdiqlanishi kerak (yuqoridagi §1-14 ga qarang, ular hali ham amal
+qiladi).
+
+To'liq batafsil hisobot: `docs/FULL-UI-QA-MATRIX.md`.
+
+### UI_QA_CANDIDATE (Bosqich 22): **PASS** (kod QA darajasida;
+production infratuzilma tayyorligi bu bilan tasdiqlanmaydi)
