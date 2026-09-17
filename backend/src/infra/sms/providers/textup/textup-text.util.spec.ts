@@ -3,16 +3,18 @@ import { OTP_SMS_TEMPLATE } from '@/modules/auth/constants/otp.constants';
 import { DomainError } from '@/common/errors/domain-error';
 
 describe('renderTextUpText', () => {
-  it('purpose=REGISTER (yoki berilmasa) — moderatsiyaga mos "BOBODODA tasdiqlash kodi" matni', () => {
+  it('purpose=REGISTER (yoki berilmasa) — HAQIQATDA tasdiqlangan ("active") shablon matni', () => {
     expect(renderTextUpText(OTP_SMS_TEMPLATE, { code: '123456', purpose: 'REGISTER' })).toBe(
-      'BOBODODA tasdiqlash kodi: 123456',
+      "BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: 123456",
     );
-    expect(renderTextUpText(OTP_SMS_TEMPLATE, { code: '123456' })).toBe('BOBODODA tasdiqlash kodi: 123456');
+    expect(renderTextUpText(OTP_SMS_TEMPLATE, { code: '123456' })).toBe(
+      "BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: 123456",
+    );
   });
 
-  it('purpose=PASSWORD_RESET — moderatsiyaga mos "BOBODODA parolni tiklash kodi" matni', () => {
+  it('purpose=PASSWORD_RESET — HAQIQATDA tasdiqlangan ("active") shablon matni', () => {
     expect(renderTextUpText(OTP_SMS_TEMPLATE, { code: '654321', purpose: 'PASSWORD_RESET' })).toBe(
-      'BOBODODA parolni tiklash kodi: 654321',
+      'BOBODODA saytida parolni tiklash uchun tasdiqlash kodi: 654321',
     );
   });
 
@@ -55,7 +57,7 @@ describe('deriveTextUpTemplateId', () => {
     expect(deriveTextUpTemplateId(OTP_SMS_TEMPLATE, { code: '1', purpose: 'PASSWORD_RESET' }, config)).toBe('pwd-tpl-1');
   });
 
-  it('OTP, moderatsiya hali tasdiqlanmagan (config bo‘sh) — undefined', () => {
+  it('OTP, config bo‘sh (masalan sandbox) — undefined', () => {
     expect(deriveTextUpTemplateId(OTP_SMS_TEMPLATE, { code: '1', purpose: 'REGISTER' }, {})).toBeUndefined();
   });
 

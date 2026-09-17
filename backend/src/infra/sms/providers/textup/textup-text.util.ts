@@ -3,12 +3,15 @@ import { DomainError } from '@/common/errors/domain-error';
 import type { TextUpConfig } from './textup.types';
 
 /**
- * Bo'lim 11 — matn TextUp moderatsiyasiga topshirilgan matn bilan ANIQ
- * mos kelishi SHART ("BOBODODA" bitta so'z, `&` YO'Q, nuqta/qo'shimcha
- * matn YO'Q) — moderatsiya "BOBODODA Registration/Password Reset OTP"
- * shabloni aynan shu statik qismga tasdiqlangan, boshqacha matn
- * tasdiqlangan shablon bilan mos kelmasligi mumkin. Qisqa (bitta SMS
- * segmenti), parol/JWT/shaxsiy ma'lumot/havola YO'Q.
+ * Bo'lim 11 — matn TextUp moderatsiyasida HAQIQATDA tasdiqlangan matn
+ * bilan ANIQ mos kelishi SHART. **2026-09-17: `GET /v1/templates` orqali
+ * tasdiqlangan (bo'lim: real API javobi) — bizning DASTLABKI taxmin
+ * ("BOBODODA tasdiqlash kodi: ...") moderatsiya tomonidan RAD ETILGAN
+ * ("Rad etildi: Yo'riqnomadagi Punkt 2 dan foydalanib yozib bering."),
+ * o'rniga UZUNROQ, boshqacha ibora tasdiqlangan** — shu YERDA taxmin
+ * emas, `status:"active"` shablonning haqiqiy `content`/`verifiedContent`
+ * maydonidan olingan. Qisqa (bitta SMS segmenti), parol/JWT/shaxsiy
+ * ma'lumot/havola YO'Q.
  */
 export function renderTextUpText(template: string, params: Record<string, string>): string {
   if (template === OTP_SMS_TEMPLATE) {
@@ -17,8 +20,8 @@ export function renderTextUpText(template: string, params: Record<string, string
       throw new DomainError('INVALID_INPUT', 'OTP SMS uchun "code" parametri yo‘q');
     }
     return params.purpose === 'PASSWORD_RESET'
-      ? `BOBODODA parolni tiklash kodi: ${code}`
-      : `BOBODODA tasdiqlash kodi: ${code}`;
+      ? `BOBODODA saytida parolni tiklash uchun tasdiqlash kodi: ${code}`
+      : `BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: ${code}`;
   }
   const message = params.message;
   if (!message) {
@@ -42,10 +45,12 @@ export function deriveTextUpSmsName(template: string, params: Record<string, str
 
 /**
  * Bo'lim 10 — IKKITA alohida shablon ID (bitta umumiy EMAS): moderatsiya
- * ro'yxatdan o'tgan har bir SMS matni uchun ALOHIDA tasdiqlanadi.
- * Moderatsiya hali "Tekshirilmoqda" bo'lgani uchun ikkalasi ham
- * `undefined` bo'lishi mumkin — shunda `templateId` so'rovdan BUTUNLAY
- * chiqarib tashlanadi (xom `message` bilan yuboriladi, bo'lim 14).
+ * ro'yxatdan o'tgan har bir SMS matni uchun ALOHIDA tasdiqlanadi. Ikkalasi
+ * ham 2026-09-17'da `status:"active"` (tasdiqlangan, `GET /v1/templates`
+ * orqali tekshirilgan) — lekin config'da BERILMASA (masalan sandbox/test
+ * muhitida) `templateId` so'rovdan BUTUNLAY chiqarib tashlanadi (xom
+ * `message` bilan yuboriladi, bo'lim 14) — bu ham TextUp hujjatiga ko'ra
+ * TO'G'RI ishlaydi.
  */
 export function deriveTextUpTemplateId(
   template: string,

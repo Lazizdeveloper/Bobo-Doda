@@ -1923,62 +1923,100 @@ POST {TEXTUP_SMS_URL}    (https://sms-api.textup.uz/v1/send)
 
 ### Xabar matni — moderatsiyaga ANIQ mos kelishi shart
 
+**E'TIBOR (2026-09-17 tuzatildi)**: dastlabki taxmin (`"BOBODODA
+tasdiqlash kodi: ..."`, qisqa) TextUp moderatsiyasi tomonidan HAQIQATDA
+RAD ETILGAN edi ("Rad etildi: Yo'riqnomadagi Punkt 2 dan foydalanib yozib
+bering") — bu `GET /v1/templates`ning HAQIQIY javobidan (pastga qarang)
+tasdiqlangan, taxmin emas. Haqiqatda TASDIQLANGAN (`status:"active"`)
+matn UZUNROQ:
+
 ```text
-Ro'yxatdan o'tish: BOBODODA tasdiqlash kodi: <6 raqam>
-Parolni tiklash:   BOBODODA parolni tiklash kodi: <6 raqam>
+Ro'yxatdan o'tish: BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: <6 raqam>
+Parolni tiklash:   BOBODODA saytida parolni tiklash uchun tasdiqlash kodi: <6 raqam>
 ```
 
-"BOBODODA" bitta so'z, `&` belgisi YO'Q — TextUp moderatsiyasiga aynan
-shu statik matn topshirilgan (pastga qarang), boshqacha formatlash
-tasdiqlangan shablon bilan mos kelmasligi mumkin. `name` maydoni (ichki
-operatsion yorliq, SMS matni EMAS) — `"BoboDoda Registration OTP"` /
-`"BoboDoda Password Reset OTP"` (`textup-text.util.ts`).
+`renderTextUpText()` shu ANIQ matnga moslashtirilgan (`textup-text.util.ts`).
+`name` maydoni (ichki operatsion yorliq, SMS matni EMAS) — o'zgarmagan:
+`"BoboDoda Registration OTP"` / `"BoboDoda Password Reset OTP"`.
 
-### Hisob holati (2026-09, "Tekshirilmoqda")
+### Hisob holati (2026-09-17, `GET /v1/templates` orqali tasdiqlangan)
 
 | Element | TextUp nomi | Holat |
 |---|---|---|
-| Alpha-nom | `BOBODODA` | Tekshirilmoqda |
-| Shablon #1 | `BOBODODA Registration OTP` (`BOBODODA tasdiqlash kodi: 123456`) | Tekshirilmoqda |
-| Shablon #2 | `BOBODODA Password Reset OTP` (`BOBODODA parolni tiklash kodi: 123456`) | Tekshirilmoqda |
+| Shablon (ro'yxatdan o'tish) | `BOBODODA Registration OTP` | **`active`** (tasdiqlangan) |
+| Shablon (parolni tiklash) | `BOBODODA Password Reset OTP` | **`active`** (tasdiqlangan) |
+| Alpha-nom | `BOBODODA` | Hali tekshirilmagan (`nicknameId` hali kashf etilmagan) |
 
-Moderatsiya tugamaguncha `TEXTUP_NICKNAME_ID`/`TEXTUP_REGISTRATION_
-TEMPLATE_ID`/`TEXTUP_PASSWORD_RESET_TEMPLATE_ID` BO'SH qoladi —
-`TextUpProvider` bu holda `templateId`/`nicknameId`ni so'rovdan BUTUNLAY
-chiqarib tashlaydi (qisqa raqamdan, shablonsiz yuboriladi — TextUp
-hujjatiga ko'ra bu ham TO'G'RI ishlaydi, ID'lar majburiy EMAS).
-**Haqiqiy SMS hali YUBORILMAGAN/tekshirilmagan** — moderatsiya
-tasdiqlanmaguncha yoki ATAYLAB "qisqa raqam" rejimida sinov qilish
-qarori qabul qilinmaguncha.
+Har ikkala shablonning ESKI, qisqa varianti (`status:"cancelled"`,
+xuddi shu rad etish sababi bilan) ham hisobda saqlangan — bu ATAYLAB
+qoldiriladi (TextUp o'zi arxivlaydi), kod FAQAT `active` yozuvni
+tanlaydi. `TEXTUP_REGISTRATION_TEMPLATE_ID`/`TEXTUP_PASSWORD_RESET_
+TEMPLATE_ID` lokal `.env`ga yozilgan (haqiqiy UUID qiymatlar — bu faylga
+QAYTA YOZILMAYDI, faqat `.gitignore`dagi `backend/.env`da; Railway'ga
+ham xuddi shu ikkita ID qo'yiladi production deploy vaqtida).
 
-### Moderatsiya tasdiqlangandan keyingi qadamlar
+**Haqiqiy SMS HALI YUBORILMAGAN** — faqat login (`POST /v1/login`) va
+shablonlarni o'qish (`GET /v1/templates`, READ-ONLY) bajarildi, ikkalasi
+ham SMS xarajat qilmaydi. `TEXTUP_NICKNAME_ID` hali kashf etilmagan —
+kod bu holatda `nicknameId`ni so'rovdan chiqarib tashlaydi (qisqa
+raqamdan yuboriladi, bu ham TO'G'RI ishlaydi).
+
+### Real API'dan tasdiqlangan tafsilotlar (taxmin emas)
+
+- **`GET /v1/templates`ga `userId` YETARLI EMAS** — API o'zi ikkita
+  qo'shimcha MAJBURIY query-parametrni talab qiladi (400 javobidan
+  kashf etilgan, hujjatda yozilmagan): `page` va `limit`
+  (`?userId=...&page=1&limit=100`).
+- **Javob shakli tekis massiv EMAS** — `{ count, in_verify_count,
+  templates: [...] }`. Har bir yozuvda `status` (`active`/`cancelled`/
+  `in_verify`), `content` (yuborilganda ko'rinadigan matn, joy egasi
+  bilan), `verifiedContent` (tasdiqlangan regex-shakl, `%w+` — dinamik
+  qism), `reason` (rad etilgan bo'lsa TextUp'ning izohi).
+
+### Moderatsiya/kashfiyot qadamlar (bajarilgan qismi belgilangan)
 
 ```bash
-# 1. Login (email/parol — biz umumiy TEXTUP_EMAIL/PASSWORD bilan)
+# 1. Login (email/parol — TEXTUP_EMAIL/PASSWORD) — BAJARILDI 2026-09-17,
+#    accessToken/parol HECH QACHON konsolga chiqarilmadi.
 curl -s -X POST https://api-auth.textup.uz/v1/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"'"$TEXTUP_EMAIL"'","password":"'"$TEXTUP_PASSWORD"'"}' \
   | tee /tmp/textup-login.json | jq -r '.accessToken' > /tmp/textup-token.txt
-# 2. O'z shablonlarini top (hujjatlashtirilgan GET, Bearer + userId query)
-curl -s "https://api-auth.textup.uz/v1/templates?userId=$(jq -r '.user.id' /tmp/textup-login.json)" \
-  -H "Authorization: Bearer $(cat /tmp/textup-token.txt)" | jq '.[] | {name, id, status}'
-# → "BOBODODA Registration OTP" / "BOBODODA Password Reset OTP" — FAQAT
-#   status approved/active bo'lganini qabul qiling, "in_verify"ni EMAS.
-# 3. O'z nicknameId'ni top
-curl -s "https://api-auth.textup.uz/v1/nick-names?userId=$(jq -r '.user.id' /tmp/textup-login.json)" \
-  -H "Authorization: Bearer $(cat /tmp/textup-token.txt)" | jq '.[] | {name, id, status}'
-# → "BOBODODA" — faqat tasdiqlangan holatda ID oling.
+# 2. O'z shablonlarini top — BAJARILDI. `page`/`limit` MAJBURIY (yuqoriga
+#    qarang), FAQAT status="active" qabul qilinadi, "in_verify"/"cancelled" EMAS.
+curl -s "https://api-auth.textup.uz/v1/templates?userId=$(jq -r '.user.id' /tmp/textup-login.json)&page=1&limit=100" \
+  -H "Authorization: Bearer $(cat /tmp/textup-token.txt)" \
+  | jq '.templates[] | select(.status=="active") | {name, id, status}'
 rm -f /tmp/textup-login.json /tmp/textup-token.txt   # token faylni darhol o'chiring
-# 4. Railway/.env'ga yozing:
-#    TEXTUP_NICKNAME_ID=<3-qadamdagi id>
-#    TEXTUP_REGISTRATION_TEMPLATE_ID=<2-qadamdagi Registration id>
-#    TEXTUP_PASSWORD_RESET_TEMPLATE_ID=<2-qadamdagi Password Reset id>
-# 5. Bitta nazorat qilinadigan REAL ro'yxatdan o'tish SMS testi (backend
-#    dev, SMS_PROVIDER=TEXTUP): /royxatdan-otish orqali haqiqiy telefon
-#    bilan → SMS kelishini → OTP tasdiqlanishini tekshiring. Bir nechta
-#    marta qayta yubormang (bo'lim: SMS xarajati).
-# 6. Ixtiyoriy: bitta "parolni unutdim" SMS testi (xuddi shu qoida).
+# 3. O'z nicknameId'ni top — HALI BAJARILMAGAN (foydalanuvchi so'ramagan):
+curl -s "https://api-auth.textup.uz/v1/nick-names?userId=<runtime user.id>" \
+  -H "Authorization: Bearer <accessToken>" | jq '.[] | {name, id, status}'
+# → "BOBODODA" — faqat tasdiqlangan holatda ID oling, Railway/.env'ga
+#   TEXTUP_NICKNAME_ID=<id> qo'ying.
+# 4. Bitta nazorat qilinadigan REAL ro'yxatdan o'tish SMS testi (backend
+#    dev, SMS_PROVIDER=TEXTUP) — HALI BAJARILMAGAN (foydalanuvchi ATAYLAB
+#    "hali yubormang" degan, moderatsiya endi tasdiqlangan bo'lsa ham).
+#    Bajarilganda: DIQQAT — dev backend'ni `npm run start:dev` bilan
+#    qayta ishga tushirish `.env`dagi SMS_PROVIDER=TEXTUP'ni AVTOMATIK
+#    o'qiydi (env sukut CONSOLE emas, developer ataylab TEXTUP qo'ygan
+#    bo'lsa haqiqiy SMS yuboriladi) — buni Playwright/avtomatlashtirilgan
+#    test uchun ISHLATMANG, faqat qo'lda, bitta oqim uchun.
+# 5. Ixtiyoriy: bitta "parolni unutdim" SMS testi (xuddi shu qoida).
 ```
+
+**Xavfsizlik eslatmasi (2026-09-17 topilgan, tuzatilgan)**: `backend/
+test/jest-e2e.setup.ts` avval `DEV_EXPOSE_OTP`ni pin qilardi, lekin
+`SMS_PROVIDER`ni EMAS — developer `.env`sida haqiqiy `SMS_PROVIDER=
+TEXTUP` bo'lsa, `dotenv` allaqachon o'rnatilgan kalitni qayta yozmasligi
+sababli bu qiymat Jest e2e suite'ga SIZIB O'TARDI, va REGISTER/PASSWORD_
+RESET oqimini sinovchi HAR BIR e2e test (ular to'liq `AppModule`ni,
+shu jumladan `OtpSmsProcessor` BullMQ worker'ini ko'taradi) HAQIQIY SMS
+yuborib yuborardi. Tuzatildi: `jest-e2e.setup.ts` endi `SMS_PROVIDER`ni
+HAM `'CONSOLE'`ga pin qiladi (`DEV_EXPOSE_OTP` bilan bir xil falsafa) —
+e2e endi HAR DOIM ambient `.env`dan mustaqil, real tarmoq chaqiruvisiz.
+Bu himoya Jest e2e uchun avtomatik; Playwright/qo'lda `npm run start:dev`
+uchun EMAS — o'sha holatda operator o'zi `SMS_PROVIDER=CONSOLE` bilan
+qayta ishga tushirishi kerak (yuqoridagi 4-qadam eslatmasiga qarang).
 
 ### Ishlatilmagan/rad etilgan yondashuvlar (bilib qo'yish uchun)
 

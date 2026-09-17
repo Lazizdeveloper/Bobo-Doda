@@ -623,14 +623,20 @@ chaqiruvlar bitta in-flight login promise'ni baham ko'radi. 401 → BIR
 MARTA invalidate+qayta login+qayta urinish, ikkinchi 401 — muvaffaqiyatsiz
 (cheksiz aylanma yo'q). To'liq oqim: RUNBOOK §22.
 
-**Hisob holati (2026-09, TROUGH)**: TextUp alpha-nom `BOBODODA` va
-ikkala OTP shablon ("Registration"/"Password Reset") hozircha
-**Tekshirilmoqda** (moderatsiya kutilmoqda). Kod tayyor — `templateId`/
-`nicknameId` sozlanmagan bo'lsa so'rovdan butunlay chiqarib tashlanadi
-(qisqa raqamdan, shablonsiz yuboriladi, bu ham TextUp hujjatiga ko'ra
-TO'G'RI). Moderatsiya tasdiqlangandan keyingi aniq qadamlar (shablon/
-nickname ID'larni topish, Railway'ga yozish, bitta nazorat qilinadigan
-haqiqiy SMS testi) — RUNBOOK §22.
+**Hisob holati (2026-09-17 YANGILANDI, `GET /v1/templates` real javobi
+bilan tasdiqlangan)**: ikkala OTP shablon ("Registration"/"Password
+Reset") endi **`active`** (moderatsiya TASDIQLANGAN). Bu jarayonda
+**kritik topilma**: dastlab kodga yozilgan qisqa matn ("BOBODODA
+tasdiqlash kodi: ...") moderatsiya tomonidan HAQIQATDA RAD ETILGAN
+ekan — tasdiqlangan (`active`) matn UZUNROQ: "BOBODODA saytida
+ro'yxatdan o'tish/parolni tiklash uchun tasdiqlash kodi: ...".
+`renderTextUpText()` shu ANIQ tasdiqlangan matnga tuzatildi (taxmin
+emas — real API javobidan). `TEXTUP_REGISTRATION_TEMPLATE_ID`/
+`TEXTUP_PASSWORD_RESET_TEMPLATE_ID` lokal `.env`ga yozildi (haqiqiy
+UUID'lar, repo'ga EMAS). `TEXTUP_NICKNAME_ID` hali kashf etilmagan
+(so'ralmagan) — kod bu holatda `nicknameId`ni so'rovdan chiqarib
+tashlaydi, qisqa raqamdan yuboriladi (bu ham TO'G'RI). Batafsil: RUNBOOK
+§22.
 
 | Tekshiruv | Natija |
 |---|---|
@@ -656,16 +662,26 @@ uch qatlamli fail-closed shart o'zgarishsiz, faqat `smsProvider` union
 turi kengaytirilgan).
 
 **CI/testlarda haqiqiy SMS YUBORILMAYDI** — barcha unit/e2e/Playwright
-`fetch`ni mock qiladi yoki `SMS_PROVIDER=CONSOLE` bilan ishlaydi. Haqiqiy
-provayder bilan sinov — ALOHIDA, qo'lda, nazorat qilinadigan qadam
-(RUNBOOK §22), CI'ning bir qismi EMAS.
+`fetch`ni mock qiladi yoki `SMS_PROVIDER=CONSOLE` bilan ishlaydi. **2026-
+09-17 topilgan va tuzatilgan xavf**: `test/jest-e2e.setup.ts` avval
+FAQAT `DEV_EXPOSE_OTP`ni pin qilardi — developer `.env`sida haqiqiy
+`SMS_PROVIDER=TEXTUP` bo'lsa (endi shunday), bu qiymat `dotenv`ning
+"mavjud kalitni qayta yozmaslik" xatti-harakati sababli Jest e2e
+suite'ga SIZIB o'tib, REGISTER/PASSWORD_RESET oqimini sinovchi HAR BIR
+e2e test haqiqiy SMS yuborib yuborardi. Endi `SMS_PROVIDER` ham
+`'CONSOLE'`ga pin qilingan — e2e endi HAR DOIM deterministik, ambient
+`.env`dan mustaqil. Haqiqiy provayder bilan sinov — ALOHIDA, qo'lda,
+nazorat qilinadigan qadam (RUNBOOK §22), CI'ning bir qismi EMAS.
 
 ### TEXTUP_CODE_INTEGRATION (Bosqich 23): **PASS** — kod/testlar tayyor,
-to'liq regressiya toza.
+to'liq regressiya toza (matn tuzatilgandan keyin qayta tasdiqlangan).
 
-### TEXTUP_REAL_SMS_VERIFIED: **PENDING_MODERATION** — TextUp hisobidagi
-alpha-nom va ikkala OTP shabloni "Tekshirilmoqda"; haqiqiy SMS round-trip
-(yuborish → yetib kelish → OTP tasdiqlash) HALI SINALMAGAN. Bu holatni
-"tasdiqlangan" deb ko'rsatish NOTO'G'RI bo'lar edi — moderatsiya
-tugagach yoki qisqa-raqam rejimida sinov qilish qarori qabul qilingach,
-RUNBOOK §22'dagi qadamlar bajarilib shu band yangilanadi.
+### TEXTUP_REAL_SMS_VERIFIED: **PENDING_MANUAL_TEST** (moderatsiya
+tasdiqlangan, lekin haqiqiy SMS hali yuborilmagan). 2026-09-17'da
+bajarilgan: TextUp hisobiga real login (`POST /v1/login`, muvaffaqiyatli)
+va real shablon ro'yxatini o'qish (`GET /v1/templates`, READ-ONLY) —
+ikkalasi ham SMS xarajat qilmaydi, 0 SMS yuborildi. Ikkala OTP shabloni
+`active` ekanligi tasdiqlandi. Foydalanuvchi ATAYLAB "hali qayta-qayta
+SMS yubormang" degan — bitta nazorat qilinadigan real ro'yxatdan o'tish
+SMS testi hali ALOHIDA, aniq ruxsat bilan bajariladi (RUNBOOK §22, 4-qadam).
+Bu holatni "tasdiqlangan" deb ko'rsatish HALI NOTO'G'RI bo'lar edi.

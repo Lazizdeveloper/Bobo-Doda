@@ -56,7 +56,7 @@ describe('TextUpProvider', () => {
     // userId — runtime login javobidan (user.id), config'dan EMAS.
     expect(body.userId).toBe('runtime-user-1');
     expect(body.recipients).toEqual(['+998901234567']);
-    expect(body.message).toBe('BOBODODA tasdiqlash kodi: 111222');
+    expect(body.message).toBe("BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: 111222");
     expect(body.name).toBe('BoboDoda Registration OTP');
     expect(body.templateId).toBeUndefined();
     expect(body.nicknameId).toBeUndefined();
@@ -69,7 +69,7 @@ describe('TextUpProvider', () => {
     await provider.send('+998901234567', OTP_SMS_TEMPLATE, { code: '999888', purpose: 'PASSWORD_RESET' });
     const [, sendInit] = fetchMock.mock.calls[1] as [string, RequestInit];
     const body = JSON.parse(sendInit.body as string);
-    expect(body.message).toBe('BOBODODA parolni tiklash kodi: 999888');
+    expect(body.message).toBe('BOBODODA saytida parolni tiklash uchun tasdiqlash kodi: 999888');
     expect(body.name).toBe('BoboDoda Password Reset OTP');
   });
 

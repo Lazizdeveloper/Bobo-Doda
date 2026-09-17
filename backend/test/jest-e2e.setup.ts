@@ -19,6 +19,17 @@
  * `.env`iga qarab tasodifan `devOtp` bilan/siz javob olardi (`.expect(200,
  * { sent: true })` qat'iy tengliklari shundan yiqiladi). E2E hamisha
  * deterministik bo'lishi kerak — ambient `.env`ga bog'liq emas.
+ *
+ * Bosqich 23 — `SMS_PROVIDER` xuddi shu sababdan `'CONSOLE'`ga PIN
+ * qilingan (2026-09-17 topilgan real xavf): dasturchining shaxsiy
+ * `backend/.env`i endi haqiqiy TextUp credential bilan `SMS_PROVIDER=
+ * TEXTUP` saqlashi mumkin (production integratsiyasi tayyor bo'lgach) —
+ * pin qilinmasa, e2e suite `AppModule`ni to'liq ko'taradi (BullMQ
+ * `OtpSmsProcessor` worker HAM ICHIDA), REGISTER/PASSWORD_RESET
+ * oqimlarini sinovchi HAR BIR e2e test haqiqiy TextUp SMS yuborib
+ * yuborardi — CI/lokal test yugurishda HAQIQIY pul sarflanadi va sinov
+ * telefon raqamiga SMS boradi. E2E provayder HAR DOIM CONSOLE (real
+ * tarmoq chaqiruvisiz).
  */
 const SUPERUSER =
   process.env.E2E_SUPERUSER_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
@@ -38,3 +49,4 @@ process.env.DATABASE_URL = `postgresql://bobododa_app:app@${host}/health_e2e?sch
 process.env.DATABASE_MIGRATION_URL = `postgresql://bobododa_migrator:migrator@${host}/health_e2e?schema=public`;
 process.env.REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6379';
 process.env.DEV_EXPOSE_OTP = 'false';
+process.env.SMS_PROVIDER = 'CONSOLE';
