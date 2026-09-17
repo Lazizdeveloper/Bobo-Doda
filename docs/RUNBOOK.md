@@ -1939,13 +1939,13 @@ Parolni tiklash:   BOBODODA saytida parolni tiklash uchun tasdiqlash kodi: <6 ra
 `name` maydoni (ichki operatsion yorliq, SMS matni EMAS) — o'zgarmagan:
 `"BoboDoda Registration OTP"` / `"BoboDoda Password Reset OTP"`.
 
-### Hisob holati (2026-09-17, `GET /v1/templates` orqali tasdiqlangan)
+### Hisob holati (2026-09-17, real API javoblari bilan tasdiqlangan)
 
 | Element | TextUp nomi | Holat |
 |---|---|---|
 | Shablon (ro'yxatdan o'tish) | `BOBODODA Registration OTP` | **`active`** (tasdiqlangan) |
 | Shablon (parolni tiklash) | `BOBODODA Password Reset OTP` | **`active`** (tasdiqlangan) |
-| Alpha-nom | `BOBODODA` | Hali tekshirilmagan (`nicknameId` hali kashf etilmagan) |
+| Alpha-nom | `BOBODODA` | **`in_verify`** (`GET /v1/nick-names` orqali tekshirilgan — hali tasdiqlanmagan) |
 
 Har ikkala shablonning ESKI, qisqa varianti (`status:"cancelled"`,
 xuddi shu rad etish sababi bilan) ham hisobda saqlangan — bu ATAYLAB
@@ -1954,12 +1954,17 @@ tanlaydi. `TEXTUP_REGISTRATION_TEMPLATE_ID`/`TEXTUP_PASSWORD_RESET_
 TEMPLATE_ID` lokal `.env`ga yozilgan (haqiqiy UUID qiymatlar — bu faylga
 QAYTA YOZILMAYDI, faqat `.gitignore`dagi `backend/.env`da; Railway'ga
 ham xuddi shu ikkita ID qo'yiladi production deploy vaqtida).
+`TEXTUP_NICKNAME_ID` ATAYLAB SOZLANMAGAN (alpha-nom hali `in_verify`) —
+tasdiqlangach `GET /v1/nick-names`ni qayta ishga tushiring va `id`ni
+qo'shing.
 
-**Haqiqiy SMS HALI YUBORILMAGAN** — faqat login (`POST /v1/login`) va
-shablonlarni o'qish (`GET /v1/templates`, READ-ONLY) bajarildi, ikkalasi
-ham SMS xarajat qilmaydi. `TEXTUP_NICKNAME_ID` hali kashf etilmagan —
-kod bu holatda `nicknameId`ni so'rovdan chiqarib tashlaydi (qisqa
-raqamdan yuboriladi, bu ham TO'G'RI ishlaydi).
+**Haqiqiy SMS YUBORILDI VA TASDIQLANDI (2026-09-17, bitta test)** —
+to'liq oqim: real `POST /auth/register/request-otp` → `sms_logs`da
+`success=true`+real `providerMessageId` → foydalanuvchi haqiqiy SMS'ni
+o'qib, matnni tasdiqladi (tasdiqlangan shablon bilan so'zma-so'z mos) →
+real `POST /auth/register/verify-otp` (foydalanuvchi o'qigan kod bilan)
+→ `registrationToken` qaytdi. Jami 1 ta real SMS. Tafsilot:
+PRODUCTION-READINESS.md §21 (`TEXTUP_REAL_SMS_VERIFIED: PASS`).
 
 ### Real API'dan tasdiqlangan tafsilotlar (taxmin emas)
 
@@ -1988,20 +1993,28 @@ curl -s "https://api-auth.textup.uz/v1/templates?userId=$(jq -r '.user.id' /tmp/
   -H "Authorization: Bearer $(cat /tmp/textup-token.txt)" \
   | jq '.templates[] | select(.status=="active") | {name, id, status}'
 rm -f /tmp/textup-login.json /tmp/textup-token.txt   # token faylni darhol o'chiring
-# 3. O'z nicknameId'ni top — HALI BAJARILMAGAN (foydalanuvchi so'ramagan):
-curl -s "https://api-auth.textup.uz/v1/nick-names?userId=<runtime user.id>" \
-  -H "Authorization: Bearer <accessToken>" | jq '.[] | {name, id, status}'
-# → "BOBODODA" — faqat tasdiqlangan holatda ID oling, Railway/.env'ga
-#   TEXTUP_NICKNAME_ID=<id> qo'ying.
-# 4. Bitta nazorat qilinadigan REAL ro'yxatdan o'tish SMS testi (backend
-#    dev, SMS_PROVIDER=TEXTUP) — HALI BAJARILMAGAN (foydalanuvchi ATAYLAB
-#    "hali yubormang" degan, moderatsiya endi tasdiqlangan bo'lsa ham).
-#    Bajarilganda: DIQQAT — dev backend'ni `npm run start:dev` bilan
-#    qayta ishga tushirish `.env`dagi SMS_PROVIDER=TEXTUP'ni AVTOMATIK
-#    o'qiydi (env sukut CONSOLE emas, developer ataylab TEXTUP qo'ygan
-#    bo'lsa haqiqiy SMS yuboriladi) — buni Playwright/avtomatlashtirilgan
+# 3. O'z nicknameId'ni top — BAJARILDI 2026-09-17: "BOBODODA" topildi,
+#    lekin status="in_verify" (hali tasdiqlanmagan) — shuning uchun
+#    TEXTUP_NICKNAME_ID SOZLANMADI (qisqa raqamdan yuborishga qoldirildi,
+#    bu ham TO'G'RI). `GET /v1/nick-names` HAM `page`/`limit` talab qiladi
+#    (2-qadamdagi bilan bir xil naqsh) va javob { count, nickNames: [...] }
+#    shaklida (tekis massiv emas):
+curl -s "https://api-auth.textup.uz/v1/nick-names?userId=<runtime user.id>&page=1&limit=100" \
+  -H "Authorization: Bearer <accessToken>" | jq '.nickNames[] | {name, id, status}'
+# → status="active" bo'lsa: Railway/.env'ga TEXTUP_NICKNAME_ID=<id> qo'ying.
+# 4. Bitta nazorat qilinadigan REAL ro'yxatdan o'tish SMS testi —
+#    BAJARILDI VA MUVAFFAQIYATLI 2026-09-17 (yuqoridagi "Haqiqiy SMS
+#    YUBORILDI" bandiga qarang). DIQQAT (kelajakda takrorlash uchun):
+#    dev backend'ni oddiy `npm run start:dev` bilan ishga tushirish
+#    `.env`dagi SMS_PROVIDER=TEXTUP'ni AVTOMATIK o'qiydi (real SMS
+#    yuboriladi!) — shuning uchun bu test ANIQ `SMS_PROVIDER=TEXTUP
+#    DEV_EXPOSE_OTP=false npm run start:dev` bilan, ALOHIDA backend
+#    instansida bajarildi, keyin `SMS_PROVIDER=CONSOLE DEV_EXPOSE_OTP=true`
+#    bilan xavfsiz holatga qaytarildi. Buni Playwright/avtomatlashtirilgan
 #    test uchun ISHLATMANG, faqat qo'lda, bitta oqim uchun.
-# 5. Ixtiyoriy: bitta "parolni unutdim" SMS testi (xuddi shu qoida).
+# 5. "Parolni unutdim" SMS testi — HALI BAJARILMAGAN (bo'lim 6:
+#    "registratsiya testi muvaffaqiyatli bo'lmaguncha kutish" — endi
+#    muvaffaqiyatli, lekin foydalanuvchi alohida ruxsat berishi kerak).
 ```
 
 **Xavfsizlik eslatmasi (2026-09-17 topilgan, tuzatilgan)**: `backend/

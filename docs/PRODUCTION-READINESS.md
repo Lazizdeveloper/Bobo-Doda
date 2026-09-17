@@ -676,12 +676,33 @@ nazorat qilinadigan qadam (RUNBOOK §22), CI'ning bir qismi EMAS.
 ### TEXTUP_CODE_INTEGRATION (Bosqich 23): **PASS** — kod/testlar tayyor,
 to'liq regressiya toza (matn tuzatilgandan keyin qayta tasdiqlangan).
 
-### TEXTUP_REAL_SMS_VERIFIED: **PENDING_MANUAL_TEST** (moderatsiya
-tasdiqlangan, lekin haqiqiy SMS hali yuborilmagan). 2026-09-17'da
-bajarilgan: TextUp hisobiga real login (`POST /v1/login`, muvaffaqiyatli)
-va real shablon ro'yxatini o'qish (`GET /v1/templates`, READ-ONLY) —
-ikkalasi ham SMS xarajat qilmaydi, 0 SMS yuborildi. Ikkala OTP shabloni
-`active` ekanligi tasdiqlandi. Foydalanuvchi ATAYLAB "hali qayta-qayta
-SMS yubormang" degan — bitta nazorat qilinadigan real ro'yxatdan o'tish
-SMS testi hali ALOHIDA, aniq ruxsat bilan bajariladi (RUNBOOK §22, 4-qadam).
-Bu holatni "tasdiqlangan" deb ko'rsatish HALI NOTO'G'RI bo'lar edi.
+### TEXTUP_REAL_SMS_VERIFIED: **PASS** (2026-09-17, bitta nazorat
+qilinadigan real ro'yxatdan o'tish SMS testi bilan tasdiqlangan)
+
+To'liq real oqim bajarildi va tasdiqlandi (aniq ruxsat bilan, dev
+backend vaqtincha `SMS_PROVIDER=TEXTUP`+`DEV_EXPOSE_OTP=false` bilan
+qayta ishga tushirilib, keyin xavfsiz `CONSOLE` holatiga qaytarildi —
+Jest/Playwright konfiguratsiyasi TEGILMADI):
+
+1. **Nickname**: `GET /v1/nick-names` — `BOBODODA` topildi, lekin
+   `status:"in_verify"` (hali tasdiqlanmagan) — `TEXTUP_NICKNAME_ID`
+   ATAYLAB sozlanmadi (foydalanuvchi ko'rsatmasi: "hali pending bo'lsa
+   bo'sh qoldiring"). SMS qisqa raqamdan yuborildi — bu ham TO'G'RI.
+2. **Real `POST /auth/register/request-otp`** — haqiqiy backend orqali
+   (`{sent:true}`, HTTP 200). Asinxron natija `sms_logs` jadvalidan
+   TASDIQLANDI (HTTP javob emas, chunki yuborish BullMQ navbatida
+   asinxron): `success=true`, real `providerMessageId` (TextUp `smsId`)
+   qaytdi, `errorMessage` bo'sh.
+3. **Haqiqiy SMS qabul qilindi** — foydalanuvchi matnni o'qib berdi:
+   `"BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: XXXXXX"`
+   — `renderTextUpText()`dagi tasdiqlangan matn bilan SO'ZMA-SO'Z mos.
+4. **Real `POST /auth/register/verify-otp`** — foydalanuvchi SMS'dan
+   o'qigan HAQIQIY kod bilan chaqirildi → HTTP 200, `registrationToken`
+   qaytdi (ya'ni frontend `/royxatdan-otish/parol`ga o'tgan bo'lar edi).
+5. **Jami real SMS soni: 1** (qayta yuborilmadi, debugging uchun
+   takrorlanmadi).
+
+Kod/token/parol/OTP HECH QACHON chatga/logga chiqarilmadi — faqat
+maskalangan telefon, HTTP status, `sms_logs`ning xavfsiz maydonlari
+(`success`/`providerMessageId`) va foydalanuvchining o'zi o'qib bergan
+matn/kod ishlatildi.
