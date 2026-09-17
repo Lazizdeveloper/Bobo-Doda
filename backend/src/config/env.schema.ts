@@ -179,14 +179,18 @@ export const envSchema = z
     TELEGRAM_BOT_TOKEN: z.string().optional(),
     TELEGRAM_SUPPORT_CHAT_ID: z.string().optional(),
 
-    // ── SMS provider (Bosqich 2 interfeys, Bosqich 13 real integratsiya) ──
+    // ── SMS provider (Bosqich 2 interfeys, Bosqich 13 PlayMobile, Bosqich 23 TextUp) ──
     // `CONSOLE` — real SMS yubormaydi (konsolga chiqaradi), FAQAT dev/test.
     // `PLAYMOBILE` — Bosqich 13'da rasmiy PLAY MOBILE SMS-Broker HTTP API
     // (playmobile.uz/instruction/, PDF spec) asosida implement qilindi.
-    // Eskiz — rasmiy texnik hujjat (developer.help/Postman documenter)
-    // JS-render qilinadigan sahifa bo'lib chiqdi, statik fetch o'qiy
-    // olmadi — CLICK bilan bir xil sabab, implement QILINMADI.
-    SMS_PROVIDER: z.enum(['CONSOLE', 'PLAYMOBILE']).default('CONSOLE'),
+    // `TEXTUP` — Bosqich 23, PRODUCTION uchun TANLANGAN provider, Bobo&Doda
+    // o'z hisobi bilan. Basic auth EMAS — ikkita ALOHIDA host bilan
+    // email/parol login + Bearer accessToken oqimi (`textup.provider.ts`
+    // va `textup-token-manager.ts` izohiga qarang). Eskiz — rasmiy texnik
+    // hujjat (developer.help/Postman documenter) JS-render qilinadigan
+    // sahifa bo'lib chiqdi, statik fetch o'qiy olmadi — CLICK bilan bir
+    // xil sabab, implement QILINMADI.
+    SMS_PROVIDER: z.enum(['CONSOLE', 'PLAYMOBILE', 'TEXTUP']).default('CONSOLE'),
     // PlayMobile rasmiy hujjatida `<base-url>` merchant-specific (portalda
     // ro'yxatdan o'tgach beriladi, hujjatda qattiq yozilmagan) — shuning
     // uchun majburiy env, qattiq yozilgan default YO'Q.
@@ -195,6 +199,29 @@ export const envSchema = z
     PLAYMOBILE_PASSWORD: z.string().optional(),
     // Bo'lim 4 — rasmiy chegara: "не более, чем из 11 разрешенных символов".
     PLAYMOBILE_SENDER: z.string().max(11).optional(),
+    // Bosqich 23 (v4) — TextUp, rasmiy hujjat asosida. Ikkita ALOHIDA host
+    // (auth/SMS) — qattiq yozilgan default YO'Q (PLAYMOBILE_API_URL bilan
+    // bir xil falsafa: sandbox/muhit almashtirish imkoni qoladi).
+    TEXTUP_AUTH_URL: z.string().url().optional(),
+    TEXTUP_SMS_URL: z.string().url().optional(),
+    TEXTUP_EMAIL: z.string().optional(),
+    TEXTUP_PASSWORD: z.string().optional(),
+    // Bo'lim 8 — MAJBURIY EMAS: faqat qo'shimcha hisob-xavfsizlik
+    // assertioni. Berilsa, runtime login javobidagi `user.id` bilan
+    // tekshiriladi (fail-closed) — so'rovga qo'yiladigan `userId` esa HAR
+    // DOIM runtime login javobidan olinadi, bu maydondan EMAS.
+    TEXTUP_EXPECTED_USER_ID: z.string().optional(),
+    // Bo'lim 9/12 — ixtiyoriy, tasdiqlangan alpha-nom ("BOBODODA" hozir
+    // "Tekshirilmoqda"). Berilmasa qisqa raqamdan yuboriladi — bu ham
+    // TO'G'RI ishlaydi, majburiy EMAS.
+    TEXTUP_NICKNAME_ID: z.string().optional(),
+    // Bo'lim 10/11 — IKKITA ALOHIDA shablon ID (bitta umumiy EMAS): har
+    // bir moderatsiya matni ("BOBODODA Registration/Password Reset OTP")
+    // alohida tasdiqlanadi. Ikkalasi ham "Tekshirilmoqda" — hozircha
+    // ikkalasi ham bo'sh qolishi mumkin (`textup.provider.ts` shunda
+    // `templateId`ni so'rovdan butunlay chiqarib tashlaydi).
+    TEXTUP_REGISTRATION_TEMPLATE_ID: z.string().optional(),
+    TEXTUP_PASSWORD_RESET_TEMPLATE_ID: z.string().optional(),
     // Bosqich 22 — FAQAT lokal dev qulayligi: yoqilsa, `/auth/*/request-otp`
     // javobida generatsiya qilingan kod `devOtp` maydonida qaytadi (frontend
     // konsolni o'qimasdan sinash uchun). Sukut — HAR DOIM `false` (yoqib
@@ -302,6 +329,28 @@ export const envSchema = z
             code: z.ZodIssueCode.custom,
             path: [key],
             message: `SMS_PROVIDER=PLAYMOBILE bo'lsa ${key} majburiy`,
+          });
+        }
+      }
+    }
+    // Bosqich 23 (v4) — TEXTUP tanlansa 4 ta maydon HAM majburiy (bo'lim 24 —
+    // production shu credential'lar bo'lmasa umuman ko'tarilmasin).
+    // TEXTUP_EXPECTED_USER_ID/NICKNAME_ID/*_TEMPLATE_ID ATAYLAB bu ro'yxatda
+    // YO'Q — ular ixtiyoriy (hisob-xavfsizlik assertioni / moderatsiya
+    // hali tasdiqlanmagan).
+    if (env.SMS_PROVIDER === 'TEXTUP') {
+      const required: (keyof typeof env)[] = [
+        'TEXTUP_AUTH_URL',
+        'TEXTUP_SMS_URL',
+        'TEXTUP_EMAIL',
+        'TEXTUP_PASSWORD',
+      ];
+      for (const key of required) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `SMS_PROVIDER=TEXTUP bo'lsa ${key} majburiy`,
           });
         }
       }

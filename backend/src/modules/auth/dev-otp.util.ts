@@ -14,11 +14,14 @@
  *   3. `devExposeOtp` — operator ATAYLAB yoqqan (`DEV_EXPOSE_OTP=true`).
  *
  * Har qanday BITTASI yolg'on bo'lsa — natija `false`, kod hech qachon
- * qaytarilmaydi.
+ * qaytarilmaydi. Bosqich 23 — `SMS_PROVIDER=TEXTUP` bilan sinov qilinganda
+ * bu ATAYLAB `false` qaytaradi (shart 2 — `smsProvider === 'CONSOLE'`
+ * TEXTUP uchun avtomatik yolg'on): integratsiya sinovida HAQIQIY SMS kelishi
+ * kerak, devOtp orqali "yashirin" tekshirish yo'li YO'Q.
  */
 export function shouldExposeDevOtp(params: {
   isProduction: boolean;
-  smsProvider: 'CONSOLE' | 'PLAYMOBILE';
+  smsProvider: 'CONSOLE' | 'PLAYMOBILE' | 'TEXTUP';
   devExposeOtp: boolean;
 }): boolean {
   return !params.isProduction && params.smsProvider === 'CONSOLE' && params.devExposeOtp;

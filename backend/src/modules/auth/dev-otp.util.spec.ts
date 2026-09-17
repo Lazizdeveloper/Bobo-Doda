@@ -36,4 +36,16 @@ describe('shouldExposeDevOtp — uch qatlamli fail-closed shart', () => {
       shouldExposeDevOtp({ isProduction: true, smsProvider: 'PLAYMOBILE', devExposeOtp: false }),
     ).toBe(false);
   });
+
+  it('Bosqich 23 — development + TEXTUP (devExposeOtp=true bo‘lsa ham) → false — haqiqiy SMS kelishi kerak', () => {
+    expect(
+      shouldExposeDevOtp({ isProduction: false, smsProvider: 'TEXTUP', devExposeOtp: true }),
+    ).toBe(false);
+  });
+
+  it('Bosqich 23 — production + TEXTUP + DEV_EXPOSE_OTP=true → false', () => {
+    expect(
+      shouldExposeDevOtp({ isProduction: true, smsProvider: 'TEXTUP', devExposeOtp: true }),
+    ).toBe(false);
+  });
 });

@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job } from 'bullmq';
+import type { OtpPurpose } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
 import { SMS_PROVIDER, type SmsProvider } from './sms-provider.interface';
@@ -11,6 +12,16 @@ export interface OtpSmsJobData {
   phone: string;
   code: string;
   template: string;
+  /**
+   * Bosqich 23 — ixtiyoriy (orqaga moslik: eski, hali `purpose`siz
+   * navbatga qo'yilgan job ham to'g'ri ishlaydi). Provider matn
+   * render'iga (`params.purpose`) forward qilinadi — REGISTER va
+   * PASSWORD_RESET SMS matnini farqlash uchun (bo'lim 5). `OtpService`/
+   * `OtpSmsProcessor` matn qanday ko'rinishini BILMAYDI — faqat qaysi
+   * maqsad ekanligini uzatadi, aniq so'zlarni provider (`renderTextUpText`
+   * va h.k.) tanlaydi.
+   */
+  purpose?: OtpPurpose;
 }
 
 /**
@@ -40,11 +51,11 @@ export class OtpSmsProcessor extends WorkerHost {
   }
 
   async process(job: Job<OtpSmsJobData>): Promise<void> {
-    const { phone, code, template } = job.data;
+    const { phone, code, template, purpose } = job.data;
 
     let result: { success: boolean; providerMessageId?: string; errorMessage?: string };
     try {
-      result = await this.sms.send(phone, template, { code });
+      result = await this.sms.send(phone, template, purpose ? { code, purpose } : { code });
     } catch (err) {
       result = { success: false, errorMessage: err instanceof Error ? err.message : String(err) };
     }

@@ -113,8 +113,9 @@ export class OtpService {
     });
 
     // BullMQ orqali — OutboxEvent EMAS (`otp-sms.processor.ts` izohiga qarang:
-    // OTP xom holda Postgres'ga yozilmasin).
-    await this.smsQueue.add('send', { phone, code, template: OTP_SMS_TEMPLATE });
+    // OTP xom holda Postgres'ga yozilmasin). `purpose` — Bosqich 23,
+    // provider REGISTER/PASSWORD_RESET matnini farqlashi uchun.
+    await this.smsQueue.add('send', { phone, code, template: OTP_SMS_TEMPLATE, purpose });
 
     // Bosqich 22 — FAQAT lokal dev qulayligi (`dev-otp.util.ts`). Kodning
     // o'zi HECH QACHON qayta o'qilmaydi (`codeHash` bir tomonlama) — shuning

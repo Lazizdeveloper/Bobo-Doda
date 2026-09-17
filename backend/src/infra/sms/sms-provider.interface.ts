@@ -1,10 +1,11 @@
 /**
- * SMS provayder abstraksiyasi (Bosqich 2 spec). Real provayderlar (Eskiz,
- * PlayMobile) — HALI YOZILMAGAN (haqiqiy API kalitlari yo'q; soxta HTTP
- * chaqiruv yozish "ishlaydi" degan noto'g'ri taassurot berardi). Interfeys
- * shu joyni tayyorlab qo'yadi — real provayder qo'shilganda faqat SHU
- * fayllar (`*.provider.ts` + `sms.module.ts`dagi bitta qator) o'zgaradi,
- * `OtpService`/boshqa chaqiruvchi kod TEGILMAYDI.
+ * SMS provayder abstraksiyasi (Bosqich 2 spec). Real provayderlar: PlayMobile
+ * (Bosqich 13) va TextUp (Bosqich 23, production'da tanlangan) — Eskiz hali
+ * ham YOZILMAGAN (rasmiy hujjat JS-render qilinadigan sahifa, statik fetch
+ * o'qiy olmadi). Interfeys shu joyni tayyorlab qo'ydi — yangi provayder
+ * qo'shilganda faqat SHU fayllar (`providers/<nom>/` papkasidagi provider
+ * klassi + `sms.module.ts`dagi bitta `case`) o'zgaradi, `OtpService`/boshqa
+ * chaqiruvchi kod TEGILMAYDI.
  *
  * Bosqich 10 — bu BITTA interfeys OTP (`OtpSmsProcessor`) VA generic
  * Outbox-notification worker ORASIDA baham ko'riladi (bo'lim 12: "bir xil

@@ -182,6 +182,29 @@ export class AppConfigService {
     };
   }
 
+  /** Bosqich 23 (v4) — TextUp. `SMS_PROVIDER=TEXTUP` bo'lsa birinchi 4tasi majburiy (env.schema.ts). */
+  get textUp(): {
+    authUrl: string | undefined;
+    smsUrl: string | undefined;
+    email: string | undefined;
+    password: string | undefined;
+    expectedUserId: string | undefined;
+    nicknameId: string | undefined;
+    registrationTemplateId: string | undefined;
+    passwordResetTemplateId: string | undefined;
+  } {
+    return {
+      authUrl: this.get('TEXTUP_AUTH_URL'),
+      smsUrl: this.get('TEXTUP_SMS_URL'),
+      email: this.get('TEXTUP_EMAIL'),
+      password: this.get('TEXTUP_PASSWORD'),
+      expectedUserId: this.get('TEXTUP_EXPECTED_USER_ID'),
+      nicknameId: this.get('TEXTUP_NICKNAME_ID'),
+      registrationTemplateId: this.get('TEXTUP_REGISTRATION_TEMPLATE_ID'),
+      passwordResetTemplateId: this.get('TEXTUP_PASSWORD_RESET_TEMPLATE_ID'),
+    };
+  }
+
   /** Bosqich 10 — Outbox notification delivery worker konfiguratsiyasi. */
   get outbox(): {
     processingTimeoutSeconds: number;

@@ -28,6 +28,16 @@ const playMobileCreds = {
   PLAYMOBILE_SENDER: 'BoboDoda',
 };
 
+// Bosqich 23 (v4) — SMS_PROVIDER=TEXTUP tanlansa 4 ta maydon HAM majburiy
+// (TEXTUP_EXPECTED_USER_ID/NICKNAME_ID/*_TEMPLATE_ID ixtiyoriy).
+const textUpCreds = {
+  SMS_PROVIDER: 'TEXTUP',
+  TEXTUP_AUTH_URL: 'https://api-auth.textup.uz/v1/login',
+  TEXTUP_SMS_URL: 'https://sms-api.textup.uz/v1/send',
+  TEXTUP_EMAIL: 'test@textup.uz',
+  TEXTUP_PASSWORD: 'test-password',
+};
+
 describe('validateEnv', () => {
   it('minimal majburiy env bilan o’tadi va default’larni to’ldiradi', () => {
     const env = validateEnv({ ...base });
@@ -252,6 +262,50 @@ describe('validateEnv', () => {
       PAYMENT_PROVIDER: 'PAYME',
     });
     expect(env.SMS_PROVIDER).toBe('PLAYMOBILE');
+  });
+
+  it('Bosqich 23 — SMS_PROVIDER=TEXTUP, credential’lar yo‘q — rad etiladi', () => {
+    expect(() => validateEnv({ ...base, SMS_PROVIDER: 'TEXTUP' })).toThrow(/TEXTUP_AUTH_URL/);
+  });
+
+  it('Bosqich 23 — SMS_PROVIDER=TEXTUP, to‘liq credential bilan o‘tadi', () => {
+    const env = validateEnv({ ...base, ...textUpCreds });
+    expect(env.SMS_PROVIDER).toBe('TEXTUP');
+    expect(env.TEXTUP_AUTH_URL).toBe('https://api-auth.textup.uz/v1/login');
+    expect(env.TEXTUP_SMS_URL).toBe('https://sms-api.textup.uz/v1/send');
+  });
+
+  it('Bosqich 23 — TEXTUP_EXPECTED_USER_ID/NICKNAME_ID/*_TEMPLATE_ID ixtiyoriy — bo‘lmasa ham o‘tadi', () => {
+    const env = validateEnv({ ...base, ...textUpCreds });
+    expect(env.TEXTUP_EXPECTED_USER_ID).toBeUndefined();
+    expect(env.TEXTUP_NICKNAME_ID).toBeUndefined();
+    expect(env.TEXTUP_REGISTRATION_TEMPLATE_ID).toBeUndefined();
+    expect(env.TEXTUP_PASSWORD_RESET_TEMPLATE_ID).toBeUndefined();
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=TEXTUP to‘liq credential bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...textUpCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.SMS_PROVIDER).toBe('TEXTUP');
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=TEXTUP, credential’lar yo‘q — rad etiladi (fail closed)', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        NODE_ENV: 'production',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+        SMS_PROVIDER: 'TEXTUP',
+      }),
+    ).toThrow(/TEXTUP_AUTH_URL/);
   });
 
   it('Bosqich 10 — OUTBOX_* sukut qiymatlari', () => {

@@ -613,3 +613,59 @@ To'liq batafsil hisobot: `docs/FULL-UI-QA-MATRIX.md`.
 
 ### UI_QA_CANDIDATE (Bosqich 22): **PASS** (kod QA darajasida;
 production infratuzilma tayyorligi bu bilan tasdiqlanmaydi)
+
+## 21. Bosqich 23 — TextUp SMS provider integratsiyasi
+
+**Auth**: email/parol → `POST {TEXTUP_AUTH_URL}` → Bearer `accessToken`
+(Basic auth EMAS — birinchi taxmin noto'g'ri chiqqan edi). Token
+`TextUpTokenManager`da BITTA jarayon xotirasida keshlanadi, bir vaqtli
+chaqiruvlar bitta in-flight login promise'ni baham ko'radi. 401 → BIR
+MARTA invalidate+qayta login+qayta urinish, ikkinchi 401 — muvaffaqiyatsiz
+(cheksiz aylanma yo'q). To'liq oqim: RUNBOOK §22.
+
+**Hisob holati (2026-09, TROUGH)**: TextUp alpha-nom `BOBODODA` va
+ikkala OTP shablon ("Registration"/"Password Reset") hozircha
+**Tekshirilmoqda** (moderatsiya kutilmoqda). Kod tayyor — `templateId`/
+`nicknameId` sozlanmagan bo'lsa so'rovdan butunlay chiqarib tashlanadi
+(qisqa raqamdan, shablonsiz yuboriladi, bu ham TextUp hujjatiga ko'ra
+TO'G'RI). Moderatsiya tasdiqlangandan keyingi aniq qadamlar (shablon/
+nickname ID'larni topish, Railway'ga yozish, bitta nazorat qilinadigan
+haqiqiy SMS testi) — RUNBOOK §22.
+
+| Tekshiruv | Natija |
+|---|---|
+| Backend `npm run lint` | ✅ PASS |
+| Backend `npm run typecheck` | ✅ PASS |
+| Backend `npm test` (unit) | ✅ **457/457 PASS**, 45 suite |
+| Backend `npm run test:e2e` (Jest, real Postgres+Redis) | ✅ **339/339 PASS**, 19 suite |
+| Backend `npm run build` | ✅ PASS |
+| `npm run generate:contracts` | ✅ PASS, drift = 0 |
+| Frontend `eslint .` | ✅ PASS |
+| Frontend `tsc --noEmit` | ✅ PASS |
+| Frontend `next build` | ✅ PASS |
+| Playwright (auth+logout+buyer+disputes+purchase+admin+seller×2) | ✅ **48 PASS, 1 SKIP (TOTP UI yo'q), 0 FAIL** |
+
+**Xavfsizlik**: `TEXTUP_PASSWORD`/`accessToken`/`refreshToken`/
+`Authorization` header/OTP HECH QACHON loglanmaydi (unit testda tekshirilgan
+— `textup.provider.spec.ts`/`textup-token-manager.spec.ts`, log
+chaqiruvlarining butun seriyalashtirilgan tanasi tekshiriladi, faqat
+maydon nomi emas). Frontend TextUp haqida HECH NARSA bilmaydi —
+`app`/`lib`/`components`da `grep -rn "TEXTUP\|textup"` 0 natija beradi.
+`SMS_PROVIDER=TEXTUP` bo'lsa `devOtp` HECH QACHON qaytarilmaydi (mavjud
+uch qatlamli fail-closed shart o'zgarishsiz, faqat `smsProvider` union
+turi kengaytirilgan).
+
+**CI/testlarda haqiqiy SMS YUBORILMAYDI** — barcha unit/e2e/Playwright
+`fetch`ni mock qiladi yoki `SMS_PROVIDER=CONSOLE` bilan ishlaydi. Haqiqiy
+provayder bilan sinov — ALOHIDA, qo'lda, nazorat qilinadigan qadam
+(RUNBOOK §22), CI'ning bir qismi EMAS.
+
+### TEXTUP_CODE_INTEGRATION (Bosqich 23): **PASS** — kod/testlar tayyor,
+to'liq regressiya toza.
+
+### TEXTUP_REAL_SMS_VERIFIED: **PENDING_MODERATION** — TextUp hisobidagi
+alpha-nom va ikkala OTP shabloni "Tekshirilmoqda"; haqiqiy SMS round-trip
+(yuborish → yetib kelish → OTP tasdiqlash) HALI SINALMAGAN. Bu holatni
+"tasdiqlangan" deb ko'rsatish NOTO'G'RI bo'lar edi — moderatsiya
+tugagach yoki qisqa-raqam rejimida sinov qilish qarori qabul qilingach,
+RUNBOOK §22'dagi qadamlar bajarilib shu band yangilanadi.

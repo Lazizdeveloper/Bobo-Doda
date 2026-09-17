@@ -5,6 +5,7 @@ import { ConsoleSmsProvider } from './console-sms.provider';
 import { SMS_PROVIDER } from './sms-provider.interface';
 import { OtpSmsProcessor, OTP_SMS_QUEUE } from './otp-sms.processor';
 import { PlayMobileProvider } from './providers/playmobile/playmobile.provider';
+import { TextUpProvider } from './providers/textup/textup.provider';
 
 /**
  * Real provayderga o'tish — FAQAT shu modulda: quyidagi factory'ga yangi
@@ -42,6 +43,27 @@ import { PlayMobileProvider } from './providers/playmobile/playmobile.provider';
             throw new Error('SMS_PROVIDER=PLAYMOBILE uchun PLAYMOBILE_API_URL/LOGIN/PASSWORD/SENDER majburiy');
           }
           return new PlayMobileProvider({ apiUrl, login, password, sender });
+        }
+        if (provider === 'TEXTUP') {
+          // Bosqich 23 (v4) — TextUp, PRODUCTION uchun tanlangan provider,
+          // Bobo&Doda o'z hisobi bilan. Ikkinchi qatlam himoya (birinchisi —
+          // env.schema.ts Zod superRefine). `expectedUserId`/`nicknameId`/
+          // shablon ID'lar ATAYLAB bu tekshiruvda YO'Q — ixtiyoriy (bo'lim 24).
+          const { authUrl, smsUrl, email, password, expectedUserId, nicknameId, registrationTemplateId, passwordResetTemplateId } =
+            config.textUp;
+          if (!authUrl || !smsUrl || !email || !password) {
+            throw new Error('SMS_PROVIDER=TEXTUP uchun TEXTUP_AUTH_URL/SMS_URL/EMAIL/PASSWORD majburiy');
+          }
+          return new TextUpProvider({
+            authUrl,
+            smsUrl,
+            email,
+            password,
+            expectedUserId,
+            nicknameId,
+            registrationTemplateId,
+            passwordResetTemplateId,
+          });
         }
         throw new Error('SMS_PROVIDER: qo‘llab-quvvatlanmaydigan qiymat');
       },

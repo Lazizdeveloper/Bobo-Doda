@@ -1879,3 +1879,116 @@ chalkashib ketmasin): `bd_register_otp_phone`/`bd_registration_token`
 | 5 marta ketma-ket login | 0 (qo'shimcha) |
 | Parolni unutish | 1 |
 | Parolni unutish (noma'lum telefon) | 0 (public javob bir xil) |
+
+## 22. TextUp SMS provider integratsiyasi (Bosqich 23)
+
+### Auth — email/parol → Bearer accessToken (Basic auth EMAS)
+
+TextUp'ning ikkita ALOHIDA hosti bor: auth (`api-auth.textup.uz`) va SMS
+(`sms-api.textup.uz`). Birinchi taxmin (Basic auth, bitta host,
+`POST /v1/messages`) NOTO'G'RI chiqdi — TextUp haqiqiy hujjati quyidagi
+oqimni talab qiladi:
+
+```text
+POST {TEXTUP_AUTH_URL}   (https://api-auth.textup.uz/v1/login)
+  { "email": ..., "password": ... }
+  → { accessToken, refreshToken, user: { id, status } }
+
+POST {TEXTUP_SMS_URL}    (https://sms-api.textup.uz/v1/send)
+  Authorization: Bearer <accessToken>
+  { message, userId, name, recipients: ["+998..."], templateId?, nicknameId? }
+  → { smsId }
+```
+
+- **`userId`** — SMS so'rovida YUBORILADIGAN qiymat HAR DOIM runtime login
+  javobidagi `user.id` (ENV'dan EMAS — boshqa loyihadan ID "ko'chirib
+  olish" ATAYLAB QILINMADI). `TEXTUP_EXPECTED_USER_ID` — ixtiyoriy,
+  qo'shimcha hisob-xavfsizlik assertioni: berilsa, runtime `user.id` bilan
+  solishtiriladi, mos kelmasa fail-closed (`textup-token-manager.ts`).
+- **Token kesh** — `TextUpTokenManager`, bitta jarayon xotirasida
+  (Redis/DB shart emas, `SmsModule`dagi `SMS_PROVIDER` singleton). Bir
+  vaqtli chaqiruvlar (masalan 10 ta SMS bir vaqtda navbatdan chiqsa)
+  BITTA in-flight login promise'ni baham ko'radi — 10 ta alohida login
+  SO'ROVI YO'Q. Login muvaffaqiyatsiz bo'lsa promise/kesh tozalanadi,
+  keyingi chaqiruv qayta urinadi.
+- **401 → BIR MARTA qayta urinish** (`textup.provider.ts`): SMS so'rovi
+  401 qaytarsa — token invalidate qilinadi, qayta login qilinadi, SMS
+  BIR MARTA qayta yuboriladi. Ikkinchi 401 — muvaffaqiyatsiz, cheksiz
+  aylanma YO'Q. Hujjatlashtirilmagan refresh-token endpoint O'YLAB
+  TOPILMAGAN — `refreshToken` ishlatilmaydi.
+- **Timeout'da ko'r-ko'rona qayta yuborish YO'Q**: tarmoq xatosi/timeout
+  — RETRYABLE deb belgilanadi (`permanent` berilmaydi), lekin provider
+  ICHIDA ikkinchi HTTP chaqiruv qilinmaydi — qayta urinish OTP
+  navbatining o'zi (bounded, mavjud siyosat o'zgarmagan).
+
+### Xabar matni — moderatsiyaga ANIQ mos kelishi shart
+
+```text
+Ro'yxatdan o'tish: BOBODODA tasdiqlash kodi: <6 raqam>
+Parolni tiklash:   BOBODODA parolni tiklash kodi: <6 raqam>
+```
+
+"BOBODODA" bitta so'z, `&` belgisi YO'Q — TextUp moderatsiyasiga aynan
+shu statik matn topshirilgan (pastga qarang), boshqacha formatlash
+tasdiqlangan shablon bilan mos kelmasligi mumkin. `name` maydoni (ichki
+operatsion yorliq, SMS matni EMAS) — `"BoboDoda Registration OTP"` /
+`"BoboDoda Password Reset OTP"` (`textup-text.util.ts`).
+
+### Hisob holati (2026-09, "Tekshirilmoqda")
+
+| Element | TextUp nomi | Holat |
+|---|---|---|
+| Alpha-nom | `BOBODODA` | Tekshirilmoqda |
+| Shablon #1 | `BOBODODA Registration OTP` (`BOBODODA tasdiqlash kodi: 123456`) | Tekshirilmoqda |
+| Shablon #2 | `BOBODODA Password Reset OTP` (`BOBODODA parolni tiklash kodi: 123456`) | Tekshirilmoqda |
+
+Moderatsiya tugamaguncha `TEXTUP_NICKNAME_ID`/`TEXTUP_REGISTRATION_
+TEMPLATE_ID`/`TEXTUP_PASSWORD_RESET_TEMPLATE_ID` BO'SH qoladi —
+`TextUpProvider` bu holda `templateId`/`nicknameId`ni so'rovdan BUTUNLAY
+chiqarib tashlaydi (qisqa raqamdan, shablonsiz yuboriladi — TextUp
+hujjatiga ko'ra bu ham TO'G'RI ishlaydi, ID'lar majburiy EMAS).
+**Haqiqiy SMS hali YUBORILMAGAN/tekshirilmagan** — moderatsiya
+tasdiqlanmaguncha yoki ATAYLAB "qisqa raqam" rejimida sinov qilish
+qarori qabul qilinmaguncha.
+
+### Moderatsiya tasdiqlangandan keyingi qadamlar
+
+```bash
+# 1. Login (email/parol — biz umumiy TEXTUP_EMAIL/PASSWORD bilan)
+curl -s -X POST https://api-auth.textup.uz/v1/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"'"$TEXTUP_EMAIL"'","password":"'"$TEXTUP_PASSWORD"'"}' \
+  | tee /tmp/textup-login.json | jq -r '.accessToken' > /tmp/textup-token.txt
+# 2. O'z shablonlarini top (hujjatlashtirilgan GET, Bearer + userId query)
+curl -s "https://api-auth.textup.uz/v1/templates?userId=$(jq -r '.user.id' /tmp/textup-login.json)" \
+  -H "Authorization: Bearer $(cat /tmp/textup-token.txt)" | jq '.[] | {name, id, status}'
+# → "BOBODODA Registration OTP" / "BOBODODA Password Reset OTP" — FAQAT
+#   status approved/active bo'lganini qabul qiling, "in_verify"ni EMAS.
+# 3. O'z nicknameId'ni top
+curl -s "https://api-auth.textup.uz/v1/nick-names?userId=$(jq -r '.user.id' /tmp/textup-login.json)" \
+  -H "Authorization: Bearer $(cat /tmp/textup-token.txt)" | jq '.[] | {name, id, status}'
+# → "BOBODODA" — faqat tasdiqlangan holatda ID oling.
+rm -f /tmp/textup-login.json /tmp/textup-token.txt   # token faylni darhol o'chiring
+# 4. Railway/.env'ga yozing:
+#    TEXTUP_NICKNAME_ID=<3-qadamdagi id>
+#    TEXTUP_REGISTRATION_TEMPLATE_ID=<2-qadamdagi Registration id>
+#    TEXTUP_PASSWORD_RESET_TEMPLATE_ID=<2-qadamdagi Password Reset id>
+# 5. Bitta nazorat qilinadigan REAL ro'yxatdan o'tish SMS testi (backend
+#    dev, SMS_PROVIDER=TEXTUP): /royxatdan-otish orqali haqiqiy telefon
+#    bilan → SMS kelishini → OTP tasdiqlanishini tekshiring. Bir nechta
+#    marta qayta yubormang (bo'lim: SMS xarajati).
+# 6. Ixtiyoriy: bitta "parolni unutdim" SMS testi (xuddi shu qoida).
+```
+
+### Ishlatilmagan/rad etilgan yondashuvlar (bilib qo'yish uchun)
+
+- **Config'dan `userId` yuborish** (login javobidan EMAS) — ikkinchi
+  spetsifikatsiya iteratsiyasida ko'rib chiqilgan, keyin referens
+  integratsiyaga moslashtirilib bekor qilingan: runtime `user.id`
+  haqiqiy manba, config faqat ixtiyoriy xavfsizlik tekshiruvi.
+- **Bitta umumiy `TEXTUP_TEMPLATE_ID`** — rad etildi: ikkita ALOHIDA
+  moderatsiya matni (ro'yxatdan o'tish/parolni tiklash) ikkita ALOHIDA
+  ID talab qiladi, aralashtirib bo'lmaydi.
+- **`"BOBO&DODA"`/`"Bobo&Doda"` (ampersand bilan) SMS matnida** — rad
+  etildi: moderatsiyaga aynan `"BOBODODA"` (bitta so'z) topshirilgan,
+  boshqa formatlash tasdiqlangan shablonga mos kelmasligi mumkin.
