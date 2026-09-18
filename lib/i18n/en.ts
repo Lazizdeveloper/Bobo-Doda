@@ -1091,6 +1091,7 @@ export const en: Record<string, string> = {
   "cfund.pay": "Pay and activate",
   "cfund.modalDesc": "The full amount is transferred to the Bobo&Doda escrow account. Not to the specialist — the money is released milestone by milestone as each is accepted. If you don't accept, the money returns to your account.",
   "cfund.done": "Contract activated — the specialist starts the work",
+  "cfund.paymentsDisabled": "Payments are temporarily unavailable. Please try again later.",
   "cfund.total": "Escrow payment",
   "cfund.awaitingSeller": "Awaiting payment from the client — you'll start the work once it arrives",
 

@@ -176,8 +176,12 @@ export default function XaridorWorkroomPage() {
       }
       setWatchingPayment(true);
       toast(t("cfund.done"));
-    } catch {
-      toast(t("common.error"), "error");
+    } catch (error) {
+      if (error instanceof ApiError && error.message === "FEATURE_DISABLED") {
+        toast(t("cfund.paymentsDisabled"), "error");
+      } else {
+        toast(t("common.error"), "error");
+      }
     } finally {
       setPaying(false);
     }

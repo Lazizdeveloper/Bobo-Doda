@@ -1899,6 +1899,10 @@ export const dictionary: Record<string, Entry> = {
     uz: "Shartnoma faollashdi — mutaxassis ishni boshlaydi",
     ru: "Контракт активирован — специалист приступает к работе",
   },
+  "cfund.paymentsDisabled": {
+    uz: "To'lovlar hozircha vaqtincha ishlamaydi. Iltimos, keyinroq qayta urinib ko'ring.",
+    ru: "Приём платежей временно недоступен. Пожалуйста, попробуйте позже.",
+  },
   "cfund.total": { uz: "Escrow'ga to'lov", ru: "Оплата в эскроу" },
   "cfund.awaitingSeller": {
     uz: "Buyurtmachi to'lovni amalga oshirishi kutilmoqda — to'lov tushgach ishni boshlaysiz",
