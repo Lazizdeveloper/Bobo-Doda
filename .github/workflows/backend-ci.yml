@@ -145,13 +145,24 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "CREATE DATABASE ci_migration_check;"
+          # DIQQAT — parollar ATAYLAB 'app'/'migrator': rollar
+          # (bobododa_app/bobododa_migrator) Postgres'da KLASTER-GLOBAL, shu
+          # SHARED service konteynerni keyinroq shu jobdagi "e2e" qadami ham
+          # ishlatadi (har bir spec'ning beforeAll'i `provisionDb()` orqali).
+          # `provisionDb()` (test/support/e2e-infra.ts) shu rollarni
+          # `IF NOT EXISTS` bilan yaratadi va parolni QATTIQ 'app'/'migrator'
+          # deb oladi — agar shu yerda BOSHQA parol ishlatilsa, bu qadam
+          # rolni O'SHA parol bilan BIRINCHI bo'lib yaratib qo'yadi va
+          # `provisionDb()`dagi CREATE `IF NOT EXISTS` tufayli o'tkazib
+          # yuboriladi — keyin "e2e" qadami P1000 (Authentication failed)
+          # bilan yiqiladi (real CI run'da topilgan va tasdiqlangan xato).
           psql "postgresql://postgres:postgres@localhost:5432/ci_migration_check" \
-            -v app_pw=ci_app_pw \
-            -v migrator_pw=ci_migrator_pw \
+            -v app_pw=app \
+            -v migrator_pw=migrator \
             -v db_name=ci_migration_check \
             -f prisma/sql/roles.sql
-          export DATABASE_URL="postgresql://bobododa_app:ci_app_pw@localhost:5432/ci_migration_check?schema=public"
-          export DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:ci_migrator_pw@localhost:5432/ci_migration_check?schema=public"
+          export DATABASE_URL="postgresql://bobododa_app:app@localhost:5432/ci_migration_check?schema=public"
+          export DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:migrator@localhost:5432/ci_migration_check?schema=public"
           npx prisma migrate deploy
           STATUS=$(npx prisma migrate status)
           echo "$STATUS"
@@ -160,8 +171,8 @@ jobs:
       - name: Production-config test — fail-closed qoidalar HAQIQIY boot bilan tasdiqlanadi (bo'lim 73)
         working-directory: backend
         env:
-          DATABASE_URL: postgresql://bobododa_app:ci_app_pw@localhost:5432/ci_migration_check?schema=public
-          DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:ci_migrator_pw@localhost:5432/ci_migration_check?schema=public
+          DATABASE_URL: postgresql://bobododa_app:app@localhost:5432/ci_migration_check?schema=public
+          DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@localhost:5432/ci_migration_check?schema=public
           REDIS_URL: redis://localhost:6379
           JWT_ACCESS_SECRET: ci-production-config-test-access-secret-32
           JWT_STAFF_ACCESS_SECRET: ci-production-config-test-staff-secret-32
