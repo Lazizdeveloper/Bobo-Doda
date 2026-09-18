@@ -706,3 +706,146 @@ Kod/token/parol/OTP HECH QACHON chatga/logga chiqarilmadi — faqat
 maskalangan telefon, HTTP status, `sms_logs`ning xavfsiz maydonlari
 (`success`/`providerMessageId`) va foydalanuvchining o'zi o'qib bergan
 matn/kod ishlatildi.
+
+## 22. Bosqich 23 — Railway production deploy + PAYMENTS_ENABLED=false
+
+**Railway**: loyiha "Bobo-Doda" (workspace "Laziz Shakarov's Projects",
+`production` environment). Xizmatlar: `backend` (Dockerfile, `backend/`
+o'z build kontekstida — quyida), `frontend` (Nixpacks, root `next build`/
+`next start`), `Postgres`, `Redis` — ikkalasi ham PRIVATE tarmoq orqali
+(`postgres.railway.internal`/`redis.railway.internal`), tashqi portga
+ochilmagan. Ikkala domen HAM haqiqiy ishlaydi va real HTTP tekshirilgan:
+
+- Frontend: `https://frontend-production-25bc.up.railway.app` — landing/
+  `/kirish`/`/royxatdan-otish`/`/rahbariyat/kirish` 200, noma'lum marshrut
+  404, CSP `connect-src` haqiqiy backend domenini (`https://`+`wss://`)
+  to'g'ri aks ettiradi, `localhost` sizib chiqmagan.
+- Backend: `https://backend-production-52385.up.railway.app` —
+  `/health/live`+`/health/ready` ikkalasi ham `{"status":"ok",...}`,
+  Prisma/Redis ulangan, Reconciliation/Outbox repeatable job'lari
+  ro'yxatdan o'tgan, CORS aniq frontend domenigagina ruxsat beradi
+  (wildcard emas), `/docs` 404 (Swagger o'chirilgan), login xato javobi
+  toza `DomainError` (xom stack trace emas), `requestId` bor.
+
+**DB rollari — REAL Railway Postgres'da tasdiqlangan** (taxmin emas):
+`prisma/sql/roles.sql` orqali `bobododa_app`/`bobododa_migrator`
+bootstrap qilindi, 21 ta migratsiya toza DB'ga qo'llandi. Uch aniq
+tekshiruv: `bobododa_app` SELECT qila oladi ✓, `CREATE TABLE` rad etiladi
+("permission denied for schema public") ✓, `ledger_entries`ga UPDATE rad
+etiladi ("permission denied for table ledger_entries") ✓ — moliyaviy
+append-only himoya REAL production DB'da ishlaydi, faqat kod darajasida
+emas.
+
+**Backup + Restore drill — BAJARILDI va TASDIQLANDI**: `pg_dump`
+(PostgreSQL 18 mos versiya, Railway'ning o'zi 18.6) real production
+DB'dan → ALOHIDA, IZOLYATSIYALANGAN lokal DB'ga `pg_restore` → `prisma
+migrate status` "Database schema is up to date" (21/21 migratsiya, drift
+yo'q) → 34 jadval, barcha kritik moliyaviy jadval (`ledger_transactions`,
+`audit_logs` va h.k.) mavjud. Qator sonlari 0 — bu XATO EMAS, production
+hali LAUNCH qilinmagan, haqiqatan bo'sh. Drill resurslari tozalandi
+(`dropdb`). **Railway'ning o'z avtomatik backup xususiyati FAQAT dashboard
+orqali yoqiladi** (CLI'da bunday buyruq yo'q, tekshirilgan) — operator
+Railway konsolida Postgres xizmati → "Backups" bo'limidan yoqishi kerak
+(tavsiya: kunlik, kamida 7 kunlik saqlash). Qo'lda bajarilgan drill
+MEXANIZMNING o'zi ishlashini isbotladi, lekin DOIMIY, JADVAL bo'yicha
+avtomatik backup hali dashboard'da YOQILMAGAN — bu ANIQ, KEYINGI qadam.
+
+**PAYMENTS_ENABLED=false — xavfsiz to'lovsiz launch (yangi, real Payme
+credential yo'qligi uchun)**: `PAYOUTS_ENABLED` bilan BIR XIL naqsh —
+`payment.module.ts` HAR DOIM `DisabledPaymentProvider` qaytaradi
+(`PAYMENT_PROVIDER`/`NODE_ENV`dan qat'i nazar), `PaymentController.
+create()` DB yozuv/idempotency rezervatsiyasidan OLDIN `FEATURE_DISABLED`
+(503) qaytaradi — mavjud moliyaviy tarix TEGILMAYDI. Frontend endi bu
+aniq xatoni alohida ko'rsatadi ("To'lovlar hozircha vaqtincha ishlamaydi"),
+umumiy xato o'rniga. Production Railway backend AYNAN shu konfiguratsiya
+bilan muvaffaqiyatli ko'tarildi (haqiqiy deploy log bilan tasdiqlangan —
+avval `PAYMENT_PROVIDER=TEST IMKONSIZ` bilan crash-loop qilardi).
+
+**CI — jiddiy, uzoq muddatli topilma tuzatildi**: `.github/workflows/
+backend-ci.yml`ning "quality" job'i KAMIDA 2026-09-15'dan beri (tekshirilgan
+GitHub Actions tarixi — bir nechta ketma-ket push) HAR DOIM
+`generate:contracts` bosqichida yiqilar edi: bu buyruq to'liq Nest DI
+grafini quradi (`emit-openapi.ts`), lekin workflow `JWT_ACCESS_SECRET`/
+`JWT_STAFF_ACCESS_SECRET`/`STAFF_TOTP_ENCRYPTION_KEY`ni HECH QACHON
+bermagan. Tuzatildi — CI-only, sir bo'lmagan qiymatlar qo'shildi (haqiqiy
+DB/Redis ulanish TALAB QILINMAYDI, chunki bu bosqich `app.init()`ni
+chaqirmaydi). Lokal'da aniq shu bosqich qayta ishga tushirilib tasdiqlandi,
+keyin haqiqiy GitHub Actions run bilan qayta tekshirildi.
+
+**CI — IKKINCHI, chuqurroq topilma (yuqoridagi tuzatish orqali ochilgan)**:
+"quality" job doim yiqilgani uchun "integration" job (`needs: quality`)
+HECH QACHON haqiqatan ishlab ko'rmagan edi — yuqoridagi tuzatishdan keyin
+birinchi marta ishga tushganda "e2e" bosqichi HAR BIR spec'da
+`P1000: Authentication failed ... 'bobododa_migrator'` bilan yiqildi.
+Sabab: "Migration test" bosqichi `roles.sql` orqali `bobododa_app`/
+`bobododa_migrator` rollarini `ci_app_pw`/`ci_migrator_pw` parollari bilan
+yaratadi; Postgres rollari KLASTER-GLOBAL va bir xil shared service
+konteyner keyingi "e2e" bosqichida ham ishlatiladi, u yerda har bir
+spec'ning `beforeAll`i `provisionDb()` (`test/support/e2e-infra.ts`)
+chaqiradi — bu ham AYNAN o'sha rol nomlarini, lekin `'app'`/`'migrator'`
+parollari bilan, `IF NOT EXISTS` sharti bilan yaratishga urinadi. Rollar
+ALLAQACHON (birinchi bosqichdan) mavjud bo'lgani uchun yaratish
+o'tkazib yuboriladi va parol ESKI (`ci_app_pw`/`ci_migrator_pw`) qolib
+ketadi — keyin `provisionDb()` o'zining qattiq yozilgan `'app'`/
+`'migrator'` paroli bilan ulanishga urinib, rad javobi oladi. Tuzatish:
+"Migration test" bosqichining parollari `provisionDb()`ning konvensiyasi
+bilan (`'app'`/`'migrator'`) MOSLASHTIRILDI. Izolyatsiyalangan throwaway
+Postgres klasterda AYNAN shu xato reproduksiya qilindi (rol bitta parol
+bilan yaratilib, boshqasi bilan ulanishga urinilganda haqiqiy P1000),
+keyin tuzatish tasdiqlandi. So'ng butun lokal e2e suite (19 spec, real
+Postgres+Redis, CI'ning bosqich tartibi bilan — avval "Migration test",
+keyin "e2e") IKKI MARTA to'liq ishga tushirildi: birinchi marta eski,
+uzoq muddat ishlab turgan (haftadan beri) lokal Redis'ga qarshi ishlatilib
+223/339 test yiqilgani aniqlandi — lekin bu MENING tuzatishimga aloqasi
+YO'Q edi, sabab ESKI Redis'dagi to'plangan holat (BullMQ navbat/rate-limit
+kalitlari) edi, real CI HAR DOIM YANGI Redis konteyner bilan ishlaydi.
+Butunlay YANGI, izolyatsiyalangan Postgres+Redis juftligiga qarshi qayta
+ishga tushirilganda 338/339 (keyin qayta tekshirilganda 339/339) o'tdi —
+qolgan yagona muvaqqat yiqilish `seller-onboarding.e2e-spec.ts`dagi "10 ta
+PARALLEL submit" poyga testi edi, bu allaqachon kod izohida (`jest-e2e.
+setup.ts`) "ba'zan ECONNRESET beradi" deb hujjatlashtirilgan, MENING
+tuzatishimga ALOQASI YO'Q, alohida qayta ishga tushirilganda 22/22 o'tdi.
+
+**Backend Dockerfile — jiddiy topilma tuzatildi**: `backend/`ning o'ziga
+xos `package-lock.json`i YO'Q edi (npm workspaces monorepo, yagona lockfile
+ildizda) — image HAR DOIM `deps` bosqichida yiqilardi. Backend HECH QANDAY
+workspace paketiga (`@bobododa/contracts`) bog'liq emasligi tekshirilgach,
+ALOHIDA, standalone lockfile generatsiya qilindi (`npm install --package-
+lock-only`, izolyatsiyalangan papkada) va `backend/`ga qo'shildi — Dockerfile
+o'zining asl, sodda dizayniga (build konteksti `backend/`ning o'zi) qaytdi.
+Haqiqiy Railway build bilan tasdiqlandi.
+
+**Branch protection**: `main` (GitHub `Lazizdeveloper/Bobo-Doda`, `origin`
+— DIQQAT, `upstream` boshqa hisobga tegishli, TEGILMADI) endi himoyalangan:
+PR majburiy, force-push va o'chirish bloklangan. `required_status_checks`
+ATAYLAB hali sozlanmagan — CI "quality" job'i uzoq vaqt yiqilib kelgani
+uchun (yuqoriga qarang) aniq check nomlarini ishonchli deb bo'lmasdi; endi
+tuzatilgach, keyingi qadam sifatida qo'shilishi mumkin.
+
+**Object storage — ANIQ dalil bilan NOT_REQUIRED**: `filesService.upload`
+(frontend) hamon `disabled()` (FEATURE_DISABLED) qaytaradi — HECH QANDAY
+foydalanuvchi fayli HECH QACHON hech qanday diskka (vaqtinchalik ham)
+yozilmaydi. KYC/xizmat-rasm/chat-biriktirma UI'lari REACHABLE, lekin
+yuklash chaqiruvi har doim toza xato bilan rad etiladi — Railway
+ephemeral disk xavfi shu sababli AMALDA MAVJUD EMAS. Haqiqiy fayl
+yuklash qurilganda (kelajakda) — R2/S3 shart, hozircha emas.
+
+**Monitoring**: Railway'ning o'zining strukturaviy log oqimi (CLI orqali
+`railway logs`) va real-vaqt resurs metrikasi (`railway metrics`) ALLAQACHON
+ishlaydi (tekshirilgan — backend/frontend/Postgres/Redis hammasi past
+yuklama, muammosiz). Sentry yoki shunga o'xshash tashqi xato-kuzatuv
+integratsiyasi HALI YO'Q (`package.json`da tekshirilgan, hech qanday
+`sentry` paketi yo'q) — bu YANGI vendor/byudjet qarori talab qiladi,
+shuning uchun bu bosqichda O'YLAB TOPILMADI ("do not overengineer").
+Railway dashboard'ining o'z resurs-ogohlantirish sozlamalari (CPU/xotira/
+qulab tushish) — dashboard orqali qo'lda yoqilishi kerak, CLI orqali
+sozlanmaydi.
+
+### RAILWAY_INFRA_READY: **PASS**
+### PAYMENT_FREE_PRODUCTION_READY: **PASS** (kod darajasida — real Payme
+kelgach `PAYMENTS_ENABLED=true` + credential'lar qo'shilsa yetarli, kod
+o'zgarishi shart emas)
+### BACKUP_VERIFIED: **PASS** (qo'lda drill) — **avtomatik, jadvalli
+backup HALI dashboard'da yoqilmagan** (aniq keyingi qadam, yuqoriga qarang)
+### FULL_PRODUCTION_READY: **BLOCKED** — real Payme credential va Railway
+dashboard'dagi avtomatik backup sozlamasi kutilmoqda

@@ -2043,3 +2043,112 @@ qayta ishga tushirishi kerak (yuqoridagi 4-qadam eslatmasiga qarang).
 - **`"BOBO&DODA"`/`"Bobo&Doda"` (ampersand bilan) SMS matnida** — rad
   etildi: moderatsiyaga aynan `"BOBODODA"` (bitta so'z) topshirilgan,
   boshqa formatlash tasdiqlangan shablonga mos kelmasligi mumkin.
+
+## 23. Railway production deploy (Bosqich 23)
+
+### Xizmat topologiyasi
+
+```text
+Railway loyihasi "Bobo-Doda" (workspace: Laziz Shakarov's Projects)
+└─ production environment
+   ├─ backend   — Dockerfile (backend/Dockerfile), build konteksti backend/
+   ├─ frontend  — Nixpacks (avtomatik aniqlangan, root next build/next start)
+   ├─ Postgres  — private: postgres.railway.internal:5432
+   └─ Redis     — private: redis.railway.internal:6379
+```
+
+**Backend Dockerfile — MUHIM**: `backend/`ning o'zining alohida
+`package-lock.json`i bor (npm workspaces monorepo bo'lsa ham — backend
+HECH QANDAY workspace paketiga bog'liq EMAS, shuning uchun standalone
+lockfile xavfsiz va to'g'ri). Build konteksti `backend/`ning O'ZI
+(`railway up backend --path-as-root --service backend`), ROOT EMAS —
+aks holda `backend/Dockerfile`ning `COPY package.json package-lock.json`
+qatori muvaffaqiyatsiz bo'ladi.
+
+**Domen porti — DIQQAT**: Railway HAR IKKALA xizmatga o'zining ichki
+`PORT` (odatda `8080`) o'zgaruvchisini avtomatik beradi — bu `EXPOSE`
+Dockerfile'da yozilgan qiymatdan (backend: 4000) YOKI odatiy Next.js
+qiymatidan (frontend: 3000) FARQ QILISHI mumkin. Domen yaratilgandan
+keyin HAQIQIY tinglanayotgan portni loglardan tasdiqlang
+(`railway logs --service <nom>`, "Local: http://localhost:XXXX" qatori)
+va `railway domain update <domen> --port <XXXX> --service <nom>` bilan
+moslashtiring — aks holda 502 "Application failed to respond" (bu holat
+haqiqatan yuz berdi va tuzatildi, ikkala xizmatda ham).
+
+### DB rollarini bootstrap qilish (bir martalik, Railway Postgres'da)
+
+Railway Postgres'ning `DATABASE_URL`/`PGUSER` — superuser (`postgres`)
+darajasida. `bobododa_app`/`bobododa_migrator` (RUNBOOK §3) shu superuser
+orqali BIR MARTA yaratiladi:
+
+```bash
+# 1. SSH tunnel (Railway private DB'ga tashqaridan yagona xavfsiz yo'l —
+#    public proxy YO'Q, faqat shu tunnel; SSH kalit ro'yxatdan o'tgan bo'lishi kerak):
+railway connect postgres --tunnel-only
+# → mahalliy port + superuser parolini chiqaradi
+
+# 2. Rollarni yaratish (roles.sql, RUNBOOK §3):
+psql "postgresql://postgres@127.0.0.1:<port>/railway" \
+  -v app_pw="$(openssl rand -base64 24)" \
+  -v migrator_pw="$(openssl rand -base64 24)" \
+  -v db_name=railway -v app_role=bobododa_app -v migrator_role=bobododa_migrator \
+  -f prisma/sql/roles.sql
+
+# 3. Migratsiya (xuddi shu tunnel orqali, migrator rol bilan):
+DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:<pw>@127.0.0.1:<port>/railway?schema=public" \
+DATABASE_URL="postgresql://bobododa_app:<pw>@127.0.0.1:<port>/railway?schema=public" \
+  npx prisma migrate deploy
+
+# 4. Backend Railway o'zgaruvchilariga PRIVATE domen bilan yozing (tunnel
+#    portiga EMAS — u faqat bir martalik admin ishi uchun):
+#    DATABASE_URL=postgresql://bobododa_app:<pw>@postgres.railway.internal:5432/railway?schema=public
+#    DATABASE_MIGRATION_URL=postgresql://bobododa_migrator:<pw>@postgres.railway.internal:5432/railway?schema=public
+```
+
+**Tekshiruv (haqiqiy Railway DB'da bajarilgan)**: `bobododa_app` bilan
+`SELECT` ✓ ishlaydi, `CREATE TABLE` ✗ "permission denied for schema
+public", `UPDATE ledger_entries` ✗ "permission denied for table
+ledger_entries" — append-only himoya kod darajasida EMAS, DB darajasida
+tasdiqlangan.
+
+### Backup + Restore drill protokoli
+
+```bash
+# Backup — Railway Postgres versiyasiga MOS pg_dump kerak (versiya
+# mos kelmasa pg_dump rad etadi — "aborting because of server version
+# mismatch"; Railway 2026-09 holatida PostgreSQL 18):
+nix-shell -p postgresql_18 --run "pg_dump '<tunnel-URL>' --format=custom --no-owner --no-privileges --file=backup.dump"
+
+# Restore — YANGI, IZOLYATSIYALANGAN DB'ga (production'ga EMAS):
+createdb -h 127.0.0.1 -U <local-superuser> restore_drill
+pg_restore --host=127.0.0.1 --username=<local-superuser> --dbname=restore_drill --no-owner --no-privileges backup.dump
+
+# Tekshirish — schema joriy ekanligi:
+DATABASE_URL=".../restore_drill" DATABASE_MIGRATION_URL=".../restore_drill" npx prisma migrate status
+# → "Database schema is up to date!" kutiladi
+
+# Tozalash:
+dropdb -h 127.0.0.1 -U <local-superuser> restore_drill
+```
+
+**DIQQAT**: bu qo'lda drill — mexanizmning o'zini tasdiqlaydi. Railway'ning
+DOIMIY, avtomatik/jadvalli backup xususiyati FAQAT dashboard orqali
+yoqiladi (Postgres xizmati → Backups) — CLI'da bunday buyruq yo'q
+(`railway --help` bo'yicha tekshirilgan). Bu operator uchun ANIQ,
+qolgan qadam.
+
+### PAYMENTS_ENABLED — real Payme credential kelgunga qadar
+
+```bash
+# Hozirgi xavfsiz production konfiguratsiya:
+railway variable set PAYMENTS_ENABLED=false --service backend
+
+# Real Payme credential kelganda:
+railway variable set PAYMENTS_ENABLED=true --service backend
+railway variable set PAYMENT_PROVIDER=PAYME --service backend
+railway variable set PAYME_MERCHANT_ID=<qiymat> PAYME_LOGIN=<qiymat> PAYME_KEY=<qiymat> PAYME_CHECKOUT_URL=<qiymat> --service backend
+# Keyin: railway up backend --path-as-root --service backend (yoki redeploy)
+```
+
+Kod o'zgarishi SHART EMAS — `payment.module.ts` avtomatik `PaymeProvider`ga
+o'tadi (`PAYMENTS_ENABLED`/`PAYMENT_PROVIDER`ni tekshirib).
