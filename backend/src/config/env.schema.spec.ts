@@ -154,6 +154,27 @@ describe('validateEnv', () => {
     );
   });
 
+  it('PAYMENTS_ENABLED sukut bo’yicha "true"', () => {
+    expect(validateEnv({ ...base }).PAYMENTS_ENABLED).toBe(true);
+  });
+
+  it('Bosqich 23 — production’da PAYMENTS_ENABLED=false + PAYMENT_PROVIDER=TEST (sukut) — o‘tadi (xavfsiz o‘chirilgan)', () => {
+    const env = validateEnv({
+      ...base,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENTS_ENABLED: 'false',
+    });
+    expect(env.PAYMENTS_ENABLED).toBe(false);
+    expect(env.PAYMENT_PROVIDER).toBe('TEST');
+  });
+
+  it('Bosqich 23 — PAYMENTS_ENABLED=false + PAYMENT_PROVIDER=PAYME, credential’lar yo‘q — baribir o‘tadi (PAYME tekshiruvi o‘tkazib yuboriladi)', () => {
+    const env = validateEnv({ ...base, PAYMENTS_ENABLED: 'false', PAYMENT_PROVIDER: 'PAYME' });
+    expect(env.PAYMENTS_ENABLED).toBe(false);
+  });
+
   it('production’da PAYMENT_PROVIDER=PAYME to‘liq credential bilan o’tadi', () => {
     const env = validateEnv({
       ...base,

@@ -9,6 +9,16 @@
 # "Deployment ketma-ketligi") — runtime konteyner faqat `bobododa_app`
 # (kam huquqli) rol bilan ishlaydi, uning `DATABASE_URL`'ida DDL huquqi
 # UMUMAN yo'q (A4).
+#
+# BUILD CONTEXT — `backend/`ning O'ZI (Bosqich 23-deploy tuzatishi):
+# loyiha npm workspaces monorepo, lekin `backend/package-lock.json`
+# ATAYLAB standalone (root lockfile'dan MUSTAQIL, `npm install
+# --package-lock-only` alohida, izolyatsiyalangan papkada generatsiya
+# qilingan) — backend HECH QANDAY workspace paketiga (`@bobododa/
+# contracts`) bog'liq EMAS, shuning uchun bu xavfsiz. Railway'da:
+# `railway up backend --path-as-root --service backend` — `backend/`
+# papkasi MUSTAQIL yuklanadi, shu Dockerfile uning ILDIZIDA topiladi
+# (qo'shimcha "Dockerfile Path" sozlamasi SHART EMAS).
 
 # ---- deps ----------------------------------------------------------------
 FROM node:22-alpine AS deps

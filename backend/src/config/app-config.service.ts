@@ -124,6 +124,11 @@ export class AppConfigService {
     };
   }
 
+  /** Bosqich 23 — real Payme credential hali yo'q bo'lsa, feature butunlay o'chiriladi (`false`, `PAYOUTS_ENABLED` bilan bir xil falsafa). */
+  get paymentsEnabled(): boolean {
+    return this.get('PAYMENTS_ENABLED');
+  }
+
   /** Bosqich 12 — Payme Merchant API. `PAYMENT_PROVIDER=PAYME` bo'lsa hammasi majburiy (env.schema.ts). */
   get payme(): { merchantId: string | undefined; login: string | undefined; key: string | undefined; checkoutUrl: string | undefined } {
     return {

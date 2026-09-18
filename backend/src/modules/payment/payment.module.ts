@@ -5,6 +5,7 @@ import { GuardsModule } from '@/common/guards/guards.module';
 import { AppConfigService } from '@/config/app-config.service';
 import { PAYMENT_PROVIDER } from './providers/payment-provider.interface';
 import { TestPaymentProvider } from './providers/test/test-payment.provider';
+import { DisabledPaymentProvider } from './providers/disabled/disabled-payment.provider';
 import { PaymeProvider } from './providers/payme/payme.provider';
 import { PaymeMerchantService } from './providers/payme/payme-merchant.service';
 import { PaymeMerchantController } from './providers/payme/payme-merchant.controller';
@@ -41,6 +42,10 @@ const DEV_ONLY_TEST_SECRET = 'test-only-insecure-secret-change-me';
       provide: PAYME_MERCHANT_CONFIG,
       inject: [AppConfigService],
       useFactory: (config: AppConfigService): PaymeMerchantConfig | null => {
+        // Bosqich 23 — `PAYMENTS_ENABLED=false` bo'lsa Payme JSON-RPC
+        // endpoint ham "mavjud emas" ko'rsatishi kerak (butun to'lov
+        // gateway'i o'chirilgan holatda).
+        if (!config.paymentsEnabled) return null;
         if (config.payment.provider !== 'PAYME') return null;
         const { merchantId, login, key, checkoutUrl } = config.payme;
         if (!merchantId || !login || !key || !checkoutUrl) return null;
@@ -51,6 +56,12 @@ const DEV_ONLY_TEST_SECRET = 'test-only-insecure-secret-change-me';
       provide: PAYMENT_PROVIDER,
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => {
+        // Bosqich 23 — real Payme credential hali tanlanmagan bo'lsa,
+        // feature to'liq o'chiriladi (`PAYOUTS_ENABLED` bilan bir xil
+        // falsafa) — `PAYMENT_PROVIDER`/`NODE_ENV`dan qat'i nazar.
+        if (!config.paymentsEnabled) {
+          return new DisabledPaymentProvider();
+        }
         const { provider, testWebhookSecret } = config.payment;
         if (provider === 'TEST') {
           // Ikkinchi qatlam himoya (birinchisi — `env.schema.ts` Zod

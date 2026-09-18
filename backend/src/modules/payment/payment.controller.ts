@@ -9,6 +9,7 @@ import { AccountStatusGuard } from '@/common/guards/account-status.guard';
 import { AuditService } from '@/common/audit/audit.service';
 import { IdempotencyService } from '@/common/idempotency/idempotency.service';
 import { DomainError } from '@/common/errors/domain-error';
+import { AppConfigService } from '@/config/app-config.service';
 import { PaymentService } from './payment.service';
 import { PaymentResponseDto, toPaymentResponseDto } from './dto/payment-response.dto';
 import { CREATE_PAYMENT_ENDPOINT, PAYMENT_CREATE_STALE_AFTER_MS } from './payment.constants';
@@ -31,6 +32,7 @@ export class PaymentController {
     private readonly payments: PaymentService,
     private readonly idempotency: IdempotencyService,
     private readonly audit: AuditService,
+    private readonly config: AppConfigService,
   ) {}
 
   @Post()
@@ -42,6 +44,13 @@ export class PaymentController {
     @Param('contractId') contractId: string,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
   ): Promise<PaymentResponseDto> {
+    // Bosqich 23 — real Payme credential hali yo'q bo'lsa, feature to'liq
+    // o'chirilgan: hech qanday DB yozuv/idempotency rezervatsiya
+    // URINILMAYDI (mavjud moliyaviy tarix TEGILMAYDI), aniq xato darhol
+    // qaytadi (`SellerPayoutController.create()` bilan bir xil naqsh).
+    if (!this.config.paymentsEnabled) {
+      throw new DomainError('FEATURE_DISABLED', 'To‘lov qabul qilish hozircha o‘chirilgan');
+    }
     if (!idempotencyKey) {
       throw new DomainError('IDEMPOTENCY_KEY_REQUIRED', 'Idempotency-Key header majburiy');
     }

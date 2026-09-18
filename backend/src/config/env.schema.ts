@@ -121,12 +121,21 @@ export const envSchema = z
       .regex(/^[0-9a-fA-F]{64}$/, 'STAFF_TOTP_ENCRYPTION_KEY 64 ta hex belgi (32 bayt) bo‘lishi shart'),
 
     // ── To'lov gateway'lari (Bosqich 5) ────────────────────────────────
-    // `PAYMENT_PROVIDER` — provider registry kaliti (`payment.module.ts`).
-    // Real PAYME/CLICK protokoli hali IMPLEMENT QILINMAGAN (bo'lim 7: repo/
-    // docs'da signature/callback spec yo'q, o'ylab topilmaydi) — ularni
-    // tanlash hozircha HAR QANDAY muhitda boot vaqtida rad etiladi
+    // Bosqich 23 (production launch) — `PAYOUTS_ENABLED` bilan BIR XIL
+    // naqsh: Payme haqiqiy credential hali mavjud emas bo'lsa, production
+    // "soxta TEST provider" bilan emas, ATAYLAB `PAYMENTS_ENABLED=false`
+    // bilan ishga tushishi mumkin (`payment.module.ts` HAR DOIM
+    // `DisabledPaymentProvider` qaytaradi, `PAYMENT_PROVIDER`/`NODE_ENV`dan
+    // qat'i nazar). Sukut `true` — mavjud dev/test oqimlari o'zgarishsiz.
+    PAYMENTS_ENABLED: booleanish.default('true'),
+    // `PAYMENT_PROVIDER` — provider registry kaliti (`payment.module.ts`),
+    // FAQAT `PAYMENTS_ENABLED=true` bo'lsa ma'noga ega. Real PAYME/CLICK
+    // protokoli hali IMPLEMENT QILINMAGAN (bo'lim 7: repo/docs'da signature/
+    // callback spec yo'q, o'ylab topilmaydi) — ularni tanlash hozircha
+    // HAR QANDAY muhitda boot vaqtida rad etiladi
     // (`assertPaymentProviderSupported`). `TEST` — faqat dev/test uchun,
-    // production'da pastdagi `superRefine` fail-fast qiladi.
+    // production'da (`PAYMENTS_ENABLED=true` bo'lsa) pastdagi `superRefine`
+    // fail-fast qiladi.
     PAYMENT_PROVIDER: z.enum(['TEST', 'PAYME', 'CLICK']).default('TEST'),
     // Test provider HMAC siri — faqat dev/test. Berilmasa dev-only sukut
     // qiymat ishlatiladi (`payment.module.ts`) — production'da TEST provider
@@ -272,12 +281,16 @@ export const envSchema = z
       // (`payment.module.ts` ikkalasini ham har doim rad etadi) — natijada
       // hozircha production HECH QANDAY provider bilan ko'tarilolmaydi, bu
       // ATAYLAB: real provider ulanmaguncha to'lov qabul qiluvchi prod
-      // muhit ishga tushmasligi kerak.
-      if (env.PAYMENT_PROVIDER === 'TEST') {
+      // muhit ishga tushmasligi kerak. Bosqich 23 — `PAYMENTS_ENABLED=false`
+      // bo'lsa bu tekshiruv O'TKAZIB YUBORILADI: `PAYMENT_PROVIDER` shu
+      // holatda umuman ishlatilmaydi (`payment.module.ts` har doim
+      // `DisabledPaymentProvider` qaytaradi, `PAYOUTS_ENABLED` bilan bir
+      // xil falsafa) — sukut `TEST` qiymatini o'zgartirish shart emas.
+      if (env.PAYMENTS_ENABLED && env.PAYMENT_PROVIDER === 'TEST') {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['PAYMENT_PROVIDER'],
-          message: "production'da PAYMENT_PROVIDER=TEST IMKONSIZ (fail closed)",
+          message: "production'da PAYMENT_PROVIDER=TEST IMKONSIZ (fail closed) — yoki PAYMENTS_ENABLED=false qo'ying",
         });
       }
       // OTP policy audit — user-facing OTP FAQAT SMS orqali yuborilishi
@@ -307,8 +320,10 @@ export const envSchema = z
     // sandbox'ga ulanish uchun to'liq credential kerak) 4 ta maydon HAM
     // MAJBURIY. Ikkinchi qatlam himoya — `payment.module.ts` factory'da
     // ham qayta tekshiriladi (F1/ADR-03 bilan bir xil falsafa: kritik
-    // fail-closed tekshiruv bitta joyga ishonib qolmaydi).
-    if (env.PAYMENT_PROVIDER === 'PAYME') {
+    // fail-closed tekshiruv bitta joyga ishonib qolmaydi). `PAYMENTS_
+    // ENABLED=false` bo'lsa bu HAM o'tkazib yuboriladi — yuqoridagi
+    // izohga qarang.
+    if (env.PAYMENTS_ENABLED && env.PAYMENT_PROVIDER === 'PAYME') {
       const required: (keyof typeof env)[] = ['PAYME_MERCHANT_ID', 'PAYME_LOGIN', 'PAYME_KEY', 'PAYME_CHECKOUT_URL'];
       for (const key of required) {
         if (!env[key]) {

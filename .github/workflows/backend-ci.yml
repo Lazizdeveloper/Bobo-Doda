@@ -28,11 +28,21 @@ permissions:
 
 # Monorepo (npm workspaces): install va build ILDIZDAN. Dummy DB URL'lar —
 # schema `directUrl` env talab qiladi; `prisma validate/generate` hech narsaga
-# ULANMAYDI.
+# ULANMAYDI. JWT/TOTP — Bosqich 23-audit tuzatishi: `generate:contracts`
+# (`emit-openapi.ts`) `NestFactory.create(AppModule)` chaqiradi, bu esa
+# `ConfigModule.forRoot()`ning Zod env validatsiyasini ishga tushiradi
+# (`app.init()` EMAS — DB/Redis ULANMAYDI, faqat MAJBURIY maydonlar
+# formati tekshiriladi). Bu uchtasi bo'lmasa "quality" job HAR DOIM
+# yiqilardi — aynan shu sabab bilan (haqiqiy CI loglarida tasdiqlangan,
+# `STAFF_TOTP_ENCRYPTION_KEY: Required`). Qiymatlar sir EMAS — faqat CI
+# formatini qondirish uchun, hech qanday real muhitda ishlatilmaydi.
 env:
   DATABASE_URL: postgresql://bobododa_app:app@localhost:5432/bobododa?schema=public
   DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@localhost:5432/bobododa?schema=public
   REDIS_URL: redis://localhost:6379
+  JWT_ACCESS_SECRET: ci-quality-job-dummy-access-secret-32
+  JWT_STAFF_ACCESS_SECRET: ci-quality-job-dummy-staff-secret-32
+  STAFF_TOTP_ENCRYPTION_KEY: '2222222222222222222222222222222222222222222222222222222222222222'
 
 jobs:
   quality:
@@ -185,6 +195,19 @@ jobs:
             exit 1
           fi
           echo "OK: to'liq to'g'ri production config (Payme + PlayMobile + payouts o'chirilgan) bilan boot MUVAFFAQIYATLI"
+          # Bosqich 23 — real Payme credential hali yo'q bo'lgan production
+          # launch uchun: PAYMENTS_ENABLED=false (PAYMENT_PROVIDER=TEST
+          # sukutda qolsa ham) production'da MUVAFFAQIYATLI ko'tarilishi
+          # SHART — "soxta TEST fallback" emas, ATAYLAB xavfsiz o'chirilgan
+          # holat (PAYOUTS_ENABLED bilan bir xil falsafa).
+          if ! PAYMENTS_ENABLED=false \
+             SMS_PROVIDER=PLAYMOBILE PLAYMOBILE_API_URL=https://send.example.uz/broker-api PLAYMOBILE_LOGIN=ci-login PLAYMOBILE_PASSWORD=ci-password PLAYMOBILE_SENDER=BoboDoda \
+             PAYOUTS_ENABLED=false \
+             $BOOT_CMD; then
+            echo "::error::PAYMENTS_ENABLED=false bilan boot MUVAFFAQIYATSIZ bo'ldi — xavfsiz to'lovsiz launch buzilgan"
+            exit 1
+          fi
+          echo "OK: PAYMENTS_ENABLED=false (Payme credentialsiz) bilan boot MUVAFFAQIYATLI — xavfsiz to'lovsiz launch"
 
       - name: e2e — health + DB-role append-only (A4)
         run: npm run test:e2e --workspace backend
