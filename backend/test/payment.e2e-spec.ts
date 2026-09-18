@@ -203,15 +203,28 @@ describe('Payment (e2e)', () => {
       });
   });
 
-  t('10 ta parallel bir xil key — faqat BITTASI muvaffaqiyatli, DB’da bitta Payment', async () => {
+  t('10 ta parallel bir xil key — faqat BITTA Payment yaratiladi, har bir javob 200 (replay) yoki 409 (conflict)', async () => {
     const { contractId, buyer } = await createActiveContract();
     const results = await Promise.all(
       Array.from({ length: 10 }, () => createPaymentReq(buyer, contractId, 'idem-parallel')),
     );
     const succeeded = results.filter((r) => r.status === 200);
     const conflicted = results.filter((r) => r.status === 409);
-    expect(succeeded).toHaveLength(1);
-    expect(conflicted).toHaveLength(9);
+    // 10ta so'rov orasida haqiqiy poyga bor: `IdempotencyService.replay()`
+    // hali yakunlanmagan (statusCode === null) yozuvga 409 CONFLICT qaytaradi,
+    // LEKIN original ALLAQACHON tugagan bo'lsa (statusCode yozilgan) — bu
+    // ATAYLAB xavfsiz REPLAY (200, xuddi shu id) qiladi, chunki idempotentlik
+    // aynan shu uchun bor: qayta urinish har doim xavfsiz. Nechta so'rov
+    // "hali ishlov berilmoqda" oynasiga (409) tushishi va nechtasi tugagan
+    // yozuvni topib REPLAY qilishi (200) MASHINA TEZLIGIGA bog'liq — lokal
+    // odatda 1/9, sekinroq CI runner'da original tezroq tugab ko'proq so'rov
+    // REPLAY oynasiga tushishi mumkin (bu XATO EMAS). Qat'iy, vaqtga
+    // bog'liq bo'lmagan invariant: HAR bir so'rov 200 yoki 409 dan biri,
+    // barcha 200'lar BIR XIL id (dublikat to'lov YO'Q), barcha 409'lar
+    // aynan IDEMPOTENCY_CONFLICT.
+    expect(succeeded.length + conflicted.length).toBe(10);
+    expect(succeeded.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(succeeded.map((r) => r.body.id)).size).toBe(1);
     expect(conflicted.every((r) => r.body.code === 'IDEMPOTENCY_CONFLICT')).toBe(true);
 
     const count = await db!.payment.count({ where: { contractId } });

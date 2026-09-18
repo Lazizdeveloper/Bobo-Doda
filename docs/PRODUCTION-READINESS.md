@@ -805,6 +805,30 @@ qolgan yagona muvaqqat yiqilish `seller-onboarding.e2e-spec.ts`dagi "10 ta
 PARALLEL submit" poyga testi edi, bu allaqachon kod izohida (`jest-e2e.
 setup.ts`) "ba'zan ECONNRESET beradi" deb hujjatlashtirilgan, MENING
 tuzatishimga ALOQASI YO'Q, alohida qayta ishga tushirilganda 22/22 o'tdi.
+Push qilingach haqiqiy GitHub Actions run (35369445037) BOSHQA bitta test
+bilan yiqildi: `payment.e2e-spec.ts`dagi "10 ta parallel bir xil key"
+testi — bu ESA haqiqiy, uchinchi, mustaqil topilma bo'lib chiqdi (flaky
+emas): `IdempotencyService.replay()` (`src/common/idempotency/
+idempotency.service.ts`) ATAYLAB xavfsiz — agar original so'rov ALLAQACHON
+tugagan bo'lsa (statusCode yozilgan), keyingi bir xil kalitli so'rov 409
+CONFLICT emas, 200 REPLAY (xuddi shu id bilan xavfsiz keshlangan javob)
+qaytaradi; faqat original HALI tugamagan (statusCode === null) bo'lsa 409
+qaytadi. Test esa qat'iy `succeeded.toHaveLength(1)` / `conflicted.
+toHaveLength(9)` talab qilardi — bu faqat original JUDA tez tugasa (lokal
+mashinada odatiy holat) to'g'ri, sekinroq/boshqacha rejalashtirilgan CI
+runner'da esa original ko'proq so'rov yetib kelgunicha ALLAQACHON tugab,
+ko'pchiligi 409 o'rniga xavfsiz 200 REPLAY oladi (CI run'da 7/10 shunday
+bo'ldi — HAMMASI bir xil Payment id bilan, DUBLIKAT TO'LOV YO'Q). Bu
+ilova mantig'ida XATO EMAS (moliyaviy invariant — bitta Payment qatori —
+har doim saqlangan), balki TEST'ning o'zida vaqtga bog'liq, haddan tashqari
+qat'iy assertsiya edi. Tuzatildi: assertsiya endi vaqtdan mustaqil
+invariant'larni tekshiradi — har bir javob 200 yoki 409 (10tasi ham),
+kamida bittasi 200, BARCHA 200'lar BIR XIL id (dublikat yo'q), BARCHA
+409'lar aynan `IDEMPOTENCY_CONFLICT`, va DB'da aniq bitta `Payment` qatori
+— moliyaviy kafolatning o'zi TEKSHIRUV DOIRASIDAN TUSHIB QOLMAYDI, faqat
+vaqtga bog'liq bo'lgan qism olib tashlandi. Lokal'da izolyatsiyalangan
+muhitda 5 marta ketma-ket + to'liq fayl (24/24) tasdiqlandi, typecheck/
+lint toza.
 
 **Backend Dockerfile — jiddiy topilma tuzatildi**: `backend/`ning o'ziga
 xos `package-lock.json`i YO'Q edi (npm workspaces monorepo, yagona lockfile
