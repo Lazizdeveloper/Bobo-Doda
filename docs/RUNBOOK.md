@@ -2152,3 +2152,72 @@ railway variable set PAYME_MERCHANT_ID=<qiymat> PAYME_LOGIN=<qiymat> PAYME_KEY=<
 
 Kod o'zgarishi SHART EMAS — `payment.module.ts` avtomatik `PaymeProvider`ga
 o'tadi (`PAYMENTS_ENABLED`/`PAYMENT_PROVIDER`ni tekshirib).
+
+## 24. Domen bo'linishi (Bosqich 23) — bobododa.uz / app / api
+
+### Egalik
+- **Vercel** (`bobo-doda` loyihasi, `prj_IuWC7zsb2aGnTeGe0P0SLIm1LaZ1`) —
+  FAQAT `bobododa.uz` + `www.bobododa.uz` (landing + huquqiy/FAQ/yordam).
+- **Railway** (`Bobo-Doda` loyihasi) — `frontend` (`app.bobododa.uz`),
+  `backend` (`api.bobododa.uz`), Postgres, Redis — HAMMASI shu yerda.
+- **DNS** — AHOST (`rdns1/2/3.ahost.uz`), Vercel/Railway nazorat qilmaydi.
+
+### Railway custom domain qo'shish (bir martalik, boshqa domen kerak bo'lsa)
+```bash
+railway domain <sub>.bobododa.uz --service <frontend|backend> --port 8080
+# Chiqargan CNAME + TXT (_railway-verify.<sub>) yozuvlarini AHOST'da qo'shing.
+# TXT — FAQAT bir martalik egalik tasdiqlash uchun; tasdiqlangandan keyin
+# saqlansa ham, o'chirilsa ham keyingi ishlashga ta'sir qilmaydi.
+railway domain status <sub>.bobododa.uz --service <nom>   # Verified: yes / Certificate: VALID kutiladi
+```
+DIQQAT — AHOST'da ba'zan yangi TXT yozuv authoritative nameserver'ning
+BARCHA tugunlarida bir vaqtda ko'rinmasligi mumkin (klaster ichi kechikish):
+`dig TXT ... @rdns1.ahost.uz` bo'sh qaytarsa ham, Railway'ning o'zi allaqachon
+`Verified: yes` deb belgilashi mumkin — HAQIQIY tekshiruv har doim `curl`
+(bypass'siz) bilan TLS sertifikatini tekshirish (`subject: CN=<domen>` mos
+kelishi kerak, xatosiz).
+
+### `NEXT_PUBLIC_API_URL` o'zgartirilganda — MUHIM
+Bu BUILD VAQTIDA o'qiladigan qiymat (Next.js `NEXT_PUBLIC_*` konvensiyasi).
+```bash
+railway variable set NEXT_PUBLIC_API_URL=https://api.bobododa.uz --service frontend --skip-deploys
+railway redeploy --service frontend --from-source --yes   # --from-source SHART!
+```
+`--from-source`siz oddiy `railway redeploy` faqat ESKI build image'ni qayta
+ishga tushiradi — yangi qiymat JS bundle'ga hech qachon kirmaydi (backend'dagi
+`CORS_ORIGINS` kabi RUNTIME o'zgaruvchilar uchun esa oddiy redeploy yetarli).
+
+### Vercel landing-only deploy
+```bash
+vercel link --project bobo-doda --scope shakarovlaziz243-5791s-projects  # bir martalik
+vercel deploy --prod --yes   # mavjud loyihaga, YANGI loyiha yaratmaydi
+```
+`.vercelignore` MAVJUD — mavjud bo'lgach `.gitignore` E'TIBORGA OLINMAYDI,
+shuning uchun `node_modules/`, `.next*/`, `backend/node_modules` va h.k.
+BARCHASI shu faylda ANIQ yozilgan bo'lishi kerak (aks holda 100MB fayl
+chegarasidan yiqiladi — bir marta shunday bo'lgan, `.next` webpack cache
+fayli 100MB dan katta edi).
+
+Landing-only marshrut cheklovi (`next.config.mjs`ning `redirects()`)
+`process.env.VERCEL === "1"` bilan avtomatik ishlaydi — Vercel'ning o'zi bu
+flag'ni har bir build'ga beradi, qo'shimcha sozlash SHART EMAS. Railway'dagi
+build bu flag'ga ega EMAS, shuning uchun xuddi shu kod Railway'da hech qanday
+redirect qo'shmaydi.
+
+### Rollback
+**Vercel landing** — oldingi deploy'ga qaytarish:
+```bash
+vercel ls bobo-doda --prod          # oldingi deployment ID/URL toping
+vercel promote <oldingi-deployment-url>   # yoki dashboard: Deployments → ... → Promote to Production
+```
+**Railway frontend/backend** — oldingi (ishlaydigan) deployment'ga qaytarish:
+```bash
+railway status --json   # activeDeployments ro'yxatidan oldingi ID
+# Dashboard orqali: Deployments → oldingi qatorda "Redeploy"
+```
+**DNS** — `app`/`api` CNAME yozuvlarini AHOST'dan o'chirish (Railway'dagi
+custom domain'lar ham `railway domain delete` bilan olib tashlanadi) —
+xom Railway domenlar (`*.up.railway.app`) HAR DOIM ishlab turadi, cutover
+bekor qilinsa ham foydalanuvchilar uchun zaxira yo'l bo'lib qoladi.
+CORS_ORIGINS'da ikkalasi (custom + xom domen) ham saqlanganidan, xom domenga
+qaytish CORS o'zgarishini talab qilmaydi.

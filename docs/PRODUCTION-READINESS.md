@@ -919,3 +919,77 @@ job (lint/typecheck/unit/contracts) esa TO'LIQ, barqaror YASHIL.
 dashboard'dagi avtomatik backup sozlamasi kutilmoqda; CI "integration"
 job'idagi qoldiq P2 topilma launch'ni BLOKLAMAYDI (production xavfsizligiga
 ta'siri yo'q), lekin CI ishonchliligi uchun ANIQ ochiq qolmoqda
+
+## 23. Bosqich 23 — Domen bo'linishi: bobododa.uz (landing) / app+api (Railway)
+
+**Muammo (P0, endi YOPILGAN)**: `bobododa.uz` (Vercel) 39 kunlik, real backend'ga
+ULANMAGAN, to'liq ilovaning (kabinet sahifalari bilan birga) eski nusxasini
+ko'rsatib turardi — `NEXT_PUBLIC_API_URL` sozlanmagan, `connect-src 'self'`
+faqat, haqiqiy foydalanuvchi login/ro'yxatdan o'tishga urinsa So'rovlar
+jimgina muvaffaqiyatsiz bo'lardi (backend yo'q, faqat statik HTML).
+
+**Yakuniy arxitektura (real, ishga tushirilgan va tekshirilgan)**:
+- `https://bobododa.uz` — Vercel, FAQAT landing + huquqiy/FAQ/yordam sahifalari
+  (`/`, `/oferta`, `/maxfiylik`, `/shartlar`, `/savol-javob`, `/yordam-markazi`).
+  Backend'ga BOG'LIQ EMAS (`NEXT_PUBLIC_API_URL` Vercel'da sozlanmagan,
+  `connect-src 'self'` — ataylab).
+- `https://www.bobododa.uz` — `bobododa.uz`ga 308 permanent redirect
+  (host-based, `next.config.mjs`).
+- `https://app.bobododa.uz` — Railway `frontend` xizmati (custom domain),
+  haqiqiy backend'ga ulangan (`NEXT_PUBLIC_API_URL=https://api.bobododa.uz`,
+  build vaqtida sozlangan). Barcha kabinet/auth marshrutlari (`/kirish`,
+  `/royxatdan-otish`, `/parolni-unutdim`, `/rol-tanlash`, `/mutaxassis/*`,
+  `/xaridor/*`, `/admin/*`, `/rahbariyat/*`, `/tolov/*`) shu yerda.
+- `https://api.bobododa.uz` — Railway `backend` xizmati (custom domain).
+- Bitta kod, ikki deploy: `bobododa.uz` (Vercel)dagi marshrut redirect'lari
+  `next.config.mjs`'da `process.env.VERCEL === "1"` (Vercel platformasi
+  AVTOMATIK beradigan flag, qo'lda sozlash shart emas) bilan shartlangan —
+  Railway'dagi (`app.bobododa.uz`) xuddi shu kod bazasi bu shartga tushmaydi
+  va barcha marshrutlarni to'g'ridan-to'g'ri ko'rsatadi. `app/robots.ts` ham
+  xuddi shu flag bilan: Vercel'da ochiq sahifalarni indekslashga ruxsat
+  beradi, Railway'da (autentifikatsiyalangan ilova) butunlay yopadi.
+
+**DNS (AHOST, `bobododa.uz` zonasi)**:
+```
+app  CNAME  q8qeuwkx.up.railway.app
+api  CNAME  cc3zmfhi.up.railway.app
+_railway-verify.app  TXT  (bir martalik egalik tasdiqlash — Railway
+                            tasdiqlagandan keyin ahamiyati yo'q)
+_railway-verify.api  TXT  (xuddi shunday)
+```
+`@` (A → 76.76.21.21) va `www` (Vercel'ga) — TEGILMADI. MX/SPF/DKIM/DMARC —
+TEGILMADI.
+
+**TLS**: ikkalasi ham Railway orqali Let's Encrypt'dan avtomatik, haqiqiy
+(wildcard emas) sertifikat oldi — `curl` bilan (bypass'siz) tasdiqlangan:
+`app.bobododa.uz` → `CN=app.bobododa.uz`, `api.bobododa.uz` →
+`CN=api.bobododa.uz`, ikkalasi ham `subjectAltName` mos keladi.
+
+**CORS**: backend `CORS_ORIGINS` endi `https://app.bobododa.uz` VA eski xom
+Railway domenini (`https://frontend-production-25bc.up.railway.app`) ikkalasini
+ham o'z ichiga oladi (fallback — bo'lim 17: xom domenlar operatsion zaxira
+sifatida qoldiriladi). Ikkalasi ham HAQIQIY CORS preflight bilan tekshirildi
+(`Access-Control-Allow-Origin` javobda to'g'ri qaytadi). Wildcard EMAS,
+credentials bilan.
+
+**To'lov xavfsizligi — o'zgarmagan**: `PAYMENTS_ENABLED=false`,
+`PAYOUTS_ENABLED=false`, `NODE_ENV=production` — bu bosqichda TEGILMADI,
+qayta tasdiqlandi.
+
+**Muhim operatsion eslatma**: `NEXT_PUBLIC_API_URL` BUILD VAQTIDA
+o'qiladigan qiymat — `railway variable set` bilan o'zgartirilgach oddiy
+`railway redeploy` YETARLI EMAS (eski build image'ni faqat qayta ishga
+tushiradi). `railway redeploy --from-source` kerak — bu haqiqiy qayta
+build qiladi. Backend uchun (`CORS_ORIGINS` — runtime o'zgaruvchi) oddiy
+redeploy yetarli edi.
+
+**Tasdiqlash**: `bobododa.uz/kirish` va barcha boshqa ilova marshrutlari
+→ `app.bobododa.uz`ga 308 (query string saqlanadi), `www.bobododa.uz` →
+`bobododa.uz`, huquqiy sahifalar joyida qoladi, canonical/OG/Twitter/
+robots.txt/sitemap.xml barchasi haqiqiy production domenida tekshirildi,
+`app.bobododa.uz`ning JS bundle'ida FAQAT `https://api.bobododa.uz`
+uchraydi (eski xom Railway URL yoki localhost — YO'Q), `api.bobododa.uz/
+health/ready` → `db:true, redis:true`.
+
+### DOMAIN_CUTOVER_COMPLETE: **YES**
+### P0 (eski, uzilgan Vercel ilovasi): **YOPILDI**
