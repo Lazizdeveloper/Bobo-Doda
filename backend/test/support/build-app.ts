@@ -41,5 +41,21 @@ export async function buildTestApp(
   }
 
   await app.init();
+
+  // Bosqich 23 — Node http.Server sukut `keepAliveTimeout` (5s): agar
+  // BIR NECHTA testdan qolgan bo'sh (idle) keep-alive socket shu vaqt
+  // ichida qayta ishlatilmasa, SERVER uni faol yopadi. Uzoq, ketma-ket
+  // `--runInBand` fayl ichida (yoki 10x chinakam PARALLEL burst — masalan
+  // `seller-onboarding.e2e-spec.ts`dagi "10 ta PARALLEL submit") mijoz
+  // (supertest/Node Agent) socket'ni AYNAN shu yopilish daqiqasida qayta
+  // ishlatishga urinishi mumkin — klassik `ECONNRESET` poyga holati (real
+  // GitHub Actions runner'da kuzatilgan, real Postgres 16+Redis
+  // integration job'ida). Bu FAQAT test transporti — production'da
+  // `app.listen()` haqiqiy tarmoq ulanishlari bilan ishlaydi, bu yerdagi
+  // qiymat production konfiguratsiyasiga ta'sir qilmaydi.
+  const server = app.getHttpServer() as { keepAliveTimeout?: number; headersTimeout?: number };
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
+
   return app;
 }
