@@ -26,7 +26,11 @@ export class HealthController {
   @Get('live')
   @ApiOkResponse({ type: LivenessDto })
   live(): LivenessDto {
-    return { status: 'ok', uptimeSeconds: Math.round(process.uptime()) };
+    return {
+      status: 'ok',
+      uptimeSeconds: Math.round(process.uptime()),
+      commit: process.env.GIT_COMMIT_SHA,
+    };
   }
 
   @Get('ready')
