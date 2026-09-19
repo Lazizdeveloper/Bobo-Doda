@@ -5314,6 +5314,10 @@
           "uptimeSeconds": {
             "type": "number",
             "example": 42
+          },
+          "commit": {
+            "type": "string",
+            "example": "67e1191"
           }
         },
         "required": [

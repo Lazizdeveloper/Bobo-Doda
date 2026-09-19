@@ -1997,6 +1997,8 @@ export interface components {
             status: string;
             /** @example 42 */
             uptimeSeconds: number;
+            /** @example 67e1191 */
+            commit?: string;
         };
         ReadinessDto: {
             /** @example ok */
