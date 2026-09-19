@@ -292,24 +292,29 @@ describe('Seller onboarding + Service lifecycle (e2e)', () => {
     const session = await loginNewUser(app!, sms, 'SELLER');
     const payload = { legalName: 'Parallel Legal', displayName: 'Parallel Display' };
     // 10 chinakam PARALLEL yozuv (`$transaction`) — to'liq test-jarayoni
-    // og'ir yuklangan paytda (uzoq e2e suite oxiri) supertest'ning
-    // in-process HTTP transporti bir martalik `ECONNRESET` berishi mumkin
-    // (bu — transport shovqini, DB constraint natijasi EMAS: izolyatsiyada
-    // va suite boshida bu hech qachon sodir bo'lmaydi). Shu SPETSIFIK
-    // transport xatosi uchun bitta qayta urinish — asosiy tasdiq (aniq 1
-    // muvaffaqiyat + 9 deterministik konflikt) qattiq qolaveradi.
-    async function submitWithRetry(): Promise<request.Response> {
+    // og'ir yuklangan paytda (uzoq e2e suite oxiri, YOKI resurs cheklangan
+    // CI runner — GitHub Actions'ning standart 2 vCPU runner'ida real
+    // ishga tushirishda bitta emas, BIR NECHTA so'rov ketma-ket
+    // `ECONNRESET` olishi kuzatildi) supertest'ning in-process HTTP
+    // transporti `ECONNRESET` berishi mumkin (bu — transport shovqini, DB
+    // constraint natijasi EMAS: izolyatsiyada va suite boshida bu hech
+    // qachon sodir bo'lmaydi). Qayta urinish XAVFSIZ — bu endpoint CAS
+    // (`sellerApplication`dagi unique constraint) orqali tabiiy idempotent:
+    // asl so'rov serverga YETMAGAN bo'lsa qayta urinish yangi urinish,
+    // YETGAN-YU javob yo'qolgan bo'lsa qayta urinish DETERMINISTIK 409
+    // (`SELLER_APPLICATION_ALREADY_PENDING`) oladi — hech qachon ikkinchi
+    // qator yaratmaydi. Shu SPETSIFIK transport xatosi uchun bir necha
+    // marta qayta urinamiz — asosiy tasdiq (aniq 1 muvaffaqiyat + 9
+    // deterministik konflikt) qattiq qolaveradi.
+    async function submitWithRetry(attempt = 1): Promise<request.Response> {
       try {
         return await request(app!.getHttpServer())
           .post('/api/v1/me/seller-application')
           .set('Authorization', `Bearer ${session.accessToken}`)
           .send(payload);
       } catch (err) {
-        if (err instanceof Error && /ECONNRESET/.test(err.message)) {
-          return request(app!.getHttpServer())
-            .post('/api/v1/me/seller-application')
-            .set('Authorization', `Bearer ${session.accessToken}`)
-            .send(payload);
+        if (err instanceof Error && /ECONNRESET/.test(err.message) && attempt < 4) {
+          return submitWithRetry(attempt + 1);
         }
         throw err;
       }
