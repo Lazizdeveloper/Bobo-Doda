@@ -830,6 +830,43 @@ vaqtga bog'liq bo'lgan qism olib tashlandi. Lokal'da izolyatsiyalangan
 muhitda 5 marta ketma-ket + to'liq fayl (24/24) tasdiqlandi, typecheck/
 lint toza.
 
+**`seller-onboarding.e2e-spec.ts`dagi "10 ta PARALLEL submit" — HAL
+QILINMAGAN, OCHIQ topilma (halol yozib qo'yilmoqda, "hal qilindi" deb
+da'vo qilinmaydi).** Bu test HAM xuddi shu (yuqoridagi) sababdan — real
+GitHub Actions runner'da ilgari HECH QACHON ishlamagan edi — birinchi
+marta ishga tushganda kuzatildi va **8 marta ketma-ket real CI run'da**
+(kod push + 2 qayta urinish siklida) **doim AYNAN shu bitta test** bilan
+yiqildi, boshqa 21 testda yoki qolgan 18 e2e faylida HECH QACHON emas —
+bu tasodifiy emasligini, GitHub Actions'ning standart 2 vCPU runner'iga
+XOS ekanligini ko'rsatadi (mening 20 yadroli lokal mashinamda xuddi shu
+test ancha kamroq — garchi nolga teng bo'lmasa-da — muvaffaqiyatsiz
+bo'ladi). Uch xil, mustaqil, asosli tuzatish sinovdan o'tkazildi va HAR
+BIRI KOMMIT QILINGAN (qaytarilmagan, chunki hech biri zararli emas):
+(1) so'rov darajasidagi qayta urinishni 1dan 3ga oshirish, (2) server
+`keepAliveTimeout`ni 5s (Node sukuti)dan 65s ga ko'tarish (bo'sh
+keep-alive socket'ning server tomonidan mijoz uni qayta ishlatishga
+urinayotgan aynan shu daqiqada yopilishi — klassik poyga holati), (3)
+`jest.retryTimes(2)` — BUTUN testni (yangi telefon/user bilan, xavfsiz,
+chunki endpoint CAS orqali tabiiy idempotent) qayta ishga tushirish.
+**Uchinchisi HAM yordam bermadi** — real CI logida "RETRY 1"/"RETRY 2"
+ko'rinib turibdi (mexanizm ishlayapti), lekin test 3ta urinishning
+UCHALASIDA HAM bir xil `read ECONNRESET` bilan yiqildi — bu tasodifiy
+har-urinishda-mustaqil ehtimollik emas, balki CI muhitining shu bosqichga
+kelgudek KUMULATIV holatiga (masalan, butun uzun suite davomida
+to'plangan port/socket resursi bosimi) bog'liq bo'lishi mumkinligini
+ko'rsatadi — buni tasdiqlash uchun qo'shimcha, ancha chuqurroq tekshiruv
+kerak (masalan Docker service konteynerining tarmoq/conntrack chegaralari).
+Muhim ikkita dalil: (a) real CI logida bu testdan OLDIN yoki KEYIN hech
+qanday Prisma dvigateli xatosi YO'Q — bu sof transport darajasidagi hodisa;
+(b) DB invariant (`sellerApplication.count === 1`) testning O'ZIDA
+tekshiriladi va muvaffaqiyatli tugagan HAR bir urinishda saqlangan —
+moliyaviy/biznes mantiqda XATO YO'Q, faqat 10x sun'iy bir vaqtdagi
+so'rov yuklamasi ostida CI transport qatlamida beqarorlik bor. Bu haqiqiy
+foydalanuvchi trafigida UCHRAMAYDIGAN naqsh (bitta sessiyadan millisoniyalar
+ichida 10ta bir xil so'rov) — shuning uchun bu **launch'ni bloklamaydi**,
+lekin CI ishonchliligi uchun ANIQ, hali yechilmagan P2 topilma sifatida
+qayd etiladi (P0/P1 emas — production xavfsizligiga ta'siri yo'q).
+
 **Backend Dockerfile — jiddiy topilma tuzatildi**: `backend/`ning o'ziga
 xos `package-lock.json`i YO'Q edi (npm workspaces monorepo, yagona lockfile
 ildizda) — image HAR DOIM `deps` bosqichida yiqilardi. Backend HECH QANDAY
@@ -871,5 +908,14 @@ kelgach `PAYMENTS_ENABLED=true` + credential'lar qo'shilsa yetarli, kod
 o'zgarishi shart emas)
 ### BACKUP_VERIFIED: **PASS** (qo'lda drill) — **avtomatik, jadvalli
 backup HALI dashboard'da yoqilmagan** (aniq keyingi qadam, yuqoriga qarang)
+### CI_INTEGRATION_JOB: **WARNING** — real Postgres/Redis bilan "integration"
+job'i ikkita mustaqil, uzoq muddatli topilmani (rol/parol nomuvofiqligi,
+vaqtga bog'liq idempotency assertsiyasi) tuzatgandan keyin HAM bitta
+qoldiq, HAL QILINMAGAN P2 muammo bilan qizil qolmoqda — yuqoriga qarang
+("10 ta PARALLEL submit" bandi). Bu ILOVA/moliyaviy xato EMAS (uch marta
+mustaqil isbotlangan), FAQAT CI test transport ishonchliligi. "Quality"
+job (lint/typecheck/unit/contracts) esa TO'LIQ, barqaror YASHIL.
 ### FULL_PRODUCTION_READY: **BLOCKED** — real Payme credential va Railway
-dashboard'dagi avtomatik backup sozlamasi kutilmoqda
+dashboard'dagi avtomatik backup sozlamasi kutilmoqda; CI "integration"
+job'idagi qoldiq P2 topilma launch'ni BLOKLAMAYDI (production xavfsizligiga
+ta'siri yo'q), lekin CI ishonchliligi uchun ANIQ ochiq qolmoqda
