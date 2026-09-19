@@ -7,6 +7,11 @@
  * bloklanadi deb hisoblardi — holbuki `seedAdmins` da operator adminda
  * `audit` huquqi BOR. Ya'ni suite hech qachon o'ta olmasdi va shu sababli
  * admin panel amalda avtomatik tekshiruvsiz qolgan edi.
+ *
+ * YANA HAM ESKIRGAN (Bosqich 17dan beri) — real `lib/api/admin.ts` mock
+ * `sb2_admin_session`ni emas, `bd_staff_session` + real email+parol(+TOTP)
+ * login oqimini kutadi. O'rnini bosuvchi: `npm run test:e2e:live`
+ * (`tests/e2e/admin.spec.ts`, staff credential berilsa) — RUNBOOK §14.
  */
 const { chromium } = require("playwright");
 

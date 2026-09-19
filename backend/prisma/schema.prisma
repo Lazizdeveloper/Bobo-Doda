@@ -1,16 +1,48 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Bobo&Doda backend — Prisma schema
 //
-// Bosqich 1: POYDEVOR. Bu migratsiya faqat identity + auth token infra +
-// cross-cutting (audit / outbox / idempotency) modellarini kiritadi.
-// Domen modellari (Service, Job, Contract, Milestone, Ledger, Dispute …) o'z
-// bosqichlarida qo'shiladi — to'liq loyiha `docs/01-data-model.md` da.
+// Bosqich 1: POYDEVOR (identity + auth token infra + cross-cutting).
+// Bosqich 2: AUTH — telefon+OTP (`OtpCode`), refresh rotatsiya/reuse-detection
+// uchun `RefreshToken.activeRole`, `User.passwordHash` nullable (parol yo'q).
+// Bosqich 3: USER/PROFILE/SELLER ACTIVATION/MARKETPLACE — `User.status`
+// (moderatsiya) + `sellerStatus` (layoqatdan mustaqil faollik), `SellerApplication`,
+// `Category`, `Service` (moderatsiya state machine bilan).
+// Bosqich 4: CONTRACT/ORDER/MILESTONE — `Contract` (ACTIVE Service'dan,
+// to'liq iqtisodiy snapshot bilan), `Milestone` + ish tarixi
+// (`MilestoneSubmission`/`MilestoneRevisionRequest`). TO'LOV/LEDGER/ESCROW
+// HALI YO'Q — keyingi bosqich.
+// Bosqich 5: PAYMENT DOMAIN — `Payment` (provider-agnostik, faqat
+// ACTIVE Contract uchun — bo'lim 1: docs'dagi "to'lovdan keyin ACTIVE"
+// modeli Phase 4'ning allaqachon ishlab chiqarilgan state machine'i bilan
+// mos kelmaydi, shuning uchun to'lov ATAYLAB Contract lifecycle'dan
+// mustaqil, alohida domen sifatida qo'shildi — `ContractStatus`ga `PAID`
+// QO'SHILMADI). `PaymentProviderEvent` — webhook qabul qilish/dedup
+// jurnali (append-only).
+// Bosqich 6: DOUBLE-ENTRY LEDGER — `LedgerAccount`/`LedgerTransaction`/
+// `LedgerEntry` (`docs/03-schema-review.md` B8 — signed yagona `amount`,
+// debit/credit ikki ustun EMAS: docs buni ATAYLAB rad etgan, "xato
+// manbai"). `Transaction` docs nomi EMAS — Prisma `$transaction`/
+// `TransactionClient` bilan chalkashmasin deb `LedgerTransaction`ga
+// aniqlashtirilgan (yagona ataylab qilingan nom farqi). Ikki hodisa post
+// qiladi: `PAYMENT_FUNDING` (Payment SUCCEEDED) va `CONTRACT_SETTLEMENT`
+// (Contract COMPLETED — MILESTONE darajasida EMAS, docs original
+// eskizidan farqli: bizda bitta to'liq Payment + bitta yakuniy COMPLETED
+// hodisasi bor). REFUND/PAYOUT/DISPUTE HALI YO'Q — keyingi bosqich.
+// Qolgan domen modellari (Job, Ledger, Dispute …) o'z bosqichlarida
+// qo'shiladi — to'liq loyiha `docs/01-data-model.md` da.
 //
 // Qoidalar (`docs/02-decisions.md`):
 //  • Enum'lar — inglizcha UPPER_SNAKE (ADR-02).
 //  • Pul — BigInt tiyin (ADR-01)  → Bosqich 4.
 //  • `version Int` — holatga ta'sir qiladigan har modelda (optimistic lock).
 //  • Migratsiya faqat `prisma migrate` — qo'lda SQL / `db push` YO'Q.
+//  • Birlamchi kalitlar — UUIDv7 (A1). Prisma `@default(uuid())` (v4) YO'Q;
+//    ID `src/common/id/id.factory.ts` (`newId()` / `IdFactory`) da yasaladi,
+//    service qatlami `data: { id: ids.next(), ... }` beradi. PG16 da native
+//    `uuidv7()` yo'q — generatsiya ilova darajasida.
+//  • Vaqt — hamma joyda `DateTime @db.Timestamptz(6)` (A3). `timestamp` YO'Q.
+//  • DB rollari (A4): `url` = `bobododa_app` (runtime, kam huquq),
+//    `directUrl` = `bobododa_migrator` (DDL/kengaytma/GRANT — `prisma migrate`).
 // ─────────────────────────────────────────────────────────────────────────────
 
 generator client {
@@ -18,8 +50,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime — kam huquqli `bobododa_app` roli (append-only jadvallarga
+  // UPDATE/DELETE yo'q, DB darajasida majburlangan).
+  url       = env("DATABASE_URL")
+  // `prisma migrate` / `db pull` — `bobododa_migrator` roli (DDL, CREATE
+  // EXTENSION, GRANT). PrismaClient buni ISHLATMAYDI.
+  directUrl = env("DATABASE_MIGRATION_URL")
 }
 
 // ── Enums ────────────────────────────────────────────────────────────────────
@@ -72,20 +109,374 @@ enum AuditActorType {
 
 /// Outbox hodisasining yetkazish holati.
 enum OutboxStatus {
+  /// Yetkazish kutilmoqda (`availableAt` bilan — backoff shu maydonni oldinga suradi).
+  PENDING
+  /// Worker claim qilgan (`processingToken`/`processingStartedAt` bilan) — lease muddati bor.
+  PROCESSING
+  /// TERMINAL — provider yetkazishni authoritative qabul qildi.
+  SENT
+  /// TERMINAL — Bosqich 10: retry limiti tugadi (DLQ semantikasi). Retry
+  /// qilinadigan oddiy xato BU HOLATDA EMAS — u yana PENDING'ga qaytadi.
+  DEAD
+  /// TERMINAL — Bosqich 10, bo'lim 53: bildirishnoma ATAYLAB YUBORILMADI
+  /// (masalan qabul qiluvchi topilmadi, yoki hodisa turi uchun bildirishnoma
+  /// mo'ljallanmagan) — provider xatosi EMAS, shuning uchun DEAD bilan
+  /// aralashtirilmaydi (operator ikkalasini turli xil o'qishi kerak).
+  SKIPPED
+}
+
+/// Bosqich 10, bo'lim 13/18 — bildirishnoma kanali. Hozircha FAQAT SMS real
+/// implement qilingan (bo'lim 18: real Email/Telegram provider spec yo'q,
+/// o'ylab topilmaydi) — qolgan ikkitasi kelajakdagi kengayish uchun.
+enum NotificationChannel {
+  SMS
+  EMAIL
+  TELEGRAM
+}
+
+/// Bosqich 10, bo'lim 23 — bitta yetkazish urinishining NATIJASI (append-only
+/// `OutboxDeliveryAttempt`da saqlanadi). `RETRYABLE_FAILURE`/`PERMANENT_FAILURE`
+/// ajratilishi retry siyosati uchun MUHIM (bo'lim 23).
+enum OutboxDeliveryAttemptStatus {
+  DELIVERED
+  RETRYABLE_FAILURE
+  PERMANENT_FAILURE
+}
+
+/// Bosqich 3 — hisob holati (staff moderatsiyasi). `User.deletedAt` (B4
+/// anonimizatsiya) BILAN ALMASHTIRILMAYDI — mustaqil o'qlar: "o'chirilgan"
+/// holat shu yerda YO'Q, chunki `deletedAt != null` allaqachon shuni bildiradi.
+enum UserStatus {
+  /// Oddiy foydalanish.
+  ACTIVE
+  /// Vaqtinchalik cheklov — sezgir/yozish amallari bloklanadi (`suspendedUntil`).
+  SUSPENDED
+  /// Platformadan amalda chiqarilgan.
+  BLOCKED
+}
+
+/// Bosqich 11 — `StaffMember.isActive: Boolean`dan almashtirildi. `UserStatus`
+/// bilan bir xil falsafa, lekin nomi ATAYLAB BOSHQA (`BLOCKED` emas
+/// `DISABLED`) — staff "bloklanmaydi" (bu marketplace tili), operatsion
+/// ravishda "faoliyati to'xtatiladi/o'chiriladi".
+enum StaffStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+/// "role = SELLER" (layoqat, `User.roles`) DAN MUSTAQIL — sotuvchi sifatida
+/// HAQIQATAN faoliyat yuritish huquqi (Bosqich 3 spec: ikki tushuncha
+/// ataylab ajratilgan). Faqat `APPROVED` bo'lganda yangi `Service` yaratish
+/// mumkin (`SellerEligibilityGuard`).
+enum SellerStatus {
+  NOT_APPLIED
+  PENDING
+  APPROVED
+  REJECTED
+  /// `APPROVED`dan staff to'g'ridan-to'g'ri (ariza orqali EMAS) cheklaydi.
+  SUSPENDED
+}
+
+/// Bitta `SellerApplication` yozuvining o'z holati — `User.sellerStatus`dan
+/// FARQLI (u "joriy holat" ko'zgusi, bu esa "shu arizaning taqdiri").
+enum SellerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CategoryStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+/// Bosqich 0 eskizi (`docs/01-data-model.md`) faqat 3 qiymat (ACTIVE/PAUSED/
+/// DRAFT, moderatsiyasiz) ko'rsatgan edi — Bosqich 3 spec'i moderatsiya
+/// navbatini ANIQ talab qiladi, shuning uchun ATAYLAB kengaytirilgan
+/// (frontend hali bu contract'ni iste'mol qilmaydi — buzilish yo'q).
+enum ServiceStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  PAUSED
+  ARCHIVED
+}
+
+/// Bosqich 4 — `Contract` holat mashinasi. Docs eskizi (`SIGNED|ACTIVE|
+/// COMPLETED|CANCELLED|DISPUTED`) YANGI seller accept/reject darvozasini
+/// (PENDING_SELLER) va hali mavjud bo'lmagan Dispute'ni (DISPUTED) hisobga
+/// olmagan edi — shuning uchun ATAYLAB kengaytirilgan/qisqartirilgan.
+enum ContractStatus {
+  /// Buyer yaratdi, seller hali qaror qilmagan.
+  PENDING_SELLER
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+/// `docs/01`dagi `FUNDED`/`ACCEPTED` to'lov tushunchasiga bog'liq (Bosqich
+/// 5/6 hali yo'q) — shuning uchun `IN_PROGRESS`/`APPROVED`ga almashtirilgan
+/// (Bosqich 4 spec, bo'lim 12).
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  REVISION_REQUESTED
+  APPROVED
+}
+
+/// Bosqich 5 — `Payment` holat mashinasi. `SUCCEEDED`/`FAILED`/`CANCELLED`/
+/// `EXPIRED` — TERMINAL (oddiy webhook ulardan chiqib keta olmaydi, faqat
+/// `PaymentService` ichidagi CAS orqali, va hech qachon `SUCCEEDED`dan
+/// chiqib ketmaydi — bo'lim 4). `PROCESSING` — provider so'rovni qabul
+/// qildi (create javobi keldi), lekin hali yakuniy tasdiq (webhook) yo'q.
+enum PaymentStatus {
+  /// Bizning DB'da yaratildi, provider'ga hali yuborilmagan/javob kutilmoqda.
+  PENDING
+  /// Provider `createPayment` so'rovni qabul qildi — yakuniy natija webhook/
+  /// query orqali keladi.
+  PROCESSING
+  /// TERMINAL — provider pul tasdiqladi. Boshqa hech qanday holatga o'tmaydi.
+  SUCCEEDED
+  /// TERMINAL.
+  FAILED
+  /// TERMINAL — buyer/provider tomonidan bekor qilindi (hali boshlanmagan).
+  CANCELLED
+  /// TERMINAL — provider sessiyasi muddati tugadi (yangi urinish — YANGI qator).
+  EXPIRED
+}
+
+/// Bosqich 7 — `Refund` holat mashinasi. `PaymentStatus` bilan bir xil
+/// falsafa, lekin `CANCELLED`/`EXPIRED` YO'Q (bo'lim 6 — hech qanday
+/// oqim ularni ishlab chiqarmaydi, "unused future state" qo'shilmadi).
+enum RefundStatus {
+  /// Bizning DB'da yaratildi, provider'ga hali yuborilmagan/javob kutilmoqda.
+  PENDING
+  /// Provider `refundPayment` so'rovni qabul qildi — yakuniy natija webhook orqali.
+  PROCESSING
+  /// TERMINAL — provider pulni qaytardi. Boshqa hech qanday holatga o'tmaydi.
+  SUCCEEDED
+  /// TERMINAL.
+  FAILED
+}
+
+/// Bosqich 7 — `Payout` holat mashinasi. Xuddi shu falsafa.
+enum PayoutStatus {
   PENDING
   PROCESSING
-  SENT
+  /// TERMINAL — provider tashqi hisobga pul o'tkazdi.
+  SUCCEEDED
+  /// TERMINAL — `PAYOUT_RELEASE` journal orqali rezervatsiya bekor qilinadi.
   FAILED
+}
+
+/// Bosqich 8 — `Dispute` holat mashinasi. `docs/01`dagi minimal
+/// `OPEN|UNDER_REVIEW|RESOLVED`ga ikkita amaliy holat qo'shilgan
+/// (`REJECTED`/`CANCELLED`) — real workflow ularsiz to'liq emas (staff
+/// asossiz nizoni rad etishi, yoki oshkor tomon o'zi qaytarib olishi
+/// kerak). `AWAITING_EVIDENCE` QO'SHILMADI — hech qanday real qoida buni
+/// alohida holat sifatida talab qilmaydi (dalil istalgan vaqt, OPEN yoki
+/// UNDER_REVIEW'da, qo'shilishi mumkin).
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  /// TERMINAL — moliyaviy resolution qo'llangan.
+  RESOLVED
+  /// TERMINAL — staff asossiz deb rad etdi, hech qanday moliyaviy harakat yo'q.
+  REJECTED
+  /// TERMINAL — ochgan tomon o'zi qaytarib oldi (bo'lim 37).
+  CANCELLED
+}
+
+/// `docs/01-data-model.md`dagi ro'yxat bilan AYNAN bir xil.
+enum DisputeReason {
+  SCOPE
+  QUALITY
+  DEADLINE
+  PAYMENT
+  COMMUNICATION
+  OTHER
+}
+
+/// Bo'lim 19/20 — docs `DisputeOutcome (REFUND_BUYER|PAYOUT_SELLER|SPLIT)`
+/// bilan bir xil kontsept, tavsifliroq nom. `SPLIT` — `BUYER_FULL_REFUND`/
+/// `SELLER_FULL_RELEASE` ning UMUMIY holati (buyerAward+sellerAward har
+/// doim `heldAmount`ga teng; 100/0 va 0/100 shu uchtaning ikkitasi) — lekin
+/// alohida saqlanadi (aniq intent, reporting/audit uchun tushunarli).
+enum DisputeResolutionType {
+  BUYER_FULL_REFUND
+  SELLER_FULL_RELEASE
+  SPLIT
+}
+
+/// Bosqich 9, bo'lim 7 — reconciliation urinishini kim/nima boshlagani.
+/// Faqat haqiqatan kerakli uchta manba (bo'lim 7: "keraksiz enum qo'shma").
+enum ReconciliationTrigger {
+  /// Rejalashtirilgan job (`ReconciliationProcessor`) — stuck operatsiyalarni topib avtomatik tekshiradi.
+  AUTOMATIC
+  /// Staff `POST /staff/{payments,refunds,payouts}/:id/reconcile` orqali.
+  STAFF
+  /// `npm run financial:check` — deploy oldidan preflight (bo'lim 47/50).
+  DEPLOYMENT_CHECK
+}
+
+/// Bosqich 9, bo'lim 6 — bitta reconciliation urinishining YAKUNIY natijasi
+/// (bo'lim 59/60: append-only uchun INSERT-ON-COMPLETE dizayni — "boshida
+/// create, oxirida update" YO'Q, faqat natija ANIQ bo'lgach BITTA INSERT).
+enum ReconciliationRunStatus {
+  /// Provider hali PENDING/PROCESSING dedi — hech narsa o'zgarmadi.
+  NO_CHANGE
+  /// Provider terminal holat qaytardi va local aggregate SHU orqali (webhook
+  /// bilan BIR XIL yo'ldan) muvaffaqiyatli yangilandi.
+  RECONCILED
+  /// Contradiction (bo'lim 42/43) yoki NOT_FOUND/UNKNOWN (bo'lim 11/41) —
+  /// moliyaviy harakat YO'Q, `FinancialAnomaly` yozildi.
+  ANOMALY
+  /// Query o'zi muvaffaqiyatsiz bo'ldi (ambiguous timeout YOKI config xatosi,
+  /// bo'lim 32/35) — keyinroq qayta urinish uchun qoldiriladi.
+  ERROR
+}
+
+/// Bosqich 9, bo'lim 22 — integrity/reconciliation anomaliyasining og'irlik darajasi.
+enum FinancialAnomalySeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// `DisputeEvidence.type` — Prisma enum EMAS, oddiy `String` ustun
+// (`PaymentProviderEvent.outcome` bilan bir xil naqsh). Ruxsat etilgan
+// qiymatlar TS union sifatida `dispute.constants.ts`da e'lon qilingan va
+// `@IsIn` bilan ilova darajasida tekshiriladi.
+
+/// Bosqich 6/7 — ledger hisobi TURI (buxgalteriya bucket, real bank hisobi
+/// EMAS). `PAYMENT_CLEARING`≈docs `GATEWAY_CLEARING`, `ESCROW`≈`USER_ESCROW`,
+/// `SELLER_PAYABLE`≈`USER_AVAILABLE`.
+enum LedgerAccountType {
+  /// Platforma — provider'dan hali "tozalanmagan" pul (bitta, valyuta boshiga).
+  PAYMENT_CLEARING
+  /// Foydalanuvchi (buyer) — escrow'dagi mablag'.
+  ESCROW
+  /// Foydalanuvchi (seller) — settlement'dan keyin unga tegishli, hali
+  /// yechilmagan mablag' (Payout orqali chiqadi).
+  SELLER_PAYABLE
+  /// Platforma — undirilgan komissiya (bitta, valyuta boshiga).
+  PLATFORM_REVENUE
+  /// Bosqich 7 — Platforma: refund uchun tashqi provider'ga "chiqib
+  /// ketayotgan" pul (PAYMENT_CLEARING'ning oynali aksi — bitta, valyuta
+  /// boshiga). Docs'dagi `REFUND_LIABILITY`ga mos, qisqaroq nom.
+  REFUND_CLEARING
+  /// Bosqich 7 — Foydalanuvchi (seller): payout so'rovi RESERV qilingan,
+  /// lekin hali tashqi tizimga yuborilmagan/tasdiqlanmagan mablag'.
+  /// ATAYLAB `ownerType=USER` (bo'lim 56 — har seller uchun "inPayout"
+  /// alohida so'ralishi kerak, docs/03 B8'ning "PLATFORM_ESCROW nega yo'q"
+  /// mulohazasi bilan bir xil sabab: bitta platforma-darajasidagi pool
+  /// hech kimga tegishli bo'lmagan, foydasiz hisob bo'lardi).
+  PAYOUT_CLEARING
+  /// Bosqich 8 — Foydalanuvchi (seller): POST-settlement dispute ochilganda
+  /// `SELLER_PAYABLE`dan REZERV qilingan, nizo hal bo'lgunicha yechib
+  /// bo'lmaydigan mablag' (bo'lim 9). ATAYLAB `ownerType=USER`, `PAYOUT_
+  /// CLEARING` bilan bir xil sabab (bo'lim 258'dagi izoh — pooled hisob
+  /// "qaysi seller" savoliga javob berolmaydi). PRE-settlement dispute
+  /// bu hisobni UMUMAN ishlatmaydi — ESCROW o'zi tabiiy "hold" vazifasini
+  /// bajaradi (pul contract ACTIVE ekan hech qayerga ketolmaydi).
+  DISPUTE_HOLD
+}
+
+/// `LedgerAccount.ownerId` kimga tegishli ekanini bildiradi — `PLATFORM`
+/// hisoblarda `ownerId = NULL` (docs B8: "platforma hisoblari hech qanday
+/// egaga tegishli emas — yagona, tizim darajasidagi hisoblar").
+enum LedgerAccountOwnerType {
+  PLATFORM
+  USER
+}
+
+/// Bosqich 6/7/8 — faqat haqiqatan kerakli turlar (bo'lim 19/41: "unused
+/// future states qo'shib tashlama"). Bosqich 8 uchta yangi tur qo'shdi
+/// (`DISPUTE_HOLD`/`DISPUTE_RESOLUTION`/`DISPUTE_HOLD_RELEASE`, pastda) —
+/// buyer-bound refund qismi esa YANGI tur TALAB QILMAYDI, mavjud `REFUND`
+/// turi qayta ishlatiladi (manba hisobi ESCROW yoki DISPUTE_HOLD bo'lishi
+/// mumkin, lekin `type`/`sourceId` semantikasi bir xil: "bu refund tashqi
+/// providerga qanday pul chiqarganini" bildiradi).
+///
+/// **`PAYOUT_COMPLETION` ATAYLAB YO'Q** (bo'lim 30/41'dagi taklifdan chetga
+/// chiqish, sababi bilan): `PAYMENT_CLEARING`ning o'zi ham "pul tasdiqlandi"
+/// paytida ikkinchi yozuv OLMAYDI (funding — yagona journal). Xuddi shu
+/// simmetriya bilan: `PAYOUT_RESERVATION` mablag'ni SELLER_PAYABLE'dan
+/// PAYOUT_CLEARING'ga o'tkazgach, provider muvaffaqiyatli tasdiqlasa
+/// PAYOUT_CLEARING'dan pul ENDI HAQIQATDA tashqariga (bank/karta) chiqib
+/// ketadi — buni ifodalash uchun ICHKI hisobga yana bir yozuv qo'shishning
+/// buxgalteriya ma'nosi yo'q (faqat Payout.status CAS + audit/outbox
+/// yetarli). Faqat MUVAFFAQIYATSIZ bo'lsa `PAYOUT_RELEASE` kerak — mablag'
+/// SELLER_PAYABLE'ga QAYTADI.
+enum LedgerTransactionType {
+  /// `Payment.status → SUCCEEDED`: PAYMENT_CLEARING -amount ; ESCROW(buyer) +amount.
+  PAYMENT_FUNDING
+  /// `Contract.status → COMPLETED` (oxirgi milestone approve, ATOMIK):
+  /// ESCROW(buyer) -agreedAmount ; SELLER_PAYABLE(seller) +net ; PLATFORM_REVENUE +fee.
+  CONTRACT_SETTLEMENT
+  /// Bosqich 7 — `Refund.status → SUCCEEDED` (webhook): ESCROW(buyer)
+  /// -amount ; REFUND_CLEARING +amount. FAQAT pre-settlement (Contract
+  /// hali ACTIVE) — bo'lim 3.
+  REFUND
+  /// Bosqich 7 — `Payout` yaratilganda, DARHOL (external chaqiruvdan
+  /// OLDIN): SELLER_PAYABLE(seller) -amount ; PAYOUT_CLEARING(seller)
+  /// +amount. Ikkinchi parallel payout so'rovi shu pulni QAYTA ISHLATA
+  /// OLMAYDI (bo'lim 23/26).
+  PAYOUT_RESERVATION
+  /// Bosqich 7 — `Payout.status → FAILED`: PAYOUT_CLEARING(seller)
+  /// -amount ; SELLER_PAYABLE(seller) +amount (rezervatsiyani BEKOR
+  /// qiladi, original yozuvni EMAS — bo'lim 31/32, birinchi haqiqiy
+  /// reversal naqshi).
+  PAYOUT_RELEASE
+  /// Bosqich 8, bo'lim 9/11 — POST-settlement `Dispute` OCHILGANDA, DARHOL:
+  /// SELLER_PAYABLE(seller) -heldAmount ; DISPUTE_HOLD(seller) +heldAmount.
+  /// `heldAmount = min(sellerNetSnapshot, joriy SELLER_PAYABLE balansi)` —
+  /// agar seller allaqachon payout qilib ulgurgan bo'lsa, TO'LIQ emas,
+  /// FAQAT mavjud qismi ushlab qolinadi (bo'lim 40/41 — negative balans
+  /// UMUMAN yaratilmaydi). PRE-settlement dispute bu turni UMUMAN
+  /// ishlatmaydi (ESCROW o'zi hold vazifasini bajaradi).
+  DISPUTE_HOLD
+  /// Bosqich 8, bo'lim 23/31 — resolve() vaqtida SELLER-BOUND qismni
+  /// KO'CHIRADI (agar `sellerAwardAmount > 0`): manba — pre-settlement
+  /// bo'lsa ESCROW(buyer), post-settlement bo'lsa DISPUTE_HOLD(seller);
+  /// destination — SELLER_PAYABLE(seller) +net, PLATFORM_REVENUE +fee
+  /// (fee — `Contract.platformFeeRateBpsSnapshot` bo'yicha, docs T5
+  /// misolidagi formula: "sotuvchi ulushiga ham standart komissiya
+  /// qo'llanadi"). BUYER-BOUND qism (agar bor bo'lsa) bu journal'da
+  /// UMUMAN ko'rinmaydi — u alohida, DEFERRED `REFUND` journal orqali
+  /// (webhook tasdiqlangandan keyin, bo'lim 25 — crash-safe orchestration).
+  DISPUTE_RESOLUTION
+  /// Bosqich 8, bo'lim 37/38 — `Dispute` REJECTED/CANCELLED (hech qanday
+  /// moliyaviy resolution YO'Q): DISPUTE_HOLD(seller) -heldAmount ;
+  /// SELLER_PAYABLE(seller) +heldAmount (TO'LIQ un-freeze). Faqat hold
+  /// mavjud bo'lgan (post-settlement) disputlar uchun — pre-settlement
+  /// reject/cancel HECH QANDAY ledger harakati talab qilmaydi (hech narsa
+  /// hech qachon ESCROW'dan chiqmagan).
+  DISPUTE_HOLD_RELEASE
 }
 
 // ── Identity ─────────────────────────────────────────────────────────────────
 
 /// Marketplace foydalanuvchisi (buyer va/yoki seller).
 model User {
-  id           String  @id @default(uuid()) @db.Uuid
+  id           String  @id @db.Uuid
   phone        String  @unique
-  passwordHash String
-  fullName     String
+  /// Bosqich 21 — parol bilan login (SMS faqat telefon egaligini isbotlash
+  /// uchun: ro'yxatdan o'tish va parolni tiklashda, ODDIY login'da EMAS).
+  /// Argon2id (`HashService`, `AuthService.register`/`resetPassword`
+  /// yozadi). NULL — hali register/reset qilinmagan eski (Bosqich 2-20
+  /// davridagi) hisob; `AuthService.login` buni oddiy INVALID_CREDENTIALS
+  /// sifatida ko'radi (`Parolni unutdim` orqali tiklanadi — ayni vaqtda bu
+  /// eski hisoblar uchun onboarding yo'li).
+  passwordHash String?
+  /// OTP tasdiqlangan zahoti (`AuthService.verifyOtpAndLogin`) foydalanuvchi
+  /// hali ismini kiritmagan — shuning uchun NULL bilan yaratiladi. Profil
+  /// wizardida (Bosqich 3, `profileDone`) to'ldiriladi.
+  fullName     String?
   /// [SELLER], [BUYER], yoki ikkalasi. SELLER qo'shish → KYC talab qilinadi.
   roles        Role[]
   /// Avatar S3 obyekt kaliti (presigned URL orqali olinadi).
@@ -93,9 +484,29 @@ model User {
   email        String?
 
   // Onboarding holati — login'da sessiya qayerda to'xtagan bo'lsa tiklanadi.
-  roleChosen  Boolean @default(false)
-  profileDone Boolean @default(false)
-  verified    Boolean @default(false)
+  roleChosen     Boolean @default(false)
+  profileDone    Boolean @default(false)
+  verified       Boolean @default(false)
+  /// Oxirgi tanlangan/almashtirilgan rol (`/me/roles/choose`,
+  /// `/me/roles/switch` yangilaydi). Ikkala rolga ega foydalanuvchi YANGI
+  /// login (OTP) qilganda — qaysi kontekst bilan boshlanishini shundan
+  /// bilamiz (aks holda `roles[]` massiv tartibiga tayanish o'zboshimcha
+  /// bo'lardi).
+  lastActiveRole Role?
+
+  // Bosqich 3 — hisob holati (staff moderatsiyasi). LIVE o'qiladi
+  // (`AccountStatusGuard`), JWT'ga HECH QACHON keshlanmaydi — ADR-04
+  // falsafasi bilan bir xil (eski access token bilan bloklangan hisob
+  // write amal qila olmasligi kerak).
+  status          UserStatus @default(ACTIVE)
+  statusReason    String?
+  statusChangedAt DateTime?  @db.Timestamptz(6)
+  /// Faqat `status=SUSPENDED` uchun ma'noli.
+  suspendedUntil  DateTime?  @db.Timestamptz(6)
+
+  /// "role bilan tugamaydi" — bu LAYOQAT (`roles`) EMAS, HAQIQATAN faol
+  /// sotuvchilik huquqi. `SellerApplicationService` yangilaydi.
+  sellerStatus SellerStatus @default(NOT_APPLIED)
 
   // Buyer / kompaniya qo'shimcha maydonlari.
   companyName String?
@@ -114,24 +525,46 @@ model User {
   deletedAt DateTime? @db.Timestamptz(6)
   version   Int       @default(0)
 
-  refreshTokens RefreshToken[]
-  staffMember   StaffMember?
+  refreshTokens      RefreshToken[]
+  staffMember        StaffMember?
+  sellerApplications SellerApplication[]
+  services           Service[]
+  contractsAsBuyer   Contract[]          @relation("ContractsAsBuyer")
+  contractsAsSeller  Contract[]          @relation("ContractsAsSeller")
+  payments           Payment[]
+  ledgerAccounts     LedgerAccount[]
+  payouts            Payout[]
+  disputesOpened     Dispute[]
+  authGrants         AuthGrant[]
 
   @@index([createdAt])
+  // Bosqich 11, bo'lim 57 — `GET /staff/users`/`GET /staff/sellers`
+  // filtrlash+saralashi uchun (status/sellerStatus bo'yicha + vaqt tartibi).
+  @@index([status, createdAt])
+  @@index([sellerStatus, createdAt])
   @@map("users")
 }
 
 /// Refresh token — DB'da saqlanadi (revocation uchun). Oilaviy reuse
-/// detection: ishlatilgan token qayta kelsa butun `familyId` bekor qilinadi
-/// (to'liq mantiq — Bosqich 2).
+/// detection: ishlatilgan token qayta kelsa butun `familyId` bekor qilinadi.
 model RefreshToken {
-  id           String    @id @default(uuid()) @db.Uuid
+  id           String    @id @db.Uuid
   userId       String    @db.Uuid
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// Argon2/SHA-256 hash — xom token DB'da SAQLANMAYDI.
+  /// SHA-256 hash (`opaque-token.util.ts`) — DETERMINISTIK, chunki qidiruv
+  /// AYNAN shu ustun bo'yicha (`WHERE tokenHash = ?`). Xom token DB'da
+  /// SAQLANMAYDI. (Argon2id EMAS — argon2 tasodifiy "salt"i qidiruvni
+  /// buzardi; argon2id past-entropiyali sirlar — OTP/parol — uchun.)
   tokenHash    String    @unique
   familyId     String    @db.Uuid
   replacedById String?   @db.Uuid
+  /// Shu sessiya qaysi rolda ishlayapti (ADR-04: kontekst tekshiruvi shu
+  /// yerdan o'qiladi). Rotatsiyada oldinga ko'chiriladi; `/me/roles/switch`
+  /// yangi qiymat bilan YANGI oilaviy avlodni yaratadi. NULL = foydalanuvchi
+  /// hali birinchi rolini tanlamagan ("pending onboarding" sessiya — faqat
+  /// `/me/roles/choose` kabi cheklangan endpoint'larga ruxsat, `RolesGuard`
+  /// buni har doim rad etadi).
+  activeRole   Role?
   revokedAt    DateTime? @db.Timestamptz(6)
   userAgent    String?
   ip           String?
@@ -144,36 +577,162 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+/// Bosqich 21 — SMS OTP FAQAT ikki maqsadda yuboriladi: telefon egaligini
+/// ro'yxatdan o'tishda YOKI parolni tiklashda isbotlash. Oddiy LOGIN endi
+/// parol bilan (`AuthService.login`) — OTP UMUMAN ishtirok etmaydi, shuning
+/// uchun avvalgi `LOGIN` qiymati olib tashlandi (Bosqich 20'dagi `AuthIntent`
+/// ning o'rnini bosadi). Bitta OTP challenge FAQAT bitta maqsad uchun yaroqli
+/// — REGISTER uchun so'ralgan kod PASSWORD_RESET'ni tasdiqlay olmaydi va
+/// aksincha (`OtpService.verifyOtp` `purpose`ni `WHERE`ga qo'shadi).
+enum OtpPurpose {
+  REGISTER
+  PASSWORD_RESET
+}
+
+/// OTP kodi — telefon egaligini isbotlash (Bosqich 2, Bosqich 21 — parolga
+/// o'tish bilan REGISTER/PASSWORD_RESET'ga toraytirildi). Append-only EMAS:
+/// `attempts`/`consumedAt` tekshirishda yangilanadi. Kod HECH QACHON ochiq
+/// matnda saqlanmaydi — faqat `codeHash` (argon2id).
+model OtpCode {
+  id         String     @id @db.Uuid
+  /// E.164 (masalan +998901234567) — `phone.util.ts` normallashtiradi.
+  phone      String
+  /// Challenge qaysi maqsad uchun yaratilganini bog'laydi.
+  purpose    OtpPurpose
+  codeHash   String
+  attempts   Int        @default(0)
+  /// Muvaffaqiyatli tasdiqlangan YOKI 5-xato urinishda "kuygan" vaqt —
+  /// ikkalasida ham kod qayta ishlatib bo'lmaydi.
+  consumedAt DateTime?  @db.Timestamptz(6)
+  ip         String?
+  expiresAt  DateTime   @db.Timestamptz(6)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@index([phone, purpose, createdAt])
+  @@index([expiresAt])
+  @@map("otp_codes")
+}
+
+/// Bosqich 21 — OTP tasdiqlangandan KEYIN, YAKUNIY amal (User yaratish /
+/// parolni almashtirish) bajarilgunga qadar berilgan qisqa umrli, bir
+/// martalik "grant". OTP kodining O'ZI frontendda qayta ishlatilmaydi —
+/// `verify-otp` uni bitta marta (`OtpService.verifyOtp` CAS bilan)
+/// iste'mol qiladi va o'rniga shu grant'ni qaytaradi.
+///
+/// `RefreshToken`/`StaffSession` bilan BIR XIL naqsh: xom token DB'da
+/// SAQLANMAYDI — faqat SHA-256 (`hashOpaqueToken`, past-entropiyali SIR
+/// EMAS, 256 bitli tasodifiy qiymat — qidiruv tezligi muhim, argon2id shart
+/// emas). `consumedAt` — CAS bilan bir martalik iste'mol (10 ta parallel
+/// `/register/complete` FAQAT bittasini o'tkazadi).
+model AuthGrant {
+  id         String     @id @db.Uuid
+  purpose    OtpPurpose
+  /// E.164 — REGISTER uchun hali User yo'q, shuning uchun bog'lovchi
+  /// maydon shu (userId EMAS).
+  phone      String
+  /// PASSWORD_RESET uchun MAJBURIY (qaysi hisobning paroli tiklanadi).
+  /// REGISTER uchun NULL — User hali yaratilmagan.
+  userId     String?    @db.Uuid
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String     @unique
+  consumedAt DateTime?  @db.Timestamptz(6)
+  expiresAt  DateTime   @db.Timestamptz(6)
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@index([expiresAt])
+  @@map("auth_grants")
+}
+
+/// SMS yuborish jurnali — hisob-kitob va suiiste'molni aniqlash uchun.
+/// OTP kodi (yoki boshqa maxfiy matn) HECH QACHON bu yerga yozilmaydi —
+/// faqat "kimga/qachon/qaysi shablon/muvaffaqiyatlimi" (Bosqich 2 spec).
+model SmsLog {
+  id                String   @id @db.Uuid
+  phone             String
+  template          String
+  success           Boolean
+  providerMessageId String?
+  errorMessage      String?
+  createdAt         DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([phone, createdAt])
+  @@map("sms_logs")
+}
+
 /// Admin/operator hisobi. `userId` ixtiyoriy — staff ham marketplace
 /// foydalanuvchisi bo'lishi mumkin, lekin IDENTITY alohida (ADR-04).
 model StaffMember {
-  id           String            @id @default(uuid()) @db.Uuid
-  userId       String?           @unique @db.Uuid
-  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  fullName     String
-  email        String            @unique
-  passwordHash String
-  role         StaffRole
-  title        String
-  permissions  StaffPermission[]
-  isActive     Boolean           @default(true)
-  mfaEnabled   Boolean           @default(false)
-  lastLoginAt  DateTime?         @db.Timestamptz(6)
-  createdAt    DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime          @updatedAt @db.Timestamptz(6)
-  version      Int               @default(0)
+  id                   String            @id @db.Uuid
+  userId               String?           @unique @db.Uuid
+  user                 User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fullName             String
+  email                String            @unique
+  passwordHash         String
+  /// Bosqich 11 — admin `POST /staff/admin/staff-members` bilan yaratganda
+  /// yoki `.../password-reset` bilan almashtirganda `true`. Login javobida
+  /// qaytariladi (client "parolni almashtiring" degan yumshoq signal
+  /// ko'rsatishi mumkin) — HECH QANDAY endpointni QATTIQ bloklamaydi
+  /// (bo'lim 4: "minimal secure flow" — admin temp parolni xavfsiz
+  /// kanaldan uzatadi deb ishoniladi, qo'shimcha majburlash murakkablik
+  /// qo'shadi, aniq foyda kam).
+  mustChangePassword   Boolean           @default(false)
+  role                 StaffRole
+  title                String
+  permissions          StaffPermission[]
+  /// Bosqich 11 — `isActive: Boolean`dan almashtirildi (`UserStatus` bilan
+  /// bir xil naqsh). ACTIVE — normal. SUSPENDED — vaqtinchalik cheklov
+  /// (`reactivate` bilan qaytariladi). DISABLED — doimiy o'chirilgan
+  /// (hard delete YO'Q — bo'lim 60: AuditLog actor tarixi buzilmasin).
+  /// Ikkalasi (SUSPENDED/DISABLED) ham `StaffPermissionGuard`da BIR XIL
+  /// natija beradi — "faol emas" — operatsion farq faqat qaytarish
+  /// siyosatida.
+  status               StaffStatus       @default(ACTIVE)
+  statusReason         String?
+  statusChangedAt      DateTime?         @db.Timestamptz(6)
+  mfaEnabled           Boolean           @default(false)
+  /// TOTP (RFC 6238) umumiy siri — Bosqich 11'dan boshlab SHIFRLANGAN
+  /// holda saqlanadi (`totp-secret-cipher.util.ts`, AES-256-GCM,
+  /// `STAFF_TOTP_ENCRYPTION_KEY`). Faqat VERIFY qilingandan keyin shu
+  /// ustunga yoziladi (bo'lim 7: "Secret faqat verify bo'lgandan keyin
+  /// active bo'lsin").
+  totpSecret           String?
+  /// Bosqich 11, bo'lim 8 — enrollment boshlangan, HALI verify qilinmagan
+  /// sir (shifrlangan). Muddati o'tsa (`pendingTotpExpiresAt`) yaroqsiz —
+  /// eski faol MFA konfiguratsiyasiga (`totpSecret`/`mfaEnabled`) TA'SIR
+  /// QILMAYDI.
+  pendingTotpSecret    String?
+  pendingTotpExpiresAt DateTime?         @db.Timestamptz(6)
+  /// Bosqich 11, bo'lim 13 — RFC 6238 replay himoyasi: oxirgi MUVAFFAQIYATLI
+  /// qabul qilingan HOTP counter. Undan KATTA bo'lmagan counter qayta rad
+  /// etiladi (bir xil kod ikki marta — parallel so'rovlarda ham — ISHLATIB
+  /// BO'LMAYDI).
+  lastTotpCounter      Int?
+  lastLoginAt          DateTime?         @db.Timestamptz(6)
+  createdAt            DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
+  version              Int               @default(0)
 
   sessions StaffSession[]
 
+  @@index([status, createdAt])
   @@map("staff_members")
 }
 
 /// Admin sessiyasi — 8 soat (frontend `AdminSession`). JWT'dan alohida
-/// server-side yozuv (majburiy logout uchun).
+/// server-side yozuv (majburiy logout uchun). Marketplace `RefreshToken`dan
+/// FARQLI — rotatsiya YO'Q (bitta opaque token butun sessiya davomida
+/// amal qiladi, faqat access JWT 15 daqiqada yangilanadi); staff sonining
+/// kamligi va operator nazorati bu soddalikni oqlaydi (spec faqat
+/// marketplace refresh uchun rotatsiya/reuse-detection talab qilgan).
 model StaffSession {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String      @id @db.Uuid
   staffId   String      @db.Uuid
   staff     StaffMember @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  /// SHA-256 hash (`opaque-token.util.ts`) — xom token DB'da SAQLANMAYDI.
+  /// Muhim: bu ID'dan ATAYLAB alohida ustun — `id` `/staff/me/sessions`
+  /// kabi ro'yxatlarda ko'rsatilishi mumkin, shu sabab u bearer sir
+  /// BO'LMASLIGI kerak.
+  tokenHash String      @unique
   userAgent String?
   ip        String?
   expiresAt DateTime    @db.Timestamptz(6)
@@ -190,7 +749,7 @@ model StaffSession {
 /// Audit jurnali — HAR pul harakati va staff qarori bu yerga tushadi
 /// (ADR: Q36). `AuditActorType.STAFF` yozuvlari admin panelidagi `AuditEvent`.
 model AuditLog {
-  id            String         @id @default(uuid()) @db.Uuid
+  id            String         @id @db.Uuid
   actorId       String?        @db.Uuid
   actorType     AuditActorType
   actorName     String
@@ -208,8 +767,13 @@ model AuditLog {
   createdAt     DateTime       @default(now()) @db.Timestamptz(6)
 
   @@index([resourceType, resourceId])
-  @@index([actorId])
-  @@index([action])
+  // Bosqich 11, bo'lim 38/57 — `GET /staff/audit-logs` filtr+tartib
+  // so'rovlari uchun kompozit indekslar (`WHERE actorId=? ORDER BY
+  // createdAt DESC` va sh.k.) — YAKKA `actorId`/`action` indekslarini
+  // ALMASHTIRADI (kompozitning YETAKCHI ustuni yakka-ustun so'rovlarni ham
+  // xizmat qiladi — dublikat indeks bo'lmasin, bo'lim 57's aniq talabi).
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
 }
@@ -218,28 +782,82 @@ model AuditLog {
 /// ICHIDA yoziladi, alohida worker jo'natadi. Tranzaksiya ichida HTTP call
 /// QILINMAYDI.
 model OutboxEvent {
-  id            String       @id @default(uuid()) @db.Uuid
-  aggregateType String
-  aggregateId   String
-  eventType     String
-  payload       Json
-  status        OutboxStatus @default(PENDING)
-  attempts      Int          @default(0)
-  lastError     String?
-  availableAt   DateTime     @default(now()) @db.Timestamptz(6)
-  processedAt   DateTime?    @db.Timestamptz(6)
-  createdAt     DateTime     @default(now()) @db.Timestamptz(6)
+  id                  String       @id @db.Uuid
+  aggregateType       String
+  aggregateId         String
+  eventType           String
+  payload             Json
+  /// Bosqich 10, bo'lim 15 — worker payload formatini shu bo'yicha
+  /// talqin qiladi (backward-compatible parser). Yangi format kerak
+  /// bo'lsa versiya oshadi, ESKI qatorlar o'z versiyasida qoladi.
+  payloadVersion      Int          @default(1)
+  status              OutboxStatus @default(PENDING)
+  attempts            Int          @default(0)
+  lastError           String?
+  /// Bosqich 10 — strukturaviy sabab kodi (masalan `UNSUPPORTED_EVENT`,
+  /// `RECIPIENT_MISSING`) — erkin matnli `lastError`dan farqli, filtrlash/
+  /// klassifikatsiya uchun.
+  lastErrorCode       String?
+  /// Bosqich 10, bo'lim 43 — claim token: worker shu qatorni PROCESSING
+  /// qilganda o'zining tasodifiy tokenini yozadi; FINALIZE faqat shu token
+  /// hali ustunda TURGANDA muvaffaqiyatli bo'ladi (stale worker eskirgan
+  /// natija bilan yangi worker holatini QAYTA YOZOLMAYDI).
+  processingToken     String?      @db.Uuid
+  /// Bosqich 10, bo'lim 9/10 — lease boshlanish payti. Muddat
+  /// (`OUTBOX_PROCESSING_TIMEOUT_SECONDS`) konfiguratsiyada — bu yerda
+  /// alohida "leaseUntil" USTUNI YO'Q (hisoblanadi, saqlanmaydi — bir xil
+  /// falsafa Bosqich 9's stuck-detection'i bilan).
+  processingStartedAt DateTime?    @db.Timestamptz(6)
+  /// Backoff/retry rejalashtirish — bo'lim 24: keyingi urinish shu vaqtdan
+  /// OLDIN sodir bo'lmaydi. Bosqich 1'dan mavjud ustun qayta ishlatiladi
+  /// (yangi "nextAttemptAt" USTUNI YARATILMAYDI — bir xil ma'no).
+  availableAt         DateTime     @default(now()) @db.Timestamptz(6)
+  /// TERMINAL holatga (SENT/DEAD/SKIPPED) o'tgan payt — qaysi terminal
+  /// holat ekanini `status` aytadi, BU maydon FAQAT "qachon".
+  processedAt         DateTime?    @db.Timestamptz(6)
+  createdAt           DateTime     @default(now()) @db.Timestamptz(6)
+
+  deliveryAttempts OutboxDeliveryAttempt[]
 
   @@index([status, availableAt])
+  @@index([status, processingStartedAt])
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
+}
+
+/// Bosqich 10, bo'lim 5/6 — append-only yetkazish urinishlari tarixi.
+/// `OutboxEvent.status`ni FAQAT yangilab ketish operational debugging uchun
+/// yetarli emas (nechta urinish bo'lgan, qaysi provider/kanal, qachon) —
+/// bu jadval HAR bir urinishni alohida, o'chmas yozuv sifatida saqlaydi.
+/// Xom provider javobi/body SAQLANMAYDI (bo'lim 5's "Raw response/body
+/// saqlama" + bo'lim 46's redaction qoidasi) — faqat strukturaviy natija.
+model OutboxDeliveryAttempt {
+  id                String                      @id @db.Uuid
+  outboxEventId     String                      @db.Uuid
+  outboxEvent       OutboxEvent                 @relation(fields: [outboxEventId], references: [id])
+  attemptNumber     Int
+  channel           NotificationChannel
+  provider          String
+  status            OutboxDeliveryAttemptStatus
+  errorCode         String?
+  providerMessageId String?
+  startedAt         DateTime                    @db.Timestamptz(6)
+  /// Insert-on-complete (Bosqich 9's `ReconciliationRun` bilan bir xil
+  /// naqsh) — qator FAQAT urinish TO'LIQ yakunlanganda BIR MARTA yoziladi,
+  /// shuning uchun har doim ma'lum (create-keyin-update tsikli YO'Q).
+  completedAt       DateTime                    @db.Timestamptz(6)
+  createdAt         DateTime                    @default(now()) @db.Timestamptz(6)
+
+  @@index([outboxEventId, attemptNumber])
+  @@index([outboxEventId, createdAt])
+  @@map("outbox_delivery_attempts")
 }
 
 /// Idempotentlik kaliti — pul harakati qiladigan HAR endpoint
 /// `Idempotency-Key` header qabul qiladi. Bir xil (key, user, endpoint)
 /// takrorlansa saqlangan javob qaytariladi.
 model IdempotencyKey {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String   @id @db.Uuid
   key              String
   userId           String?  @db.Uuid
   endpoint         String
@@ -252,4 +870,898 @@ model IdempotencyKey {
   @@unique([key, userId, endpoint])
   @@index([expiresAt])
   @@map("idempotency_keys")
+}
+
+// ── Bosqich 3: User/Profile/Seller/Marketplace ─────────────────────────────
+
+/// Sotuvchi bo'lish arizasi (KYC metadata). Bir user — istalgan vaqtda
+/// KO'PI BILAN BITTA `PENDING` ariza (qo'lda yozilgan partial unique index —
+/// pastga qarang, `migration.sql`). Hujjat (identity/KYC fayl) yuklash —
+/// TODO/BLOKLANGAN: S3 klienti/`Attachment` infratuzilmasi hali yo'q
+/// (Bosqich 5, `filesService.upload` bilan birga keladi) — shu paytgacha
+/// faqat matn metadata.
+model SellerApplication {
+  id                String                  @id @db.Uuid
+  userId            String                  @db.Uuid
+  user              User                    @relation(fields: [userId], references: [id])
+  legalName         String
+  displayName       String
+  description       String?
+  status            SellerApplicationStatus @default(PENDING)
+  submittedAt       DateTime                @default(now()) @db.Timestamptz(6)
+  reviewedAt        DateTime?               @db.Timestamptz(6)
+  /// `AuditLog.actorId` bilan bir xil naqsh — StaffMember'ga FK EMAS
+  /// (mas'uliyat ajratilgan, staff jadvali bilan cascade bog'liqligi yo'q).
+  reviewedByStaffId String?                 @db.Uuid
+  rejectionReason   String?
+  createdAt         DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime                @updatedAt @db.Timestamptz(6)
+  version           Int                     @default(0)
+
+  @@index([userId, status])
+  @@index([status, submittedAt])
+  @@map("seller_applications")
+}
+
+/// Marketplace taksonomiyasi — FAQAT staff yaratadi/boshqaradi (ADR: 3 tilda,
+/// `docs/02-decisions.md` "Qisqa qarorlar"). Hierarchy (`parentId`) YO'Q —
+/// joriy frontend (`lib/category-fields.ts`) yassi 8 ta kategoriya ishlatadi,
+/// spekulyativ ravishda qo'shilmadi (YAGNI).
+model Category {
+  id        String         @id @db.Uuid
+  slug      String         @unique
+  nameUz    String
+  nameRu    String
+  nameEn    String
+  status    CategoryStatus @default(ACTIVE)
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @db.Timestamptz(6)
+  version   Int            @default(0)
+
+  services Service[]
+
+  @@map("categories")
+}
+
+/// Sotuvchi e'loni (gig). Minimal model — Bosqich 3 spec: media/extras/
+/// paketlar keyingi bosqichga qoldirilgan (Contract snapshot uchun kerakli
+/// maydonlar — sellerId/title/price/currency — allaqachon tekis, kelajakdagi
+/// bosqichni to'smaydi).
+model Service {
+  id                String        @id @db.Uuid
+  sellerId          String        @db.Uuid
+  seller            User          @relation(fields: [sellerId], references: [id])
+  categoryId        String        @db.Uuid
+  category          Category      @relation(fields: [categoryId], references: [id])
+  title             String
+  description       String
+  /// Tarjima qilinmaydi — foydalanuvchi kontenti qaysi tilda yozilgan
+  /// bo'lsa saqlanadi (ADR-02 qisqa qarorlar, "i18n").
+  lang              String        @default("uz")
+  /// BigInt tiyin (ADR-01). DTO chegarasida butun so'mga aylantiriladi
+  /// (`common/money/money.util.ts`) — Ledger bilan BIR XIL konvensiya.
+  price             BigInt
+  currency          String        @default("UZS")
+  deliveryDays      Int
+  status            ServiceStatus @default(DRAFT)
+  submittedAt       DateTime?     @db.Timestamptz(6)
+  reviewedAt        DateTime?     @db.Timestamptz(6)
+  reviewedByStaffId String?       @db.Uuid
+  rejectionReason   String?
+  /// Birinchi marta ACTIVE bo'lgan payt (moderatsiya tasdiqlagan).
+  publishedAt       DateTime?     @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(6)
+  version           Int           @default(0)
+
+  contracts Contract[]
+
+  @@index([sellerId, status])
+  @@index([status, createdAt])
+  @@index([categoryId, status])
+  @@map("services")
+}
+
+// ── Bosqich 4: Contract/Order/Milestone ────────────────────────────────────
+
+/// Buyer ↔ Seller bitimi — FAQAT ACTIVE `Service`dan yaratiladi (Job/Offer
+/// yo'llari hali yo'q, shuning uchun `sourceType`/`jobId`/`offerId` YO'Q —
+/// docs/01'dagi to'liq eskizdan ATAYLAB soddalashtirilgan, chunki ikkalasi
+/// ham hali erishib bo'lmaydigan qiymat bo'lardi).
+///
+/// **Snapshot — ENG MUHIM invariant**: yaratilgandan keyin `Service`
+/// o'zgarsa (narx, tavsif, hatto o'chirilsa/arxivlansa) HAM shu yozuv
+/// o'zgarmaydi. Hech qanday PATCH endpoint YO'Q — `agreedAmount`/
+/// `currency`/snapshot maydonlari FAQAT yaratilishda yoziladi.
+model Contract {
+  id String @id @db.Uuid
+
+  buyerId  String @db.Uuid
+  buyer    User   @relation("ContractsAsBuyer", fields: [buyerId], references: [id])
+  sellerId String @db.Uuid
+  seller   User   @relation("ContractsAsSeller", fields: [sellerId], references: [id])
+
+  serviceId String  @db.Uuid
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  /// Quyidagi 4 maydon — yaratilish payti xotira ko'chirmasi (Service/
+  /// SellerApplication keyinchalik o'zgarsa ham BUTUNLAY o'zgarmas qoladi).
+  serviceTitleSnapshot       String
+  serviceDescriptionSnapshot String
+  categoryNameSnapshot       String
+  /// `SellerApplication.displayName` (eng oxirgi APPROVED ariza) — yaratilish
+  /// paytida xaridor ko'rgan/kelishgan nom.
+  sellerDisplayNameSnapshot  String
+
+  /// BigInt tiyin (ADR-01) — HAR DOIM `service.price`ga TENG (yaratilishda
+  /// snapshot qilinadi, buyer o'zgartira olmaydi — faqat milestone'larga
+  /// qanday bo'lishini tanlaydi).
+  agreedAmount BigInt
+  currency     String @default("UZS")
+
+  /// Bosqich 5/6 (`PlatformFeeConfig`, ADR-05, runtime+versiyalangan) hali
+  /// yo'q — hozircha `common/money/fee.constant.ts`dagi YAGONA qattiq
+  /// stavkadan snapshot qilinadi. Haqiqiy pul HARAKATI YO'Q — informatsion.
+  platformFeeRateBpsSnapshot Int
+  platformFeeAmountSnapshot  BigInt
+
+  /// UTC. Server mahalliy vaqtiga bog'lanmaydi (barcha vaqt kabi Timestamptz).
+  deadline DateTime @db.Timestamptz(6)
+
+  status ContractStatus @default(PENDING_SELLER)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  version   Int      @default(0)
+
+  milestones Milestone[]
+  payments   Payment[]
+  refunds    Refund[]
+  disputes   Dispute[]
+
+  @@index([buyerId, status, createdAt])
+  @@index([sellerId, status, createdAt])
+  @@index([serviceId])
+  @@map("contracts")
+}
+
+/// Bosqichli to'lov birligi. `amount` — yaratilgandan keyin UMUMAN
+/// tahrirlanmaydi (tahrirlash endpoint yo'q) — shuning uchun
+/// `SUM(amount) == contract.agreedAmount` invarianti DB trigger'siz ham
+/// buzilmaydi (faqat yaratishda tekshiriladi, keyin o'zgarish yo'li yo'q).
+model Milestone {
+  id         String   @id @db.Uuid
+  contractId String   @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id])
+
+  title       String
+  description String?
+  /// BigInt tiyin — IMMUTABLE.
+  amount      BigInt
+  /// 1-based tartib raqami — `@@unique([contractId, position])`.
+  position    Int
+  status      MilestoneStatus @default(PENDING)
+  dueAt       DateTime?       @db.Timestamptz(6)
+
+  /// Oxirgi topshirilgan/tasdiqlangan payt — to'liq tarix
+  /// `MilestoneSubmission`da (qayta topshirishlar ustma-ust yozilmaydi).
+  submittedAt DateTime? @db.Timestamptz(6)
+  approvedAt  DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  version   Int      @default(0)
+
+  submissions      MilestoneSubmission[]
+  revisionRequests MilestoneRevisionRequest[]
+
+  @@unique([contractId, position])
+  @@index([contractId, status])
+  @@map("milestones")
+}
+
+/// Ish topshirish tarixi — APPEND-ONLY (qayta topshirish YANGI qator,
+/// eskisi o'chirilmaydi/o'zgartirilmaydi). `AuditLog`dan FARQLI: bu yerda
+/// BIZNES KONTENT (xabar, fayl havolalari) saqlanadi, xavfsizlik/actor
+/// izi emas — ikkalasi ATAYLAB alohida (bo'lim 16: "domain history va
+/// security audit vazifalarini ajrat").
+model MilestoneSubmission {
+  id              String    @id @db.Uuid
+  milestoneId     String    @db.Uuid
+  milestone       Milestone @relation(fields: [milestoneId], references: [id])
+  /// `AuditLog.actorId` bilan bir xil naqsh — FK emas (hozircha doim
+  /// `contract.sellerId`ga teng, lekin yozuv o'zi mustaqil o'qilishi uchun
+  /// aniq saqlanadi).
+  submittedById   String    @db.Uuid
+  message         String?
+  /// Fayl-yuklash infratuzilmasi (S3) hali yo'q (Bosqich 5) — shuning
+  /// uchun FAQAT tashqi havolalar (masalan Google Drive), server-side
+  /// sxema/uzunlik tekshiruvi bilan (`create-milestone-submission.dto.ts`).
+  deliverableUrls String[]
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([milestoneId, createdAt])
+  @@map("milestone_submissions")
+}
+
+/// O'zgartirish so'rovlari tarixi — APPEND-ONLY (`MilestoneSubmission`
+/// bilan bir xil falsafa).
+model MilestoneRevisionRequest {
+  id            String    @id @db.Uuid
+  milestoneId   String    @db.Uuid
+  milestone     Milestone @relation(fields: [milestoneId], references: [id])
+  requestedById String    @db.Uuid
+  reason        String
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([milestoneId, createdAt])
+  @@map("milestone_revision_requests")
+}
+
+// ── Bosqich 5: Payment domain ───────────────────────────────────────────────
+
+/// Bitta to'lov URINISHI — Contract'ga bog'langan. **Alohida `PaymentAttempt`
+/// modeli YO'Q (ataylab, overengineering)**: har retry — YANGI `Payment`
+/// qatori (tarix shunday saqlanadi), eskisi o'zgarmay qoladi. Faqat
+/// `Contract.status = ACTIVE` uchun yaratiladi (bo'lim 1 — eng konservativ
+/// qaror: seller hali qabul qilmagan shartnoma uchun pul olish keraksiz
+/// bekor-qilish/qaytarish murakkabligini yaratardi; bu ATAYLAB
+/// `docs/01-data-model.md`dagi "to'lov → keyin ACTIVE" ketma-ketligidan
+/// chetga chiqish — Phase 4 state machine allaqachon ishlab chiqarilgan,
+/// unga tegilmadi).
+///
+/// **Eng muhim DB invariant** (bo'lim 5/59): bitta Contract IKKI MARTA
+/// muvaffaqiyatli to'lanib ketmasin — `migration.sql`dagi qo'lda qo'shilgan
+/// `UNIQUE ("contractId") WHERE status = 'SUCCEEDED'` partial index bilan
+/// (Prisma DSL buni ifodalay olmaydi).
+model Payment {
+  id String @id @db.Uuid
+
+  contractId  String   @db.Uuid
+  contract    Contract @relation(fields: [contractId], references: [id])
+  /// Har doim `contract.buyerId`ga teng (yaratishda tekshiriladi) — lekin
+  /// mustaqil saqlanadi, `AuditLog.actorId`/`MilestoneSubmission.submittedById`
+  /// bilan bir xil naqsh.
+  payerUserId String   @db.Uuid
+  payer       User     @relation(fields: [payerUserId], references: [id])
+
+  /// Provider registry kaliti (masalan "TEST") — Prisma enum EMAS: haqiqiy
+  /// provider hali tanlanmagan/ulanmagan (bo'lim 7), enum qiymati keyin
+  /// migratsiya qo'shishni talab qilardi. Ilova darajasida registry orqali
+  /// tekshiriladi (`PAYMENT_PROVIDER` env, `payment.module.ts`).
+  provider          String
+  /// Provider'ning o'z tizimidagi identifikatori — `createPayment` javobidan.
+  /// Ambiguous (timeout) urinishda NULL bo'lib qolishi mumkin.
+  providerPaymentId String?
+
+  /// BigInt tiyin — HAR DOIM `Contract.agreedAmount`dan snapshot qilinadi
+  /// (bo'lim 9: client yuborgan summaga ISHONILMAYDI, DTO'da amount maydoni
+  /// UMUMAN YO'Q).
+  amount   BigInt
+  currency String
+
+  status        PaymentStatus @default(PENDING)
+  /// Faqat XAVFSIZ/ommaviy matn (provider xom xabari EMAS — bo'lim 30/46).
+  failureReason String?
+
+  providerCreatedAt DateTime? @db.Timestamptz(6)
+  succeededAt       DateTime? @db.Timestamptz(6)
+  failedAt          DateTime? @db.Timestamptz(6)
+  cancelledAt       DateTime? @db.Timestamptz(6)
+  /// Provider to'lov sessiyasi muddati (agar provider qo'llasa).
+  expiresAt         DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  version   Int      @default(0)
+
+  events           PaymentProviderEvent[]
+  refunds          Refund[]
+  paymeTransaction PaymeTransaction?
+
+  @@index([contractId, createdAt])
+  @@index([payerUserId, createdAt])
+  @@index([status, createdAt])
+  /// Bosqich 9, bo'lim 57 — stuck-scan uchun (`status IN (...) AND updatedAt < threshold ORDER BY updatedAt, id`).
+  @@index([status, updatedAt])
+  @@index([provider, providerPaymentId])
+  @@map("payments")
+}
+
+/// Bosqich 12 — Payme Merchant API protokoliga XOS transaksiya tarixi.
+/// `PaymentStatus`DAN ATAYLAB ALOHIDA (bo'lim 9): bittasi bizning ichki
+/// pul-harakati state machine'imiz, ikkinchisi Payme protokolining o'z
+/// raqamli holati (`state`: 1=created, 2=performed, -1=cancelled-before-
+/// perform, -2=cancelled-after-perform — rasmiy
+/// developer.help.paycom.uz/metody-merchant-api/ asosida) — ular bir
+/// enumga HECH QACHON birlashtirilmaydi. `Payment.status → SUCCEEDED`
+/// o'tishi HAMISHA `PaymentService`ning yagona authoritative CAS+ledger
+/// yo'li orqali (bo'lim 14) — bu jadval faqat Payme protokol chaqiruvlari
+/// tarixini saqlaydi, hech qanday pul harakati mantig'ini bilmaydi.
+///
+/// `@@unique([paymentId])` — bitta ichki `Payment` qatoriga UMRI DAVOMIDA
+/// KO'PI BILAN BITTA Payme transaksiyasi (bo'lim 12: har checkout urinishi
+/// o'zining YANGI `Payment` qatorini oladi — `PaymentService.create()`,
+/// bo'lim 14ning izohiga qarang). Ikkinchi (boshqa `paymeTransactionId`
+/// bilan) `CreateTransaction` shu DB darajasidagi cheklov orqali rad
+/// etiladi — CAS, try/catch bo'lmasa ham xavfsiz.
+model PaymeTransaction {
+  id String @id @db.Uuid
+
+  /// Payme'ning o'z transaksiya identifikatori (`params.id`) — CreateTransaction
+  /// idempotentligi SHU `@unique` orqali ta'minlanadi (bo'lim 12/13).
+  paymeTransactionId String @unique
+
+  paymentId String  @unique @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id])
+
+  /// BigInt tiyin — CreateTransaction paytida `Payment.amount`dan SNAPSHOT
+  /// qilinadi. Keyingi (idempotent) chaqiruvlar shu qiymat bilan
+  /// solishtiriladi (bo'lim 12 — amount/account o'zgargan bo'lsa conflict).
+  amount BigInt
+
+  /// Payme protokoli raqamli holati — rasmiy spec bilan 1:1 (izohga qarang).
+  state        Int  @default(1)
+  /// `CancelTransaction.reason` — Payme yuborgan raqamli sabab kodi (bo'lim
+  /// 19: xavfsiz strukturaviy maydon, xom payload EMAS).
+  cancelReason Int?
+
+  /// Payme'ning o'z soati (`params.time`, CreateTransaction so'rovida, ms epoch → UTC).
+  providerTime DateTime  @db.Timestamptz(6)
+  /// Bizning tomonimizning transaksiyani yaratgan payti (`result.create_time`).
+  createTime   DateTime  @default(now()) @db.Timestamptz(6)
+  performTime  DateTime? @db.Timestamptz(6)
+  cancelTime   DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  /// Bo'lim 21 — GetStatement `from<=time<=to` (provider creation time)
+  /// bo'yicha filtr, ascending tartib uchun.
+  @@index([createTime])
+  @@map("payme_transactions")
+}
+
+/// Webhook QABUL QILISH jurnali — APPEND-ONLY, dedup/replay-himoya uchun
+/// (bo'lim 18/19). Bitta yozuv = bitta provider hodisasi (`providerEventId`
+/// bilan aniqlanadi). Insert-once naqsh: qayta ishlash natijasi (`outcome`)
+/// SHU BITTA `create()` chaqiruvida allaqachon hisoblab yozilgan bo'ladi —
+/// keyin UPDATE qilish shart emas (Payment CAS + audit + outbox bilan BIR
+/// XIL tranzaksiyada, bo'lim 54), shuning uchun `AuditLog`/`MilestoneSubmission`
+/// bilan bir xil to'liq append-only siyosat qo'llanadi (UPDATE/DELETE yo'q).
+/// `@@unique([provider, providerEventId])` — takroriy yetkazishni (10 marta
+/// parallel kelsa ham) DB darajasida BITTA marta qabul qildiruvchi CAS.
+model PaymentProviderEvent {
+  id String @id @db.Uuid
+
+  /// NULL bo'lishi mumkin — provider noma'lum/mos kelmaydigan referens
+  /// yuborsa ham hodisa hali ham loglanadi (`outcome = UNKNOWN_PAYMENT`).
+  paymentId String?  @db.Uuid
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+
+  provider        String
+  providerEventId String
+  eventType       String
+  /// Qayta ishlash natijasi: APPLIED | NOOP_ALREADY_TARGET | MISMATCH |
+  /// UNKNOWN_PAYMENT | CONFLICT — cheklangan qiymatlar to'plami, lekin enum
+  /// emas (ichki tashxis maydoni, wire contract emas).
+  outcome         String
+
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  processedAt DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([provider, providerEventId])
+  @@index([paymentId, receivedAt])
+  @@map("payment_provider_events")
+}
+
+// ── Bosqich 6: Double-entry Ledger ──────────────────────────────────────────
+
+/// Buxgalteriya bucket — real bank hisobi EMAS (bo'lim 4). Platforma
+/// hisoblari (`PAYMENT_CLEARING`/`PLATFORM_REVENUE`) — `ownerId = NULL`,
+/// docs B8 tavsiyasiga ko'ra EAGER: `migration.sql`da bitta marta
+/// bootstrap qilingan (ikkitagina qator, doim mavjud) — runtime'da
+/// HECH QANDAY create-race yo'q, `LedgerService` faqat SELECT qiladi.
+/// Foydalanuvchi hisoblari (`ESCROW`(buyer)/`SELLER_PAYABLE`(seller)) —
+/// har doim LAZY (`upsert()` orqali, race-safe — bo'lim 42).
+///
+/// **Duplicate himoyasi ikki qatlamli** (bo'lim 5/42): Prisma
+/// `@@unique([type, ownerType, ownerId, currency])` foydalanuvchi
+/// hisoblarini to'liq qamrab oladi (`ownerId` doim NOT NULL), lekin
+/// Postgres `NULL != NULL` qoidasi sabab BU YOLGIZ platforma hisoblarini
+/// (`ownerId = NULL`) himoya QILA OLMAYDI — shuning uchun `migration.sql`da
+/// qo'lda qo'shilgan PARTIAL unique index (`WHERE "ownerType" = 'PLATFORM'`)
+/// ikkinchi qatlam.
+///
+/// **TO'LIQ append-only** (bo'lim 20): identifikatsiya maydonlari
+/// (`type`/`ownerType`/`ownerId`/`currency`) yaratilgach HECH QACHON
+/// o'zgarmasligi SHART — DB darajasida UPDATE/DELETE ikkalasi ham revoke
+/// (`append-only.constants.ts`). Parallel-birinchi-marta-yaratish poygasi
+/// (bo'lim 42) shuning uchun UPDATE huquqiga tayanadigan `upsert()` EMAS —
+/// `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` orqali yechiladi
+/// (`LedgerService.getOrCreateUserAccount()`): tentative `INSERT` conflict
+/// bersa, savepoint'ga qaytariladi (Postgres'ning "tranzaksiya aborted"
+/// holatini TOZALAYDI — oddiy JS `catch` buni QILA OLMAYDI) va keyin
+/// mavjud qator o'qiladi — barchasi UPDATE huquqisiz, BITTA tashqi
+/// tranzaksiya ichida.
+model LedgerAccount {
+  id String @id @db.Uuid
+
+  type      LedgerAccountType
+  ownerType LedgerAccountOwnerType
+  /// FAQAT `ownerType = USER` uchun. `onDelete: Restrict` — ANIQ yozilgan
+  /// (docs B3: moliyaviy FK'lar hech qachon SetNull/Cascade emas, User
+  /// haqiqiy DELETE bilan o'chirilmaydi). **DIQQAT:** bu yerda ANIQ yozish
+  /// SHART — Prisma optional (`String?`) relation uchun sukut ravishda
+  /// `SetNull` tanlaydi (`NO ACTION` EMAS), `onDelete` yozilmasa xuddi shu
+  /// docs qoidasini BUZGAN bo'lardi (majburiy relation'lardagi sukut
+  /// `Restrict`dan farqli — bu Prisma DSL'ning kam ma'lum bo'lgan holati).
+  ownerId   String?                @db.Uuid
+  owner     User?                  @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  currency  String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  entries LedgerEntry[]
+
+  @@unique([type, ownerType, ownerId, currency])
+  @@index([ownerType, ownerId])
+  @@map("ledger_accounts")
+}
+
+/// Journal sarlavhasi — docs `Transaction` bilan BIR XIL konsept, lekin
+/// ATAYLAB `LedgerTransaction` deb nomlangan (Prisma `$transaction`/
+/// `Prisma.TransactionClient` bilan chalkashmasin — kod ichida
+/// `tx: Prisma.TransactionClient` parametri va `LedgerTransaction` modeli
+/// bir joyda ishlatilgani uchun bu amaliy zaruriyat, atayin qilingan
+/// yagona terminologik farq).
+///
+/// **Exactly-once — `@@unique([type, sourceId])`** (bo'lim 9/30): `type`
+/// o'zi source turi bilan 1:1 mos (`PAYMENT_FUNDING` ↔ Payment,
+/// `CONTRACT_SETTLEMENT` ↔ Contract), shuning uchun alohida
+/// `sourceType` ustuni YO'Q (docs'dagi polimorf `referenceType`+
+/// `referenceId`dan ATAYLAB soddalashtirilgan — hozircha haqiqiy
+/// polimorfizm yo'q, YAGNI). `actorId`/`idempotencyKey` HAM YO'Q — "kim
+/// qildi" allaqachon `AuditLog`da (mas'uliyat ajratilgan, Phase 3-4
+/// falsafasi bilan bir xil).
+model LedgerTransaction {
+  id String @id @db.Uuid
+
+  type        LedgerTransactionType
+  currency    String
+  /// `Payment.id` (PAYMENT_FUNDING) yoki `Contract.id` (CONTRACT_SETTLEMENT).
+  /// FK EMAS (docs B8 bilan bir xil ataylab qaror — `Message.contractId`
+  /// polimorf naqshi) — yagona yozish yo'li `LedgerService` mavjudlikni
+  /// yozishdan oldin allaqachon tekshiradi.
+  sourceId    String
+  description String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  entries LedgerEntry[]
+
+  @@unique([type, sourceId])
+  @@index([createdAt])
+  @@map("ledger_transactions")
+}
+
+/// **APPEND-ONLY, IMMUTABLE** (bo'lim 8/20/49) — xato tuzatish FAQAT kelajakdagi
+/// reversal-journal orqali (hozir implement qilinmagan, lekin naqsh shu
+/// yerda hujjatlangan: eski qator HECH QACHON UPDATE qilinmaydi).
+///
+/// `amount` — ISHORALI (docs B8 ANIQ qarori, debit/credit ikki ustun
+/// EMAS): musbat = hisobga qo'shiladi (kredit), manfiy = hisobdan
+/// ayriladi (debit). **`SUM(amount) OVER (transactionId) = 0`** — bu shu
+/// notatsiyadagi "debit = credit" balans invarianti, ikki qatlamda
+/// majburlangan: (1) `LedgerService.postJournal()` yozishdan OLDIN summani
+/// tekshiradi; (2) DB DEFERRABLE constraint trigger (`migration.sql`) —
+/// oxirgi chiziq, `LedgerService`ni chetlab o'tishga urinsa ham ushlaydi.
+///
+/// `currency` — `LedgerAccount`/`LedgerTransaction`dan QASDDAN
+/// TAKRORLANGAN (docs B8 bilan bir xil) — DB trigger shu ustun orqali
+/// ikkalasiga ham mosligini tekshiradi (bo'lim 46 — cross-currency himoya).
+model LedgerEntry {
+  id String @id @db.Uuid
+
+  transactionId String            @db.Uuid
+  transaction   LedgerTransaction @relation(fields: [transactionId], references: [id])
+  accountId     String            @db.Uuid
+  account       LedgerAccount     @relation(fields: [accountId], references: [id])
+
+  /// BigInt tiyin, ISHORALI. 0 bo'lishi mumkin EMAS (bo'lim 58 — nolinchi
+  /// yozuv umuman yaratilmaydi, masalan komissiya 0 bo'lsa shu oyoq
+  /// tashlab ketiladi).
+  amount   BigInt
+  currency String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([transactionId])
+  @@index([accountId, createdAt])
+  @@map("ledger_entries")
+}
+
+// ── Bosqich 7: Refund ────────────────────────────────────────────────────────
+
+/// Bo'lim 5 — dedicated model (docs'dagi eski frontend-mock eskizi
+/// "Refund alohida jadval EMAS, Transaction(kind=REFUND)" deydi, lekin bu
+/// hozirgi backend arxitekturasidan OLDIN yozilgan — `Payment` ham xuddi
+/// shunday "faqat ledger" bo'lishi mumkin edi, lekin ATAYLAB alohida domen
+/// modeli qilingan edi: `reason`/`requestedByStaffId` kabi maydonlar sof
+/// ledger yozuvida tabiiy joylashmaydi. Shu ANIQ, batafsil Bosqich 7
+/// spetsifikatsiyasi ustun qo'yiladi).
+///
+/// **FAQAT pre-settlement** (bo'lim 3): `Contract.status = ACTIVE` va unga
+/// tegishli `SUCCEEDED` Payment mavjud bo'lgandagina yaratiladi. Post-
+/// settlement (COMPLETED contract) refund — Bosqich 8 Dispute/adjustment
+/// scope'i, BU YERDA IMPLEMENT QILINMAGAN (bo'lim 63).
+///
+/// **FAQAT to'liq refund** (bo'lim 7): `amount` HAR DOIM
+/// `Payment.amount`ga teng — partial refund YO'Q (docs/prompt buni talab
+/// qilmaydi, keraksiz murakkablik qo'shilmadi).
+model Refund {
+  id String @id @db.Uuid
+
+  contractId String   @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id])
+  paymentId  String   @db.Uuid
+  payment    Payment  @relation(fields: [paymentId], references: [id])
+
+  /// Bosqich 8 — NULL bo'lsa bu bo'lim 3/16'dagi "yalang'och" staff-so'ralgan
+  /// to'liq refund (Bosqich 7, o'zgarishsiz). Berilgan bo'lsa bu Refund
+  /// `DisputeService.resolve()` orqali yaratilgan — buyer-bound award'ning
+  /// tashqi ijrosi (bo'lim 25/60: mavjud Refund infratuzilmasi qayta
+  /// ishlatiladi, alohida "DisputeRefund" domeni YARATILMAYDI).
+  disputeId String?  @db.Uuid
+  dispute   Dispute? @relation(fields: [disputeId], references: [id])
+
+  /// `AuditLog.actorId` bilan bir xil naqsh — FK EMAS. Refund FAQAT staff
+  /// tomonidan boshlanadi (bo'lim 3/16: buyer arbitrary ACTIVE contract'ni
+  /// o'zi refund qila olmaydi — xavfsiz minimal permission modeli).
+  /// Dispute-driven refund uchun — nizoni RESOLVE qilgan staff.
+  requestedByStaffId String @db.Uuid
+  reason             String
+
+  /// BigInt tiyin — bo'lim 26/27: yalang'och refund uchun HAR DOIM
+  /// `Payment.amount`ga teng (o'zgarmadi). Dispute-driven bo'lsa
+  /// `Dispute.buyerAwardAmount`ga teng — HAR DOIM `Payment.amount`dan KICHIK
+  /// yoki TENG (hech qachon katta emas — bo'lim 61 invarianti, `Dispute.
+  /// heldAmount` orqali resolve() vaqtida ALLAQACHON majburlangan).
+  amount   BigInt
+  currency String
+
+  status           RefundStatus @default(PENDING)
+  provider         String
+  providerRefundId String?
+  failureReason    String?
+
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  processingAt DateTime? @db.Timestamptz(6)
+  succeededAt  DateTime? @db.Timestamptz(6)
+  failedAt     DateTime? @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(6)
+  version      Int       @default(0)
+
+  events RefundProviderEvent[]
+
+  @@index([contractId, createdAt])
+  @@index([paymentId])
+  @@index([status, createdAt])
+  @@index([status, updatedAt])
+  @@index([provider, providerRefundId])
+  @@index([disputeId])
+  @@map("refunds")
+}
+
+/// `PaymentProviderEvent` bilan BIR XIL append-only dedup naqshi (bo'lim
+/// 45 — ATAYLAB alohida jadval, generic `ProviderEvent`ga rewrite QILINMADI:
+/// Phase 5'ning allaqachon ishlab chiqarilgan, sinalgan dedup mexanizmiga
+/// tegilmaydi — bu bosqichning ustuvorlik tartibida "maintainability"
+/// "correctness/recoverability"dan PASTROQ).
+model RefundProviderEvent {
+  id String @id @db.Uuid
+
+  refundId String? @db.Uuid
+  refund   Refund? @relation(fields: [refundId], references: [id])
+
+  provider        String
+  providerEventId String
+  eventType       String
+  outcome         String
+
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  processedAt DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([provider, providerEventId])
+  @@index([refundId, receivedAt])
+  @@map("refund_provider_events")
+}
+
+// ── Bosqich 7: Seller Payout ─────────────────────────────────────────────────
+
+/// Bo'lim 20 — minimal, xavfsiz model. `destinationReference` — OPAQUE
+/// matn (bo'lim 36): bank/karta domeni bu backend'da HALI mavjud EMAS,
+/// shuning uchun soxta `PaymentCard`/bank-hisob modeli O'YLAB TOPILMADI —
+/// seller o'ziga tushunarli erkin matnli referens kiritadi (masalan
+/// "Uzcard •••• 1234"), xom PAN/CVV/hisob raqami SAQLANMAYDI.
+model Payout {
+  id String @id @db.Uuid
+
+  sellerId String @db.Uuid
+  seller   User   @relation(fields: [sellerId], references: [id])
+
+  amount               BigInt
+  currency             String
+  destinationReference String
+
+  status           PayoutStatus @default(PENDING)
+  provider         String
+  providerPayoutId String?
+  failureReason    String?
+
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  processingAt DateTime? @db.Timestamptz(6)
+  succeededAt  DateTime? @db.Timestamptz(6)
+  failedAt     DateTime? @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(6)
+  version      Int       @default(0)
+
+  events PayoutProviderEvent[]
+
+  @@index([sellerId, createdAt])
+  @@index([status, createdAt])
+  @@index([status, updatedAt])
+  @@index([provider, providerPayoutId])
+  @@map("payouts")
+}
+
+/// `PaymentProviderEvent`/`RefundProviderEvent` bilan bir xil append-only
+/// dedup naqshi (bo'lim 46).
+model PayoutProviderEvent {
+  id String @id @db.Uuid
+
+  payoutId String? @db.Uuid
+  payout   Payout? @relation(fields: [payoutId], references: [id])
+
+  provider        String
+  providerEventId String
+  eventType       String
+  outcome         String
+
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  processedAt DateTime? @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([provider, providerEventId])
+  @@index([payoutId, receivedAt])
+  @@map("payout_provider_events")
+}
+
+// ── Bosqich 8: Dispute + Post-settlement Refund + Split Settlement ───────────
+
+/// Bo'lim 3/6/42 — Contract-darajasida (milestone-darajasida EMAS): bizning
+/// haqiqiy settlement bitta contract uchun BIR MARTA, YAXLIT bo'ladi (docs'
+/// dagi eski per-milestone MILESTONE_RELEASE mock modelidan farqli —
+/// Bosqich 4/6 qarori), shuning uchun "qaysi milestone disputed" savolining
+/// moliyaviy ma'nosi yo'q — butun `agreedAmount` (pre-settlement) yoki
+/// undan kelib chiqqan `sellerNet` (post-settlement) bir butun sifatida
+/// disputlanadi. `Contract.status` FAQAT `ACTIVE` yoki `COMPLETED` bo'lganda
+/// ochiladi (bo'lim 6) — boshqa holatlarda moliyaviy predmet yo'q.
+model Dispute {
+  id String @id @db.Uuid
+
+  contractId String   @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+
+  /// Bo'lim 5 — FAQAT contract ishtirokchisi (buyer YOKI seller).
+  openedByUserId String @db.Uuid
+  openedBy       User   @relation(fields: [openedByUserId], references: [id], onDelete: Restrict)
+
+  reason      DisputeReason
+  description String
+
+  status DisputeStatus @default(OPEN)
+
+  /// Ochilgan paytdagi Contract holati snapshot'i — `true` = pre-settlement
+  /// (ESCROW hali to'liq, ledger hold shart emas), `false` = post-settlement
+  /// (`DISPUTE_HOLD` orqali SELLER_PAYABLE'dan rezerv qilingan). Resolve()
+  /// bu qiymatga qarab qaysi hisobdan (ESCROW yoki DISPUTE_HOLD) yechish
+  /// kerakligini hal qiladi — `contract.status`ni qayta o'qishga ISHONMAYDI
+  /// (bo'lim 59 falsafasi — garchi amalda dispute ochiq turganda Contract
+  /// holati o'zgarmasligi HAM alohida guard bilan majburlangan bo'lsa ham).
+  preSettlement Boolean
+
+  /// Nazariy "to'liq" disputlanadigan summa: pre-settlement — `agreedAmount`;
+  /// post-settlement — settlement journalidan olingan `sellerNet` (bo'lim 14
+  /// — `CONTRACT_SETTLEMENT` provenance authoritative). `heldAmount`dan
+  /// KATTA bo'lishi mumkin (agar seller allaqachon qisman/to'liq payout
+  /// qilib ulgurgan bo'lsa) — informatsion, resolve() `heldAmount`ga qarab
+  /// ishlaydi.
+  disputedAmount BigInt
+  /// HAQIQATDA ushlab qolingan summa — resolve()ning yagona ceiling'i
+  /// (`buyerAwardAmount + sellerAwardAmount <= heldAmount`, bo'lim 61).
+  /// Pre-settlement uchun HAR DOIM `disputedAmount`ga teng (ESCROW to'liq
+  /// mavjud). Post-settlement uchun `min(disputedAmount, ochilish
+  /// paytidagi SELLER_PAYABLE balansi)` — bo'lim 40/41: negative balans
+  /// yaratilmaydi, ortiqcha mablag' "yo'q" deb hisoblanadi (avtomatik
+  /// bekor qilinmaydi, faqat resolve() doirasi torayadi).
+  heldAmount     BigInt
+  currency       String
+
+  resolutionType    DisputeResolutionType?
+  buyerAwardAmount  BigInt?
+  sellerAwardAmount BigInt?
+  /// Staff yozgan ochiq (buyer/seller ko'radigan) sabab — ichki eslatma EMAS
+  /// (bo'lim 48: ichki moderatsiya metadata bu yerga yozilmaydi).
+  resolutionReason  String?
+
+  openedAt          DateTime  @default(now()) @db.Timestamptz(6)
+  reviewStartedAt   DateTime? @db.Timestamptz(6)
+  resolvedAt        DateTime? @db.Timestamptz(6)
+  resolvedByStaffId String?   @db.Uuid
+  rejectedAt        DateTime? @db.Timestamptz(6)
+  rejectedByStaffId String?   @db.Uuid
+  cancelledAt       DateTime? @db.Timestamptz(6)
+
+  /// `docs/02-decisions.md`: "v1'da admin qarori yakuniy, lekin Dispute'da
+  /// appealable + resolvedAt hozirdan" — maydon ATAYLAB hozir qo'yilgan
+  /// (kelajakdagi v1.1 apellyatsiya migratsiyasini oldini olish uchun),
+  /// lekin HECH QANDAY apellyatsiya logikasi BU BOSQICHDA yo'q (v1.1 scope).
+  appealable Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  version   Int      @default(0)
+
+  evidence DisputeEvidence[]
+  events   DisputeEvent[]
+  refunds  Refund[]
+
+  @@index([contractId, createdAt])
+  @@index([status, createdAt])
+  @@index([openedByUserId])
+  @@map("disputes")
+}
+
+/// **APPEND-ONLY** (bo'lim 16): dalil keyinchalik jimgina tahrirlanmaydi —
+/// typo tuzatish uchun YANGI yozuv qo'shiladi, eskisi UPDATE qilinmaydi.
+/// Xom fayl bayti SAQLANMAYDI (bo'lim 15) — `fileReference` faqat tashqi
+/// obyekt-xotira kaliti/URL (S3 hali yo'q — bu bosqichda faqat matn
+/// referens, `Attachment`ga bog'lash kelajakda additiv).
+model DisputeEvidence {
+  id        String  @id @db.Uuid
+  disputeId String  @db.Uuid
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Restrict)
+
+  /// Ikkalasi ham NULL bo'lishi mumkin emas — validatsiya ilova darajasida
+  /// (bittasi doim to'ldiriladi: kim yubordi — user yoki staff).
+  submittedByUserId  String? @db.Uuid
+  submittedByStaffId String? @db.Uuid
+
+  /// `"TEXT" | "FILE"` — pastdagi izohga qarang (Prisma enum emas, ataylab).
+  type          String
+  text          String?
+  fileReference String?
+  /// Bo'lim 43 — ixtiyoriy, faqat SHU contractning milestone'i bo'lishi
+  /// SHART (ilova darajasida tekshiriladi, FK emas — `LedgerTransaction.
+  /// sourceId` bilan bir xil "polimorf, lekin yagona yozuvchi tekshiradi"
+  /// qarori).
+  milestoneId   String? @db.Uuid
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_evidence")
+}
+
+/// **APPEND-ONLY** (bo'lim 16/17) — domen tarixi (workflow timeline),
+/// `AuditLog` bilan MAQSADSIZ DUPLICATE emas: `AuditLog` — xavfsizlik/
+/// accountability ("kim, qachon, qaysi IP'dan"), `DisputeEvent` — domen
+/// hikoyasi (buyer/seller UI'da ko'rsatiladigan chronologik lenta).
+model DisputeEvent {
+  id        String  @id @db.Uuid
+  disputeId String  @db.Uuid
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Restrict)
+
+  /// `"OPENED" | "EVIDENCE_ADDED" | "REVIEW_STARTED" | "RESOLVED" |
+  /// "REJECTED" | "CANCELLED"` — `PaymentProviderEvent.eventType` bilan bir
+  /// xil naqsh (oddiy `String`, Prisma enum emas).
+  type      String
+  actorType AuditActorType
+  actorId   String?
+  actorName String
+  metadata  Json?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([disputeId, createdAt])
+  @@map("dispute_events")
+}
+
+// ── Bosqich 9: Financial Reconciliation + Operational Hardening ──────────────
+
+/// **APPEND-ONLY** (bo'lim 31/59/60) — "insert-on-complete" dizayni: provider
+/// so'rovi bajariladi, natija ANIQ bo'lgach BITTA marta yoziladi (boshida
+/// create qilib oxirida update qilish YO'Q, shuning uchun append-only
+/// jadval bilan tabiiy mos keladi). Har urinish (muvaffaqiyatli, o'zgarishsiz
+/// yoki xato bilan) shu yerga yoziladi — `AuditLog` esa FAQAT ma'noli
+/// mutatsiya/anomaliya uchun (bo'lim 30: "har background poll uchun audit
+/// yozib DB'ni to'ldirma").
+///
+/// `operationId`/`operationType` — `LedgerTransaction.sourceId` bilan bir
+/// xil ATAYLAB polimorf, lekin FK EMAS qaror (bo'lim 6): Payment/Refund/
+/// Payout uchtasi ham mumkin, alohida ustunlar keraksiz murakkablik bo'lardi.
+model ReconciliationRun {
+  id String @id @db.Uuid
+
+  /// `"PAYMENT" | "REFUND" | "PAYOUT"`.
+  operationType String
+  operationId   String
+  /// Provider registry kaliti (masalan "TEST") — `Payment.provider` bilan bir xil naqsh.
+  provider      String
+  trigger       ReconciliationTrigger
+
+  status ReconciliationRunStatus
+
+  /// Urinish BOSHIDA kuzatilgan local aggregate status (masalan "PENDING")
+  /// — Payment/Refund/Payout'ning O'Z enumi, bitta ustunga sig'dirish uchun `String`.
+  observedLocalStatus    String
+  /// `ProviderOperationState` qiymati — `ERROR` holatida query hech qachon
+  /// muvaffaqiyatli qaytmagani uchun NULL bo'lishi mumkin.
+  observedProviderStatus String?
+  /// Diagnostika uchun erkin matn (masalan "MARKED_SUCCEEDED", "RELEASED_RESERVATION", "NONE").
+  actionTaken            String?
+  /// `ERROR` holatida `ErrorCode` qiymati (masalan "PAYMENT_PROVIDER_UNAVAILABLE").
+  errorCode              String?
+
+  startedAt   DateTime @db.Timestamptz(6)
+  completedAt DateTime @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([operationType, operationId, createdAt])
+  @@index([status, createdAt])
+  @@map("reconciliation_runs")
+}
+
+/// Operator ko'rinishi uchun STRUKTURALASHTIRILGAN anomaliya (bo'lim 22) —
+/// oddiy string ro'yxat EMAS. Mutable (append-only EMAS): staff `resolvedAt`
+/// orqali "ko'rib chiqildi" deb belgilashi mumkin — bu FAQAT operator
+/// workflow holati, hech qanday moliyaviy maydonga tegmaydi (bo'lim 27:
+/// "manual ledger patch yo'q").
+///
+/// `@@unique([code, entityType, entityId])` — bir xil aniqlangan muammo
+/// qayta-qayta scan qilinsa ham (masalan har reconciliation batch'ida)
+/// DUPLIKAT qator YARATILMAYDI (`createMany({skipDuplicates:true})` orqali,
+/// bo'lim 22: operator visibility shovqinsiz bo'lishi kerak).
+model FinancialAnomaly {
+  id String @id @db.Uuid
+
+  /// Masalan "SUCCEEDED_PAYMENT_WITHOUT_FUNDING", "TERMINAL_CONTRADICTION",
+  /// "PROVIDER_NOT_FOUND", "PROVIDER_STATUS_UNKNOWN" — kichik, ichki, HUJJATLASHTIRILGAN
+  /// to'plam (`anomaly-codes.constant.ts`), Prisma enum EMAS (tez-tez
+  /// kengayishi mumkin, migratsiya talab qilmasin).
+  code     String
+  severity FinancialAnomalySeverity
+
+  /// `"PAYMENT" | "REFUND" | "PAYOUT" | "CONTRACT" | "LEDGER_TRANSACTION"`.
+  entityType String
+  entityId   String
+
+  description String
+
+  detectedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  resolvedAt        DateTime? @db.Timestamptz(6)
+  resolvedByStaffId String?   @db.Uuid
+  resolutionNote    String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([code, entityType, entityId])
+  @@index([severity, detectedAt])
+  @@index([entityType, entityId])
+  @@map("financial_anomalies")
 }

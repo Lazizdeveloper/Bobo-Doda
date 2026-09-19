@@ -38,5 +38,8 @@ export default defineConfig([
     // Backend (NestJS) — alohida repo-ichi loyiha, o'z eslint/tsconfig'i bilan
     // (backend/eslint.config.mjs). Frontend `eslint .` uni tekshirmasin.
     "backend/**",
+    // packages/contracts — OpenAPI'dan GENERATSIYA qilingan TS (qo'lda tahrir
+    // qilinmaydi). O'z tsconfig'i bilan tekshiriladi; frontend lint tegmasin.
+    "packages/**",
   ]),
 ]);

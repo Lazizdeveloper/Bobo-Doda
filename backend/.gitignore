@@ -12,6 +12,9 @@
 .env
 .env.local
 .env.*.local
+# Phase 18 — isolated admin E2E environment (throwaway secrets, but still
+# gitignored on principle; see scratch/e2e-infra/)
+.env.e2e
 
 # prisma — generated client lives in node_modules; keep migrations tracked
 /prisma/*.db

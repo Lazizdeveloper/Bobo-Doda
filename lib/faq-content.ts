@@ -55,11 +55,11 @@ export const FAQ_ITEMS: FaqItem[] = [
       en: "How long does registration take?",
     },
     a: {
-      uz: "Bir necha daqiqa: telefon raqami va parol bilan ro'yxatdan o'tasiz, rolni (mutaxassis yoki xaridor) tanlaysiz va Telegram orqali shaxsingizni tasdiqlaysiz.",
-      ru: "Всего пара минут: регистрация по номеру телефона и паролю, выбор роли (специалист или клиент) и подтверждение личности через Telegram.",
-      en: "Just a couple of minutes: register with your phone number and password, choose a role (specialist or client), and verify your identity via Telegram.",
+      uz: "Bir necha daqiqa: telefon raqamingizni kiritasiz, SMS orqali kelgan bir martalik kodni tasdiqlaysiz va rolni (mutaxassis yoki xaridor) tanlaysiz — parol shart emas.",
+      ru: "Всего пара минут: вводите номер телефона, подтверждаете одноразовый код из SMS и выбираете роль (специалист или клиент) — пароль не нужен.",
+      en: "Just a couple of minutes: enter your phone number, confirm the one-time code sent by SMS, and choose a role (specialist or client) — no password needed.",
     },
-    keywords: ["register", "signup", "telegram"],
+    keywords: ["register", "signup", "otp", "sms"],
   },
   {
     slug: "tillar",

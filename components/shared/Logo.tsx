@@ -2,6 +2,9 @@ import Link from "next/link";
 
 export function LogoMark({ size = 32 }: { size?: number }) {
   return (
+    // next/image emas — logotip bir necha o'lchamda (nav, TopNav, auth) qayta
+    // ishlatiladi; statik PNG, ulash qulayligi LCP xavfidan ustun.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/logo-icon.png"
       alt="Logo mark"

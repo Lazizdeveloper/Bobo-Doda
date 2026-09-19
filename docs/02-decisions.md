@@ -98,6 +98,17 @@ olmaydi.
   ```
 - `fundMilestone` chegaradan **olib tashlanadi** — to'liq-oldindan model uni
   ishlatmaydi (UI ham chaqirmaydi).
+
+  > **A5 tekshiruvi (2026-09-10).** `grep -rn "fundMilestone"` butun frontend
+  > bo'ylab — **3 ta topildi, HAMMASI adapter/mock qatlamida**, birorta ham
+  > ekran/komponent (`app/`, `components/`) da EMAS:
+  > `lib/api/contracts.ts` (interfeys deklaratsiyasi) ·
+  > `lib/api/client.ts` (mock'ga delegatsiya) ·
+  > `lib/mock-api/index.ts` (mock implementatsiya).
+  > Ya'ni bu aynan "adapter qatlami bilan yopiladigan narsa" — chaqiruvchi
+  > ekran yo'q. **Bosqich 2 da** real `paymentsService` yozilganda uch joydan
+  > ham olib tashlanadi (`docs/00` §8 "Bosqich 2+ ga qoldirildi" jadvalida
+  > belgilangan). Bloklovchi emas.
 - Contract to'lov tasdiqlanmaguncha **`PENDING_PAYMENT`** (frontend
   `imzolangan`). Return URL'dan qaytish uni `ACTIVE` qilmaydi — faqat
   tasdiqlangan callback yoki `getStatus` polling.

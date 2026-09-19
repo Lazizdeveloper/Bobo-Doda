@@ -1,0 +1,29 @@
+{
+  "name": "@bobododa/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Backend API shartnomasi — OpenAPI'dan generatsiya qilingan TS tiplari + enum map'lar. QO'LDA TAHRIR QILINMAYDI (npm run generate:contracts).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./enums": "./src/enums.ts",
+    "./openapi-types": "./src/openapi-types.ts",
+    "./openapi.json": "./openapi.json"
+  },
+  "files": [
+    "src",
+    "openapi.json"
+  ],
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('src',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1",
+    "typescript": "^5.7.3"
+  }
+}

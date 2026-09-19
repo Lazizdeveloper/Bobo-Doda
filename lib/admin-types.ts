@@ -90,6 +90,9 @@ export interface AdminAccount {
   permissions: AdminPermission[];
   createdAt: string;
   lastLoginAt?: string;
+  /** Bosqich 17 — real backend maydonlari (mock hech qachon o'rnatmaydi) */
+  mustChangePassword?: boolean;
+  mfaEnabled?: boolean;
 }
 
 export interface AdminSession {

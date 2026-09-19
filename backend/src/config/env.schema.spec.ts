@@ -1,8 +1,41 @@
 import { validateEnv } from './env.schema';
 
 const base = {
-  DATABASE_URL: 'postgresql://u:p@localhost:5432/db?schema=public',
+  DATABASE_URL: 'postgresql://bobododa_app:app@localhost:5432/db?schema=public',
+  DATABASE_MIGRATION_URL: 'postgresql://bobododa_migrator:migrator@localhost:5432/db?schema=public',
   REDIS_URL: 'redis://localhost:6379',
+  // Bosqich 2 — MAJBURIY (≥32 belgi).
+  JWT_ACCESS_SECRET: 'test-access-secret-test-access-secret-32',
+  JWT_STAFF_ACCESS_SECRET: 'test-staff-secret-test-staff-secret-32',
+  // Bosqich 11 — MAJBURIY (64 ta hex belgi).
+  STAFF_TOTP_ENCRYPTION_KEY: 'a'.repeat(64),
+};
+
+// Bosqich 12 — PAYMENT_PROVIDER=PAYME tanlansa 4 ta maydon HAM majburiy.
+const paymeCreds = {
+  PAYME_MERCHANT_ID: 'test-merchant-id',
+  PAYME_LOGIN: 'Paycom',
+  PAYME_KEY: 'test-payme-key',
+  PAYME_CHECKOUT_URL: 'https://test.paycom.uz',
+};
+
+// Bosqich 13 — SMS_PROVIDER=PLAYMOBILE tanlansa 4 ta maydon HAM majburiy.
+const playMobileCreds = {
+  SMS_PROVIDER: 'PLAYMOBILE',
+  PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
+  PLAYMOBILE_LOGIN: 'test-login',
+  PLAYMOBILE_PASSWORD: 'test-password',
+  PLAYMOBILE_SENDER: 'BoboDoda',
+};
+
+// Bosqich 23 (v4) — SMS_PROVIDER=TEXTUP tanlansa 4 ta maydon HAM majburiy
+// (TEXTUP_EXPECTED_USER_ID/NICKNAME_ID/*_TEMPLATE_ID ixtiyoriy).
+const textUpCreds = {
+  SMS_PROVIDER: 'TEXTUP',
+  TEXTUP_AUTH_URL: 'https://api-auth.textup.uz/v1/login',
+  TEXTUP_SMS_URL: 'https://sms-api.textup.uz/v1/send',
+  TEXTUP_EMAIL: 'test@textup.uz',
+  TEXTUP_PASSWORD: 'test-password',
 };
 
 describe('validateEnv', () => {
@@ -21,7 +54,24 @@ describe('validateEnv', () => {
   });
 
   it('REDIS_URL yo’q bo’lsa xato tashlaydi', () => {
-    expect(() => validateEnv({ DATABASE_URL: base.DATABASE_URL })).toThrow(/REDIS_URL/);
+    expect(() =>
+      validateEnv({
+        DATABASE_URL: base.DATABASE_URL,
+        DATABASE_MIGRATION_URL: base.DATABASE_MIGRATION_URL,
+      }),
+    ).toThrow(/REDIS_URL/);
+  });
+
+  it('DATABASE_MIGRATION_URL yo’q bo’lsa xato tashlaydi (A4 — rol ajratish majburiy)', () => {
+    expect(() =>
+      validateEnv({ DATABASE_URL: base.DATABASE_URL, REDIS_URL: base.REDIS_URL }),
+    ).toThrow(/DATABASE_MIGRATION_URL/);
+  });
+
+  it('DATABASE_MIGRATION_URL — DATABASE_URL dan alohida qiymat', () => {
+    const env = validateEnv({ ...base });
+    expect(env.DATABASE_MIGRATION_URL).toBe(base.DATABASE_MIGRATION_URL);
+    expect(env.DATABASE_MIGRATION_URL).not.toBe(env.DATABASE_URL);
   });
 
   it('noto’g’ri PORT rad etiladi', () => {
@@ -49,9 +99,288 @@ describe('validateEnv', () => {
   });
 
   it('production’da SWAGGER_ENABLED=false bilan o’tadi', () => {
-    const env = validateEnv({ ...base, NODE_ENV: 'production', SWAGGER_ENABLED: 'false' });
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
     expect(env.NODE_ENV).toBe('production');
     expect(env.SWAGGER_ENABLED).toBe(false);
+  });
+
+  it('DB_ROLE_ASSERTION sukut bo’yicha "on" (true)', () => {
+    expect(validateEnv({ ...base }).DB_ROLE_ASSERTION).toBe(true);
+  });
+
+  it('DB_ROLE_ASSERTION="off" false qiladi (dev/test)', () => {
+    expect(validateEnv({ ...base, DB_ROLE_ASSERTION: 'off' }).DB_ROLE_ASSERTION).toBe(false);
+  });
+
+  it('production’da DB_ROLE_ASSERTION=off rad etiladi (F1 — fail closed)', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        NODE_ENV: 'production',
+        SWAGGER_ENABLED: 'false',
+        DB_ROLE_ASSERTION: 'off',
+        PAYMENT_PROVIDER: 'PAYME',
+      }),
+    ).toThrow(/DB_ROLE_ASSERTION/);
+  });
+
+  it('production’da DB_ROLE_ASSERTION sukut (on) bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.DB_ROLE_ASSERTION).toBe(true);
+  });
+
+  it('PAYMENT_PROVIDER sukut bo’yicha "TEST"', () => {
+    expect(validateEnv({ ...base }).PAYMENT_PROVIDER).toBe('TEST');
+  });
+
+  it('production’da PAYMENT_PROVIDER=TEST (sukut) rad etiladi (fail closed)', () => {
+    expect(() => validateEnv({ ...base, NODE_ENV: 'production', SWAGGER_ENABLED: 'false' })).toThrow(
+      /PAYMENT_PROVIDER/,
+    );
+  });
+
+  it('PAYMENTS_ENABLED sukut bo’yicha "true"', () => {
+    expect(validateEnv({ ...base }).PAYMENTS_ENABLED).toBe(true);
+  });
+
+  it('Bosqich 23 — production’da PAYMENTS_ENABLED=false + PAYMENT_PROVIDER=TEST (sukut) — o‘tadi (xavfsiz o‘chirilgan)', () => {
+    const env = validateEnv({
+      ...base,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENTS_ENABLED: 'false',
+    });
+    expect(env.PAYMENTS_ENABLED).toBe(false);
+    expect(env.PAYMENT_PROVIDER).toBe('TEST');
+  });
+
+  it('Bosqich 23 — PAYMENTS_ENABLED=false + PAYMENT_PROVIDER=PAYME, credential’lar yo‘q — baribir o‘tadi (PAYME tekshiruvi o‘tkazib yuboriladi)', () => {
+    const env = validateEnv({ ...base, PAYMENTS_ENABLED: 'false', PAYMENT_PROVIDER: 'PAYME' });
+    expect(env.PAYMENTS_ENABLED).toBe(false);
+  });
+
+  it('production’da PAYMENT_PROVIDER=PAYME to‘liq credential bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.PAYMENT_PROVIDER).toBe('PAYME');
+    expect(env.PAYME_CHECKOUT_URL).toBe(paymeCreds.PAYME_CHECKOUT_URL);
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=PAYME, lekin credential’lar yo‘q — rad etiladi (dev’da ham, ikkinchi qatlam himoya)', () => {
+    expect(() => validateEnv({ ...base, PAYMENT_PROVIDER: 'PAYME' })).toThrow(/PAYME_MERCHANT_ID/);
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=PAYME, faqat BAZI credential’lar bor — qolganlari nomma-nom sanaladi', () => {
+    try {
+      validateEnv({ ...base, PAYMENT_PROVIDER: 'PAYME', PAYME_MERCHANT_ID: 'm-1' });
+      fail('xato kutilgan edi');
+    } catch (err) {
+      const message = (err as Error).message;
+      expect(message).not.toContain('PAYME_MERCHANT_ID');
+      expect(message).toContain('PAYME_LOGIN');
+      expect(message).toContain('PAYME_KEY');
+      expect(message).toContain('PAYME_CHECKOUT_URL');
+    }
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=PAYME to‘liq credential bilan dev’da ham o’tadi', () => {
+    const env = validateEnv({ ...base, ...paymeCreds, PAYMENT_PROVIDER: 'PAYME' });
+    expect(env.PAYME_MERCHANT_ID).toBe(paymeCreds.PAYME_MERCHANT_ID);
+    expect(env.PAYME_LOGIN).toBe(paymeCreds.PAYME_LOGIN);
+  });
+
+  it('Bosqich 12 — PAYME_CHECKOUT_URL noto‘g‘ri URL bo‘lsa rad etiladi', () => {
+    expect(() =>
+      validateEnv({ ...base, ...paymeCreds, PAYMENT_PROVIDER: 'PAYME', PAYME_CHECKOUT_URL: 'not-a-url' }),
+    ).toThrow(/PAYME_CHECKOUT_URL/);
+  });
+
+  it('Bosqich 12 — PAYMENT_PROVIDER=TEST (sukut) bo‘lsa PAYME credential’lari kerak emas', () => {
+    expect(() => validateEnv({ ...base })).not.toThrow();
+  });
+
+  it('PAYOUT_PROVIDER sukut bo’yicha "TEST"', () => {
+    expect(validateEnv({ ...base }).PAYOUT_PROVIDER).toBe('TEST');
+  });
+
+  it('Bosqich 13 — PAYOUTS_ENABLED sukut bo‘yicha true', () => {
+    expect(validateEnv({ ...base }).PAYOUTS_ENABLED).toBe(true);
+  });
+
+  it('Bosqich 13 — PAYOUTS_ENABLED="false" bilan o‘tadi', () => {
+    expect(validateEnv({ ...base, PAYOUTS_ENABLED: 'false' }).PAYOUTS_ENABLED).toBe(false);
+  });
+
+  it('SMS_PROVIDER sukut bo’yicha "CONSOLE"', () => {
+    expect(validateEnv({ ...base }).SMS_PROVIDER).toBe('CONSOLE');
+  });
+
+  it('Bosqich 13 — SMS_PROVIDER=PLAYMOBILE, credential’lar yo‘q — rad etiladi', () => {
+    expect(() => validateEnv({ ...base, SMS_PROVIDER: 'PLAYMOBILE' })).toThrow(/PLAYMOBILE_API_URL/);
+  });
+
+  it('Bosqich 13 — SMS_PROVIDER=PLAYMOBILE, to‘liq credential bilan o‘tadi', () => {
+    const env = validateEnv({
+      ...base,
+      SMS_PROVIDER: 'PLAYMOBILE',
+      PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
+      PLAYMOBILE_LOGIN: 'test-login',
+      PLAYMOBILE_PASSWORD: 'test-password',
+      PLAYMOBILE_SENDER: 'BoboDoda',
+    });
+    expect(env.SMS_PROVIDER).toBe('PLAYMOBILE');
+    expect(env.PLAYMOBILE_SENDER).toBe('BoboDoda');
+  });
+
+  it('Bosqich 13 — PLAYMOBILE_SENDER 11 belgidan uzun bo‘lsa rad etiladi', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        SMS_PROVIDER: 'PLAYMOBILE',
+        PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
+        PLAYMOBILE_LOGIN: 'test-login',
+        PLAYMOBILE_PASSWORD: 'test-password',
+        PLAYMOBILE_SENDER: 'TooLongSenderName',
+      }),
+    ).toThrow(/PLAYMOBILE_SENDER/);
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=CONSOLE (sukut) rad etiladi (fail closed)', () => {
+    expect(() =>
+      validateEnv({ ...base, ...paymeCreds, NODE_ENV: 'production', SWAGGER_ENABLED: 'false', PAYMENT_PROVIDER: 'PAYME' }),
+    ).toThrow(/SMS_PROVIDER/);
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=PLAYMOBILE to‘liq credential bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.SMS_PROVIDER).toBe('PLAYMOBILE');
+  });
+
+  it('Bosqich 23 — SMS_PROVIDER=TEXTUP, credential’lar yo‘q — rad etiladi', () => {
+    expect(() => validateEnv({ ...base, SMS_PROVIDER: 'TEXTUP' })).toThrow(/TEXTUP_AUTH_URL/);
+  });
+
+  it('Bosqich 23 — SMS_PROVIDER=TEXTUP, to‘liq credential bilan o‘tadi', () => {
+    const env = validateEnv({ ...base, ...textUpCreds });
+    expect(env.SMS_PROVIDER).toBe('TEXTUP');
+    expect(env.TEXTUP_AUTH_URL).toBe('https://api-auth.textup.uz/v1/login');
+    expect(env.TEXTUP_SMS_URL).toBe('https://sms-api.textup.uz/v1/send');
+  });
+
+  it('Bosqich 23 — TEXTUP_EXPECTED_USER_ID/NICKNAME_ID/*_TEMPLATE_ID ixtiyoriy — bo‘lmasa ham o‘tadi', () => {
+    const env = validateEnv({ ...base, ...textUpCreds });
+    expect(env.TEXTUP_EXPECTED_USER_ID).toBeUndefined();
+    expect(env.TEXTUP_NICKNAME_ID).toBeUndefined();
+    expect(env.TEXTUP_REGISTRATION_TEMPLATE_ID).toBeUndefined();
+    expect(env.TEXTUP_PASSWORD_RESET_TEMPLATE_ID).toBeUndefined();
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=TEXTUP to‘liq credential bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...textUpCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.SMS_PROVIDER).toBe('TEXTUP');
+  });
+
+  it('OTP policy — production’da SMS_PROVIDER=TEXTUP, credential’lar yo‘q — rad etiladi (fail closed)', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        NODE_ENV: 'production',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+        SMS_PROVIDER: 'TEXTUP',
+      }),
+    ).toThrow(/TEXTUP_AUTH_URL/);
+  });
+
+  it('Bosqich 10 — OUTBOX_* sukut qiymatlari', () => {
+    const env = validateEnv({ ...base });
+    expect(env.OUTBOX_PROCESSING_TIMEOUT_SECONDS).toBe(120);
+    expect(env.OUTBOX_BATCH_SIZE).toBe(50);
+    expect(env.OUTBOX_WORKER_CONCURRENCY).toBe(5);
+    expect(env.OUTBOX_MAX_ATTEMPTS).toBe(6);
+    expect(env.OUTBOX_RETRY_BASE_SECONDS).toBe(30);
+    expect(env.OUTBOX_RETRY_MAX_SECONDS).toBe(3600);
+    expect(env.OUTBOX_SWEEP_INTERVAL_SECONDS).toBe(30);
+  });
+
+  it('DB_APP_ROLE sukut bo’yicha "bobododa_app"', () => {
+    expect(validateEnv({ ...base }).DB_APP_ROLE).toBe('bobododa_app');
+  });
+
+  it('DB_APP_ROLE boshqa kvotalanmagan identifikatorni qabul qiladi', () => {
+    expect(validateEnv({ ...base, DB_APP_ROLE: 'custom_app_role' }).DB_APP_ROLE).toBe(
+      'custom_app_role',
+    );
+  });
+
+  it('DB_APP_ROLE noto‘g‘ri identifikatorlarni rad etadi (T1)', () => {
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: '1bad' })).toThrow(/DB_APP_ROLE/);
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: 'has space' })).toThrow(/DB_APP_ROLE/);
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: "app'; DROP TABLE users; --" })).toThrow(
+      /DB_APP_ROLE/,
+    );
+    expect(() => validateEnv({ ...base, DB_APP_ROLE: 'a'.repeat(64) })).toThrow(/DB_APP_ROLE/);
+  });
+
+  it('JWT_ACCESS_SECRET yo‘q yoki 32 belgidan qisqa bo‘lsa xato tashlaydi', () => {
+    const { JWT_ACCESS_SECRET: _drop, ...withoutSecret } = base;
+    expect(() => validateEnv(withoutSecret)).toThrow(/JWT_ACCESS_SECRET/);
+    expect(() => validateEnv({ ...base, JWT_ACCESS_SECRET: 'too-short' })).toThrow(/JWT_ACCESS_SECRET/);
+  });
+
+  it('JWT_STAFF_ACCESS_SECRET marketplace’dan ALOHIDA majburiy maydon', () => {
+    const { JWT_STAFF_ACCESS_SECRET: _drop, ...withoutStaffSecret } = base;
+    expect(() => validateEnv(withoutStaffSecret)).toThrow(/JWT_STAFF_ACCESS_SECRET/);
+  });
+
+  it('JWT_ACCESS_TTL/JWT_REFRESH_TTL — noto‘g‘ri format (`\\d+[smhd]` emas) rad etiladi', () => {
+    expect(() => validateEnv({ ...base, JWT_ACCESS_TTL: '15 minutes' })).toThrow(/JWT_ACCESS_TTL/);
+    expect(() => validateEnv({ ...base, JWT_REFRESH_TTL: '30' })).toThrow(/JWT_REFRESH_TTL/);
+  });
+
+  it('JWT TTL sukut qiymatlari', () => {
+    const env = validateEnv({ ...base });
+    expect(env.JWT_ACCESS_TTL).toBe('15m');
+    expect(env.JWT_REFRESH_TTL).toBe('30d');
+    expect(env.JWT_STAFF_ACCESS_TTL).toBe('15m');
+    expect(env.JWT_STAFF_REFRESH_TTL).toBe('8h');
   });
 
   it('bir nechta muammoni bitta xabarda sanaydi', () => {

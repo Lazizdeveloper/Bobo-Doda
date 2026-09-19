@@ -121,9 +121,12 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
     Promise.all([
       usersService.getCurrent(),
       usersService.getSellerProfile(),
-      paymentsService.getCards(),
+      /* Bosqich 17 — real backendda karta/bildirishnoma sozlamalari yo'q:
+         butun sahifani yiqitmasin deb bo'sh/standart qiymatga tushadi
+         (tegishli tablar nav'dan olib tashlangan, ko'rinmas holat). */
+      paymentsService.getCards().catch(() => []),
       servicesService.listMine(),
-      usersService.getPreferences(),
+      usersService.getPreferences().catch(() => null),
     ])
       .then(([user, profile, cardList, services, pref]) => {
         if (user) {

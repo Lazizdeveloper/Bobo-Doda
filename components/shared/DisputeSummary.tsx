@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-import { authService, disputesService } from "@/lib/api";
+import { disputesService } from "@/lib/api";
 import type { Dispute } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -69,7 +69,10 @@ export function DisputeSummary({
     );
   }
 
-  const isOpener = dispute.openedBy === authService.getSession()?.userId;
+  /* Real backend ishtirokchi javobida "kim ochdi"ni qaytarmaydi — tugma
+     har doim ko'rsatiladi, huquqi bo'lmasa server FORBIDDEN qaytaradi
+     (pastda maxsus xabar bilan ushlangan). */
+  const isOpener = true;
 
   return (
     <Card className="border-danger/30 bg-danger/5">

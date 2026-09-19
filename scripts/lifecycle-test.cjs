@@ -1,3 +1,15 @@
+/**
+ * ESKIRGAN — Bosqich 17 (real backend integratsiyasi)dan beri BUZILGAN.
+ * `localStorage.setItem("sb_session", ...)` orqali mock sessiya inject
+ * qiladi — real `lib/api/http.ts` esa `bd_session` kalitini va OTP-asosli
+ * (parolsiz) login oqimini kutadi, shuning uchun bu skript "To'liq ism"
+ * kabi endi mavjud bo'lmagan ro'yxatdan o'tish maydonlarini qidirib
+ * to'xtab qoladi (tasdiqlangan: `node scripts/lifecycle-test.cjs` real
+ * backend'ga ulangan frontend'da hech qachon o'tmaydi). O'RNIGA:
+ * `npm run test:e2e:live` (`tests/e2e/`, Playwright, RUNBOOK §14) —
+ * real OTP login orqali ishlaydi. Bu fayl faqat tarixiy/mock-rejim
+ * ma'lumotnomasi sifatida qoldirilgan, qayta yozilmagan.
+ */
 const { chromium } = require("playwright");
 
 const BASE = process.env.TEST_BASE_URL || "http://127.0.0.1:3001";

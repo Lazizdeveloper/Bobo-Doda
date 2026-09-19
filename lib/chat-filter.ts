@@ -7,6 +7,8 @@
  * shaxsiy kontaktlarni almashish cheklanadi (Upwork/Fiverr standartlari).
  */
 
+import type { TrustReport } from "@/lib/admin-types";
+
 export interface CircumventionCheckResult {
   hasViolation: boolean;
   type?: "phone" | "telegram" | "email" | "card" | "phrase";
@@ -191,7 +193,7 @@ export function reportCircumventionViolation(params: {
   if (typeof window === "undefined") return;
   try {
     const raw = localStorage.getItem("sb2_trust_reports");
-    const reports: any[] = raw ? JSON.parse(raw) : [];
+    const reports: TrustReport[] = raw ? (JSON.parse(raw) as TrustReport[]) : [];
 
     const now = new Date();
     const fiveMinutesAgo = now.getTime() - 5 * 60 * 1000;
@@ -204,7 +206,7 @@ export function reportCircumventionViolation(params: {
     );
     if (isDuplicate) return;
 
-    const newReport = {
+    const newReport: TrustReport = {
       id: `rep-auto-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       reporterId: "system_anti_circumvention",
       reporterName: "🛡️ Tizim Xavfsizlik Nazorati (Auto-Shield)",

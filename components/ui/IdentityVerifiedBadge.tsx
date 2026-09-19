@@ -5,8 +5,9 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useT } from "@/lib/i18n";
 
 /** KYC (hujjat) tasdiqlanganlik belgisi — TrustBadge (reyting asosida) va
-    User.verified (Telegram)dan alohida, VerificationRecord.status === "tasdiqlangan"
-    ga bog'liq real identity tekshiruvi. */
+    User.verified (SMS OTP orqali telefon tasdiqlanganligi)dan alohida,
+    VerificationRecord.status === "tasdiqlangan" ga bog'liq real identity
+    tekshiruvi. */
 export function IdentityVerifiedBadge() {
   const { t } = useT();
   return (

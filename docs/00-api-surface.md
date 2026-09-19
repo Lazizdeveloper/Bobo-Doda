@@ -617,6 +617,11 @@ Noto'g'ri o'tish → `assertTransition` `Error("BAD_STATE")` (→ 409 `INVALID_T
 - **`register` semantikasi:** darhol `Session` (frontend hozirgi kutgani) yoki
   `register`→OTP→`verify`→token. Bosqich 2 (Auth) boshida hal qilinadi;
   `User`/`Session`/`RefreshToken` ikkalasini ham qo'llaydigan qilib loyihalanadi.
+- **`fundMilestone` olib tashlash (ADR-03):** A5 tekshiruvida (2026-09-10)
+  `fundMilestone` faqat adapter/mock qatlamida topildi — `lib/api/contracts.ts`
+  (interfeys), `lib/api/client.ts` (delegatsiya), `lib/mock-api/index.ts`
+  (mock). Hech qanday ekran chaqirmaydi. Bosqich 2 da real `paymentsService`
+  yozilganda shu 3 joydan ham o'chiriladi. Chaqiruvchi ekran ro'yxati: **YO'Q**.
 - **`rejectCloseContract` (Q16):** "yopish so'rovini rad etish" haqiqiy
   imkoniyatmi? Bosqich 4 (workroom) da aniqlanadi — hozir mock'da bor,
   interfeysda yo'q, UI chaqirmaydi.

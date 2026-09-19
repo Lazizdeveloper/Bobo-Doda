@@ -36,18 +36,43 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   NO_SESSION: { code: "UNAUTHENTICATED", status: 401, retryable: false },
   INVALID_CREDENTIALS: { code: "UNAUTHENTICATED", status: 401, retryable: false },
   INVALID_CURRENT_PASSWORD: { code: "UNAUTHENTICATED", status: 401, retryable: false },
+  /* Bosqich 17 — backend `ERROR_CODES` (`backend/src/common/errors/error-codes.ts`)
+     bilan bitta shartnoma: quyidagi kodlar mock qatlamida hech qachon
+     tashlanmagan, faqat real backend javobida keladi. */
+  UNAUTHENTICATED: { code: "UNAUTHENTICATED", status: 401, retryable: false },
+  TOKEN_EXPIRED: { code: "UNAUTHENTICATED", status: 401, retryable: false },
+  TOKEN_REUSED: { code: "UNAUTHENTICATED", status: 401, retryable: false },
+  MFA_REQUIRED: { code: "UNAUTHENTICATED", status: 401, retryable: false },
 
   /* --- Ruxsat (403) --- */
   FORBIDDEN: { code: "FORBIDDEN", status: 403, retryable: false },
   NOT_ALLOWED: { code: "FORBIDDEN", status: 403, retryable: false },
   /* Admin bloklagan hisob — parolni qayta kiritish yordam bermaydi */
   ACCOUNT_BLOCKED: { code: "FORBIDDEN", status: 403, retryable: false },
+  ACCOUNT_SUSPENDED: { code: "FORBIDDEN", status: 403, retryable: false },
+  /* Staff `mustChangePassword=true` — faqat oq ro'yxatdagi endpoint'lar ochiq */
+  PASSWORD_CHANGE_REQUIRED: { code: "FORBIDDEN", status: 403, retryable: false },
+  SELLER_NOT_APPROVED: { code: "FORBIDDEN", status: 403, retryable: false },
+  CONTRACT_SELF_PURCHASE_NOT_ALLOWED: { code: "FORBIDDEN", status: 403, retryable: false },
+  PAYMENT_NOT_ALLOWED: { code: "FORBIDDEN", status: 403, retryable: false },
+  CONTRACT_NOT_FUNDED: { code: "FORBIDDEN", status: 403, retryable: false },
+  REFUND_NOT_ALLOWED: { code: "FORBIDDEN", status: 403, retryable: false },
+  DISPUTE_NOT_ALLOWED: { code: "FORBIDDEN", status: 403, retryable: false },
 
   /* --- Topilmadi (404) --- */
   NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
   USER_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
   CARD_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
   DISPUTE_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  SERVICE_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  CATEGORY_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  SELLER_APPLICATION_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  CONTRACT_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  MILESTONE_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  SERVICE_NOT_AVAILABLE: { code: "NOT_FOUND", status: 404, retryable: false },
+  PAYMENT_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  REFUND_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
+  PAYOUT_NOT_FOUND: { code: "NOT_FOUND", status: 404, retryable: false },
 
   /* --- Holat/konflikt (409) --- */
   BAD_STATE: { code: "INVALID_TRANSITION", status: 409, retryable: false },
@@ -66,6 +91,24 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   HAS_SUBMITTED_WORK: { code: "CONFLICT", status: 409, retryable: false },
   SELF_LOCK: { code: "CONFLICT", status: 409, retryable: false },
   READ_ONLY: { code: "CONFLICT", status: 409, retryable: false },
+  LAST_ADMIN_PROTECTED: { code: "CONFLICT", status: 409, retryable: false },
+  ALREADY_FUNDED: { code: "CONFLICT", status: 409, retryable: false },
+  ALREADY_CANCELLED: { code: "CONFLICT", status: 409, retryable: false },
+  NOT_PENDING: { code: "CONFLICT", status: 409, retryable: false },
+  CIRCUMVENTION_DETECTED: { code: "CONFLICT", status: 409, retryable: false },
+  IDEMPOTENCY_CONFLICT: { code: "CONFLICT", status: 409, retryable: false },
+  SELLER_APPLICATION_ALREADY_PENDING: { code: "CONFLICT", status: 409, retryable: false },
+  CATEGORY_SLUG_EXISTS: { code: "CONFLICT", status: 409, retryable: false },
+  PAYMENT_ALREADY_SUCCEEDED: { code: "CONFLICT", status: 409, retryable: false },
+  PAYMENT_INVALID_STATE: { code: "CONFLICT", status: 409, retryable: false },
+  PAYMENT_WEBHOOK_CONFLICT: { code: "CONFLICT", status: 409, retryable: false },
+  REFUND_ALREADY_SUCCEEDED: { code: "CONFLICT", status: 409, retryable: false },
+  REFUND_ALREADY_REQUESTED: { code: "CONFLICT", status: 409, retryable: false },
+  REFUND_WEBHOOK_CONFLICT: { code: "CONFLICT", status: 409, retryable: false },
+  PAYOUT_WEBHOOK_CONFLICT: { code: "CONFLICT", status: 409, retryable: false },
+  CONTRACT_REFUND_IN_PROGRESS: { code: "CONFLICT", status: 409, retryable: false },
+  DISPUTE_ALREADY_OPEN: { code: "CONFLICT", status: 409, retryable: false },
+  DISPUTE_IN_PROGRESS: { code: "CONFLICT", status: 409, retryable: false },
 
   /* --- Validatsiya (422) --- */
   VALIDATION: { code: "VALIDATION", status: 422, retryable: false },
@@ -75,14 +118,31 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   INVALID_HOLDER: { code: "VALIDATION", status: 422, retryable: false },
   INVALID_DATE: { code: "VALIDATION", status: 422, retryable: false },
   INVALID_CODE: { code: "VALIDATION", status: 422, retryable: false },
+  /* Bosqich 22 — INVALID_CODE'dan ajratilgan aniq OTP holatlari: sahifalar
+     `err.message` (xom backend kodi) bo'yicha alohida matn ko'rsatadi
+     (`auth.codeExpired`/`auth.codeAttemptsExceeded`) — bu yerda faqat
+     umumiy VALIDATION guruhiga ro'yxatga olinadi. */
+  OTP_EXPIRED: { code: "VALIDATION", status: 422, retryable: false },
+  OTP_ATTEMPTS_EXCEEDED: { code: "VALIDATION", status: 422, retryable: false },
+  INVALID_CARD: { code: "VALIDATION", status: 422, retryable: false },
+  INVALID_EXPIRY: { code: "VALIDATION", status: 422, retryable: false },
+  INVALID_BANK_ACCOUNT: { code: "VALIDATION", status: 422, retryable: false },
   WEAK_PASSWORD: { code: "VALIDATION", status: 422, retryable: false },
   EMPTY_MESSAGE: { code: "VALIDATION", status: 422, retryable: false },
   COMMENT_REQUIRED: { code: "VALIDATION", status: 422, retryable: false },
   REASON_REQUIRED: { code: "VALIDATION", status: 422, retryable: false },
   REPLY_REQUIRED: { code: "VALIDATION", status: 422, retryable: false },
   TOO_MANY_MILESTONES: { code: "VALIDATION", status: 422, retryable: false },
+  MILESTONE_AMOUNT_MISMATCH: { code: "VALIDATION", status: 422, retryable: false },
+  DEADLINE_INVALID: { code: "VALIDATION", status: 422, retryable: false },
+  PAYMENT_AMOUNT_MISMATCH: { code: "VALIDATION", status: 422, retryable: false },
+  PAYMENT_CURRENCY_MISMATCH: { code: "VALIDATION", status: 422, retryable: false },
+  PAYMENT_PROVIDER_ERROR: { code: "VALIDATION", status: 422, retryable: false },
+  PAYOUT_PROVIDER_ERROR: { code: "VALIDATION", status: 422, retryable: false },
+  IDEMPOTENCY_KEY_REQUIRED: { code: "VALIDATION", status: 422, retryable: false },
   INSUFFICIENT_BALANCE: { code: "VALIDATION", status: 422, retryable: false },
   NO_BALANCE: { code: "VALIDATION", status: 422, retryable: false },
+  BELOW_MINIMUM: { code: "BELOW_MINIMUM", status: 422, retryable: false },
   /* Yechish summasi admin belgilagan eng kichik chegaradan past */
   BELOW_MIN_PAYOUT: { code: "BELOW_MINIMUM", status: 422, retryable: false },
 
@@ -99,9 +159,22 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   OFFERS_DISABLED: { code: "FEATURE_DISABLED", status: 503, retryable: false },
   REGISTRATION_PAUSED: { code: "FEATURE_DISABLED", status: 503, retryable: false },
   CATEGORY_DISABLED: { code: "FEATURE_DISABLED", status: 503, retryable: false },
+  /* Bosqich 17 — real backendda hali qamrab olinmagan bo'lim (Job/Offer/
+     Messages/Reviews/KYC/kartalar/...): frontend `client.ts` shu kodni
+     ATAYLAB tashlaydi (backend hech qachon qaytarmaydi). */
+  FEATURE_DISABLED: { code: "FEATURE_DISABLED", status: 503, retryable: false },
+  /* Provider (Payme/PlayMobile) ambiguous javob berdi (timeout/network) —
+     qayta urinish MUMKIN, lekin ko'r-ko'rona emas (backend idempotency
+     snapshot bilan himoyalangan). */
+  PAYMENT_PROVIDER_UNAVAILABLE: { code: "PAYMENTS_PAUSED", status: 503, retryable: true },
+  PAYOUT_PROVIDER_UNAVAILABLE: { code: "PAYMENTS_PAUSED", status: 503, retryable: true },
 
   /* --- Saqlash joyi (507) --- */
   STORAGE_FULL: { code: "STORAGE_FULL", status: 507, retryable: false },
+
+  /* --- Server / ichki invariant (500) --- */
+  INVARIANT_VIOLATION: { code: "UNKNOWN", status: 500, retryable: false },
+  PROVIDER_CONFIG_ERROR: { code: "UNKNOWN", status: 500, retryable: false },
 };
 
 export class ApiError extends Error implements ApiErrorShape {

@@ -18,11 +18,11 @@ export function AccountSecurity() {
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (
-      newPassword.length < 8 ||
-      !/[A-Za-z]/.test(newPassword) ||
-      !/\d/.test(newPassword)
-    ) {
+    // Bosqich 21 — backend siyosati bilan bir xil: kamida 8 belgi, faqat
+    // bo'sh joylardan iborat bo'lmasin. Composition-fetish qoidalari
+    // (harf+raqam majburiyligi) ATAYLAB yo'q — backend authoritative,
+    // frontend undan qattiqroq bo'lmasligi kerak.
+    if (newPassword.length < 8 || !/\S/.test(newPassword)) {
       setError(t("security.passwordRules"));
       return;
     }

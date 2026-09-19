@@ -1,0 +1,8279 @@
+{
+  "openapi": "3.1.0",
+  "paths": {
+    "/health/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/auth/register/request-otp": {
+      "post": {
+        "operationId": "AuthController_requestRegisterOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOtpResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/register/verify-otp": {
+      "post": {
+        "operationId": "AuthController_verifyRegisterOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/register/complete": {
+      "post": {
+        "operationId": "AuthController_completeRegistration",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteRegistrationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password-reset/request-otp": {
+      "post": {
+        "operationId": "AuthController_requestPasswordResetOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOtpResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password-reset/verify-otp": {
+      "post": {
+        "operationId": "AuthController_verifyPasswordResetOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password-reset/complete": {
+      "post": {
+        "operationId": "AuthController_completePasswordReset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePasswordResetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "MeController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/profile": {
+      "patch": {
+        "operationId": "MeController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/roles/choose": {
+      "post": {
+        "operationId": "MeController_chooseRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChooseRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/roles/switch": {
+      "post": {
+        "operationId": "MeController_switchRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/sessions": {
+      "get": {
+        "operationId": "MeController_listSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      },
+      "delete": {
+        "operationId": "MeController_revokeAllSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/change-password": {
+      "post": {
+        "operationId": "MeController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/me/sessions/{id}": {
+      "delete": {
+        "operationId": "MeController_revokeSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/staff/auth/login": {
+      "post": {
+        "operationId": "StaffAuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/auth/refresh": {
+      "post": {
+        "operationId": "StaffAuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffSessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/auth/logout": {
+      "post": {
+        "operationId": "StaffAuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me": {
+      "get": {
+        "operationId": "StaffMeController_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/change-password": {
+      "post": {
+        "operationId": "StaffMeController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/sessions": {
+      "get": {
+        "operationId": "StaffMeController_listSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      },
+      "delete": {
+        "operationId": "StaffMeController_revokeAllSessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/sessions/{id}": {
+      "delete": {
+        "operationId": "StaffMeController_revokeSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/totp/enroll": {
+      "post": {
+        "operationId": "StaffMeController_enrollTotp",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpEnrollResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/totp/verify": {
+      "post": {
+        "operationId": "StaffMeController_verifyTotp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpVerifyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/staff/me/totp/disable": {
+      "post": {
+        "operationId": "StaffMeController_disableTotp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotpDisableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-auth"
+        ]
+      }
+    },
+    "/categories": {
+      "get": {
+        "operationId": "CategoryController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "categories"
+        ]
+      }
+    },
+    "/staff/categories": {
+      "get": {
+        "operationId": "StaffCategoryController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-categories"
+        ]
+      },
+      "post": {
+        "operationId": "StaffCategoryController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-categories"
+        ]
+      }
+    },
+    "/staff/categories/{id}": {
+      "get": {
+        "operationId": "StaffCategoryController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-categories"
+        ]
+      },
+      "patch": {
+        "operationId": "StaffCategoryController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-categories"
+        ]
+      }
+    },
+    "/staff/categories/{id}/archive": {
+      "post": {
+        "operationId": "StaffCategoryController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-categories"
+        ]
+      }
+    },
+    "/staff/categories/{id}/activate": {
+      "post": {
+        "operationId": "StaffCategoryController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-categories"
+        ]
+      }
+    },
+    "/me/seller-application": {
+      "get": {
+        "operationId": "SellerApplicationController_getCurrent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerApplicationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "seller-application"
+        ]
+      },
+      "post": {
+        "operationId": "SellerApplicationController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSellerApplicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerApplicationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "seller-application"
+        ]
+      }
+    },
+    "/staff/seller-applications": {
+      "get": {
+        "operationId": "StaffSellerApplicationController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-seller-applications"
+        ]
+      }
+    },
+    "/staff/seller-applications/{id}": {
+      "get": {
+        "operationId": "StaffSellerApplicationController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerApplicationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-seller-applications"
+        ]
+      }
+    },
+    "/staff/seller-applications/{id}/approve": {
+      "post": {
+        "operationId": "StaffSellerApplicationController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerApplicationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-seller-applications"
+        ]
+      }
+    },
+    "/staff/seller-applications/{id}/reject": {
+      "post": {
+        "operationId": "StaffSellerApplicationController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectSellerApplicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerApplicationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-seller-applications"
+        ]
+      }
+    },
+    "/staff/sellers": {
+      "get": {
+        "operationId": "StaffSellerController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sellerStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_APPLIED",
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "SUSPENDED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-sellers"
+        ]
+      }
+    },
+    "/staff/sellers/{userId}": {
+      "get": {
+        "operationId": "StaffSellerController_get",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-sellers"
+        ]
+      }
+    },
+    "/staff/sellers/{userId}/suspend": {
+      "post": {
+        "operationId": "StaffSellerController_suspend",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendSellerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-sellers"
+        ]
+      }
+    },
+    "/staff/sellers/{userId}/reinstate": {
+      "post": {
+        "operationId": "StaffSellerController_reinstate",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-sellers"
+        ]
+      }
+    },
+    "/services": {
+      "get": {
+        "operationId": "ServiceController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Kategoriya slug",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seller",
+            "required": false,
+            "in": "query",
+            "description": "Sotuvchi userId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priceMin",
+            "required": false,
+            "in": "query",
+            "description": "Butun so‘m",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "priceMax",
+            "required": false,
+            "in": "query",
+            "description": "Butun so‘m",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
+    "/services/{id}": {
+      "get": {
+        "operationId": "ServiceController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
+    "/seller/services": {
+      "post": {
+        "operationId": "SellerServiceController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      },
+      "get": {
+        "operationId": "SellerServiceController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      }
+    },
+    "/seller/services/{id}": {
+      "get": {
+        "operationId": "SellerServiceController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      },
+      "patch": {
+        "operationId": "SellerServiceController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      }
+    },
+    "/seller/services/{id}/submit": {
+      "post": {
+        "operationId": "SellerServiceController_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      }
+    },
+    "/seller/services/{id}/pause": {
+      "post": {
+        "operationId": "SellerServiceController_pause",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      }
+    },
+    "/seller/services/{id}/resume": {
+      "post": {
+        "operationId": "SellerServiceController_resume",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      }
+    },
+    "/seller/services/{id}/archive": {
+      "post": {
+        "operationId": "SellerServiceController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-services"
+        ]
+      }
+    },
+    "/staff/services": {
+      "get": {
+        "operationId": "StaffServiceController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-services"
+        ]
+      }
+    },
+    "/staff/services/{id}": {
+      "get": {
+        "operationId": "StaffServiceController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-services"
+        ]
+      }
+    },
+    "/staff/services/{id}/approve": {
+      "post": {
+        "operationId": "StaffServiceController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-services"
+        ]
+      }
+    },
+    "/staff/services/{id}/reject": {
+      "post": {
+        "operationId": "StaffServiceController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-services"
+        ]
+      }
+    },
+    "/staff/services/{id}/force-pause": {
+      "post": {
+        "operationId": "StaffServiceController_forcePause",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-services"
+        ]
+      }
+    },
+    "/staff/users": {
+      "get": {
+        "operationId": "StaffUserController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "SUSPENDED",
+                "BLOCKED"
+              ]
+            }
+          },
+          {
+            "name": "sellerStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_APPLIED",
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "SUSPENDED"
+              ]
+            }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SELLER",
+                "BUYER"
+              ]
+            }
+          },
+          {
+            "name": "phone",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-users"
+        ]
+      }
+    },
+    "/staff/users/{id}": {
+      "get": {
+        "operationId": "StaffUserController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-users"
+        ]
+      }
+    },
+    "/staff/users/{id}/suspend": {
+      "post": {
+        "operationId": "StaffUserController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-users"
+        ]
+      }
+    },
+    "/staff/users/{id}/block": {
+      "post": {
+        "operationId": "StaffUserController_block",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-users"
+        ]
+      }
+    },
+    "/staff/users/{id}/reactivate": {
+      "post": {
+        "operationId": "StaffUserController_reactivate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-users"
+        ]
+      }
+    },
+    "/contracts": {
+      "post": {
+        "operationId": "ContractController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContractDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "contracts"
+        ]
+      }
+    },
+    "/me/contracts": {
+      "get": {
+        "operationId": "MeContractController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_SELLER",
+                "ACTIVE",
+                "COMPLETED",
+                "CANCELLED",
+                "REJECTED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-contracts"
+        ]
+      }
+    },
+    "/me/contracts/{id}": {
+      "get": {
+        "operationId": "MeContractController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-contracts"
+        ]
+      }
+    },
+    "/me/contracts/{id}/cancel": {
+      "post": {
+        "operationId": "MeContractController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-contracts"
+        ]
+      }
+    },
+    "/me/contracts/{contractId}/milestones/{milestoneId}/approve": {
+      "post": {
+        "operationId": "MeContractController_approveMilestone",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MilestoneResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-contracts"
+        ]
+      }
+    },
+    "/me/contracts/{contractId}/milestones/{milestoneId}/request-revision": {
+      "post": {
+        "operationId": "MeContractController_requestRevision",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestRevisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MilestoneResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-contracts"
+        ]
+      }
+    },
+    "/seller/contracts": {
+      "get": {
+        "operationId": "SellerContractController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_SELLER",
+                "ACTIVE",
+                "COMPLETED",
+                "CANCELLED",
+                "REJECTED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-contracts"
+        ]
+      }
+    },
+    "/seller/contracts/{id}": {
+      "get": {
+        "operationId": "SellerContractController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-contracts"
+        ]
+      }
+    },
+    "/seller/contracts/{id}/accept": {
+      "post": {
+        "operationId": "SellerContractController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-contracts"
+        ]
+      }
+    },
+    "/seller/contracts/{id}/reject": {
+      "post": {
+        "operationId": "SellerContractController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-contracts"
+        ]
+      }
+    },
+    "/seller/contracts/{contractId}/milestones/{milestoneId}/submit": {
+      "post": {
+        "operationId": "SellerContractController_submitMilestone",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitMilestoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MilestoneResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-contracts"
+        ]
+      }
+    },
+    "/staff/contracts": {
+      "get": {
+        "operationId": "StaffContractController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_SELLER",
+                "ACTIVE",
+                "COMPLETED",
+                "CANCELLED",
+                "REJECTED"
+              ]
+            }
+          },
+          {
+            "name": "buyerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sellerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-contracts"
+        ]
+      }
+    },
+    "/staff/contracts/{id}": {
+      "get": {
+        "operationId": "StaffContractController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-contracts"
+        ]
+      }
+    },
+    "/me/contracts/{contractId}/payment": {
+      "post": {
+        "operationId": "PaymentController_create",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-payments"
+        ]
+      }
+    },
+    "/me/payments": {
+      "get": {
+        "operationId": "MePaymentController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SUCCEEDED",
+                "FAILED",
+                "CANCELLED",
+                "EXPIRED"
+              ]
+            }
+          },
+          {
+            "name": "contractId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-payments"
+        ]
+      }
+    },
+    "/me/payments/{id}": {
+      "get": {
+        "operationId": "MePaymentController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-payments"
+        ]
+      }
+    },
+    "/staff/payments": {
+      "get": {
+        "operationId": "StaffPaymentController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SUCCEEDED",
+                "FAILED",
+                "CANCELLED",
+                "EXPIRED"
+              ]
+            }
+          },
+          {
+            "name": "contractId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "payerUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-payments"
+        ]
+      }
+    },
+    "/staff/payments/{id}": {
+      "get": {
+        "operationId": "StaffPaymentController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPaymentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-payments"
+        ]
+      }
+    },
+    "/staff/ledger/transactions": {
+      "get": {
+        "operationId": "StaffLedgerController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PAYMENT_FUNDING",
+                "CONTRACT_SETTLEMENT",
+                "REFUND",
+                "PAYOUT_RESERVATION",
+                "PAYOUT_RELEASE",
+                "DISPUTE_HOLD",
+                "DISPUTE_RESOLUTION",
+                "DISPUTE_HOLD_RELEASE"
+              ]
+            }
+          },
+          {
+            "name": "sourceId",
+            "required": false,
+            "in": "query",
+            "description": "Payment.id yoki Contract.id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-ledger"
+        ]
+      }
+    },
+    "/staff/ledger/transactions/{id}": {
+      "get": {
+        "operationId": "StaffLedgerController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerTransactionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-ledger"
+        ]
+      }
+    },
+    "/seller/balance": {
+      "get": {
+        "operationId": "SellerBalanceController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerBalanceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-balance"
+        ]
+      }
+    },
+    "/staff/refunds": {
+      "post": {
+        "operationId": "StaffRefundController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffRefundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-refunds"
+        ]
+      },
+      "get": {
+        "operationId": "StaffRefundController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SUCCEEDED",
+                "FAILED"
+              ]
+            }
+          },
+          {
+            "name": "contractId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "paymentId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-refunds"
+        ]
+      }
+    },
+    "/staff/refunds/{id}": {
+      "get": {
+        "operationId": "StaffRefundController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffRefundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-refunds"
+        ]
+      }
+    },
+    "/me/refunds": {
+      "get": {
+        "operationId": "MeRefundController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SUCCEEDED",
+                "FAILED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-refunds"
+        ]
+      }
+    },
+    "/me/refunds/{id}": {
+      "get": {
+        "operationId": "MeRefundController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-refunds"
+        ]
+      }
+    },
+    "/seller/payouts": {
+      "post": {
+        "operationId": "SellerPayoutController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePayoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-payouts"
+        ]
+      },
+      "get": {
+        "operationId": "SellerPayoutController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SUCCEEDED",
+                "FAILED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-payouts"
+        ]
+      }
+    },
+    "/seller/payouts/{id}": {
+      "get": {
+        "operationId": "SellerPayoutController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "seller-payouts"
+        ]
+      }
+    },
+    "/staff/payouts": {
+      "get": {
+        "operationId": "StaffPayoutController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SUCCEEDED",
+                "FAILED"
+              ]
+            }
+          },
+          {
+            "name": "sellerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-payouts"
+        ]
+      }
+    },
+    "/staff/payouts/{id}": {
+      "get": {
+        "operationId": "StaffPayoutController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPayoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-payouts"
+        ]
+      }
+    },
+    "/me/contracts/{contractId}/disputes": {
+      "post": {
+        "operationId": "OpenDisputeController_open",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes": {
+      "get": {
+        "operationId": "MeDisputeController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "UNDER_REVIEW",
+                "RESOLVED",
+                "REJECTED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}": {
+      "get": {
+        "operationId": "MeDisputeController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}/evidence": {
+      "get": {
+        "operationId": "MeDisputeController_listEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      },
+      "post": {
+        "operationId": "MeDisputeController_addEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEvidenceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}/events": {
+      "get": {
+        "operationId": "MeDisputeController_listEvents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/me/disputes/{id}/cancel": {
+      "post": {
+        "operationId": "MeDisputeController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-disputes"
+        ]
+      }
+    },
+    "/staff/disputes": {
+      "get": {
+        "operationId": "StaffDisputeController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "UNDER_REVIEW",
+                "RESOLVED",
+                "REJECTED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "contractId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "buyerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sellerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}": {
+      "get": {
+        "operationId": "StaffDisputeController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/evidence": {
+      "get": {
+        "operationId": "StaffDisputeController_listEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      },
+      "post": {
+        "operationId": "StaffDisputeController_addEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEvidenceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/events": {
+      "get": {
+        "operationId": "StaffDisputeController_listEvents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/start-review": {
+      "post": {
+        "operationId": "StaffDisputeController_startReview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/reject": {
+      "post": {
+        "operationId": "StaffDisputeController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/disputes/{id}/resolve": {
+      "post": {
+        "operationId": "StaffDisputeController_resolve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveDisputeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDisputeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-disputes"
+        ]
+      }
+    },
+    "/staff/reconciliation/anomalies": {
+      "get": {
+        "operationId": "StaffReconciliationController_listAnomalies",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "severity",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "WARNING",
+                "CRITICAL"
+              ]
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resolved",
+            "required": false,
+            "in": "query",
+            "description": "true — faqat hal qilingan, false — faqat ochiq",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "since",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana — shundan keyin aniqlanganlar",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/anomalies/{id}/acknowledge": {
+      "post": {
+        "operationId": "StaffReconciliationController_acknowledgeAnomaly",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeAnomalyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnomalyResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/summary": {
+      "get": {
+        "operationId": "StaffReconciliationController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/payments/{id}/reconcile": {
+      "post": {
+        "operationId": "StaffReconciliationController_reconcilePayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationRunResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/refunds/{id}/reconcile": {
+      "post": {
+        "operationId": "StaffReconciliationController_reconcileRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationRunResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/reconciliation/payouts/{id}/reconcile": {
+      "post": {
+        "operationId": "StaffReconciliationController_reconcilePayout",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationRunResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-reconciliation"
+        ]
+      }
+    },
+    "/staff/financial-integrity/scan": {
+      "post": {
+        "operationId": "StaffFinancialIntegrityController_scan",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-financial-integrity"
+        ]
+      }
+    },
+    "/staff/outbox": {
+      "get": {
+        "operationId": "StaffOutboxController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "PROCESSING",
+                "SENT",
+                "DEAD",
+                "SKIPPED"
+              ]
+            }
+          },
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "aggregateType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
+    },
+    "/staff/outbox/summary": {
+      "get": {
+        "operationId": "StaffOutboxController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
+    },
+    "/staff/outbox/{id}": {
+      "get": {
+        "operationId": "StaffOutboxController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
+    },
+    "/staff/outbox/{id}/retry": {
+      "post": {
+        "operationId": "StaffOutboxController_retry",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutboxEventResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-outbox"
+        ]
+      }
+    },
+    "/staff/admin/staff-members": {
+      "get": {
+        "operationId": "StaffAdminController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "SUSPENDED",
+                "DISABLED"
+              ]
+            }
+          },
+          {
+            "name": "email",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permission",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      },
+      "post": {
+        "operationId": "StaffAdminController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateStaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}": {
+      "get": {
+        "operationId": "StaffAdminController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/permissions": {
+      "patch": {
+        "operationId": "StaffAdminController_updatePermissions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStaffPermissionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/suspend": {
+      "post": {
+        "operationId": "StaffAdminController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffStatusActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/disable": {
+      "post": {
+        "operationId": "StaffAdminController_disable",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffStatusActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/reactivate": {
+      "post": {
+        "operationId": "StaffAdminController_reactivate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffMemberResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/sessions": {
+      "delete": {
+        "operationId": "StaffAdminController_revokeSessions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/totp/reset": {
+      "post": {
+        "operationId": "StaffAdminController_resetTotp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/admin/staff-members/{id}/password-reset": {
+      "post": {
+        "operationId": "StaffAdminController_resetPassword",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPasswordResetResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-admin"
+        ]
+      }
+    },
+    "/staff/audit-logs": {
+      "get": {
+        "operationId": "StaffAuditLogController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "actorType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "STAFF",
+                "SYSTEM"
+              ]
+            }
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdTo",
+            "required": false,
+            "in": "query",
+            "description": "ISO sana",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-audit-logs"
+        ]
+      }
+    },
+    "/staff/audit-logs/{id}": {
+      "get": {
+        "operationId": "StaffAuditLogController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "staff-audit-logs"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Bobo&Doda API",
+    "description": "Markaziy Osiyo freelance marketplace — milestone escrow, double-entry ledger. Frontend `lib/api` chegarasini qoplaydi.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LivenessDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 42
+          },
+          "commit": {
+            "type": "string",
+            "example": "67e1191"
+          }
+        },
+        "required": [
+          "status",
+          "uptimeSeconds"
+        ]
+      },
+      "ReadinessDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "db": {
+            "type": "boolean",
+            "example": true
+          },
+          "redis": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "status",
+          "db",
+          "redis"
+        ]
+      },
+      "ApiErrorDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "VALIDATION",
+            "description": "Taksonomiya kodi (`error-codes.ts`). Frontend shu bo’yicha matn tanlaydi."
+          },
+          "message": {
+            "type": "string",
+            "example": "Validatsiya muvaffaqiyatsiz",
+            "description": "Log/debug uchun — foydalanuvchiga ko’rsatilmaydi."
+          },
+          "fieldErrors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "phone": "Raqam band"
+            },
+            "description": "Maydon-darajali validatsiya — to’g’ridan-to’g’ri forma maydonlariga."
+          },
+          "requestId": {
+            "type": "string",
+            "example": "3f9a1c2e-...",
+            "description": "So’rov identifikatori — log bilan bog’lash uchun (`x-request-id`)."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "RequestOtpDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+998901234567"
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "RequestOtpResponseDto": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "boolean",
+            "example": true
+          },
+          "devOtp": {
+            "type": "string",
+            "description": "FAQAT DEVELOPMENT — productionda HECH QACHON qaytarilmaydi. Generatsiya qilingan OTP kodi, frontend backend konsolini o'qimasdan sinash uchun.",
+            "example": "532123"
+          }
+        },
+        "required": [
+          "sent"
+        ]
+      },
+      "VerifyOtpDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+998901234567"
+          },
+          "code": {
+            "type": "string",
+            "example": "482913",
+            "description": "6 xonali OTP kodi"
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "CompleteRegistrationDto": {
+        "type": "object",
+        "properties": {
+          "registrationToken": {
+            "type": "string",
+            "description": "`verify-otp` javobidagi qisqa umrli token"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "confirmPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "registrationToken",
+          "password",
+          "confirmPassword"
+        ]
+      },
+      "AuthSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Qisqa umrli JWT — `Authorization: Bearer <token>`"
+          },
+          "activeRole": {
+            "type": "string",
+            "enum": [
+              "SELLER",
+              "BUYER"
+            ],
+            "nullable": true,
+            "description": "NULL — rol hali tanlanmagan"
+          },
+          "roleChosen": {
+            "type": "boolean"
+          },
+          "profileDone": {
+            "type": "boolean"
+          },
+          "isNewUser": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accessToken",
+          "roleChosen",
+          "profileDone",
+          "isNewUser"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+998901234567"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone",
+          "password"
+        ]
+      },
+      "CompletePasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "resetToken": {
+            "type": "string",
+            "description": "`verify-otp` javobidagi qisqa umrli token"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "confirmPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resetToken",
+          "password",
+          "confirmPassword"
+        ]
+      },
+      "MeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "object",
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "avatarKey": {
+            "type": "object",
+            "nullable": true
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "SELLER",
+                "BUYER"
+              ]
+            }
+          },
+          "activeRole": {
+            "type": "string",
+            "enum": [
+              "SELLER",
+              "BUYER"
+            ],
+            "nullable": true
+          },
+          "roleChosen": {
+            "type": "boolean"
+          },
+          "profileDone": {
+            "type": "boolean"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "BLOCKED"
+            ]
+          },
+          "sellerStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_APPLIED",
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "roles",
+          "roleChosen",
+          "profileDone",
+          "verified",
+          "status",
+          "sellerStatus",
+          "createdAt"
+        ]
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "fullName"
+        ]
+      },
+      "ChooseRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "SELLER",
+              "BUYER"
+            ],
+            "example": "BUYER"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "SwitchRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "SELLER",
+              "BUYER"
+            ],
+            "example": "SELLER"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "SessionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "activeRole": {
+            "type": "string",
+            "enum": [
+              "SELLER",
+              "BUYER"
+            ],
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "object",
+            "nullable": true
+          },
+          "ip": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "Shu so‘rovni yuborgan tokenning o‘zi shu sessiyagami"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "expiresAt",
+          "current"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "StaffLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@bobododa.uz"
+          },
+          "password": {
+            "type": "string"
+          },
+          "totpCode": {
+            "type": "string",
+            "description": "2FA yoqilgan hisoblar uchun majburiy (TOTP, 6 xona)"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "StaffSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accessToken",
+          "role",
+          "permissions",
+          "mustChangePassword"
+        ]
+      },
+      "StaffMeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "role",
+          "title",
+          "permissions",
+          "mfaEnabled",
+          "mustChangePassword"
+        ]
+      },
+      "TotpEnrollResponseDto": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "otpauthUri": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauthUri"
+        ]
+      },
+      "TotpVerifyDto": {
+        "type": "object",
+        "properties": {
+          "totpCode": {
+            "type": "string",
+            "description": "6 xonali TOTP kod"
+          }
+        },
+        "required": [
+          "totpCode"
+        ]
+      },
+      "TotpDisableDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "totpCode": {
+            "type": "string",
+            "description": "6 xonali TOTP kod"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "totpCode"
+        ]
+      },
+      "CategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "nameUz": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "nameUz",
+          "nameRu",
+          "nameEn",
+          "status",
+          "sortOrder",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "dizayn",
+            "description": "kichik harf, raqam, tire (kebab-case)"
+          },
+          "nameUz": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number",
+            "default": 0
+          }
+        },
+        "required": [
+          "slug",
+          "nameUz",
+          "nameRu",
+          "nameEn"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "nameUz": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        }
+      },
+      "SellerApplicationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "legalName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED"
+            ]
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reviewedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "rejectionReason": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "legalName",
+          "displayName",
+          "status",
+          "submittedAt",
+          "createdAt"
+        ]
+      },
+      "SubmitSellerApplicationDto": {
+        "type": "object",
+        "properties": {
+          "legalName": {
+            "type": "string",
+            "description": "Haqiqiy F.I.Sh — KYC uchun"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Bozorda ko’rinadigan nom"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "legalName",
+          "displayName"
+        ]
+      },
+      "RejectSellerApplicationDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "SellerDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "object"
+          },
+          "sellerStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_APPLIED",
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "servicesCount": {
+            "type": "number"
+          },
+          "contractsAsSellerCount": {
+            "type": "number"
+          },
+          "payoutsSucceededCount": {
+            "type": "number"
+          },
+          "disputesAsSellerCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "sellerStatus",
+          "createdAt",
+          "verified",
+          "servicesCount",
+          "contractsAsSellerCount",
+          "payoutsSucceededCount",
+          "disputesAsSellerCount"
+        ]
+      },
+      "SuspendSellerDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "PublicServiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sellerId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "deliveryDays": {
+            "type": "number"
+          },
+          "publishedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sellerId",
+          "categoryId",
+          "title",
+          "description",
+          "lang",
+          "price",
+          "currency",
+          "deliveryDays",
+          "createdAt"
+        ]
+      },
+      "CreateServiceDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 5000
+          },
+          "price": {
+            "type": "number",
+            "description": "Butun so‘m",
+            "minimum": 1,
+            "maximum": 10000000000
+          },
+          "deliveryDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365
+          }
+        },
+        "required": [
+          "categoryId",
+          "title",
+          "description",
+          "price",
+          "deliveryDays"
+        ]
+      },
+      "ServiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sellerId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "deliveryDays": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PENDING_REVIEW",
+              "ACTIVE",
+              "REJECTED",
+              "PAUSED",
+              "ARCHIVED"
+            ]
+          },
+          "submittedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "reviewedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "rejectionReason": {
+            "type": "object",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sellerId",
+          "categoryId",
+          "title",
+          "description",
+          "lang",
+          "price",
+          "currency",
+          "deliveryDays",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateServiceDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 5000
+          },
+          "price": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000000000
+          },
+          "deliveryDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365
+          }
+        }
+      },
+      "RejectServiceDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "UserDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "object"
+          },
+          "email": {
+            "type": "object"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "SELLER",
+                "BUYER"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "BLOCKED"
+            ]
+          },
+          "statusReason": {
+            "type": "object"
+          },
+          "statusChangedAt": {
+            "type": "object"
+          },
+          "suspendedUntil": {
+            "type": "object"
+          },
+          "sellerStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_APPLIED",
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUSPENDED"
+            ]
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "contractsAsBuyerCount": {
+            "type": "number"
+          },
+          "contractsAsSellerCount": {
+            "type": "number"
+          },
+          "paymentsCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "roles",
+          "status",
+          "sellerStatus",
+          "verified",
+          "createdAt",
+          "contractsAsBuyerCount",
+          "contractsAsSellerCount",
+          "paymentsCount"
+        ]
+      },
+      "SuspendUserDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          },
+          "suspendedUntil": {
+            "type": "string",
+            "description": "ISO sana — berilmasa muddatsiz (staff qo‘lda tugatadi)"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "BlockUserDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreateMilestoneInputDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m",
+            "minimum": 1,
+            "maximum": 10000000000
+          },
+          "dueAt": {
+            "type": "string",
+            "description": "ISO 8601"
+          }
+        },
+        "required": [
+          "title",
+          "amount"
+        ]
+      },
+      "CreateContractDto": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string"
+          },
+          "deadline": {
+            "type": "string",
+            "description": "ISO 8601 — kelajakda bo‘lishi shart"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateMilestoneInputDto"
+            }
+          }
+        },
+        "required": [
+          "serviceId",
+          "deadline",
+          "milestones"
+        ]
+      },
+      "MilestoneResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "object",
+            "nullable": true
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "position": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "IN_PROGRESS",
+              "SUBMITTED",
+              "REVISION_REQUESTED",
+              "APPROVED"
+            ]
+          },
+          "dueAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "approvedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "title",
+          "amount",
+          "position",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ContractResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "buyerId": {
+            "type": "string"
+          },
+          "sellerId": {
+            "type": "string"
+          },
+          "serviceId": {
+            "type": "string"
+          },
+          "serviceTitleSnapshot": {
+            "type": "string"
+          },
+          "serviceDescriptionSnapshot": {
+            "type": "string"
+          },
+          "categoryNameSnapshot": {
+            "type": "string"
+          },
+          "sellerDisplayNameSnapshot": {
+            "type": "string"
+          },
+          "agreedAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "platformFeeRateBps": {
+            "type": "number"
+          },
+          "platformFeeAmount": {
+            "type": "number",
+            "description": "Butun so‘m — informatsion, hali undirilmagan"
+          },
+          "deadline": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_SELLER",
+              "ACTIVE",
+              "COMPLETED",
+              "CANCELLED",
+              "REJECTED"
+            ]
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MilestoneResponseDto"
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "buyerId",
+          "sellerId",
+          "serviceId",
+          "serviceTitleSnapshot",
+          "serviceDescriptionSnapshot",
+          "categoryNameSnapshot",
+          "sellerDisplayNameSnapshot",
+          "agreedAmount",
+          "currency",
+          "platformFeeRateBps",
+          "platformFeeAmount",
+          "deadline",
+          "status",
+          "milestones",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "RequestRevisionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "SubmitMilestoneDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "deliverableUrls": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PaymentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "EXPIRED"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "object"
+          },
+          "succeededAt": {
+            "type": "object"
+          },
+          "failedAt": {
+            "type": "object"
+          },
+          "cancelledAt": {
+            "type": "object"
+          },
+          "expiresAt": {
+            "type": "object"
+          },
+          "checkoutUrl": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "provider",
+          "status",
+          "amount",
+          "currency",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "StaffPaymentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "EXPIRED"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "object"
+          },
+          "succeededAt": {
+            "type": "object"
+          },
+          "failedAt": {
+            "type": "object"
+          },
+          "cancelledAt": {
+            "type": "object"
+          },
+          "expiresAt": {
+            "type": "object"
+          },
+          "checkoutUrl": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "payerUserId": {
+            "type": "string"
+          },
+          "providerPaymentId": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "provider",
+          "status",
+          "amount",
+          "currency",
+          "createdAt",
+          "updatedAt",
+          "payerUserId"
+        ]
+      },
+      "LedgerEntryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "accountType": {
+            "type": "string",
+            "enum": [
+              "PAYMENT_CLEARING",
+              "ESCROW",
+              "SELLER_PAYABLE",
+              "PLATFORM_REVENUE",
+              "REFUND_CLEARING",
+              "PAYOUT_CLEARING",
+              "DISPUTE_HOLD"
+            ]
+          },
+          "accountOwnerType": {
+            "type": "string",
+            "enum": [
+              "PLATFORM",
+              "USER"
+            ]
+          },
+          "accountOwnerId": {
+            "type": "object"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Ishorali butun so‘m — musbat=kredit, manfiy=debit"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "accountType",
+          "accountOwnerType",
+          "amount",
+          "currency",
+          "createdAt"
+        ]
+      },
+      "LedgerTransactionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "PAYMENT_FUNDING",
+              "CONTRACT_SETTLEMENT",
+              "REFUND",
+              "PAYOUT_RESERVATION",
+              "PAYOUT_RELEASE",
+              "DISPUTE_HOLD",
+              "DISPUTE_RESOLUTION",
+              "DISPUTE_HOLD_RELEASE"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Payment.id yoki Contract.id — `type`ga qarab"
+          },
+          "description": {
+            "type": "object"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntryResponseDto"
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "currency",
+          "sourceId",
+          "entries",
+          "createdAt"
+        ]
+      },
+      "SellerBalanceResponseDto": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "available": {
+            "type": "number",
+            "description": "Butun so‘m — SELLER_PAYABLE hisobidagi joriy qoldiq"
+          }
+        },
+        "required": [
+          "currency",
+          "available"
+        ]
+      },
+      "CreateRefundDto": {
+        "type": "object",
+        "properties": {
+          "contractId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "contractId",
+          "reason"
+        ]
+      },
+      "StaffRefundResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "paymentId": {
+            "type": "string"
+          },
+          "disputeId": {
+            "type": "object",
+            "description": "Bosqich 8 — dispute-driven bo‘lsa tegishli Dispute ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SUCCEEDED",
+              "FAILED"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "object"
+          },
+          "succeededAt": {
+            "type": "object"
+          },
+          "failedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "requestedByStaffId": {
+            "type": "string"
+          },
+          "providerRefundId": {
+            "type": "object"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "paymentId",
+          "status",
+          "amount",
+          "currency",
+          "reason",
+          "createdAt",
+          "updatedAt",
+          "requestedByStaffId",
+          "provider"
+        ]
+      },
+      "RefundResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "paymentId": {
+            "type": "string"
+          },
+          "disputeId": {
+            "type": "object",
+            "description": "Bosqich 8 — dispute-driven bo‘lsa tegishli Dispute ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SUCCEEDED",
+              "FAILED"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "object"
+          },
+          "succeededAt": {
+            "type": "object"
+          },
+          "failedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "paymentId",
+          "status",
+          "amount",
+          "currency",
+          "reason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreatePayoutDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m",
+            "minimum": 1
+          },
+          "destinationReference": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "amount",
+          "destinationReference"
+        ]
+      },
+      "PayoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SUCCEEDED",
+              "FAILED"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "destinationReference": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "object"
+          },
+          "succeededAt": {
+            "type": "object"
+          },
+          "failedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "amount",
+          "currency",
+          "destinationReference",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "StaffPayoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SUCCEEDED",
+              "FAILED"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "destinationReference": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "object"
+          },
+          "succeededAt": {
+            "type": "object"
+          },
+          "failedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sellerId": {
+            "type": "string"
+          },
+          "providerPayoutId": {
+            "type": "object"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "amount",
+          "currency",
+          "destinationReference",
+          "createdAt",
+          "updatedAt",
+          "sellerId",
+          "provider"
+        ]
+      },
+      "OpenDisputeDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SCOPE",
+              "QUALITY",
+              "DEADLINE",
+              "PAYMENT",
+              "COMMUNICATION",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "reason",
+          "description"
+        ]
+      },
+      "DisputeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SCOPE",
+              "QUALITY",
+              "DEADLINE",
+              "PAYMENT",
+              "COMMUNICATION",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "UNDER_REVIEW",
+              "RESOLVED",
+              "REJECTED",
+              "CANCELLED"
+            ]
+          },
+          "preSettlement": {
+            "type": "boolean"
+          },
+          "disputedAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "heldAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "resolutionType": {
+            "type": "string",
+            "enum": [
+              "BUYER_FULL_REFUND",
+              "SELLER_FULL_RELEASE",
+              "SPLIT"
+            ]
+          },
+          "buyerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "sellerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "resolutionReason": {
+            "type": "object"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reviewStartedAt": {
+            "type": "object"
+          },
+          "resolvedAt": {
+            "type": "object"
+          },
+          "rejectedAt": {
+            "type": "object"
+          },
+          "cancelledAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "reason",
+          "description",
+          "status",
+          "preSettlement",
+          "disputedAmount",
+          "heldAmount",
+          "currency",
+          "openedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AddEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "fileReference": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "milestoneId": {
+            "type": "string"
+          }
+        }
+      },
+      "DisputeEvidenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "disputeId": {
+            "type": "string"
+          },
+          "submittedByUserId": {
+            "type": "object"
+          },
+          "submittedByStaffId": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string"
+          },
+          "text": {
+            "type": "object"
+          },
+          "fileReference": {
+            "type": "object"
+          },
+          "milestoneId": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "disputeId",
+          "type",
+          "createdAt"
+        ]
+      },
+      "StaffDisputeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SCOPE",
+              "QUALITY",
+              "DEADLINE",
+              "PAYMENT",
+              "COMMUNICATION",
+              "OTHER"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "UNDER_REVIEW",
+              "RESOLVED",
+              "REJECTED",
+              "CANCELLED"
+            ]
+          },
+          "preSettlement": {
+            "type": "boolean"
+          },
+          "disputedAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "heldAmount": {
+            "type": "number",
+            "description": "Butun so‘m"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "resolutionType": {
+            "type": "string",
+            "enum": [
+              "BUYER_FULL_REFUND",
+              "SELLER_FULL_RELEASE",
+              "SPLIT"
+            ]
+          },
+          "buyerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "sellerAwardAmount": {
+            "type": "object",
+            "description": "Butun so‘m"
+          },
+          "resolutionReason": {
+            "type": "object"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reviewStartedAt": {
+            "type": "object"
+          },
+          "resolvedAt": {
+            "type": "object"
+          },
+          "rejectedAt": {
+            "type": "object"
+          },
+          "cancelledAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "openedByUserId": {
+            "type": "string"
+          },
+          "resolvedByStaffId": {
+            "type": "object"
+          },
+          "rejectedByStaffId": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "contractId",
+          "reason",
+          "description",
+          "status",
+          "preSettlement",
+          "disputedAmount",
+          "heldAmount",
+          "currency",
+          "openedAt",
+          "createdAt",
+          "updatedAt",
+          "openedByUserId"
+        ]
+      },
+      "RejectDisputeDto": {
+        "type": "object",
+        "properties": {
+          "resolutionReason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "resolutionReason"
+        ]
+      },
+      "ResolveDisputeDto": {
+        "type": "object",
+        "properties": {
+          "buyerAwardAmount": {
+            "type": "number",
+            "description": "Butun so‘m",
+            "minimum": 0
+          },
+          "sellerAwardAmount": {
+            "type": "number",
+            "description": "Butun so‘m",
+            "minimum": 0
+          },
+          "resolutionReason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "buyerAwardAmount",
+          "sellerAwardAmount",
+          "resolutionReason"
+        ]
+      },
+      "AcknowledgeAnomalyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      },
+      "AnomalyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "INFO",
+              "WARNING",
+              "CRITICAL"
+            ]
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "detectedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resolvedAt": {
+            "type": "object"
+          },
+          "resolvedByStaffId": {
+            "type": "object"
+          },
+          "resolutionNote": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "severity",
+          "entityType",
+          "entityId",
+          "description",
+          "detectedAt"
+        ]
+      },
+      "ReconciliationRunResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "operationType": {
+            "type": "string"
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "AUTOMATIC",
+              "STAFF",
+              "DEPLOYMENT_CHECK"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "NO_CHANGE",
+              "RECONCILED",
+              "ANOMALY",
+              "ERROR"
+            ]
+          },
+          "observedLocalStatus": {
+            "type": "string"
+          },
+          "observedProviderStatus": {
+            "type": "object"
+          },
+          "actionTaken": {
+            "type": "object"
+          },
+          "errorCode": {
+            "type": "object"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "operationType",
+          "operationId",
+          "provider",
+          "trigger",
+          "status",
+          "observedLocalStatus",
+          "startedAt",
+          "completedAt"
+        ]
+      },
+      "OutboxDeliveryAttemptResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "attemptNumber": {
+            "type": "number"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "SMS",
+              "EMAIL",
+              "TELEGRAM"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DELIVERED",
+              "RETRYABLE_FAILURE",
+              "PERMANENT_FAILURE"
+            ]
+          },
+          "errorCode": {
+            "type": "object"
+          },
+          "providerMessageId": {
+            "type": "object"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "attemptNumber",
+          "channel",
+          "provider",
+          "status",
+          "startedAt",
+          "completedAt"
+        ]
+      },
+      "OutboxEventDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "aggregateType": {
+            "type": "string"
+          },
+          "aggregateId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "payloadVersion": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SENT",
+              "DEAD",
+              "SKIPPED"
+            ]
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "lastError": {
+            "type": "object"
+          },
+          "lastErrorCode": {
+            "type": "object"
+          },
+          "availableAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "processedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deliveryAttempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutboxDeliveryAttemptResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "aggregateType",
+          "aggregateId",
+          "eventType",
+          "payload",
+          "payloadVersion",
+          "status",
+          "attempts",
+          "availableAt",
+          "createdAt",
+          "deliveryAttempts"
+        ]
+      },
+      "OutboxEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "aggregateType": {
+            "type": "string"
+          },
+          "aggregateId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "payloadVersion": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SENT",
+              "DEAD",
+              "SKIPPED"
+            ]
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "lastError": {
+            "type": "object"
+          },
+          "lastErrorCode": {
+            "type": "object"
+          },
+          "availableAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "processedAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "aggregateType",
+          "aggregateId",
+          "eventType",
+          "payload",
+          "payloadVersion",
+          "status",
+          "attempts",
+          "availableAt",
+          "createdAt"
+        ]
+      },
+      "StaffMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "DISABLED"
+            ]
+          },
+          "statusReason": {
+            "type": "object"
+          },
+          "statusChangedAt": {
+            "type": "object"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          },
+          "lastLoginAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "title",
+          "role",
+          "permissions",
+          "status",
+          "mfaEnabled",
+          "mustChangePassword",
+          "createdAt"
+        ]
+      },
+      "CreateStaffMemberDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "ops@bobododa.uz"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          }
+        },
+        "required": [
+          "email",
+          "fullName",
+          "title",
+          "role",
+          "permissions"
+        ]
+      },
+      "CreateStaffMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "OPERATIONS",
+              "FINANCE",
+              "SUPPORT",
+              "TRUST_SAFETY",
+              "KYC_REVIEWER",
+              "ADMIN"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "SUSPENDED",
+              "DISABLED"
+            ]
+          },
+          "statusReason": {
+            "type": "object"
+          },
+          "statusChangedAt": {
+            "type": "object"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          },
+          "lastLoginAt": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tempPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "title",
+          "role",
+          "permissions",
+          "status",
+          "mfaEnabled",
+          "mustChangePassword",
+          "createdAt",
+          "tempPassword"
+        ]
+      },
+      "UpdateStaffPermissionsDto": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "description": "TO‘LIQ ro‘yxat — mavjudlarni ALMASHTIRADI, qo‘shimcha qilmaydi",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DASHBOARD",
+                "USERS",
+                "SERVICES",
+                "JOBS",
+                "ORDERS",
+                "KYC",
+                "DISPUTES",
+                "PAYMENTS",
+                "REPORTS",
+                "APPEALS",
+                "REVIEWS",
+                "SUPPORT",
+                "CATEGORIES",
+                "SETTINGS",
+                "AUDIT",
+                "STAFF"
+              ]
+            }
+          }
+        },
+        "required": [
+          "permissions"
+        ]
+      },
+      "StaffStatusActionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "AdminPasswordResetResponseDto": {
+        "type": "object",
+        "properties": {
+          "tempPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tempPassword"
+        ]
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "actorId": {
+            "type": "object"
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "STAFF",
+              "SYSTEM"
+            ]
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "contextId": {
+            "type": "object"
+          },
+          "previousState": {
+            "type": "object"
+          },
+          "newState": {
+            "type": "object"
+          },
+          "ip": {
+            "type": "object"
+          },
+          "userAgent": {
+            "type": "object"
+          },
+          "requestId": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actorType",
+          "actorName",
+          "action",
+          "resourceType",
+          "resourceId",
+          "createdAt"
+        ]
+      }
+    }
+  }
+}

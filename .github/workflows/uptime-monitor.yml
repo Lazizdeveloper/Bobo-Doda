@@ -1,0 +1,104 @@
+name: Production Uptime Monitor
+
+# Bosqich 24 — minimal, HAQIQIY production monitoring: yangi vendor/hisob
+# talab qilmaydi (Sentry/UptimeRobot va h.k. mavjud emas — RUNBOOK §22/23),
+# FAQAT GitHub'ning o'zidan (allaqachon to'liq huquqli kirish bor) foydalanadi.
+# Xatolik topilsa BITTA doimiy GitHub Issue'ni ochadi/yangilaydi (spam
+# qilmaydi) — GitHub sukut bo'yicha repo kuzatuvchilariga/egasiga email
+# yuboradi, bu HAQIQIY, tekshirilgan yetkazish kanali (dashboard-only
+# "sozlangan, lekin hech qachon sinalmagan" da'vo emas).
+
+on:
+  schedule:
+    # Har 15 daqiqada (GitHub cron "best effort" — biroz kechikishi mumkin).
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: 'Haqiqiy ishlab chiqarishga tegmasdan alert yetkazish yo‘lini sinash uchun (true/false)'
+        required: false
+        default: 'false'
+
+permissions:
+  issues: write
+
+concurrency:
+  group: uptime-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production endpoints
+        id: probe
+        run: |
+          set +e
+          fail=0
+          report=""
+
+          check() {
+            local name="$1" url="$2"
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$url")
+            if [ "$code" != "200" ]; then
+              fail=1
+              report="${report}- ❌ **${name}** (\`${url}\`) → HTTP ${code}\n"
+            else
+              report="${report}- ✅ ${name} → 200\n"
+            fi
+          }
+
+          check "Landing (bobododa.uz)" "https://bobododa.uz"
+          check "App (app.bobododa.uz)" "https://app.bobododa.uz"
+          check "API health/live" "https://api.bobododa.uz/health/live"
+          check "API health/ready" "https://api.bobododa.uz/health/ready"
+
+          if [ "${{ github.event.inputs.simulate_failure }}" = "true" ]; then
+            fail=1
+            report="${report}- ❌ **SIMULATED** (\`workflow_dispatch\` test alert, no real endpoint affected)\n"
+          fi
+
+          {
+            echo "report<<EOF"
+            echo -e "$report"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "fail=$fail" >> "$GITHUB_OUTPUT"
+
+      - name: Find existing open alert issue
+        id: existing
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh issue list --repo "${{ github.repository }}" --label production-alert --state open --json number --jq '.[0].number // empty')
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update alert on failure
+        if: steps.probe.outputs.fail == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body="Production health check failed at $(date -u +%Y-%m-%dT%H:%M:%SZ).
+
+          ${{ steps.probe.outputs.report }}
+
+          Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ -n "${{ steps.existing.outputs.id }}" ]; then
+            gh issue comment ${{ steps.existing.outputs.id }} --repo "${{ github.repository }}" --body "$body"
+          else
+            gh issue create --repo "${{ github.repository }}" \
+              --title "🔴 Production down: bobododa.uz / app / api" \
+              --label production-alert \
+              --body "$body"
+          fi
+
+      - name: Close alert on recovery
+        if: steps.probe.outputs.fail == '0' && steps.existing.outputs.id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment ${{ steps.existing.outputs.id }} --repo "${{ github.repository }}" \
+            --body "✅ Recovered — all checks passing as of $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+          gh issue close ${{ steps.existing.outputs.id }} --repo "${{ github.repository }}"
