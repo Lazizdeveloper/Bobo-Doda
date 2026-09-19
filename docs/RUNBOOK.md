@@ -2221,3 +2221,107 @@ xom Railway domenlar (`*.up.railway.app`) HAR DOIM ishlab turadi, cutover
 bekor qilinsa ham foydalanuvchilar uchun zaxira yo'l bo'lib qoladi.
 CORS_ORIGINS'da ikkalasi (custom + xom domen) ham saqlanganidan, xom domenga
 qaytish CORS o'zgarishini talab qilmaydi.
+
+## 25. Release jarayoni — HAQIQIY holat (Bosqich 24 audit topilmasi)
+
+**MUHIM — hujjatlashtirilgan "develop → CI → main → production" oqimi
+HAQIQATDA MAVJUD EMAS.** Tekshirilgan (taxmin emas):
+- `main` — `develop`dan **40 commit ORQADA**, oxirgi commit "feat(backend):
+  stage 1 foundation" (loyihaning eng boshidan). `main`ga hech qachon PR
+  merge qilinmagan (`gh pr list --base main --state merged` — bo'sh).
+- Railway `frontend`/`backend` xizmatlari HECH QANDAY git manba bilan
+  ulanmagan (`railway service source` — bog'lanish yo'q) — deploy FAQAT
+  qo'lda, CLI orqali (`railway up`/`railway redeploy --from-source`).
+  Git push'ning o'zi HECH NARSANI deploy qilmaydi.
+
+**Haqiqiy oqim**: `develop`ga push → CI (`backend-ci.yml`/`ci.yml`/
+`codeql.yml`) avtomatik ishga tushadi (endi TO'LIQ yashil — Bosqich 23/24
+tuzatishlaridan keyin) → **operator qo'lda** `railway up`/`railway
+redeploy --from-source` orqali deploy qiladi. `develop`dagi kod bilan
+production'da ISHLAYOTGAN kod orasida HECH QANDAY avtomatik kafolat yo'q
+— muvofiqlik faqat operator DISTSIPLINASIGA bog'liq (har push'dan keyin
+deploy qilishni eslab qolish).
+
+**`main` branch protection — yangilandi** (Bosqich 24): `required_status_checks`
+endi HAQIQIY, CI'da tasdiqlangan 4 ta check nomi bilan sozlangan (`Lint ·
+Typecheck · Unit · Contracts`, `Integration (real Postgres 16 + Redis —
+service containers)`, `Production Build`, `Code Quality & Security`) —
+ilgari bu ATAYLAB bo'sh qoldirilgan edi, chunki CI ishonchsiz edi (bo'lim
+23'da tuzatilgan ikkita CI xatosi). `enforce_admins: false` — bu ataylab,
+chunki HALI PR oqimi qo'llanilmaydi, admin bloklanib qolmasin. `main`
+haqiqatan ishlatila boshlasa (git-asosli deploy'ga o'tilsa), shu bandni
+qayta ko'rib chiqing.
+
+**Tavsiya (bajarilmadi — arxitektura qarori, operator tasdig'i kerak)**:
+Railway xizmatlarini GitHub'ga ulash (`railway service source connect
+--repo Lazizdeveloper/Bobo-Doda --branch develop`) — shunda push avtomatik
+deploy qiladi, har doim "nima push qilingan — o'sha ishlayapti" kafolati
+bo'ladi. Hozircha bajarilmadi, chunki bu deploy MODELINI tubdan o'zgartiradi
+(CLI qo'lda nazoratidan avtomatikka) — operatorning ochiq roziligisiz
+qilinmadi.
+
+### Rollback — ilova darajasi (real, sinovdan o'tgan yo'l)
+
+Railway `redeploy` FAQAT "oxirgi" deployment'ni qayta ishga tushiradi,
+ESKI (REMOVED holatidagi) deployment'ni ID bo'yicha tanlab qayta tiklash
+uchun CLI buyrug'i YO'Q (tekshirilgan — `railway deployment`/`railway
+redeploy --help`da yo'q). Haqiqiy, ishlaydigan yo'l — kodni orqaga qaytarib
+QAYTA DEPLOY qilish:
+
+```bash
+# Muammoli commit'dan OLDINGI yaxshi commit'ni toping:
+git log --oneline -10
+
+# O'sha holatga vaqtincha o'tib, qayta deploy qiling:
+git checkout <yaxshi-commit-sha> -- .   # yoki: git worktree add ../rollback <sha>
+railway up backend --path-as-root --service backend --ci   # yoki frontend uchun mos buyruq
+git checkout develop -- .               # ishchi papkani qaytaring
+
+# Tasdiqlash:
+curl https://api.bobododa.uz/health/ready
+```
+Railway dashboard'ida ham "Deployments" ro'yxatida eski (hali REMOVED
+bo'lmagan) deployment qatorida "Redeploy" tugmasi bor — bu tezroq, lekin
+CLI'dan tekshirib bo'lmaydi (dashboard-only).
+
+### Migratsiya insident protokoli — FORWARD-FIX (DB rollback XAVFSIZ EMAS)
+
+**Bu loyihada `down` migratsiya YO'Q** (tekshirilgan — 21 ta migratsiya
+papkasining birortasida ham `down.sql` yo'q; bu Prisma'ning standart
+konvensiyasi, ataylab shunday qoldirilgan). Bu shuni anglatadi: **migratsiyani
+"orqaga qaytarish" degan xavfsiz, umumiy buyruq YO'Q.** Muammoli migratsiya
+production'ga qo'llanilgan bo'lsa:
+
+1. **HECH QACHON** `prisma migrate resolve --rolled-back` yoki qo'lda
+   `DROP TABLE`/`ALTER TABLE ... DROP COLUMN` bilan "orqaga qaytarishga"
+   urinmang — bu keyingi migratsiyalar bilan mos kelmay qolishi va
+   `_prisma_migrations` jadvalini haqiqiy schema holatidan uzib qo'yishi
+   mumkin.
+2. **FORWARD-FIX**: muammoni TUZATUVCHI YANGI migratsiya yozing (masalan
+   noto'g'ri `NOT NULL` cheklovi qo'shilgan bo'lsa — uni olib tashlovchi
+   YANGI migratsiya, ustun noto'g'ri turda bo'lsa — uni to'g'ri turga
+   o'tkazuvchi YANGI migratsiya). Bu — standart, xavfsiz yo'l, chunki
+   `_prisma_migrations` tarixi UZLUKSIZ qoladi va boshqa muhitlar (CI,
+   boshqa operator mashinasi) bilan sinxronligicha qoladi.
+3. **Agar FORWARD-FIX yetarli emas** (masalan migratsiya HAQIQIY ma'lumotni
+   yo'qotgan bo'lsa — noto'g'ri `DELETE`/ustunni tashlab yuborish real
+   qatorlar bilan): bu ENDI "migratsiya muammosi" emas, **ma'lumot
+   yo'qotish insidenti** — RUNBOOK §23'dagi PITR orqali ANIQ vaqtga
+   (muammoli migratsiyadan OLDIN) IZOLYATSIYALANGAN yangi xizmatga
+   `railway postgres pitr restore --at <vaqt> --new-service-name
+   <nom>` bilan tiklang, yo'qolgan ma'lumotni O'SHA yerdan **qo'lda**
+   (kerakli jadval/qatorlarni) production'ga qaytaring — **HECH QACHON**
+   butun production DB'ni almashtirmang (bu boshqa, muammosiz jadvallardagi
+   YANGI yozuvlarni yo'qotadi). Bu — oxirgi chora, ma'lumot yo'qotishni
+   qabul qiluvchi yo'l, muntazam vosita EMAS.
+4. Har ikkala holatda ham: `npx prisma migrate status` bilan production
+   holatini TASDIQLANG (drift yo'qligini), keyin `boot-check.ts` orqali
+   yangi backend versiyasi to'g'ri ko'tarilishini tekshiring — kodni
+   deploy qilishdan OLDIN.
+
+**Sinovdan o'tgan (Bosqich 24)**: PITR restore mexanizmining o'zi izolyatsiyalangan
+muhitda haqiqiy sinovdan o'tkazildi (bo'lim 23) — schema/ma'lumot/rol
+yaxlitligi tasdiqlangan. Bu YUQORIDAGI 3-qadamning ASOSI ishlashini
+isbotlaydi, lekin "qo'lda tanlab production'ga qaytarish" qismi
+(3-qadamning ikkinchi yarmi) hali HAQIQIY insidentda sinovdan o'tmagan —
+bu operatsion protokol, avtomatlashtirilgan skript emas.
