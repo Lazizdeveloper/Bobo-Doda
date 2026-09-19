@@ -13,11 +13,32 @@ import { OfflineSupport } from "@/components/shared/OfflineSupport";
 import { SupportModalProvider } from "@/components/shared/SupportModalProvider";
 import { PageFeedbackWidget } from "@/components/shared/PageFeedbackWidget";
 
+const SITE_URL = "https://bobododa.uz";
+const TITLE = "Bobo&Doda — Mutaxassislar bozori";
+const DESCRIPTION =
+  "Markaziy Osiyo mutaxassislari uchun to'lov kafolati bilan ishlaydigan onlayn bozor";
+
 export const metadata: Metadata = {
-  title: "Bobo&Doda — Mutaxassislar bozori",
-  description:
-    "Markaziy Osiyo mutaxassislari uchun to'lov kafolati bilan ishlaydigan onlayn bozor",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
   icons: { icon: "/favicon.svg" },
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    siteName: "Bobo&Doda",
+    locale: "uz_UZ",
+    type: "website",
+    images: [{ url: "/logo-white-bg.png", width: 850, height: 180 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ["/logo-white-bg.png"],
+  },
 };
 
 export const viewport: Viewport = {

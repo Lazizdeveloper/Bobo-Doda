@@ -27,6 +27,47 @@ const nextConfig = {
      uchun uni topish juda qiyin. E2E skriptlari ham aynan shu manzilga
      uriladi. Ishlab chiqarish build'iga (`next start`) taalluqli emas. */
   allowedDevOrigins: ["127.0.0.1", "localhost"],
+  /* Domen bo'linishi (2026-09) — bobododa.uz FAQAT landing+huquqiy
+     sahifalarni ko'rsatadi, asosiy ilova app.bobododa.uz'da (Railway,
+     shu bitta kodning ALOHIDA deploy'i, real backend'ga ulangan).
+     `process.env.VERCEL === "1"` — Vercel PLATFORMASI o'zi HAR BIR build'ga
+     avtomatik beradi (qo'lda sozlash shart emas, unutib qo'yish xavfi yo'q);
+     Railway'da bu o'zgaruvchi YO'Q, shuning uchun bu redirect'lar FAQAT
+     Vercel'dagi (landing) deploy'da ishlaydi — Railway'dagi (asosiy ilova)
+     xuddi shu sahifalarni ODATDAGIDEK to'g'ridan-to'g'ri ko'rsatadi.
+     Ro'yxat — ilovaning haqiqiy marshrutlaridan (`app/` papkasi):
+     (auth) guruhi + mutaxassis/xaridor/admin/rahbariyat kabinetlari +
+     to'lov natija sahifasi. Landing'da QOLADIGAN sahifalar (huquqiy +
+     FAQ/yordam markazi — real backend'ga bog'liq emas) bu ro'yxatda YO'Q. */
+  async redirects() {
+    if (process.env.VERCEL !== "1") return [];
+    const APP_ORIGIN = "https://app.bobododa.uz";
+    const appOnlyPaths = [
+      "/kirish",
+      "/royxatdan-otish",
+      "/parolni-unutdim",
+      "/rol-tanlash",
+      "/mutaxassis",
+      "/xaridor",
+      "/admin",
+      "/rahbariyat",
+      "/tolov",
+    ];
+    const appRedirects = appOnlyPaths.flatMap((path) => [
+      { source: path, destination: `${APP_ORIGIN}${path}`, permanent: true },
+      { source: `${path}/:rest*`, destination: `${APP_ORIGIN}${path}/:rest*`, permanent: true },
+    ]);
+    return [
+      /* www → apex — kanonik domen bobododa.uz (huquqiy qism, section 10). */
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.bobododa.uz" }],
+        destination: "https://bobododa.uz/:path*",
+        permanent: true,
+      },
+      ...appRedirects,
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders() },
