@@ -2325,3 +2325,70 @@ yaxlitligi tasdiqlangan. Bu YUQORIDAGI 3-qadamning ASOSI ishlashini
 isbotlaydi, lekin "qo'lda tanlab production'ga qaytarish" qismi
 (3-qadamning ikkinchi yarmi) hali HAQIQIY insidentda sinovdan o'tmagan —
 bu operatsion protokol, avtomatlashtirilgan skript emas.
+
+## 26. Nazoratli release protokoli (Bosqich 24 — yopildi)
+
+Bo'lim 25'dagi topilmadan keyin qat'iylashtirilgan, HAQIQIY oqim (Railway
+git'ga ATAYLAB ulanmadi — bu deploy MODELINI o'zgartiradi, operator ochiq
+roziligisiz qilinmaydi; qo'lda deploy, lekin endi to'liq nazorat ostida):
+
+```
+develop (har push'da CI avtomatik) 
+  → 4 ta majburiy check yashil bo'lishi SHART
+    (Lint · Typecheck · Unit · Contracts, Integration, Production Build,
+     Code Quality & Security)
+  → PR develop → main (`gh pr create --base main --head develop`)
+  → main branch protection PR'ni majburiy checklar o'tmasdan merge
+    qilishga YO'L QO'YMAYDI (`required_status_checks`, Bosqich 24'da
+    sozlangan — ilgari BO'SH edi, CI ishonchsiz bo'lgani uchun)
+  → merge (force-push va branch o'chirish BLOKLANGAN —
+    `allow_force_pushes: false`, `allow_deletions: false`)
+  → ATAYLAB QO'LDA production deploy (quyida)
+```
+
+### Production deploy — aniq qadamlar
+
+```bash
+# 1. main'dagi ANIQ commit'ni aniqlang (bu deploy qilinadigan versiya):
+git fetch origin main && SHA=$(git rev-parse origin/main)
+echo "Deploy qilinayotgan commit: $SHA"
+
+# 2. Backend — commit'ni GIT_COMMIT_SHA sifatida belgilab, o'sha holatdan deploy:
+git checkout $SHA -- .   # yoki: git worktree add ../deploy $SHA
+railway variable set GIT_COMMIT_SHA="$SHA" --service backend --skip-deploys
+railway up backend --path-as-root --service backend --ci
+
+# 3. Frontend (agar o'zgargan bo'lsa):
+railway up --service frontend --ci
+
+# 4. Ishchi papkani qaytaring:
+git checkout develop -- .
+```
+
+### Deploy qilingan commit'ni tashqaridan tasdiqlash (Bosqich 24 — yangi)
+
+`/health/live` endi `commit` maydonini qaytaradi (`GIT_COMMIT_SHA` orqali,
+`backend/src/modules/health/health.controller.ts`) — bu SECRET EMAS
+(commit hash o'zi maxfiy emas), shuning uchun HAR KIM tashqaridan
+tekshira oladi:
+
+```bash
+curl -s https://api.bobododa.uz/health/live | jq .commit
+# Solishtiring: git rev-parse origin/main
+```
+Agar ikkalasi mos kelmasa — production ESKI (yoki BOSHQA) commit bilan
+ishlayapti, degani. Haqiqiy sinov (Bosqich 24): deploy qilib, mos kelishi
+tasdiqlangan.
+
+### Nima UCHUN to'liq avtomatik emas
+
+Railway xizmatlari git manba bilan ulanmagan (bo'lim 25) — bu ATAYLAB:
+avtomatik deploy HAR PUSH'da ishga tushishi mumkin edi, lekin bu
+`develop`ga to'g'ridan-to'g'ri push qilish (butun shu muhandislik
+davomida qo'llanilgan amaliyot) HAR DOIM production'ni o'zgartirishini
+anglatardi — operator buni ATAYLAB xohlamasligi mumkin (masalan bir nechta
+kichik commit'ni birlashtirib, BITTA deploy qilish). Tavsiya (bo'lim 25'da
+ham yozilgan) — `railway service source connect --repo ... --branch main`
+— ANIQ shu MUAMMONI hal qiladi (faqat `main`ga merge bo'lganda deploy,
+`develop`ga oddiy push'da EMAS) va HAR DOIM aniq mos kelishni kafolatlaydi,
+lekin bu ARXITEKTURA qarori — operator tasdig'isiz yoqilmadi.
