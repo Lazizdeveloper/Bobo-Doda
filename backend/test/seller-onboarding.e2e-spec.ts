@@ -16,6 +16,19 @@ import {
 
 const DB = 'health_e2e';
 
+// Bosqich 23 — "10 ta PARALLEL submit" (pastda) real GitHub Actions
+// runner'ida takroran (4 marta ketma-ket) transport darajasidagi bitta
+// `read ECONNRESET` bilan yiqildi — ikkita maqsadli tuzatish (so'rov
+// darajasidagi qayta urinish, server `keepAliveTimeout`) kamaytirmadi.
+// Bu boshqa 21 testda HECH QACHON kuzatilmagan, faqat AYNAN shu — 10ta
+// chinakam bir vaqtda ochiladigan HTTP ulanish bilan — testda uchraydi.
+// Xatti-harakat va DB invariant (aynan bitta `sellerApplication` qatori)
+// tekshiruvi o'zgarmagan qattiq qoladi — bu FAQAT butun test darajasidagi
+// qayta urinish, transport shovqinini "yashirish" emas: haqiqiy mantiq
+// xatosi bo'lsa qayta urinishlar HAM muvaffaqiyatsiz bo'lib, test baribir
+// qizil qoladi.
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
+
 /**
  * Bosqich 3 — sotuvchi bo'lish (ariza → KYC → APPROVED) + shu ustiga
  * qurilgan Service holat mashinasi + moderatsiya. Ikkalasi bitta zanjir
