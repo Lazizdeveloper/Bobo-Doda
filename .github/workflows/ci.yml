@@ -42,6 +42,9 @@ jobs:
       - name: Verify Content Security Policy (CSP)
         run: npm run check:csp
 
+      - name: Verify NEXT_PUBLIC_API_URL guard (bo'lim 25)
+        run: npm run check:api-url
+
       - name: Run ESLint (frontend)
         run: npm run lint:app
 

@@ -4,6 +4,14 @@
    `netlify.toml` dagi nusxa `scripts/check-csp.cjs` bilan tekshiriladi
    (`npm run verify` ichida), shuning uchun ikkalasi ajralib keta olmaydi. */
 import { securityHeaders } from "./csp.config.mjs";
+import { assertApiUrlSane } from "./api-url.config.mjs";
+
+/* Bo'lim 25 (real production insident) — `NEXT_PUBLIC_API_URL` sog'ligini
+   tekshiradi (`api-url.config.mjs`, YAGONA MANBA — `scripts/check-api-url.cjs`
+   `npm run verify`da bir xil funksiyani chaqiradi). Qiymat noto'g'ri
+   ko'rinsa (localhost, yoki global API prefiksi "/api/v1" yo'q) — build'ni
+   to'xtatadi; berilmagan bo'lsa (Vercel landing/CI/lokal dev) jim o'tadi. */
+assertApiUrlSane(process.env.NEXT_PUBLIC_API_URL);
 
 const nextConfig = {
   /* Build papkasi. Odatda ".next". NEXT_DIST_DIR faqat ishlab turgan dev
