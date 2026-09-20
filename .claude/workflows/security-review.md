@@ -30,9 +30,11 @@ When two agents disagree on a security-relevant finding:
 
 | Change | Required agents |
 |---|---|
-| Auth change | backend + security + QA |
+| Auth change | backend + security + `api-contract-auditor` + QA |
 | Secret/auth config change | security + devops + release |
 | Payment enablement | fintech + backend + database + security + QA + release |
+
+Any auth change that touches a route path, prefix, or the generated contract additionally requires `api-contract-auditor` per `.claude/review-matrix.md` — it verifies the frontend/backend/contract boundary, which `security-engineer` is not positioned to independently check.
 
 ## Rules specific to security review
 

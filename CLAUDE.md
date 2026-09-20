@@ -591,9 +591,31 @@ header o'ng bloki shu sababli ixchamlashtirilgan).
 ## Specialist agents
 
 Jiddiy ish uchun mustaqil ko'rib chiqishni `.claude/agents/`dagi mutaxassis
-subagentlarga topshiring (o'nta: backend/frontend/security/database/devops/
-sre/qa/performance/fintech/release-engineer). Kim nimani ko'rib chiqishi va
-qaysi tartibda — `.claude/review-matrix.md` va `.claude/workflows/`. Xavfli
-o'zgarish uchun KAMIDA: asosiy mutaxassis ko'rib chiqishi + security yoki QA
-ko'rib chiqishi (tegishli bo'lsa) — bitta agent o'z ishini yagona tasdiqlovchi
-bo'la olmaydi.
+subagentlarga topshiring — o'n ikkitasi: backend/frontend/security/database/
+devops/sre/qa/performance/fintech/release-engineer (o'nta ish subagenti) +
+`bobododa-engineering-lead` (orkestrator) + `api-contract-auditor` (frontend/
+backend/kontrakt chegarasi bo'yicha mustaqil auditor). Kim nimani ko'rib
+chiqishi va qaysi tartibda — `.claude/review-matrix.md` va
+`.claude/workflows/`. Xavfli o'zgarish uchun KAMIDA: asosiy mutaxassis ko'rib
+chiqishi + security yoki QA ko'rib chiqishi (tegishli bo'lsa) — bitta agent
+o'z ishini yagona tasdiqlovchi bo'la olmaydi.
+
+## Engineering orchestration
+
+Jiddiy muhandislik vazifalari uchun:
+
+1. `bobododa-engineering-lead` orqali marshrutlang.
+2. `.claude/workflows/task-routing.md`dan foydalaning.
+3. Faqat vazifaga tegishli mutaxassislarni tanlang — "hammasini ishga
+   tushirish" emas, "xavfga yetarli minimal jamoa".
+4. `.claude/review-matrix.md`ni qat'iy qo'llang (yangi endpoint/marshrut/
+   prefiks/kontrakt o'zgarishi — `api-contract-auditor` MAJBURIY).
+5. O'z-o'zini tasdiqlash YO'Q — implementatsiya qilgan agent yagona
+   tekshiruvchi bo'la olmaydi.
+6. Cross-review'dan OLDIN mustaqil tekshiruv — tekshiruvchiga boshqa
+   agentning xulosasi emas, savolning o'zi beriladi.
+7. FAIL/UNKNOWN jimgina PASS'ga aylantirilmaydi.
+8. Production'ga ta'sir qiluvchi o'zgarish `release-engineer` darvozasidan
+   o'tishi SHART — `bobododa-engineering-lead` buni chetlab o'ta olmaydi va
+   o'zi yakuniy tasdiqlovchi emas (`.claude/review-matrix.md`dagi
+   "Orchestration role" izohiga qarang).

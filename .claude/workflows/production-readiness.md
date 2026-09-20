@@ -1,10 +1,10 @@
 # Production Readiness Workflow
 
-Run by the main coordinator, delegating to agents in `.claude/agents/` per `.claude/review-matrix.md`. Six phases, in order — do not skip or reorder.
+Run by `bobododa-engineering-lead` when invoked, or by the main coordinator directly, delegating to agents in `.claude/agents/` per `.claude/review-matrix.md`. Six phases, in order — do not skip or reorder. The lead (or coordinator) classifies scope and risk per `.claude/workflows/task-routing.md` before Phase A starts, but is not itself counted as one of the phase's independent audits.
 
 ## Phase A — Independent Audit
 
-Each relevant agent audits its own area independently. **Agents must not rely on another agent's PASS** — if backend-engineer's audit depends on "security-engineer already confirmed auth is fine," that's a Phase A violation; backend-engineer verifies what it needs directly.
+Each relevant agent audits its own area independently. **Agents must not rely on another agent's PASS** — if backend-engineer's audit depends on "security-engineer already confirmed auth is fine," that's a Phase A violation; backend-engineer verifies what it needs directly. If any endpoint, route, prefix, or generated contract is in scope, `api-contract-auditor` runs its own independent audit here too — it does not wait for backend-engineer's or frontend-engineer's conclusion first.
 
 ## Phase B — Cross Review
 

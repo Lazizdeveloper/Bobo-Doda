@@ -1,6 +1,6 @@
 # Release Gate Workflow
 
-The last step before production GO. Owned by `release-engineer`, but `release-engineer` is a gate on evidence quality — not a substitute for the domain reviews in `.claude/workflows/code-change-review.md` and `production-readiness.md`, and not authorized to override a specialist's FAIL on its own judgment.
+The last step before production GO. Owned by `release-engineer`, but `release-engineer` is a gate on evidence quality — not a substitute for the domain reviews in `.claude/workflows/code-change-review.md` and `production-readiness.md`, and not authorized to override a specialist's FAIL on its own judgment. `bobododa-engineering-lead`, if it routed the work, hands off to `release-engineer` here and stops — the lead is never itself a release authority (see `.claude/review-matrix.md`'s "Orchestration role" note), and it cannot skip this gate for anything production-affecting.
 
 ## What release-engineer checks
 
@@ -9,6 +9,7 @@ The last step before production GO. Owned by `release-engineer`, but `release-en
 3. **Deployment traceability** — the actual deployed commit (via `/health/live`'s `commit` field or equivalent) matches what's intended to be live. Never infer "live == main" without checking.
 4. **Rollback** — a real, documented, previously-verified rollback path exists for this class of change (app rollback vs. migration forward-fix are different procedures — confirm the right one is documented for what's being released).
 5. **Unresolved disagreements** — nothing from Phase C of `production-readiness.md` is still open.
+6. **Contract review complete when triggered** — if scope includes any endpoint, route, prefix, or generated-contract change, `api-contract-auditor`'s review is one of the "every required reviewer" checks in the GO rule below, same as any other mandatory reviewer.
 
 ## Release GO rule
 
