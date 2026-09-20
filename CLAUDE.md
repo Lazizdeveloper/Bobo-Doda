@@ -567,3 +567,13 @@ TEST_BASE_URL=http://127.0.0.1:3001 node scripts/accessibility-test.cjs
 
 Har biri `{"ok": true}` qaytarishi shart. accessibility-test axe bilan
 WCAG 2 A/AA ni tekshiradi — rang kontrasti shu yerda ushlanadi.
+
+## Specialist agents
+
+Jiddiy ish uchun mustaqil ko'rib chiqishni `.claude/agents/`dagi mutaxassis
+subagentlarga topshiring (o'nta: backend/frontend/security/database/devops/
+sre/qa/performance/fintech/release-engineer). Kim nimani ko'rib chiqishi va
+qaysi tartibda — `.claude/review-matrix.md` va `.claude/workflows/`. Xavfli
+o'zgarish uchun KAMIDA: asosiy mutaxassis ko'rib chiqishi + security yoki QA
+ko'rib chiqishi (tegishli bo'lsa) — bitta agent o'z ishini yagona tasdiqlovchi
+bo'la olmaydi.
