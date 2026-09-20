@@ -306,6 +306,22 @@ export const envSchema = z
           message: "production'da SMS_PROVIDER=CONSOLE IMKONSIZ (fail closed) — OTP faqat real SMS provider orqali yuborilishi shart",
         });
       }
+      // Bo'lim 25 audit topilmasi — `DEV_EXPOSE_OTP` bu paytgacha faqat
+      // RUNTIME qatlamda (`dev-otp.util.ts#shouldExposeDevOtp`:
+      // `!isProduction && SMS_PROVIDER==='CONSOLE' && flag`) tekshirilardi;
+      // Zod sxemasi uni hech qachon rad etmagan. Amalda inert edi (yuqoridagi
+      // SMS_PROVIDER=CONSOLE qoidasi allaqachon production'ni rad etadi),
+      // lekin BOOT vaqtida mustaqil, ikkinchi qatlam yo'q edi — production
+      // muhitida (Railway) `DEV_EXPOSE_OTP=true` operator xatosi bilan
+      // qolib ketsa, buni hech narsa ushlamas edi. F1/ADR-03 bilan bir xil
+      // falsafa: kritik fail-closed qoida BITTA joyga ishonib qolmaydi.
+      if (env.DEV_EXPOSE_OTP) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['DEV_EXPOSE_OTP'],
+          message: "production'da DEV_EXPOSE_OTP=true IMKONSIZ (fail closed) — OTP javobda hech qachon ko'rsatilmasligi shart",
+        });
+      }
       // Bosqich 7 — Payout uchun hozircha Zod darajasida DUBLIKAT qilinmadi
       // (PAYME/CLICK'dan farqli, `PAYOUT_PROVIDER` enum'ida "kelajakda
       // implement qilinadigan, lekin hozir Zod'dan o'tadigan" haqiqiy qiymat

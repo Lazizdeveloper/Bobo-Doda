@@ -551,22 +551,42 @@ etayotgan bosqich muddati eng yangi hodisa sanasidan keyin bo'lsin.
 / 1280px+ (360px da gorizontal skroll BO'LMASIN — header o'ng bloki shu
 sababli ixchamlashtirilgan).
 
-**E2E/a11y suitlarini ishga tushirish** (`npm run test:e2e`, `npm run test:a11y`):
-ular ishlab turgan serverga ulanadi. Dev serverda kompilyatsiya 30s timeout'ga
-tiqilib qolishi mumkin, shuning uchun **production build'ga qarshi** yuriting.
-DIQQAT: `npm run build` dev serverning `.next` papkasini ustiga yozadi —
-dev ishlab turgan bo'lsa `NEXT_DIST_DIR` bilan alohida papkaga build qiling:
+**E2E — DIQQAT, ESKIRGAN QISM PASTDA.** Root `npm run test:e2e`
+(`scripts/lifecycle-test.cjs` + `scripts/stress-test.cjs`) va
+`npm run test:a11y` (`scripts/accessibility-test.cjs`) — bu uchtasi haqiqiy
+backend integratsiyasi (real Postgres/Redis/NestJS)dan beri **o'zlari
+BUZILGAN** deb hujjatlashtirilgan (har birining fayl boshidagi izohiga
+qarang): `localStorage.setItem("sb_session", ...)` orqali mock sessiya
+inject qilishadi, real `lib/api/http.ts` esa `bd_session` kalitini va
+OTP-asosli login oqimini kutadi. Hech qanday CI workflow ularni
+chaqirmaydi. **Bularni tuzatilgan deb hisoblamang va yangi "talab
+qilinadigan tekshiruv" ro'yxatiga qo'shmang** — ular faqat tarixiy/mock-rejim
+ma'lumotnomasi sifatida qoldirilgan (qayta yozilmagan).
 
-```bash
-NEXT_DIST_DIR=.next-check npm run build
-NEXT_DIST_DIR=.next-check npx next start -p 3001
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/lifecycle-test.cjs
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/stress-test.cjs
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/accessibility-test.cjs
-```
+Haqiqiy (real backend'ga ulangan) E2E qoplama endi ikkita joyda:
+- **`npm run test:e2e:blocking`** (`playwright test --grep @blocking`,
+  `tests/e2e/auth.spec.ts`dagi 5 ta test) — CI'da avtomatik ishlaydi
+  (`.github/workflows/e2e-blocking.yml`: ephemeral Postgres+Redis+backend
+  (`SMS_PROVIDER=CONSOLE`, real SMS YO'Q)+frontend). Ro'yxatdan o'tish/
+  login/parolni tiklash marshrutlari VA `NEXT_PUBLIC_API_URL` prefiks
+  to'g'riligini qamraydi — bo'lim 25 production insidenti (registration
+  OTP so'rovi 404) uchun regressiya darvozasi. Hozircha faqat
+  INFORMATIV — `main`ning required status check ro'yxatiga hali
+  qo'shilmagan (release-engineer topilmasi: mavjud 4 ta required
+  check path-filtrlangan bo'lib, bitta tomonlama PR ularning barchasini
+  qondirolmaydi — buni oldin hal qilmasdan yana bitta path-filtrlangan
+  required check qo'shish holatni yomonlashtiradi).
+- **`npm run test:e2e:live`** (`playwright test`, to'liq to'plam — bug-fix
+  regressiyalar, xato xaritalash, DEV-only OTP UI, admin) — qo'lda,
+  `docs/RUNBOOK.md` §14dagi to'liq stack (backend + frontend + real
+  Postgres/Redis) ishlab turganda.
+- Backend Jest e2e (`npm run test:e2e --workspace backend`) — CI'da
+  majburiy (`backend-ci.yml`), real Postgres+Redis bilan.
 
-Har biri `{"ok": true}` qaytarishi shart. accessibility-test axe bilan
-WCAG 2 A/AA ni tekshiradi — rang kontrasti shu yerda ushlanadi.
+`npm run verify` (lint + typecheck + `check:csp` + `check:api-url` +
+`check:openapi-prefix` + build) toza bo'lishi shart. Responsive:
+360–430 / 768–1024 / 1280px+ (360px da gorizontal skroll BO'LMASIN —
+header o'ng bloki shu sababli ixchamlashtirilgan).
 
 ## Specialist agents
 

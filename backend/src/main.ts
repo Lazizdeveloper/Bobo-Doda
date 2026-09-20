@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
+import { API_GLOBAL_PREFIX, API_GLOBAL_PREFIX_EXCLUDE } from './config/api-prefix';
 import { buildValidationPipe } from './common/http/validation';
 import { AllExceptionsFilter } from './common/http/all-exceptions.filter';
 
@@ -51,9 +52,11 @@ async function bootstrap(): Promise<void> {
   app.useBodyParser('json', { limit: '1mb' });
   app.useBodyParser('urlencoded', { limit: '1mb', extended: true });
 
-  // `api/v1` prefiksi — health va docs undan tashqarida.
-  app.setGlobalPrefix('api/v1', {
-    exclude: ['health', 'health/live', 'health/ready', 'docs', 'docs-json'],
+  // `api/v1` prefiksi — health va docs undan tashqarida. Konstanta
+  // (`config/api-prefix.ts`) — `emit-openapi.ts` va `test/support/
+  // build-app.ts` HAM shu bitta manbadan o'qiydi (bo'lim 25).
+  app.setGlobalPrefix(API_GLOBAL_PREFIX, {
+    exclude: API_GLOBAL_PREFIX_EXCLUDE,
   });
 
   // Global: ValidationPipe (whitelist + forbidNonWhitelisted + transform) +

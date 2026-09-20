@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@/config/app-config.service';
+import { API_GLOBAL_PREFIX, API_GLOBAL_PREFIX_EXCLUDE } from '@/config/api-prefix';
 import { buildValidationPipe } from '@/common/http/validation';
 import { AllExceptionsFilter } from '@/common/http/all-exceptions.filter';
 
@@ -25,8 +26,8 @@ export async function buildTestApp(
 
   const app = moduleRef.createNestApplication();
   const config = app.get(AppConfigService);
-  app.setGlobalPrefix('api/v1', {
-    exclude: ['health', 'health/live', 'health/ready', 'docs', 'docs-json'],
+  app.setGlobalPrefix(API_GLOBAL_PREFIX, {
+    exclude: API_GLOBAL_PREFIX_EXCLUDE,
   });
   app.useGlobalPipes(buildValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());

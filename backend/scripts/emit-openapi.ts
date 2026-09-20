@@ -17,11 +17,21 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from '@/app.module';
+import { API_GLOBAL_PREFIX, API_GLOBAL_PREFIX_EXCLUDE } from '@/config/api-prefix';
 
 async function main(): Promise<void> {
   const outPath = resolve(process.argv[2] ?? 'openapi.json');
 
   const app = await NestFactory.create(AppModule, { logger: ['error'] });
+
+  // Bo'lim 25 — ILGARI bu yerda `setGlobalPrefix` chaqirilmagan edi: hujjat
+  // yo'llari prefikssiz chiqardi ("/auth/register/request-otp"), real server
+  // esa (`main.ts`) HAR DOIM "/api/v1/..." bilan javob beradi. Natijada
+  // committed `openapi.json` va live `/docs-json` mos kelmasdi, CI drift
+  // gate esa buni TUTOLMASDI (emitter o'zi bilan o'zini solishtirardi).
+  // `main.ts` bilan BIR XIL konstanta (`config/api-prefix.ts`) — endi
+  // ikkalasi ajralib keta olmaydi.
+  app.setGlobalPrefix(API_GLOBAL_PREFIX, { exclude: API_GLOBAL_PREFIX_EXCLUDE });
 
   const config = new DocumentBuilder()
     .setTitle('Bobo&Doda API')

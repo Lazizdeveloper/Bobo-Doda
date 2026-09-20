@@ -329,6 +329,37 @@ describe('validateEnv', () => {
     ).toThrow(/TEXTUP_AUTH_URL/);
   });
 
+  it('Bo’lim 25 — production’da DEV_EXPOSE_OTP=true rad etiladi (fail closed, boot vaqtida)', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        ...playMobileCreds,
+        NODE_ENV: 'production',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+        DEV_EXPOSE_OTP: 'true',
+      }),
+    ).toThrow(/DEV_EXPOSE_OTP/);
+  });
+
+  it('Bo’lim 25 — production’da DEV_EXPOSE_OTP=false (sukut) bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.DEV_EXPOSE_OTP).toBe(false);
+  });
+
+  it('Bo’lim 25 — dev’da (production emas) DEV_EXPOSE_OTP=true baribir o’tadi (runtime qatlam alohida tekshiradi)', () => {
+    const env = validateEnv({ ...base, DEV_EXPOSE_OTP: 'true' });
+    expect(env.DEV_EXPOSE_OTP).toBe(true);
+  });
+
   it('Bosqich 10 — OUTBOX_* sukut qiymatlari', () => {
     const env = validateEnv({ ...base });
     expect(env.OUTBOX_PROCESSING_TIMEOUT_SECONDS).toBe(120);

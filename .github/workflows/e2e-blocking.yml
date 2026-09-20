@@ -1,0 +1,225 @@
+name: E2E Blocking (Playwright)
+
+# Bo'lim 25 audit topilmasi — QA aniqladi: haqiqiy brauzer orqali
+# ro'yxatdan o'tish/login/parolni tiklash oqimini sinaydigan yagona suite
+# (`tests/e2e/`, Playwright) hech qanday CI workflow'da ISHGA TUSHMASDI
+# (manual-only, `npm run test:e2e:live`). Ildizdagi `npm run test:e2e`
+# (`scripts/lifecycle-test.cjs` + `scripts/stress-test.cjs`) esa real backend
+# integratsiyasidan beri o'zi BUZILGAN deb hujjatlashtirilgan (fayl
+# boshidagi izoh) — CI'da ham hech qachon chaqirilmagan.
+#
+# Bu workflow — MINIMAL BLOKLOVCHI to'plam: `tests/e2e/auth.spec.ts`dagi
+# 5 ta `@blocking` bilan belgilangan test (ro'yxatdan o'tish marshruti,
+# login, parolni tiklash). Uchtasi (REGISTER/LOGIN/FORGOT PASSWORD to'liq
+# oqimlari) haqiqiy `lib/api/http.ts` orqali real backend'ga uradi va
+# faqat backend haqiqatan javob berganda navigatsiya qiladi — shuning
+# uchun `NEXT_PUBLIC_API_URL` yoki backend prefiksi buzilsa ular 404/
+# timeout bilan yiqiladi (aynan 2026-09-20 insidentini qayta ishlab
+# chiqaradi). Qolgan ikkitasi (login/register sahifa render) tarmoq
+# so'rovi yubormaydi — ularning qiymati incident-qoplama emas, balki
+# frontend build/serve'ning o'zi ishlayotganini tezda ajratish (frontend-
+# engineer topilmasi, findings-closure cross-review). Bir vaqtlar
+# `@blocking`ga tegishli bo'lgan "LOGIN: noto'g'ri parol..." testi ATAYLAB
+# OLIB TASHLANGAN — xato xaritalash 404'ni ham umumiy "parol noto'g'ri"
+# xabariga tushiradi, ya'ni bu test aynan insident paytida SOXTA yashil
+# natija berardi. To'liq Playwright to'plami (bug-fix regressiyalar, xato
+# xaritalash, DEV-only OTP UI) hamon `npm run test:e2e:live` orqali qo'lda
+# ishga tushiriladi — bu yerga qo'shilmagan (real SMS/TextUP shart emas,
+# deterministik, production'ga bog'liq emas).
+#
+# Ikkala TOMON (frontend VA backend) o'zgarishida ishga tushishi shart —
+# aks holda `backend/src/modules/auth/auth.controller.ts` kabi o'zgarish
+# frontend workflow (`ci.yml`, `backend/**`ni e'tiborsiz qoldiradi) yoki
+# backend workflow (`backend-ci.yml`, faqat `backend/**`/`packages/**`ga
+# tayanadi) ORQALI HAM sinovdan o'tmasdi.
+
+# release-engineer topilmasi — path filtri `components/**`ni o'z ichiga
+# olmagan edi, holbuki barcha 5 ta `@blocking` test `components/shared/
+# CountryPhoneInput` va `components/ui/Button`ni ishlatadi (`app/(auth)/`
+# ostidagi 9 ta sahifa shulardan import qiladi) — shu papkaga tegilgan
+# o'zgarish gate'ni CHETLAB O'TARDI. `csp.config.mjs` ham qo'shildi
+# (`connect-src`ning yagona manbai — brauzer→API so'rovlarini shu yerda
+# jimgina bloklashi mumkin edi).
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'tests/e2e/**'
+      - 'playwright.config.ts'
+      - 'backend/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.mjs'
+      - 'api-url.config.mjs'
+      - 'csp.config.mjs'
+      - 'netlify.toml'
+      - 'tsconfig.json'
+      - '.github/workflows/e2e-blocking.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'tests/e2e/**'
+      - 'playwright.config.ts'
+      - 'backend/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.mjs'
+      - 'api-url.config.mjs'
+      - 'csp.config.mjs'
+      - 'netlify.toml'
+      - 'tsconfig.json'
+      - '.github/workflows/e2e-blocking.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-blocking-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-blocking:
+    name: Auth flows (register / login / forgot-password) — real backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+          TZ: UTC
+          PGTZ: UTC
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DB_NAME: ci_e2e_blocking
+      DATABASE_URL: postgresql://bobododa_app:app@localhost:5432/ci_e2e_blocking?schema=public
+      DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@localhost:5432/ci_e2e_blocking?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci-e2e-blocking-access-secret-32-chars
+      JWT_STAFF_ACCESS_SECRET: ci-e2e-blocking-staff-secret-32-char
+      STAFF_TOTP_ENCRYPTION_KEY: '3333333333333333333333333333333333333333333333333333333333333333'
+      SWAGGER_ENABLED: 'false'
+      SMS_PROVIDER: CONSOLE
+      DEV_EXPOSE_OTP: 'false'
+      PORT: 4000
+      # QA/release-engineer topilmasi — NODE_ENV ATAYLAB job darajasida
+      # o'rnatilmagan: backend uni yo'q bo'lsa Zod orqali 'development'ga
+      # (kerakli — SMS_PROVIDER=CONSOLE production'da rad etiladi),
+      # frontend esa `next build`/`next start` o'zi 'production'ga
+      # o'rnatadi (kerakli — gate haqiqiy production bundle'ni sinasin,
+      # dev bundle'ni emas). Job darajasida qat'iy qiymat qo'ysak ikkalasi
+      # BIR XIL qiymatga majburlanardi.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (workspaces, root)
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Bootstrap DB roles + migrate (bo'lim 73 naqshi)
+        working-directory: backend
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "CREATE DATABASE ${DB_NAME};"
+          psql "postgresql://postgres:postgres@localhost:5432/${DB_NAME}" \
+            -v app_pw=app \
+            -v migrator_pw=migrator \
+            -v db_name=${DB_NAME} \
+            -f prisma/sql/roles.sql
+          npx prisma migrate deploy
+
+      - name: Build backend
+        run: npm run build --workspace backend
+
+      - name: Start backend (SMS_PROVIDER=CONSOLE — real SMS YO'Q)
+        working-directory: backend
+        run: |
+          nohup node dist/main.js > "$GITHUB_WORKSPACE/backend-e2e.log" 2>&1 &
+          echo $! > /tmp/backend.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:4000/health/ready > /dev/null; then
+              echo "backend ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::backend /health/ready 60s ichida javob bermadi"
+          cat "$GITHUB_WORKSPACE/backend-e2e.log"
+          exit 1
+
+      - name: Build frontend (NEXT_PUBLIC_API_URL → mahalliy backend)
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+          NEXT_DIST_DIR: .next-e2e
+        run: npm run build
+
+      - name: Start frontend
+        env:
+          NEXT_DIST_DIR: .next-e2e
+        run: |
+          nohup npx next start -p 3000 > "$GITHUB_WORKSPACE/frontend-e2e.log" 2>&1 &
+          echo $! > /tmp/frontend.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3000/kirish > /dev/null; then
+              echo "frontend ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::frontend :3000 60s ichida javob bermadi"
+          cat "$GITHUB_WORKSPACE/frontend-e2e.log"
+          exit 1
+
+      # DIQQAT (qa-engineer topilmasi) — `E2E_DB_CMD`/`E2E_REDIS_CLI`
+      # ATAYLAB o'rnatilmagan: joriy 5 ta `@blocking` test `runDbCommand`/
+      # `flushOtpCooldown`ni (`tests/e2e/helpers.ts`) ishlatmaydi. Kimdir
+      # kelajakda shu funksiyalarni ishlatadigan testga `@blocking` qo'shsa,
+      # sukut qiymatlar (`bobododa_app@bobododa`, `redis-cli`) bu runner'da
+      # YO'Q/noto'g'ri bo'lgani uchun tushunarsiz xato beradi — o'sha payt
+      # shu ikkala env'ni ham (yoki `redis-tools` o'rnatishni) qo'shing.
+      - name: Playwright — @blocking (registration/login/forgot-password/API prefix)
+        env:
+          E2E_OTP_LOG_PATH: ${{ github.workspace }}/backend-e2e.log
+        run: npx playwright test --grep @blocking
+
+      - name: Upload debug artifacts (yiqilganda)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-blocking-debug
+          path: |
+            backend-e2e.log
+            frontend-e2e.log
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -90,6 +90,16 @@ jobs:
             exit 1
           fi
 
+      # Bo'lim 25 cross-review topilmasi (qa-engineer) — yuqoridagi drift
+      # gate FAQAT "emitter o'zi bilan committed holatni" solishtiradi:
+      # `emit-openapi.ts`dan `setGlobalPrefix` chaqiruvi yana olib
+      # tashlansa-yu committed fayl "generate:contracts" bilan qayta
+      # yozilsa, ikkalasi ham prefikssiz bo'lib, yuqoridagi gate BUZILGAN
+      # holatni "toza" deb hisoblardi. Bu qadam kontraktning O'ZINI,
+      # emitter'dan mustaqil, tekshiradi.
+      - name: OpenAPI prefix invariant — barcha yo'l /api/v1 bilan boshlanishi shart (health'dan tashqari)
+        run: npm run check:openapi-prefix
+
   integration:
     name: Integration (real Postgres 16 + Redis — service containers)
     runs-on: ubuntu-latest
@@ -219,6 +229,19 @@ jobs:
             exit 1
           fi
           echo "OK: PAYMENTS_ENABLED=false (Payme credentialsiz) bilan boot MUVAFFAQIYATLI — xavfsiz to'lovsiz launch"
+          # Bo'lim 25 — DEV_EXPOSE_OTP hech qachon Zod darajasida rad
+          # etilmagan edi (faqat runtime `shouldExposeDevOtp` uni inert
+          # qilardi). To'liq to'g'ri (PLAYMOBILE) production config bilan
+          # HAM DEV_EXPOSE_OTP=true boot'ni yiqitishi SHART — real boot bilan
+          # tasdiqlangan, faqat unit test emas.
+          if PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz \
+             SMS_PROVIDER=PLAYMOBILE PLAYMOBILE_API_URL=https://send.example.uz/broker-api PLAYMOBILE_LOGIN=ci-login PLAYMOBILE_PASSWORD=ci-password PLAYMOBILE_SENDER=BoboDoda \
+             DEV_EXPOSE_OTP=true \
+             $BOOT_CMD; then
+            echo "::error::production'da DEV_EXPOSE_OTP=true bilan boot MUVAFFAQIYATLI bo'ldi — fail-closed himoya buzilgan"
+            exit 1
+          fi
+          echo "OK: production'da DEV_EXPOSE_OTP=true (to'liq to'g'ri qolgan config bilan ham) to'g'ri rad etildi"
 
       - name: e2e — health + DB-role append-only (A4)
         run: npm run test:e2e --workspace backend

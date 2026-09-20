@@ -9,9 +9,35 @@ import { assertApiUrlSane } from "./api-url.config.mjs";
 /* Bo'lim 25 (real production insident) — `NEXT_PUBLIC_API_URL` sog'ligini
    tekshiradi (`api-url.config.mjs`, YAGONA MANBA — `scripts/check-api-url.cjs`
    `npm run verify`da bir xil funksiyani chaqiradi). Qiymat noto'g'ri
-   ko'rinsa (localhost, yoki global API prefiksi "/api/v1" yo'q) — build'ni
-   to'xtatadi; berilmagan bo'lsa (Vercel landing/CI/lokal dev) jim o'tadi. */
-assertApiUrlSane(process.env.NEXT_PUBLIC_API_URL);
+   ko'rinsa (localhost/http production'da, yoki global API prefiksi "/api/v1"
+   yo'q) — build'ni to'xtatadi; berilmagan bo'lsa (Vercel landing/CI/lokal
+   dev) jim o'tadi — FAQAT Railway asosiy ilova ("frontend" xizmati) uchun
+   bo'sh qiymat ham xato: u backend'ga ulanishi SHART.
+
+   `RAILWAY_ENVIRONMENT_NAME`/`RAILWAY_PROJECT_ID` — Railway platformasi
+   o'zi HAR BIR build/runtime'ga avtomatik beradi (`VERCEL` bilan bir xil
+   naqsh, yuqoridagi izohga qarang) — qo'lda sozlash SHART EMAS. `NETLIFY`
+   — Netlify build muhitiga o'zi beradigan o'zgaruvchi (`netlify.toml`
+   hamon mavjud va `npm run verify`dagi `check:csp` bilan faol tekshiriladi
+   — bu build maqsadi TASHLAB KETILMAGAN). Security-engineer topilmasi:
+   ILGARI faqat Railway/Vercel tekshirilardi — Netlify'da build qilinsa
+   `isRealDeploy` NOTO'G'RI `false` qolib, localhost/http qiymatlar
+   Netlify uchun ham (noto'g'ri) o'tkazib yuborilardi.
+
+   Lokal `next build`/`next dev`da (shu jumladan CI'dagi `npm run verify`
+   va Playwright uchun mahalliy backend'ga ulangan build/start) bu
+   o'zgaruvchilarning HECH biri YO'Q, shuning uchun `isRealDeploy=false`
+   qoladi va localhost/http qiymatlar rad etilmaydi (aks holda
+   `.env.local`dagi `http://localhost:4000/api/v1` bilan `npm run dev`
+   ISHLAMAY QOLADI — bu ANIQLANGAN va shu tuzatish bilan yopilgan
+   regressiya). */
+const isRailwayBuild = Boolean(process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_ID);
+const isVercelBuild = process.env.VERCEL === "1";
+const isNetlifyBuild = process.env.NETLIFY === "true";
+assertApiUrlSane(process.env.NEXT_PUBLIC_API_URL, {
+  requireForApp: isRailwayBuild,
+  isRealDeploy: isRailwayBuild || isVercelBuild || isNetlifyBuild,
+});
 
 const nextConfig = {
   /* Build papkasi. Odatda ".next". NEXT_DIST_DIR faqat ishlab turgan dev
