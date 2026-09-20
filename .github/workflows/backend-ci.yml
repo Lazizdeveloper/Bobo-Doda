@@ -231,17 +231,32 @@ jobs:
           echo "OK: PAYMENTS_ENABLED=false (Payme credentialsiz) bilan boot MUVAFFAQIYATLI — xavfsiz to'lovsiz launch"
           # Bo'lim 25 — DEV_EXPOSE_OTP hech qachon Zod darajasida rad
           # etilmagan edi (faqat runtime `shouldExposeDevOtp` uni inert
-          # qilardi). To'liq to'g'ri (PLAYMOBILE) production config bilan
-          # HAM DEV_EXPOSE_OTP=true boot'ni yiqitishi SHART — real boot bilan
-          # tasdiqlangan, faqat unit test emas.
-          if PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz \
+          # qilardi). To'liq to'g'ri (PLAYMOBILE, PAYOUTS xavfsiz o'chirilgan)
+          # production config bilan HAM DEV_EXPOSE_OTP=true boot'ni
+          # yiqitishi SHART — real boot bilan tasdiqlangan, faqat unit test
+          # emas.
+          #
+          # security-engineer cross-review topilmasi — `PAYOUTS_ENABLED=false`
+          # ATAYLAB qo'shildi va natija matni `DEV_EXPOSE_OTP` so'zi bo'yicha
+          # tekshiriladi: buni qo'shmasdan qolgan bo'lsak, boot PAYOUT_PROVIDER=
+          # TEST (sukut) production'da fail-closed bo'lgani uchun HAR HOLDA
+          # yiqilar edi — DEV_EXPOSE_OTP=true ta'sirini umuman TEKSHIRMAGAN
+          # holda ham bu qadam "to'g'ri" ko'rinardi (vakuum tekshiruv).
+          BOOT_OUTPUT=$(PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz \
              SMS_PROVIDER=PLAYMOBILE PLAYMOBILE_API_URL=https://send.example.uz/broker-api PLAYMOBILE_LOGIN=ci-login PLAYMOBILE_PASSWORD=ci-password PLAYMOBILE_SENDER=BoboDoda \
+             PAYOUTS_ENABLED=false \
              DEV_EXPOSE_OTP=true \
-             $BOOT_CMD; then
+             $BOOT_CMD 2>&1) && BOOT_EXIT=0 || BOOT_EXIT=1
+          echo "$BOOT_OUTPUT"
+          if [ "$BOOT_EXIT" -eq 0 ]; then
             echo "::error::production'da DEV_EXPOSE_OTP=true bilan boot MUVAFFAQIYATLI bo'ldi — fail-closed himoya buzilgan"
             exit 1
           fi
-          echo "OK: production'da DEV_EXPOSE_OTP=true (to'liq to'g'ri qolgan config bilan ham) to'g'ri rad etildi"
+          if ! echo "$BOOT_OUTPUT" | grep -q "DEV_EXPOSE_OTP"; then
+            echo "::error::boot DEV_EXPOSE_OTP TUFAYLI EMAS, boshqa sabab bilan yiqildi — bu tekshiruv o'z maqsadini isbotlamayapti"
+            exit 1
+          fi
+          echo "OK: production'da DEV_EXPOSE_OTP=true (to'liq to'g'ri qolgan config bilan ham) aynan DEV_EXPOSE_OTP sababli to'g'ri rad etildi"
 
       - name: e2e — health + DB-role append-only (A4)
         run: npm run test:e2e --workspace backend
