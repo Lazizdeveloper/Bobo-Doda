@@ -20,9 +20,6 @@ export interface User {
   location?: string;
   bio?: string;
   email?: string;
-  telegramUsername?: string;
-  googleConnected?: boolean;
-  telegramConnected?: boolean;
 }
 
 export type TrustBadge = "yangi" | "ishonchli" | "top_mutaxassis";
@@ -96,7 +93,9 @@ export type ServiceCategory =
   | "audio"
   | "biznes";
 
-export type ServiceStatus = "active" | "paused" | "draft";
+/** `pending_review`/`rejected`/`archived` — real backend moderatsiya
+    holatlari (Bosqich 17). Mock hech qachon bu qiymatlarni yozmaydi. */
+export type ServiceStatus = "active" | "paused" | "draft" | "pending_review" | "rejected" | "archived";
 
 /* A) Passiv yo'l — tayyor xizmat */
 export interface Service {

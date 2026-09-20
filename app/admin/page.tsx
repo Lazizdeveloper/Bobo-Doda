@@ -1,152 +1,52 @@
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+/**
+ * Bosqich 17 — real backend: `getAdminCounters()` (bir nechta real
+ * `staff/*` navbatning `total`i) + `staffListAuditLogs()` (so'nggi
+ * harakatlar). Eski mock `getAdminData()`/`getAuditEvents()` — butun
+ * bazani (foydalanuvchi/xizmat/shartnoma/bosqich/KYC/report/ticket)
+ * bitta chaqiruvda qaytarardi; real backendda bunday endpoint yo'q va
+ * bo'lishi ham kerak emas (bo'lim 91-J).
+ */
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminPageHeader, MetricCard } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
-import { AdminIcon } from "@/components/admin/AdminIcon";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { getAdminData, getAuditEvents,
-  type AdminData,
-} from "@/lib/api/admin";
-import { formatMoney, formatDate } from "@/lib/format";
-import { platformFee } from "@/lib/fees";
-import type { AuditEvent } from "@/lib/admin-types";
-import type { Milestone } from "@/lib/types";
-
-type Data = AdminData;
+import { getAdminCounters, staffListAuditLogs, type AdminCounters, type StaffAuditLogRow } from "@/lib/api/admin";
+import { formatDate } from "@/lib/format";
 
 export default function AdminDashboard() {
-  const [data, setData] = useState<Data | null>(null);
-  const [auditLog, setAuditLog] = useState<AuditEvent[]>([]);
+  const [counters, setCounters] = useState<AdminCounters | null>(null);
+  const [auditLog, setAuditLog] = useState<StaffAuditLogRow[]>([]);
   const [loadError, setLoadError] = useState<unknown>(null);
 
-  /* Ikki so'rov parallel — biri ikkinchisini kutmaydi. */
   const load = useCallback(() => {
     setLoadError(null);
-    Promise.all([getAdminData(), getAuditEvents()])
-      .then(([adminData, audit]) => {
-        setData(adminData);
-        setAuditLog(audit.slice(0, 8));
+    Promise.all([getAdminCounters(), staffListAuditLogs({ page: 1, perPage: 8 })])
+      .then(([stats, audit]) => {
+        setCounters(stats);
+        setAuditLog(audit.items);
       })
       .catch(setLoadError);
   }, []);
 
   useEffect(load, [load]);
 
-  const stats = useMemo(() => {
-    if (!data)
-      return {
-        escrowTotal: 0,
-        payoutsTotal: 0,
-        commissionTotal: 0,
-        totalGMV: 0,
-        disputeRate: "0%",
-        pendingKYC: 0,
-        openDisputes: 0,
-        pendingWithdrawals: 0,
-        openReports: 0,
-        openTickets: 0,
-        pendingAppeals: 0,
-        totalUrgent: 0,
-      };
-
-    /* Ma'lumot QATLAMDAN olinadi. Ilgari bu yerda `localStorage` to'g'ridan-
-       to'g'ri o'qilardi — backend'ga o'tishda bu satr jimgina eskirib,
-       dashboard bo'sh raqam ko'rsatib qolardi. */
-    const milestones: Milestone[] = data.milestones;
-
-    /* Escrow — FAQAT ochiq shartnomalarda. Yakunlangan/bekor qilingan
-       shartnomada qolib ketgan mablag'langan bosqich pul emas. */
-    const openContractIds = new Set(
-      data.contracts
-        .filter((c) => c.status === "faol" || c.status === "nizo")
-        .map((c) => c.id)
-    );
-    const escrow = milestones
-      .filter(
-        (m) =>
-          openContractIds.has(m.contractId) &&
-          ["mablaglangan", "topshirildi", "ozgartirish_soraldi"].includes(m.status)
-      )
-      .reduce((sum: number, m) => sum + m.amount, 0);
-
-    const completedTotal = milestones
-      .filter((m) => m.status === "qabul_qilindi")
-      .reduce((sum: number, m) => sum + m.amount, 0);
-
-    /* Komissiya YAGONA MANBADAN (`lib/fees.ts`). Ilgari bu yerda `* 0.1`
-       (10%) qattiq yozilgan edi — haqiqiy stavka esa 5%, ya'ni admin
-       dashboard daromadni ikki barobar ko'rsatardi. */
-    const commissions = platformFee(completedTotal);
-    const totalGMV = data.contracts.reduce((sum, c) => sum + c.totalAmount, 0);
-
-    const pendingKYC = data.verifications.filter(
-      (v) => v.status === "korib_chiqilmoqda"
-    ).length;
-    const openDisputes = data.disputes.filter(
-      (d) => d.status !== "hal_qilindi"
-    ).length;
-    const pendingWithdrawals = data.withdrawals.filter(
-      (w) => w.status === "kutilmoqda"
-    ).length;
-    const openReports = data.reports.filter(
-      (r) => r.status === "new" || r.status === "investigating"
-    ).length;
-    const openTickets = data.tickets.filter((t) => t.status === "ochiq").length;
-    const pendingAppeals = data.appeals.filter(
-      (a) => a.status === "pending"
-    ).length;
-
-    const totalUrgent =
-      pendingKYC +
-      openDisputes +
-      pendingWithdrawals +
-      openReports +
-      openTickets +
-      pendingAppeals;
-
-    const disputeRate =
-      data.contracts.length > 0
-        ? `${((data.disputes.length / data.contracts.length) * 100).toFixed(1)}%`
-        : "0%";
-
-    return {
-      escrowTotal: escrow,
-      commissionTotal: commissions,
-      totalGMV,
-      disputeRate,
-      pendingKYC,
-      openDisputes,
-      pendingWithdrawals,
-      openReports,
-      openTickets,
-      pendingAppeals,
-      totalUrgent,
-    };
-  }, [data]);
-
   if (loadError) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader
-          title="Operatsion Boshqaruv Markazi"
-          description="Bozor faoliyati, xavfli navbatlar va operator harakatlari."
-        />
+        <AdminPageHeader title="Operatsion Boshqaruv Markazi" description="Bozor faoliyati va operator harakatlari." />
         <ErrorState error={loadError} onRetry={load} />
       </div>
     );
   }
 
-  if (!data) {
+  if (!counters) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader
-          title="Operatsion Boshqaruv Markazi"
-          description="Bozor faoliyati, xavfli navbatlar va operator harakatlari."
-        />
+        <AdminPageHeader title="Operatsion Boshqaruv Markazi" description="Bozor faoliyati va operator harakatlari." />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <SkeletonCard key={i} />
@@ -156,236 +56,53 @@ export default function AdminDashboard() {
     );
   }
 
-  const actionQueues = [
-    {
-      label: "KYC Arizalari",
-      count: stats.pendingKYC,
-      href: "/admin/verifikatsiya",
-      desc: "Shaxsni tasdiqlovchi passport va ID tekshiruvi",
-      icon: "kyc" as const,
-      tone: stats.pendingKYC > 0 ? "warning" : ("neutral" as BadgeTone),
-    },
-    {
-      label: "Arbitraj & Nizolar",
-      count: stats.openDisputes,
-      href: "/admin/nizolar",
-      desc: "Buyurtmachi va ijrochi o‘rtasidagi da'volar",
-      icon: "disputes" as const,
-      tone: stats.openDisputes > 0 ? "danger" : ("neutral" as BadgeTone),
-    },
-    {
-      label: "Pul Yechish So'rovlari",
-      count: stats.pendingWithdrawals,
-      href: "/admin/tolovlar",
-      desc: "Mutaxassislar kartasiga to'lovlarni tasdiqlash",
-      icon: "payments" as const,
-      tone: stats.pendingWithdrawals > 0 ? "warning" : ("neutral" as BadgeTone),
-    },
-    {
-      label: "Xavfsizlik Shikoyatlari",
-      count: stats.openReports,
-      href: "/admin/shikoyatlar",
-      desc: "Scam, off-platform to'lov va plagiat signallari",
-      icon: "reports" as const,
-      tone: stats.openReports > 0 ? "danger" : ("neutral" as BadgeTone),
-    },
-    {
-      label: "Yordam Chiptalari",
-      count: stats.openTickets,
-      href: "/admin/yordam",
-      desc: "Foydalanuvchilarning ochiq murojaatlari",
-      icon: "support" as const,
-      tone: stats.openTickets > 0 ? "primary" : ("neutral" as BadgeTone),
-    },
-    {
-      label: "Hisob Apellyatsiyalari",
-      count: stats.pendingAppeals,
-      href: "/admin/apellyatsiyalar",
-      desc: "Bloklangan foydalanuvchilarning qayta tiklash arizalari",
-      icon: "appeals" as const,
-      tone: stats.pendingAppeals > 0 ? "warning" : ("neutral" as BadgeTone),
-    },
-  ];
-
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Operatsion Boshqaruv Markazi"
-        description="Bobo&Doda bozorining jonli faoliyati, xavfsizlik navbatlari va moliyaviy oqimlari."
-      />
+      <AdminPageHeader title="Operatsion Boshqaruv Markazi" description="Bobo&Doda bozorining jonli faoliyati va xavfsizlik navbatlari." />
 
-      {/* Top Level Metric Cards */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Tizim Savdo Hajmi (GMV)"
-          value={formatMoney(stats.totalGMV)}
-          detail={`Jami ${data.contracts.length} ta shartnoma bo'yicha`}
-          tone="primary"
-        />
-        <MetricCard
-          label="Escrow Himoyasida"
-          value={formatMoney(stats.escrowTotal)}
-          detail="Bajarilayotgan faol bosqichlar mablag'i"
-          tone="warning"
-        />
-        <MetricCard
-          label="Platforma Sof Daromadi"
-          value={formatMoney(stats.commissionTotal)}
-          detail="Yig'ilgan 10% xizmat haqi"
-          tone="success"
-        />
-        <MetricCard
-          label="Tezkor Ko‘rib Chiqishlar"
-          value={stats.totalUrgent}
-          detail={`Nizo: ${stats.openDisputes} · KYC: ${stats.pendingKYC} · Shikoyat: ${stats.openReports}`}
-          tone={stats.totalUrgent > 0 ? "danger" : "success"}
-        />
+        <MetricCard label="Foydalanuvchilar" value={counters.totalUsers} detail="Jami ro'yxatdan o'tganlar" tone="primary" />
+        <MetricCard label="Xizmatlar" value={counters.totalServices} detail="Jami e'lon qilingan" />
+        <MetricCard label="Shartnomalar" value={counters.totalContracts} detail="Jami tuzilgan" />
+        <MetricCard label="Ochiq Nizolar" value={counters.openDisputes} detail="Arbitraj kutmoqda" tone={counters.openDisputes > 0 ? "danger" : "success"} />
       </section>
 
-      {/* Actionable Queues Grid */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-heading text-lg font-bold text-ink flex items-center gap-2">
-              <span>⚡</span> Diqqat Talab Qiluvchi Operatsion Navbatlar
-            </h2>
-            <p className="text-xs text-muted mt-0.5">
-              Ushbu bo‘limlar zudlik bilan insoniy qaror va moderatorlik aralashuvini talab qiladi.
-            </p>
-          </div>
-          <Badge tone={stats.totalUrgent > 0 ? "danger" : "success"}>
-            {stats.totalUrgent > 0 ? `${stats.totalUrgent} ta kutmoqda` : "Navbatlar bo'sh"}
-          </Badge>
-        </div>
-
-        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          {actionQueues.map((queue) => (
-            <Link
-              key={queue.label}
-              href={queue.href}
-              className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface text-lg border border-line group-hover:scale-105 transition-transform">
-                    <AdminIcon name={queue.icon} />
-                  </span>
-                  <div>
-                    <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">
-                      {queue.label}
-                    </h3>
-                    <p className="text-3xs text-muted mt-0.5 leading-relaxed">{queue.desc}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center justify-between border-t border-line/60 pt-3">
-                <Badge tone={queue.tone} size="sm">
-                  {queue.count > 0 ? `${queue.count} ta kutilmoqda` : "Navbat toza"}
-                </Badge>
-                <span className="text-2xs font-semibold text-primary group-hover:translate-x-0.5 transition-transform">
-                  Ochish →
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+      <section className="grid gap-3.5 sm:grid-cols-2">
+        <Link href="/admin/nizolar" className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
+          <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">Nizolar markazi</h3>
+          <p className="text-3xs text-muted mt-0.5">{counters.openDisputes} ta ochiq nizo ko'rib chiqilishi kerak</p>
+        </Link>
+        <Link href="/admin/tolovlar" className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
+          <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">To'lovlar & Ledger</h3>
+          <p className="text-3xs text-muted mt-0.5">To'lovlar, qaytarishlar va buxgalteriya yozuvlari</p>
+        </Link>
       </section>
 
-      {/* Marketplace Health & Live Activity */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Platform Overview stats */}
-        <Card padding="lg" className="min-w-0 lg:col-span-1 space-y-4">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <h2 className="font-heading text-sm font-bold text-ink">Bozor Holati</h2>
-            <span className="flex items-center gap-1.5 text-3xs font-semibold text-success">
-              <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              Real-vaqt
-            </span>
-          </div>
-
-          <dl className="space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <dt className="text-muted">Foydalanuvchilar:</dt>
-              <dd className="font-bold text-ink">{data.users.length} nafar</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-muted">Mutaxassislar:</dt>
-              <dd className="font-semibold text-primary">
-                {data.users.filter((u) => u.role === "mutaxassis").length} nafar
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-muted">Xaridorlar:</dt>
-              <dd className="font-semibold text-ink">
-                {data.users.filter((u) => u.role === "xaridor").length} nafar
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-muted">Faol Xizmatlar:</dt>
-              <dd className="font-semibold text-ink">
-                {data.services.filter((s) => s.status === "active").length} ta
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-muted">Ochiq E&apos;lonlar:</dt>
-              <dd className="font-semibold text-ink">
-                {data.jobs.filter((j) => j.status === "ochiq").length} ta
-              </dd>
-            </div>
-            <div className="flex items-center justify-between border-t border-line pt-2">
-              <dt className="text-muted">Nizolar Ulushi:</dt>
-              <dd className="font-bold text-ink">{stats.disputeRate}</dd>
-            </div>
-          </dl>
-        </Card>
-
-        {/* Live Audit Log */}
-        <Card padding="lg" className="min-w-0 lg:col-span-2 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
-            <div className="min-w-0">
-              <h2 className="font-heading text-sm font-bold text-ink truncate">
-                So‘nggi Operator Harakatlari & Audit Jurnali
-              </h2>
-              <p className="text-3xs text-muted">Barcha xavfsizlik va moliyaviy operatsiyalar qayd etilmoqda.</p>
-            </div>
-            <Link
-              href="/admin/audit"
-              className="text-xs font-semibold text-primary hover:underline shrink-0"
-            >
-              To‘liq jurnal →
-            </Link>
-          </div>
-
-          <div className="space-y-2.5 max-h-72 overflow-y-auto pt-1">
-            {auditLog.length === 0 ? (
-              <p className="py-8 text-center text-xs text-muted italic">
-                Hozircha audit yozuvlari mavjud emas.
-              </p>
-            ) : (
-              auditLog.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-start justify-between rounded-xl border border-line bg-surface/40 p-2.5 text-xs hover:bg-surface transition"
-                >
-                  <div className="min-w-0 pr-3">
-                    <p className="font-bold text-ink">{event.action}</p>
-                    <p className="text-2xs text-muted truncate mt-0.5">
-                      <span className="font-semibold text-ink/80">{event.adminName}</span> · Ob&apos;ekt:{" "}
-                      <span className="font-mono">{event.target}</span>
-                      {event.details && ` · ${event.details}`}
-                    </p>
-                  </div>
-                  <span className="text-3xs text-muted whitespace-nowrap shrink-0">
-                    {formatDate(event.createdAt)}
-                  </span>
+      <Card padding="lg" className="min-w-0 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
+          <h2 className="font-heading text-sm font-bold text-ink">So'nggi Operator Harakatlari</h2>
+          <Link href="/admin/audit" className="text-xs font-semibold text-primary hover:underline shrink-0">
+            To'liq jurnal →
+          </Link>
+        </div>
+        <div className="space-y-2.5 max-h-72 overflow-y-auto pt-1">
+          {auditLog.length === 0 ? (
+            <p className="py-8 text-center text-xs text-muted italic">Hozircha audit yozuvlari mavjud emas.</p>
+          ) : (
+            auditLog.map((event) => (
+              <div key={event.id} className="flex items-start justify-between rounded-xl border border-line bg-surface/40 p-2.5 text-xs hover:bg-surface transition">
+                <div className="min-w-0 pr-3">
+                  <p className="font-bold text-ink">{event.action}</p>
+                  <p className="text-2xs text-muted truncate mt-0.5">
+                    <span className="font-semibold text-ink/80">{event.actorName}</span> · {event.resourceType} <span className="font-mono">#{event.resourceId.slice(0, 8)}</span>
+                  </p>
                 </div>
-              ))
-            )}
-          </div>
-        </Card>
-      </div>
+                <span className="text-3xs text-muted whitespace-nowrap shrink-0">{formatDate(event.createdAt)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
-

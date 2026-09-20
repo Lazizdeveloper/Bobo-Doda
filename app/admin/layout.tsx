@@ -47,6 +47,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
   const isLogin = pathname === "/admin/kirish";
+  /* Bo'lim 91-J — `mustChangePassword` qattiq darvoza: backend HAR QANDAY
+     boshqa amalni `PASSWORD_CHANGE_REQUIRED` bilan rad etadi, shuning
+     uchun UI ham shu holatda faqat shu sahifaga ruxsat beradi. */
+  const isChangePassword = pathname === "/admin/parolni-almashtirish";
 
   useEffect(() => {
     const current = getCurrentAdmin();
@@ -62,6 +66,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       if (pathname !== dest) router.replace(dest);
       return;
     }
+    if (current.mustChangePassword && !isChangePassword) {
+      router.replace("/admin/parolni-almashtirish");
+      return;
+    }
+    if (isChangePassword) {
+      setAdmin(current);
+      setReady(true);
+      return;
+    }
     if (pathname.startsWith("/admin/super") && current.role !== "super_admin") {
       if (pathname !== "/admin/ruxsat-yoq") router.replace("/admin/ruxsat-yoq");
       return;
@@ -73,7 +86,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
     setAdmin(current);
     setReady(true);
-  }, [isLogin, pathname, router]);
+  }, [isLogin, isChangePassword, pathname, router]);
 
   /* Mobil menyu Escape bilan yopiladi — modal xatti-harakati (`aria-modal`)
      e'lon qilingan joyda klaviatura bilan chiqib ketolmaslik a11y xatosi. */
@@ -126,8 +139,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, [pathname, dataVersion]);
 
   if (!ready) return null;
-  if (isLogin) return children;
+  if (isLogin || isChangePassword) return children;
 
+  /* Bosqich 17 — nav FAQAT real backend'da mavjud bo'lgan bo'limlarga
+     qisqartirildi (bo'lim 91-J). Job/Proposal, KYC, Shikoyat/Apellyatsiya/
+     Sharh moderatsiyasi, Yordam chiptalari, Platforma sozlamalari, Fikrlar
+     — real backendda modeli yo'q. Xizmatlar/Kategoriyalar/Xodimlar
+     boshqaruvi HALI ko'chirilmagan (Bosqich 17'ning keyingi bosqichi —
+     bo'lim boshidagi `lib/api/admin.ts` izohiga qarang). */
   const navGroups: NavGroup[] = [
     {
       title: "Boshqaruv",
@@ -136,41 +155,31 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       ],
     },
     {
-      title: "Bozor & Loyihalar",
+      title: "Bozor",
       items: [
         { permission: "users", href: "/admin/foydalanuvchilar", label: "Foydalanuvchilar", icon: "users" },
-        { permission: "services", href: "/admin/xizmatlar", label: "Xizmatlar Moderatsiyasi", icon: "services" },
-        { permission: "jobs", href: "/admin/loyihalar", label: "Mijoz Loyihalari", icon: "jobs" },
-        { permission: "orders", href: "/admin/shartnomalar", label: "Shartnomalar & Buyurtmalar", icon: "orders" },
+        { permission: "orders", href: "/admin/shartnomalar", label: "Shartnomalar", icon: "orders" },
       ],
     },
     {
-      title: "Ishonch & Xavfsizlik",
+      title: "Moliya & Nizolar",
       items: [
-        { permission: "kyc", href: "/admin/verifikatsiya", label: "KYC & Shaxs Tasdig‘i", icon: "kyc", badgeCount: counts.kyc },
         { permission: "disputes", href: "/admin/nizolar", label: "Nizolar & Arbitraj", icon: "disputes", badgeCount: counts.disputes },
-        { permission: "reports", href: "/admin/shikoyatlar", label: "Shikoyatlar & Xavflar", icon: "reports", badgeCount: counts.reports },
-        { permission: "appeals", href: "/admin/apellyatsiyalar", label: "Apellyatsiyalar", icon: "appeals", badgeCount: counts.appeals },
-        { permission: "support", href: "/admin/fikrlar", label: "Fikrlar & Kamchiliklar", icon: "feedback", badgeCount: counts.feedbacks },
-        { permission: "reviews", href: "/admin/sharhlar", label: "Sharhlar Moderatsiyasi", icon: "reviews" },
+        { permission: "payments", href: "/admin/tolovlar", label: "To‘lovlar, Qaytarish & Chiqarish", icon: "payments" },
       ],
     },
     {
-      title: "Moliya & Xizmat",
+      title: "Tizim",
       items: [
-        { permission: "payments", href: "/admin/tolovlar", label: "To‘lovlar & Escrow", icon: "payments", badgeCount: counts.payouts },
-        { permission: "support", href: "/admin/yordam", label: "Yordam Chiptalari", icon: "support", badgeCount: counts.tickets },
-      ],
-    },
-    {
-      title: "Tizim & Sozlamalar",
-      items: [
-        { permission: "categories", href: "/admin/kategoriyalar", label: "Kategoriyalar", icon: "categories" },
-        { permission: "settings", href: "/admin/sozlamalar", label: "Platforma Sozlamalari", icon: "settings" },
         { permission: "audit", href: "/admin/audit", label: "Audit Jurnali", icon: "audit" },
-        ...(admin?.role === "super_admin"
-          ? [{ permission: "admins" as AdminPermission, href: "/admin/super/adminlar", label: "Adminlar & Rollar", icon: "admins" as AdminIconName }]
-          : []),
+        // Bosqich 24 — QA audit: staff-boshqaruv backend'i (`getAdminAccounts`/
+        // `addAdmin`/...) hali real emas (`disabledAsync`) — bu yagona
+        // sidebar-havola bo'lib, super_admin uni bosganda doim xato
+        // ko'rardi. Boshqa "hali ulanmagan" bo'limlar (buyer/seller
+        // TopNav'dagi Ish e'lonlari/Takliflar/Xabarlar) bilan bir xil
+        // konvensiya: marshrut o'zi qoladi (to'g'ridan-to'g'ri URL orqali
+        // ochilsa ErrorState ko'rsatadi), faqat navigatsiyadan olib
+        // tashlanadi — real ulanmaguncha qayta qo'shilmasin.
       ],
     },
   ];

@@ -6,104 +6,189 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Textarea } from "@/components/ui/Textarea";
-import { TagInput } from "@/components/ui/TagInput";
-import { LocationPicker } from "@/components/ui/LocationPicker";
 import { useToast } from "@/components/ui/Toast";
-import { CATEGORIES } from "@/lib/category-fields";
-import { getSelectableCategories } from "@/lib/categories";
-import type { ServiceCategory } from "@/lib/types";
-import { usersService } from "@/lib/api";
+import { authService, sellerApplicationService, usersService } from "@/lib/api";
+import { ApiError } from "@/lib/api/errors";
+import { formatDate } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { LIMITS } from "@/lib/validate";
+import type { VerificationStatus } from "@/lib/types";
 
 interface Errors {
   fullName?: string;
-  bio?: string;
-  skills?: string;
-  categories?: string;
-  location?: string;
+  legalName?: string;
+  displayName?: string;
+  description?: string;
 }
 
+type CurrentApplication = {
+  status: VerificationStatus;
+  legalName?: string;
+  displayName?: string;
+  description?: string;
+  rejectionReason?: string;
+  submittedAt?: string;
+} | null;
+
+/**
+ * Bosqich 23 — sahifa ENDI to'liq holat-mashinasi: yuklanishda joriy
+ * ariza (`sellerApplicationService.getCurrent()`) SO'RALADI va aynan
+ * BITTA holat ko'rsatiladi — forma faqat NO_APPLICATION/REJECTED (qayta
+ * ariza) holatlarida ko'rinadi. Ilgari forma HAR DOIM ko'rsatilardi,
+ * joriy holatdan qat'i nazar — PENDING/APPROVED foydalanuvchi qayta
+ * yuborsa backend 409 (`SELLER_APPLICATION_ALREADY_PENDING`/`BAD_STATE`)
+ * qaytarardi va faqat birinchisi ushlanardi, ikkinchisi xom xato sifatida
+ * ko'rinardi.
+ */
 export default function RoyxatPage() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const router = useRouter();
   const { toast } = useToast();
 
-  /* Admin o'chirgan kategoriyada yangi ish yaratib bo'lmaydi. Ro'yxat mount'dan
-     KEYIN toraytiriladi: server render'ida `localStorage` yo'q, shuning uchun
-     darhol filtrlansa hidratsiya mos kelmasdi. */
-  const [selectableCategories, setSelectableCategories] =
-    useState<ServiceCategory[]>(CATEGORIES);
-  useEffect(() => setSelectableCategories(getSelectableCategories()), []);
-
   const [fullName, setFullName] = useState("");
-  const [bio, setBio] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [location, setLocation] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [description, setDescription] = useState("");
   const [errors, setErrors] = useState<Errors>({});
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [application, setApplication] = useState<CurrentApplication>(null);
 
   const load = useCallback(() => {
     setLoadError(null);
-    usersService
-      .getCurrent()
-      .then((user) => {
-        if (user?.fullName) setFullName(user.fullName);
+    Promise.all([usersService.getCurrent(), sellerApplicationService.getCurrent()])
+      .then(([user, app]) => {
+        if (user?.fullName) {
+          setFullName(user.fullName);
+          setDisplayName((prev) => prev || user.fullName);
+        }
+        if (app?.status === "rad_etilgan") {
+          // Qayta ariza — avvalgi qiymatlarni qulaylik uchun oldindan to'ldiramiz.
+          if (app.legalName) setLegalName(app.legalName);
+          if (app.displayName) setDisplayName(app.displayName);
+          if (app.description) setDescription(app.description);
+        }
+        setApplication(app);
+        setLoaded(true);
       })
       .catch(setLoadError);
   }, []);
 
   useEffect(load, [load]);
 
-  function toggleCategory(cat: string) {
-    setCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
-  }
-
   function validate(): boolean {
     const next: Errors = {};
     if (!fullName.trim()) next.fullName = t("onboard.errName");
-    if (bio.trim().length < 20) next.bio = t("onboard.errBio");
-    if (bio.trim().length > LIMITS.bio) next.bio = t("onboard.errBioLong");
-    if (!skills.length) next.skills = t("onboard.errSkills");
-    if (!categories.length) next.categories = t("onboard.errCategories");
-    if (!location.trim()) next.location = t("onboard.errLocation");
+    const legal = legalName.trim();
+    if (!legal) next.legalName = t("onboard.errName");
+    else if (legal.length < 2) next.legalName = t("onboard.errNameShort");
+    else if (legal.length > LIMITS.name) next.legalName = t("onboard.errNameLong");
+    const display = displayName.trim();
+    if (!display) next.displayName = t("onboard.errName");
+    else if (display.length < 2) next.displayName = t("onboard.errNameShort");
+    else if (display.length > LIMITS.name) next.displayName = t("onboard.errNameLong");
+    if (description.trim().length > 0 && description.trim().length < 20) next.description = t("onboard.errBio");
+    if (description.trim().length > LIMITS.bio) next.description = t("onboard.errBioLong");
     setErrors(next);
     return Object.keys(next).length === 0;
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     if (!validate()) return;
-    setLoading(true);
+    setSubmitting(true);
     try {
-      await usersService.completeSellerProfile({
-        fullName: fullName.trim(),
-        bio: bio.trim(),
-        skills,
-        categories,
-        location: location.trim(),
+      await usersService.updateName(fullName.trim());
+      // `PATCH /me/profile` `profileDone=true`ni serverga yozadi, lekin
+      // javobni qaytarmaydi (`updateName` — `void`) — lokal sessiya
+      // snapshot'i shu sababli o'zgarmasdi qolib, `/mutaxassis`ga
+      // o'tishda layout guard eski `profileDone=false`ni ko'rib yana
+      // shu sahifaga qaytarib yuborishi mumkin edi. Aniq sinxronlash.
+      await authService.refresh();
+      await sellerApplicationService.submit({
+        legalName: legalName.trim(),
+        displayName: displayName.trim(),
+        description: description.trim() || undefined,
       });
-      toast(t("settings.saved"));
-      router.push("/kirish/tasdiqlash");
-    } catch {
-      toast(t("common.error"), "error");
-      setLoading(false);
+      toast(t("onboard.applicationSubmitted"));
+      // Qo'lda holat qurish EMAS — bitta haqiqat manbaidan qayta o'qiymiz.
+      const fresh = await sellerApplicationService.getCurrent();
+      setApplication(fresh);
+    } catch (err) {
+      toast(mapApplicationError(err, t), "error");
+      // Ko'p-tab/poyga holati: joriy holat serverda kutilganimizdan farq
+      // qilgan bo'lishi mumkin (masalan boshqa tabda allaqachon yuborilgan) —
+      // sahifa o'zini haqiqiy holatga moslab qayta chizadi.
+      sellerApplicationService.getCurrent().then(setApplication).catch(() => {});
+    } finally {
+      setSubmitting(false);
     }
   }
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
+  if (!loaded) {
+    return (
+      <Card padding="lg">
+        <SkeletonCard />
+      </Card>
+    );
+  }
+
+  // ── PENDING — forma UMUMAN ko'rsatilmaydi, submit tugmasi yo'q ──────────
+  if (application?.status === "korib_chiqilmoqda") {
+    return (
+      <Card padding="lg">
+        <StatusIcon tone="warning" />
+        <h1 className="mt-4 font-heading text-xl font-bold text-ink">{t("dash.applicationPending")}</h1>
+        <p className="mt-2 text-sm text-muted">{t("dash.applicationPendingDesc")}</p>
+        {application.submittedAt && (
+          <p className="mt-4 text-xs text-faint">
+            {t("onboard.submittedOn")} {formatDate(application.submittedAt, lang)}
+          </p>
+        )}
+      </Card>
+    );
+  }
+
+  // ── APPROVED — yangi ariza yuborish IMKONSIZ, dashboard'ga CTA ─────────
+  if (application?.status === "tasdiqlangan") {
+    return (
+      <Card padding="lg">
+        <StatusIcon tone="success" />
+        <h1 className="mt-4 font-heading text-xl font-bold text-ink">{t("onboard.applicationApproved")}</h1>
+        <p className="mt-2 text-sm text-muted">{t("onboard.applicationApprovedDesc")}</p>
+        <Button size="lg" className="mt-6 w-full" onClick={() => router.push("/mutaxassis")}>
+          {t("onboard.goToDashboard")}
+        </Button>
+      </Card>
+    );
+  }
+
+  // ── NO_APPLICATION yoki REJECTED — forma ko'rsatiladi (REJECTED = qayta ariza) ──
+  const isReapply = application?.status === "rad_etilgan";
 
   return (
     <Card padding="lg">
-      <h1 className="font-heading text-xl font-bold text-ink">
-        {t("onboard.title")}
-      </h1>
-      <p className="mt-2 text-sm text-muted">{t("onboard.subtitle")}</p>
+      {isReapply && (
+        <div className="mb-6 rounded-card border border-danger/30 bg-danger/5 p-4">
+          <p className="font-heading text-sm font-bold text-ink">{t("dash.applicationRejected")}</p>
+          {application?.rejectionReason ? (
+            <p className="mt-1 text-xs text-muted">
+              <span className="font-semibold text-ink">{t("onboard.rejectionReasonLabel")}</span>{" "}
+              {application.rejectionReason}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted">{t("dash.applicationRejectedDesc")}</p>
+          )}
+        </div>
+      )}
+
+      <h1 className="font-heading text-xl font-bold text-ink">{t("onboard.title")}</h1>
+      <p className="mt-2 text-sm text-muted">{t("onboard.applicationSubtitle")}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4" noValidate>
         <Input
@@ -113,69 +198,73 @@ export default function RoyxatPage() {
           placeholder={t("onboard.fullNamePh")}
           error={errors.fullName}
         />
+        <Input
+          label={t("onboard.legalName")}
+          value={legalName}
+          onChange={(e) => setLegalName(e.target.value)}
+          placeholder={t("onboard.fullNamePh")}
+          maxLength={LIMITS.name}
+          error={errors.legalName}
+        />
+        <Input
+          label={t("onboard.displayName")}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder={t("onboard.displayNamePh")}
+          maxLength={LIMITS.name}
+          error={errors.displayName}
+        />
         <Textarea
           label={t("onboard.bio")}
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder={t("onboard.bioPh")}
-          error={errors.bio}
+          error={errors.description}
           maxLength={LIMITS.bio}
-          hint={`${bio.length}/${LIMITS.bio}`}
-        />
-        <TagInput
-          label={t("onboard.skills")}
-          value={skills}
-          onChange={setSkills}
-          placeholder={t("onboard.skillsPh")}
-          error={errors.skills}
+          hint={`${description.length}/${LIMITS.bio}`}
         />
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">
-            {t("onboard.categories")}
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {selectableCategories.map((cat) => {
-              const selected = categories.includes(cat);
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => toggleCategory(cat)}
-                  aria-pressed={selected}
-                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors duration-150 ${
-                    selected
-                      ? "border-primary bg-primary/15 font-medium text-ink"
-                      : "border-line bg-card text-muted hover:text-ink"
-                  }`}
-                >
-                  {t(`cat.${cat}`)}
-                </button>
-              );
-            })}
-          </div>
-          {errors.categories && (
-            <p className="text-2xs text-danger" role="alert">
-              {errors.categories}
-            </p>
-          )}
-        </div>
-
-        <LocationPicker
-          label={t("onboard.location")}
-          value={location}
-          onChange={(val) => {
-            setLocation(val);
-            if (errors.location) setErrors((prev) => ({ ...prev, location: undefined }));
-          }}
-          error={errors.location}
-          required
-        />
-
-        <Button type="submit" size="lg" loading={loading} className="mt-2 w-full">
-          {t("onboard.submit")}
+        <Button type="submit" size="lg" loading={submitting} className="mt-2 w-full">
+          {isReapply ? t("onboard.reapplyBtn") : t("onboard.submitApplication")}
         </Button>
       </form>
     </Card>
   );
+}
+
+function StatusIcon({ tone }: { tone: "warning" | "success" }) {
+  const cls = tone === "success" ? "bg-success/10 text-success-deep" : "bg-warning/10 text-warning-deep";
+  return (
+    <div className={`flex h-12 w-12 items-center justify-center rounded-full ${cls}`} aria-hidden="true">
+      {tone === "success" ? (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      ) : (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+      )}
+    </div>
+  );
+}
+
+/** Bosqich 23 — backend `DomainError.code` (xom, `ApiError.message`) bo'yicha
+    aniq matn. Bu FAQAT poyga holati uchun (multi-tab/stale form) — oddiy
+    navigatsiyada sahifa joriy holatni oldindan yuklab forma ko'rsatmaydi,
+    shuning uchun bu xatolar odatiy oqimda umuman chaqirilmaydi. */
+function mapApplicationError(err: unknown, t: (key: string) => string): string {
+  const code = err instanceof ApiError ? err.message : "";
+  switch (code) {
+    case "SELLER_APPLICATION_ALREADY_PENDING":
+      return t("onboard.alreadyPending");
+    case "BAD_STATE":
+      return t("onboard.stateChanged");
+    case "ACCOUNT_BLOCKED":
+    case "ACCOUNT_SUSPENDED":
+      return t("auth.errAccountBlocked");
+    default:
+      return t("common.error");
+  }
 }

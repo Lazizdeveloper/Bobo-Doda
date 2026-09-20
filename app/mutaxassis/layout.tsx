@@ -30,10 +30,9 @@ export default function MutaxassisLayout({ children }: { children: ReactNode }) 
       if (pathname !== "/mutaxassis/royxat") router.replace("/mutaxassis/royxat");
       return;
     }
-    if (session.profileDone && !session.verified) {
-      if (pathname !== "/kirish/tasdiqlash") router.replace("/kirish/tasdiqlash");
-      return;
-    }
+    // Bosqich 21 — `session.verified` endi HAR DOIM true: tasdiqlash
+    // (SMS OTP) hisob yaratishning O'ZIDA sodir bo'ladi (register/complete),
+    // login'da alohida "tasdiqlanmagan sessiya" bosqichi umuman yo'q.
     setReady(true);
   }, [router, pathname, isOnboarding]);
 

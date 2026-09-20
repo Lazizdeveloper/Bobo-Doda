@@ -1,18 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
 import { Logo } from "@/components/shared/Logo";
 import { LangSwitch } from "@/components/shared/LangSwitch";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const isKirish = pathname === "/kirish";
-
-  if (isKirish) {
-    return <main className="min-h-screen w-full overflow-x-hidden">{children}</main>;
-  }
-
   return (
     <div className="relative flex min-h-screen flex-col bg-[#FAFAFC] overflow-x-hidden">
       {/* Ambient background glows */}

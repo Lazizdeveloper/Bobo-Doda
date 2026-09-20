@@ -49,7 +49,7 @@ npm run start:dev
 | `npm run typecheck` | `tsc --noEmit` (strict + noUncheckedIndexedAccess) |
 | `npm run lint` | ESLint (typescript-eslint, type-checked) |
 | `npm test` | **Unit** testlar (tez, konteynersiz) |
-| `npm run test:e2e` | **Integration** — Testcontainers (real Postgres+Redis), Docker kerak |
+| `npm run test:e2e` | **Integration** (health + A4 db-roles). Postgres+Redis kerak — `E2E_SUPERUSER_URL`/`E2E_REDIS_URL` (CI: service konteyner). Yo'q bo'lsa suite'lar skip |
 | `npm run test:cov` | Unit + coverage |
 | `npm run prisma:migrate` | `prisma migrate dev` |
 | `npm run prisma:migrate:deploy` | `prisma migrate deploy` (CI/prod) |
@@ -65,15 +65,25 @@ src/
   common/
     errors/                DomainError + taksonomiya (frontend errors.ts shartnomasi)
     http/                  AllExceptionsFilter, LoggingInterceptor, RequestIdMiddleware, ValidationPipe
+    db/append-only.constants.ts  T2 — append-only jadval/huquq ro'yxati, YAGONA MANBA
   infra/
-    prisma/  redis/  queue/  logger/
+    prisma/                PrismaService (+ F1 db-role-assertion.ts), redis/  queue/  logger/
   modules/
     health/                /health/live, /health/ready
+scripts/
+  emit-openapi.ts          @bobododa/contracts uchun OpenAPI (DB/Redis'ga ulanmaydi)
+  boot-check.ts            ilovani ko'taradi, natijani exit code bilan beradi (F1 e2e shuni chaqiradi)
+  prove-append-only.sh     A4 isboti, Docker'siz (throwaway PG klaster)
 prisma/
   schema.prisma            enum'lar UPPER_SNAKE (ADR-02); pul BigInt tiyin (ADR-01, Bosqich 4)
   migrations/
+  sql/roles.sql            rol bootstrap (docker init / managed Postgres / CI)
 test/
-  health.e2e-spec.ts       Bosqich 1 DoD'ni avtomatlashtiradi
+  jest-e2e.setup.ts        e2e env'ni import'dan OLDIN o'rnatadi (@nestjs/config snapshot)
+  support/e2e-infra.ts     pgReachable / requireInfraOrSkip (F2) / provisionDb / bootCheck
+  health.e2e-spec.ts       Bosqich 1 DoD (health/ready, docs, 404) — bobododa_app roli bilan (F1)
+  db-roles.e2e-spec.ts     A4 — append-only DB darajasida (permission denied isboti)
+  db-role-assertion.e2e-spec.ts  F1 — boot tekshiruvi: happy/fail-closed/bypass + real process boot
 ```
 
 ## Bosqich 1 tekshiruv holati
@@ -82,10 +92,10 @@ test/
 |---|---|---|
 | `npm run typecheck` | ✅ | strict + noUncheckedIndexedAccess |
 | `npm run lint` | ✅ | typescript-eslint type-checked |
-| `npm test` (unit) | ✅ | 28 test / 3 suite (env sxemasi, xato taksonomiyasi, exception filter) |
+| `npm test` (unit) | ✅ | 42 test / 4 suite (env sxemasi incl. DB_ROLE_ASSERTION/DB_APP_ROLE, xato taksonomiyasi, exception filter, id.factory UUIDv7) |
 | `npm run build` | ✅ | `dist/main.js` |
 | `prisma migrate` (init) | ✅ | `prisma/migrations/2026…_init` real Postgres 16 ga qo'llandi |
-| `npm run test:e2e` | ⏳ CI | Testcontainers — Docker kerak; CI (`backend-ci.yml`) da ishlaydi |
+| `npm run test:e2e` | ✅ | 23 test / 3 suite (health 5 + db-roles A4 8 + db-role-assertion F1/T1 10) — CI service konteyner (`CI_REQUIRE_E2E=true`, F2); lokal throwaway PG bilan tekshirilgan |
 | `docker compose up` | ⏳ CI/lokal | Docker daemon kerak; `api` xizmati `/health/ready` healthcheck'i bilan |
 
 ## Muhim qoidalar (`docs/02-decisions.md`)

@@ -2,14 +2,20 @@ name: Backend CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/backend-ci.yml'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
@@ -20,13 +26,27 @@ concurrency:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: backend
+# Monorepo (npm workspaces): install va build ILDIZDAN. Dummy DB URL'lar —
+# schema `directUrl` env talab qiladi; `prisma validate/generate` hech narsaga
+# ULANMAYDI. JWT/TOTP — Bosqich 23-audit tuzatishi: `generate:contracts`
+# (`emit-openapi.ts`) `NestFactory.create(AppModule)` chaqiradi, bu esa
+# `ConfigModule.forRoot()`ning Zod env validatsiyasini ishga tushiradi
+# (`app.init()` EMAS — DB/Redis ULANMAYDI, faqat MAJBURIY maydonlar
+# formati tekshiriladi). Bu uchtasi bo'lmasa "quality" job HAR DOIM
+# yiqilardi — aynan shu sabab bilan (haqiqiy CI loglarida tasdiqlangan,
+# `STAFF_TOTP_ENCRYPTION_KEY: Required`). Qiymatlar sir EMAS — faqat CI
+# formatini qondirish uchun, hech qanday real muhitda ishlatilmaydi.
+env:
+  DATABASE_URL: postgresql://bobododa_app:app@localhost:5432/bobododa?schema=public
+  DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@localhost:5432/bobododa?schema=public
+  REDIS_URL: redis://localhost:6379
+  JWT_ACCESS_SECRET: ci-quality-job-dummy-access-secret-32
+  JWT_STAFF_ACCESS_SECRET: ci-quality-job-dummy-staff-secret-32
+  STAFF_TOTP_ENCRYPTION_KEY: '2222222222222222222222222222222222222222222222222222222222222222'
 
 jobs:
   quality:
-    name: Lint · Typecheck · Unit
+    name: Lint · Typecheck · Unit · Contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,29 +55,76 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: backend/package-lock.json
 
-      - run: npm ci
+      - name: Install (workspaces, root)
+        run: npm ci
 
       - name: Prisma validate + generate
-        run: npx prisma validate && npx prisma generate
+        run: |
+          npm run prisma:generate --workspace backend
+          npm exec --workspace backend -- prisma validate
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint (backend)
+        run: npm run lint --workspace backend
 
-      - name: Typecheck
-        run: npm run typecheck
+      - name: Typecheck (backend + contracts)
+        run: npm run typecheck --workspace backend && npm run typecheck --workspace @bobododa/contracts
 
-      - name: Unit tests
-        run: npm run test:cov
+      - name: Unit tests (backend)
+        run: npm run test:cov --workspace backend
 
-      - name: Build
-        run: npm run build
+      - name: Build (backend)
+        run: npm run build --workspace backend
+
+      - name: generate:contracts (OpenAPI → TS types + enums)
+        run: |
+          npm run generate:contracts
+          test -s packages/contracts/openapi.json
+          test -s packages/contracts/src/enums.ts
+
+      - name: Contracts drift — generated artifact’lar commit qilingan holat bilan bir xil bo‘lishi shart (bo‘lim 74)
+        run: |
+          if ! git diff --quiet -- packages/contracts; then
+            echo "::error::packages/contracts eskirgan — 'npm run generate:contracts' natijasi commit qilingan holatdan farq qiladi. Lokal'da ishga tushirib, natijani commit qiling."
+            git diff --stat -- packages/contracts
+            exit 1
+          fi
 
   integration:
-    name: Integration (Testcontainers)
+    name: Integration (real Postgres 16 + Redis — service containers)
     runs-on: ubuntu-latest
     needs: quality
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+          TZ: UTC
+          PGTZ: UTC
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # e2e testlar shu xizmatlarga ulanadi (Testcontainers EMAS — u ba'zi
+      # runner'larda Redis'ni "Connection is closed" bilan yiqitardi).
+      E2E_SUPERUSER_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      E2E_REDIS_URL: redis://localhost:6379
+      # F2 — infra kutilgan edi lekin topilmadi (masalan env nomi xato
+      # yozilsa yoki service konteyner ko'tarilmasa) JIMGINA skip bo'lib,
+      # CI yashil qolib ketmasin: shu flag yoqilganda testlar SKIP o'rniga
+      # YIQILADI ("infra topilmadi"). Lokal ishda flag yo'q — qulay skip.
+      CI_REQUIRE_E2E: 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -65,12 +132,106 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: backend/package-lock.json
 
-      - run: npm ci
+      - name: Install (workspaces, root)
+        run: npm ci
 
       - name: Prisma generate
-        run: npx prisma generate
+        run: npm run prisma:generate --workspace backend
 
-      - name: e2e (real Postgres + Redis via Testcontainers)
-        run: npm run test:e2e
+      - name: Migration test — rollarni bootstrap qilib, fresh DB'ga migratsiya (bo'lim 73)
+        working-directory: backend
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "CREATE DATABASE ci_migration_check;"
+          # DIQQAT — parollar ATAYLAB 'app'/'migrator': rollar
+          # (bobododa_app/bobododa_migrator) Postgres'da KLASTER-GLOBAL, shu
+          # SHARED service konteynerni keyinroq shu jobdagi "e2e" qadami ham
+          # ishlatadi (har bir spec'ning beforeAll'i `provisionDb()` orqali).
+          # `provisionDb()` (test/support/e2e-infra.ts) shu rollarni
+          # `IF NOT EXISTS` bilan yaratadi va parolni QATTIQ 'app'/'migrator'
+          # deb oladi — agar shu yerda BOSHQA parol ishlatilsa, bu qadam
+          # rolni O'SHA parol bilan BIRINCHI bo'lib yaratib qo'yadi va
+          # `provisionDb()`dagi CREATE `IF NOT EXISTS` tufayli o'tkazib
+          # yuboriladi — keyin "e2e" qadami P1000 (Authentication failed)
+          # bilan yiqiladi (real CI run'da topilgan va tasdiqlangan xato).
+          psql "postgresql://postgres:postgres@localhost:5432/ci_migration_check" \
+            -v app_pw=app \
+            -v migrator_pw=migrator \
+            -v db_name=ci_migration_check \
+            -f prisma/sql/roles.sql
+          export DATABASE_URL="postgresql://bobododa_app:app@localhost:5432/ci_migration_check?schema=public"
+          export DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:migrator@localhost:5432/ci_migration_check?schema=public"
+          npx prisma migrate deploy
+          STATUS=$(npx prisma migrate status)
+          echo "$STATUS"
+          echo "$STATUS" | grep -q "Database schema is up to date" || (echo "::error::Migratsiyalar joriy emas" && exit 1)
+
+      - name: Production-config test — fail-closed qoidalar HAQIQIY boot bilan tasdiqlanadi (bo'lim 73)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://bobododa_app:app@localhost:5432/ci_migration_check?schema=public
+          DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@localhost:5432/ci_migration_check?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci-production-config-test-access-secret-32
+          JWT_STAFF_ACCESS_SECRET: ci-production-config-test-staff-secret-32
+          STAFF_TOTP_ENCRYPTION_KEY: '1111111111111111111111111111111111111111111111111111111111111111'
+          NODE_ENV: production
+          SWAGGER_ENABLED: 'false'
+        run: |
+          BOOT_CMD="node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/boot-check.ts"
+          if PAYMENT_PROVIDER=TEST $BOOT_CMD; then
+            echo "::error::production'da PAYMENT_PROVIDER=TEST bilan boot MUVAFFAQIYATLI bo'ldi — fail-closed himoya buzilgan"
+            exit 1
+          fi
+          echo "OK: PAYMENT_PROVIDER=TEST production'da to'g'ri rad etildi"
+          # Bo'lim 87/§88 — Payme to'g'ri, lekin SMS_PROVIDER hali CONSOLE
+          # (sukut) bo'lsa production HAMON ko'tarilmasligi kerak.
+          if PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz $BOOT_CMD; then
+            echo "::error::production'da SMS_PROVIDER=CONSOLE bilan boot MUVAFFAQIYATLI bo'ldi — fail-closed himoya buzilgan"
+            exit 1
+          fi
+          echo "OK: to'liq Payme config bilan HAM SMS_PROVIDER=CONSOLE production'da to'g'ri rad etildi"
+          # Bosqich 13 — TO'LIQ to'g'ri config (Payme + PlayMobile + payouts
+          # xavfsiz o'chirilgan) bilan production ENDI MUVAFFAQIYATLI
+          # ko'tarilishi SHART (fresh-DB dry-run bilan qo'lda tasdiqlangan —
+          # RUNBOOK §13). Bu — "fail-closed FAQAT emas, balki to'g'ri config
+          # bilan HAQIQATAN ishga tushadi" musbat tomonni tekshiradi.
+          if ! PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz \
+             SMS_PROVIDER=PLAYMOBILE PLAYMOBILE_API_URL=https://send.example.uz/broker-api PLAYMOBILE_LOGIN=ci-login PLAYMOBILE_PASSWORD=ci-password PLAYMOBILE_SENDER=BoboDoda \
+             PAYOUTS_ENABLED=false \
+             $BOOT_CMD; then
+            echo "::error::to'liq to'g'ri production config bilan boot MUVAFFAQIYATSIZ bo'ldi"
+            exit 1
+          fi
+          echo "OK: to'liq to'g'ri production config (Payme + PlayMobile + payouts o'chirilgan) bilan boot MUVAFFAQIYATLI"
+          # Bosqich 23 — real Payme credential hali yo'q bo'lgan production
+          # launch uchun: PAYMENTS_ENABLED=false (PAYMENT_PROVIDER=TEST
+          # sukutda qolsa ham) production'da MUVAFFAQIYATLI ko'tarilishi
+          # SHART — "soxta TEST fallback" emas, ATAYLAB xavfsiz o'chirilgan
+          # holat (PAYOUTS_ENABLED bilan bir xil falsafa).
+          if ! PAYMENTS_ENABLED=false \
+             SMS_PROVIDER=PLAYMOBILE PLAYMOBILE_API_URL=https://send.example.uz/broker-api PLAYMOBILE_LOGIN=ci-login PLAYMOBILE_PASSWORD=ci-password PLAYMOBILE_SENDER=BoboDoda \
+             PAYOUTS_ENABLED=false \
+             $BOOT_CMD; then
+            echo "::error::PAYMENTS_ENABLED=false bilan boot MUVAFFAQIYATSIZ bo'ldi — xavfsiz to'lovsiz launch buzilgan"
+            exit 1
+          fi
+          echo "OK: PAYMENTS_ENABLED=false (Payme credentialsiz) bilan boot MUVAFFAQIYATLI — xavfsiz to'lovsiz launch"
+
+      - name: e2e — health + DB-role append-only (A4)
+        run: npm run test:e2e --workspace backend
+
+      # Bo'lim 73 — 10x chinakam parallel HTTP burst standart GitHub
+      # Actions 2 vCPU runner'ida transport darajasida (ECONNRESET) beqaror
+      # bo'lib chiqdi (uch mustaqil maqsadli tuzatish kamaytirmadi — RUNBOOK
+      # §24), majburiy gate'ni takroran to'sib qo'yardi — holbuki yuqoridagi
+      # majburiy suite'dagi "Concurrent double-submit" AYNAN SHU CAS
+      # invariant'ni (unique constraint — bitta qator) 2x parallel bilan
+      # ISHONCHLI tekshiradi. Shu 10x versiya signal sifatida SAQLANADI
+      # (`continue-on-error: true` — muvaffaqiyatsizlik job'ni QIZARTIRMAYDI,
+      # lekin GitHub UI'da alohida ko'rinadi), majburiy gate'dan chiqarildi.
+      - name: e2e-stress — 10x parallel seller burst (informational, non-blocking)
+        continue-on-error: true
+        run: npm run test:e2e:stress --workspace backend

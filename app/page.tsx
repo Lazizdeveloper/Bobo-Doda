@@ -1458,6 +1458,8 @@ export default function LandingPage() {
           <div className="nav-container">
             <nav className="nav-capsule" aria-label="Asosiy navigatsiya">
               <Link href="/" className="nav-brand" aria-label="Bobo&Doda">
+                {/* next/image emas — landing o'z JSX/ranglarini alohida chizadi (CLAUDE.md), statik logotip, sobit o'lcham */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo-icon.png"
                   alt="Bobo&Doda"
@@ -1495,7 +1497,14 @@ export default function LandingPage() {
                   <span>{tr("Kirish", "Войти", "Log in")}</span>
                 </Link>
 
-                <Link href="/mutaxassis/ish-elonlari" className="btn-find-work">
+                {/* Bosqich 24 — QA audit: ilgari `/mutaxassis/ish-elonlari`ga
+                    olib borardi — bu yo'l (Job/Proposal, "B yo'l") backend'da
+                    hech qachon ulanmagan, sahifa doim ErrorState ko'rsatardi
+                    (bosilsa doim ishlamaydigan tugma). Platformada mutaxassis
+                    ish topishning HAQIQIY yo'li ro'yxatdan o'tib bozorda
+                    ko'rinish (xaridor to'g'ridan-to'g'ri taklif yuboradi) —
+                    "Mutaxassis bo'lish" CTA'si bilan bir xil manzilga. */}
+                <Link href="/kirish?tab=register&role=mutaxassis" className="btn-find-work">
                   <span>{tr("Ish topish", "Найти работу", "Find jobs")}</span>
                   <span className="work-badge" aria-hidden="true">💼</span>
                 </Link>
@@ -1560,7 +1569,7 @@ export default function LandingPage() {
                       👤 {tr("Kirish", "Войти", "Log in")}
                     </Link>
                     <Link
-                      href="/mutaxassis/ish-elonlari"
+                      href="/kirish?tab=register&role=mutaxassis"
                       className="btn-outline"
                       style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46, borderColor: "rgba(20,20,20,0.15)", background: "#ffffff", fontWeight: 700 }}
                       onClick={() => setMenuOpen(false)}
@@ -2110,6 +2119,7 @@ export default function LandingPage() {
             <div className="footer-grid-yv">
               <div>
                 <div className="footer-logo-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- landing o'z JSX'ini alohida chizadi, statik logotip */}
                   <img
                     src="/logo-icon.png"
                     alt="Bobo&Doda"

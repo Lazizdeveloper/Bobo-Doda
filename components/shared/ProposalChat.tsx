@@ -65,6 +65,11 @@ export function ProposalChat({
 
   useEffect(() => {
     load();
+    // `load` ataylab chiqarib tashlangan: u `messages`ga bog'liq (yuqorida)
+    // va har render sayin identifikatori o'zgaradi — uni qo'shish bu effektni
+    // "faqat proposalId o'zgarganda birinchi yuklash" o'rniga cheksiz qayta
+    // ishga tushishga aylantirardi. Pastdagi interval effekti jonli yangilanishni beradi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposalId]);
 
   /* Jonli suhbat: yangi xabarlar kelganda yoki tablararo yozishmada F5 shart emas */

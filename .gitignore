@@ -2,12 +2,26 @@
 
 # dependencies
 /node_modules
+# npm workspaces — nested node_modules in backend/ and packages/*
+node_modules/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # testing
 /coverage
+# Playwright E2E — HTML hisobot va trace/screenshot arxivi. Hech qachon
+# commit qilinmasin.
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
+
+# Bosqich 18 — isolated admin E2E infra (throwaway Postgres data dir +
+# Redis + jonli loglar, scratch/e2e-infra/). Ishga tushirish skripti:
+# backend/scripts/e2e-stack-up.sh (RUNBOOK §18) — bu papkaning o'zi HECH
+# QACHON commit qilinmaydi (binary DB fayllari + jonli sessiya loglari).
+scratch/e2e-infra/
+scratch/*.log
 
 # next.js
 /.next/
@@ -45,3 +59,4 @@ next-env.d.ts
 .claude/settings.local.json
 
 # ikkinchi dev server build papkasi (npm run dev)
+.env*

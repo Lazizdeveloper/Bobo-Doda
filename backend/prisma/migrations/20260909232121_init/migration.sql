@@ -1,3 +1,18 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- A2 — Postgres kengaytmalari.
+-- Init migratsiyada, `bobododa_migrator` roli bilan o'rnatiladi: `CREATE
+-- EXTENSION` superuser YOKI DB ustidan `CREATE` huquqi talab qiladi, prod
+-- runtime roli (`bobododa_app`) da bu huquq BO'LMASLIGI kerak. pg_trgm +
+-- unaccent — kirill/lotin aralash qidiruv (Bosqich 3). citext — email va
+-- normallashtirilgan telefon. btree_gin — aralash (enum + trigram) GIN
+-- indekslar. Hammasi PG13+ da "trusted" — migrator superuser bo'lishi shart
+-- emas, DB ga `CREATE` yetadi.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('SELLER', 'BUYER');
 
@@ -204,3 +219,58 @@ ALTER TABLE "staff_members" ADD CONSTRAINT "staff_members_userId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "staff_sessions" ADD CONSTRAINT "staff_sessions_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "staff_members"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- A4/T1 — "append-only" ni DB DARAJASIDA majburlash, sozlanadigan rol nomi
+-- bilan.
+--
+-- Runtime roli (sukut `bobododa_app`) audit_logs / outbox_events qatorlarini
+-- O'ZGARTIRA yoki O'CHIRA olmasin. Kod darajasidagi qoidani bir kun kimdir
+-- buzadi (shoshilinch tuzatish, xato `updateMany`, migratsiya skripti); DB
+-- darajasida buzish uchun ONGLI ravishda `bobododa_migrator` ga o'tish kerak.
+-- `LedgerEntry` (Bosqich 4) paydo bo'lganda o'sha migratsiyaga xuddi shunday
+-- REVOKE qo'shiladi (yagona manba — `src/common/db/append-only.constants.ts`,
+-- F1 tekshiruvi shundan o'qiydi; bu migratsiya QO'LDA shunga mos yoziladi —
+-- `test/db-role-assertion.e2e-spec.ts` ikkalasi orasidagi drift'ni ushlaydi).
+--
+-- T1 — rol NOMI bu faylga QATTIQ YOZILMAGAN: DB darajasidagi maxsus GUC'dan
+-- (`bobododa.app_role`) o'qiladi — buni `prisma/sql/roles.sql`
+-- (`ALTER DATABASE ... SET bobododa.app_role = ...`) o'rnatadi. Hech qanday
+-- kengaytma shart emas — Postgres nuqtali ("namespace.nom") GUC'larni
+-- o'ziga tanish qilmasdan ham qabul qiladi. GUC o'rnatilmagan bo'lsa (masalan
+-- toza lokal `prisma migrate dev`) — sukut `bobododa_app`ga qaytadi.
+-- Barcha identifikatorlar `format('%I', …)` bilan quote qilinadi — string
+-- konkatenatsiya YO'Q.
+--
+-- Rollar mavjud bo'lsagina qo'llanadi: rol bootstrap qilinmagan lokal DB da
+-- (`prisma migrate dev` toza klasterga) migratsiya YIQILMASLIGI kerak.
+-- Prisma jadval nomlarini @@map bilan snake_case qiladi — quyida HAQIQIY
+-- nomlar (audit_logs, outbox_events), ADR matnidagi "AuditLog" emas.
+-- ─────────────────────────────────────────────────────────────────────────────
+DO $$
+DECLARE
+  app_role text := COALESCE(NULLIF(current_setting('bobododa.app_role', true), ''), 'bobododa_app');
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app_role) THEN
+
+    -- Bazaviy CRUD (keyingi migratsiyalar yangi jadval qo'shsa ular ham).
+    EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', app_role);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', app_role);
+    EXECUTE format('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO %I', app_role);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I', app_role);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO %I', app_role);
+
+    -- audit_logs — TO'LIQ append-only: INSERT + SELECT bor, UPDATE/DELETE yo'q.
+    EXECUTE format('REVOKE UPDATE, DELETE ON %I FROM %I', 'audit_logs', app_role);
+
+    -- outbox_events — qator o'chirish yoki payload/eventType buzish yo'q, lekin
+    -- worker yetkazish holatini yangilaydi → faqat SHU ustunlarga UPDATE.
+    EXECUTE format('REVOKE UPDATE, DELETE ON %I FROM %I', 'outbox_events', app_role);
+    EXECUTE format(
+      'GRANT UPDATE ("status", "attempts", "lastError", "availableAt", "processedAt") ON %I TO %I',
+      'outbox_events', app_role
+    );
+
+  END IF;
+END
+$$;

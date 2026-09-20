@@ -1,0 +1,38 @@
+# Vercel faqat root Next.js ilovasini (landing) deploy qiladi — bu fayl
+# mavjud bo'lgani uchun .gitignore ENDI e'tiborga olinmaydi (Vercel CLI
+# qoidasi), shuning uchun hamma narsa bu yerda ANIQ yozilishi kerak.
+
+# backend/ — alohida NestJS xizmat (Railway'da deploy qilinadi), landing
+# build'iga kod sifatida kerak emas. LEKIN butunlay chiqarib tashlanmaydi:
+# root `package.json`da npm workspace sifatida e'lon qilingan
+# (`"workspaces": ["backend", "packages/*"]`) — papka butunlay yo'q bo'lsa
+# `npm install` workspace'ni topolmay yiqilishi mumkin. Faqat og'ir,
+# keraksiz qismlari chiqariladi.
+backend/node_modules/
+backend/dist/
+backend/coverage/
+backend/test-results/
+
+# npm workspaces — nested node_modules
+node_modules/
+packages/*/node_modules/
+
+# next.js build/cache — har doim qayta generatsiya qilinadi
+.next/
+.next-*/
+out/
+
+# testing artefaktlari
+coverage/
+test-results/
+playwright-report/
+tests/e2e/.auth/
+
+# lokal throwaway infra (Postgres/Redis scratch data, session log'lari)
+scratch/
+
+# git ichki papkasi
+.git/
+
+# IDE/OS
+.DS_Store

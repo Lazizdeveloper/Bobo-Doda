@@ -1,3 +1,8 @@
+/**
+ * ESKIRGAN — Bosqich 17 (real backend integratsiyasi)dan beri BUZILGAN.
+ * Sabab va o'rnini bosuvchi — `scripts/lifecycle-test.cjs` boshidagi izohga
+ * qarang (`npm run test:e2e:live`, `tests/e2e/`, RUNBOOK §14).
+ */
 const { chromium } = require("playwright");
 
 const BASE = process.env.TEST_BASE_URL || "http://127.0.0.1:3001";

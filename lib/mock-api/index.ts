@@ -29,6 +29,7 @@ import type {
   DeliverableFile,
 } from "@/lib/types";
 import { computeBadge } from "@/lib/types";
+import type { TransactionRecord } from "@/lib/admin-types";
 import { sellerNet, platformFee } from "@/lib/fees";
 import { formatAmount } from "@/lib/format";
 import { getPlatformSettings } from "@/lib/platform-settings";
@@ -1009,147 +1010,6 @@ export async function resetPassword(input: {
   if (idx < 0) throw new Error("USER_NOT_FOUND");
   users[idx] = { ...users[idx], password };
   write(KEYS.users, users);
-}
-
-/** Tezkor kirish: Telegram orqali kirish / ro'yxatdan o'tish */
-export async function loginWithTelegram(payload?: {
-  id?: string;
-  username?: string;
-  first_name?: string;
-  role?: UserRole;
-}): Promise<Session> {
-  ensureSeed();
-  await delay(600);
-  const users = read<User[]>(KEYS.users, []);
-  const tgId = payload?.id || "tg_" + Math.floor(100000 + Math.random() * 900000);
-  const fullName = payload?.first_name || (payload?.username ? `@${payload.username}` : "Telegram Foydalanuvchi");
-  const phone = `+99899${tgId.slice(-7)}`;
-
-  let user = users.find((u) => u.phone === phone || u.id === `tg_${tgId}`);
-  if (!user) {
-    const newId = `u_tg_${Date.now()}`;
-    user = {
-      id: newId,
-      phone,
-      fullName: text(fullName, LIMITS.name),
-      role: payload?.role || "mutaxassis",
-      password: "tg_oauth_verified",
-      roleChosen: !!payload?.role,
-      profileDone: false,
-      verified: true, // Telegram orqali kirish avtomatik tasdiqlangan
-      createdAt: new Date().toISOString(),
-    };
-    users.push(user);
-    write(KEYS.users, users);
-
-    const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
-    profiles[newId] = emptyProfile(newId);
-    write(KEYS.profiles, profiles);
-  } else {
-    user.verified = true;
-    write(KEYS.users, users);
-  }
-
-  const session: Session = {
-    userId: user.id,
-    role: user.roleChosen ? user.role : (payload?.role || null),
-    profileDone: !!user.profileDone,
-    verified: true,
-  };
-  write(KEYS.session, session);
-  return session;
-}
-
-/** Tezkor kirish: Google akkount orqali kirish / ro'yxatdan o'tish */
-export async function loginWithGoogle(payload?: {
-  email?: string;
-  name?: string;
-  sub?: string;
-  role?: UserRole;
-}): Promise<Session> {
-  ensureSeed();
-  await delay(600);
-  const users = read<User[]>(KEYS.users, []);
-  const email = payload?.email || "foydalanuvchi@gmail.com";
-  const fullName = payload?.name || email.split("@")[0].replace(/[._]/g, " ");
-  const phone = `+99890${Math.floor(1000000 + Math.random() * 9000000)}`;
-
-  let user = users.find((u) => u.fullName.toLowerCase() === fullName.toLowerCase() || u.phone === phone);
-  if (!user) {
-    const newId = `u_gg_${Date.now()}`;
-    user = {
-      id: newId,
-      phone,
-      fullName: text(fullName, LIMITS.name),
-      role: payload?.role || "mutaxassis",
-      password: "google_oauth_verified",
-      roleChosen: !!payload?.role,
-      profileDone: false,
-      verified: true, // Google orqali kirish avtomatik tasdiqlangan
-      createdAt: new Date().toISOString(),
-    };
-    users.push(user);
-    write(KEYS.users, users);
-
-    const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
-    profiles[newId] = emptyProfile(newId);
-    write(KEYS.profiles, profiles);
-  } else {
-    user.verified = true;
-    write(KEYS.users, users);
-  }
-
-  const session: Session = {
-    userId: user.id,
-    role: user.roleChosen ? user.role : (payload?.role || null),
-    profileDone: !!user.profileDone,
-    verified: true,
-  };
-  write(KEYS.session, session);
-  return session;
-}
-
-/** Oxirgi bosqich: akkountni Telegram orqali tasdiqlash (kod yoki 1-klik) */
-export async function verifyTelegram(code?: string): Promise<Session> {
-  await delay(600);
-  if (code && !/^\d{6}$/.test(code)) throw new Error("INVALID_CODE");
-  const session = getSession();
-  if (!session) throw new Error("NO_SESSION");
-  /* Hisob yozuvida ham saqlanadi — keyingi login'da qayta so'ralmasin */
-  const users = read<User[]>(KEYS.users, []);
-  const idx = users.findIndex((u) => u.id === session.userId);
-  if (idx >= 0) {
-    users[idx] = { ...users[idx], verified: true };
-    write(KEYS.users, users);
-  }
-  const updated: Session = { ...session, verified: true };
-  write(KEYS.session, updated);
-  return updated;
-}
-
-/** Oxirgi bosqich: akkountni Google orqali tasdiqlash */
-export async function verifyGoogle(email?: string): Promise<Session> {
-  await delay(600);
-  const session = getSession();
-  if (!session) throw new Error("NO_SESSION");
-  const users = read<User[]>(KEYS.users, []);
-  const idx = users.findIndex((u) => u.id === session.userId);
-  if (idx >= 0) {
-    /* Google orqali tasdiqlangan email SAQLANADI: `email` parametri
-       qabul qilinar, lekin hech qayerga yozilmasdi — shu sababli
-       "Google email orqali tiklash" oqimi hech qachon ishlay olmasdi
-       (hisobda tiklash uchun email umuman yo'q edi). */
-    users[idx] = {
-      ...users[idx],
-      verified: true,
-      email: email ? text(email, LIMITS.name) : users[idx].email,
-      googleConnected: true,
-    };
-    write(KEYS.users, users);
-  }
-  const updated: Session = { ...session, verified: true };
-  write(KEYS.session, updated);
-  return updated;
 }
 
 export async function chooseRole(role: UserRole): Promise<Session> {
@@ -3549,8 +3409,8 @@ export async function fundContract(
     write(KEYS.milestones, updatedMilestones);
 
     // Tranzaksiyalar jurnaliga yozamiz
-    const transactions = read<any[]>("sb2_transactions", []);
-    const tx = {
+    const transactions = read<TransactionRecord[]>("sb2_transactions", []);
+    const tx: TransactionRecord = {
       id: uid("tx"),
       type: "escrow_mablaglash",
       userId: contract.buyerId,
@@ -3578,6 +3438,9 @@ export async function fundContract(
 export async function fundMilestone(
   contractId: string,
   milestoneId: string,
+  // A5/ADR-03: chegaradan olib tashlanadi (Bosqich 2). Imzo client.ts
+  // chaqiruvi bilan mos qolishi uchun saqlangan, hozircha ishlatilmaydi.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   method: PaymentMethod = "karta"
 ): Promise<{ contract: Contract; milestone: Milestone }> {
   await delay(600);
@@ -3752,10 +3615,10 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     incrementCompletedContracts(contract.sellerId);
   }
 
-  const transactions = read<any[]>("sb2_transactions", []);
+  const transactions = read<TransactionRecord[]>("sb2_transactions", []);
   const fee = platformFee(milestones[idx].amount);
   const net = sellerNet(milestones[idx].amount);
-  const outTx = {
+  const outTx: TransactionRecord = {
     id: uid("tx"),
     type: "milestone_tolov",
     userId: contract.sellerId,
@@ -3767,7 +3630,7 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     status: "muvaffaqiyatli",
     createdAt: new Date().toISOString(),
   };
-  const feeTx = {
+  const feeTx: TransactionRecord = {
     id: uid("tx"),
     type: "commission",
     userId: contract.sellerId,

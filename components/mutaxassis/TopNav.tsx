@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
-import { NotificationBell } from "@/components/shared/NotificationBell";
 import { authService, usersService, DATA_CHANGED_EVENT } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 
@@ -16,9 +15,19 @@ export interface TopNavProps {
 
 export function TopNav({ base }: TopNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useT();
   const [name, setName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+
+  /* Bosqich 24 — QA audit: chiqish tugmasi ilgari FAQAT Sozlamalar
+     sahifasining pastida (uzoq scroll + modal) topilardi — bosh navigatsiyada
+     "obvious logout" yo'q edi. Endi header'da doim ko'rinadi (bitta bosishda,
+     Sozlamalardagi tasdiqlash modali esa o'z holicha qoladi). */
+  function handleLogout() {
+    authService.logout();
+    router.push("/kirish");
+  }
 
   useEffect(() => {
     function refresh() {
@@ -49,13 +58,12 @@ export function TopNav({ base }: TopNavProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
+  /* Bosqich 17 — Job/Proposal va Xabarlar real backendda yo'q, nav'dan
+     olib tashlangan (sahifalar o'zi FEATURE_DISABLED bilan qoladi). */
   const items = [
     { href: "/mutaxassis", label: t("nav.dashboard"), exact: true },
-    { href: "/mutaxassis/ish-elonlari", label: t("nav.jobs") },
-    { href: "/mutaxassis/takliflarim", label: t("nav.proposals") },
     { href: "/mutaxassis/xizmatlarim", label: t("nav.services") },
     { href: "/mutaxassis/shartnomalar", label: t("nav.contracts") },
-    { href: "/mutaxassis/xabarlar", label: t("nav.messages") },
   ];
 
   return (
@@ -87,7 +95,6 @@ export function TopNav({ base }: TopNavProps) {
 
         <div className="flex items-center gap-3">
           <LangSwitch />
-          <NotificationBell />
 
           {/* Mobile menu button */}
           <button
@@ -121,6 +128,13 @@ export function TopNav({ base }: TopNavProps) {
             >
               <Avatar name={name || "?"} size="sm" />
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs font-medium text-muted hover:text-danger"
+            >
+              {t("common.logout")}
+            </button>
           </div>
         </div>
       </div>
@@ -149,6 +163,13 @@ export function TopNav({ base }: TopNavProps) {
             <Link href="/mutaxassis/sozlamalar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
                {t("nav.settings")}
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="block w-full text-left px-3 py-2 rounded-btn text-sm font-medium text-danger hover:bg-card-hover"
+            >
+              {t("common.logout")}
+            </button>
           </nav>
         </div>
       )}

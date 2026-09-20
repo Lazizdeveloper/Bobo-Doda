@@ -22,55 +22,21 @@ export interface PageFeedback {
 
 const STORAGE_KEY = "sb_page_feedbacks";
 
-const SEED_FEEDBACKS: PageFeedback[] = [
-  {
-    id: "fb_1",
-    type: "kamchilik",
-    message: "Xizmatlar bozorida sahifalash (pagination) tugmasi ba'zan oxirgi sahifaga o'tkazmayapti.",
-    pageUrl: "/xaridor/bozor",
-    pageTitle: "Xizmatlar Bozori",
-    userName: "Javohir Toshmatov",
-    userRole: "xaridor",
-    status: "yangi",
-    createdAt: "2026-03-06T10:15:00.000Z",
-  },
-  {
-    id: "fb_2",
-    type: "taklif",
-    message: "Ish e'lonlari sahifasida byudjet bo'yicha maxsus slaydli filtr qo'shilsa juda qulay bo'lardi.",
-    pageUrl: "/mutaxassis/ish-elonlari",
-    pageTitle: "Ish e'lonlari qidiruvi",
-    userName: "Dilshodbek Rustamov",
-    userRole: "mutaxassis",
-    status: "korildi",
-    adminNote: "Dizaynerlar bilan rejalashtirildi",
-    createdAt: "2026-03-05T14:30:00.000Z",
-  },
-  {
-    id: "fb_3",
-    type: "kamchilik",
-    message: "FAQ sahifasida to'lovlar bo'limi ochilganda skroll tepaga sakrab ketyapti.",
-    pageUrl: "/savol-javob",
-    pageTitle: "Ko'p so'raladigan savollar",
-    userName: "Mehmon (Anonim)",
-    userRole: "mehmon",
-    status: "hal_qilindi",
-    adminNote: "Smooth-scroll tuzatildi",
-    createdAt: "2026-03-04T09:20:00.000Z",
-  },
-];
-
+/* Bosqich 18 — ilgari bu yerda 3 ta O'YLAB TOPILGAN fikr-mulohaza yozuvi
+   (soxta ism/sana bilan) bor edi va real foydalanuvchilarga HAQIQIY
+   fikr sifatida ko'rsatilardi (`/admin/fikrlar`). Bu butun tizim
+   `lib/api`ga ulanmagan — faqat localStorage'da (real backend endpoint
+   yo'q), shuning uchun yuborilgan fikrlar ham hech qaysi adminga
+   yetib bormaydi. Soxta seed olib tashlandi; widget o'zi (haqiqiy
+   backend qamrovi yo'qligi sabab) hozircha o'zgarishsiz qoladi —
+   RUNBOOK/PRODUCTION-READINESS'da ochiq gap sifatida hujjatlashtirilgan. */
 function readFeedbacks(): PageFeedback[] {
-  if (typeof window === "undefined") return SEED_FEEDBACKS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_FEEDBACKS));
-      return SEED_FEEDBACKS;
-    }
-    return JSON.parse(raw);
+    return raw ? JSON.parse(raw) : [];
   } catch {
-    return SEED_FEEDBACKS;
+    return [];
   }
 }
 

@@ -8,6 +8,12 @@
  * "Komissiya 0–30%" validatsiyasini tekshirardi. Ya'ni suite hech qachon
  * o'ta olmasdi.
  *
+ * YANA HAM ESKIRGAN (Bosqich 17dan beri) — `sb2_admin_session` orqali mock
+ * admin sessiya inject qiladi; real `lib/api/admin.ts` esa `bd_staff_session`
+ * va real email+parol(+TOTP) login oqimini kutadi. `npm run test:e2e:live`
+ * ichidagi `tests/e2e/admin.spec.ts` o'rnini bosadi (staff credential
+ * berilsa) — RUNBOOK §14.
+ *
  * Tekshiriladigan qoidalar quyida `checks` ro'yxatida sanab o'tilgan.
  */
 const { chromium } = require("playwright");
