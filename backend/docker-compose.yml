@@ -131,6 +131,7 @@ services:
       LOG_LEVEL: info
       SWAGGER_ENABLED: 'true'
       CORS_ORIGINS: http://localhost:3000
+      STAFF_CORS_ORIGINS: http://localhost:3000
       TZ: UTC
       # Runtime — kam huquqli `bobododa_app` roli.
       DATABASE_URL: postgresql://bobododa_app:app@postgres:5432/bobododa?schema=public

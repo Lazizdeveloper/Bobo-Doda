@@ -76,6 +76,12 @@ const nextConfig = {
   async redirects() {
     if (process.env.VERCEL !== "1") return [];
     const APP_ORIGIN = "https://app.bobododa.uz";
+    /* Admin domen ko'chirishi (2026-09) — admin.bobododa.uz o'z alohida
+       nishoni (bo'lim 3). `/admin` bu yerda PREFIKSI OLIB TASHLANGAN holda
+       ko'chadi (`/admin/kirish` → `admin.bobododa.uz/kirish`), root
+       `proxy.ts`dagi kanonik xaritalash bilan bir xil qoida. `/rahbariyat`
+       o'zgarishsiz ko'chadi (super_admin kirish — o'z yo'lida qoladi). */
+    const ADMIN_ORIGIN = "https://admin.bobododa.uz";
     const appOnlyPaths = [
       "/kirish",
       "/royxatdan-otish",
@@ -83,14 +89,18 @@ const nextConfig = {
       "/rol-tanlash",
       "/mutaxassis",
       "/xaridor",
-      "/admin",
-      "/rahbariyat",
       "/tolov",
     ];
     const appRedirects = appOnlyPaths.flatMap((path) => [
       { source: path, destination: `${APP_ORIGIN}${path}`, permanent: true },
       { source: `${path}/:rest*`, destination: `${APP_ORIGIN}${path}/:rest*`, permanent: true },
     ]);
+    const adminRedirects = [
+      { source: "/admin", destination: `${ADMIN_ORIGIN}/`, permanent: true },
+      { source: "/admin/:rest*", destination: `${ADMIN_ORIGIN}/:rest*`, permanent: true },
+      { source: "/rahbariyat", destination: `${ADMIN_ORIGIN}/rahbariyat`, permanent: true },
+      { source: "/rahbariyat/:rest*", destination: `${ADMIN_ORIGIN}/rahbariyat/:rest*`, permanent: true },
+    ];
     return [
       /* www → apex — kanonik domen bobododa.uz (huquqiy qism, section 10). */
       {
@@ -100,6 +110,7 @@ const nextConfig = {
         permanent: true,
       },
       ...appRedirects,
+      ...adminRedirects,
     ];
   },
   async headers() {

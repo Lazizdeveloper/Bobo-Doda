@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { adminLogin, getCurrentAdmin } from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/errors";
 import type { AdminRole } from "@/lib/admin-types";
+import { adminAbsoluteHref, adminDashboardHref } from "@/lib/admin-routes";
 
 export function AdminLoginForm({
   role,
@@ -35,7 +36,7 @@ export function AdminLoginForm({
   useEffect(() => {
     const current = getCurrentAdmin();
     if (current && (role !== "super_admin" || current.role === "super_admin")) {
-      router.replace("/admin");
+      router.replace(adminDashboardHref());
       return;
     }
     setReady(true);
@@ -48,10 +49,10 @@ export function AdminLoginForm({
     try {
       const account = await adminLogin(email, password, needsTotp ? totpCode : undefined, role);
       if (account.mustChangePassword) {
-        router.replace("/admin/parolni-almashtirish");
+        router.replace(adminAbsoluteHref("/parolni-almashtirish"));
         return;
       }
-      router.replace("/admin");
+      router.replace(adminDashboardHref());
     } catch (err) {
       if (err instanceof ApiError && err.message === "MFA_REQUIRED") {
         setNeedsTotp(true);

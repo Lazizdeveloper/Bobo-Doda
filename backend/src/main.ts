@@ -12,6 +12,7 @@ import { AppConfigService } from './config/app-config.service';
 import { API_GLOBAL_PREFIX, API_GLOBAL_PREFIX_EXCLUDE } from './config/api-prefix';
 import { buildValidationPipe } from './common/http/validation';
 import { AllExceptionsFilter } from './common/http/all-exceptions.filter';
+import { buildStaffAwareCorsDelegate } from './common/http/cors';
 
 async function bootstrap(): Promise<void> {
   // `rawBody: true` — Bosqich 5, bo'lim 16: `req.rawBody` (Buffer) barcha
@@ -65,11 +66,15 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(buildValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  app.enableCors({
-    origin: config.corsOrigins,
-    credentials: true,
-    exposedHeaders: ['x-request-id'],
-  });
+  // Bo'lim 3 (admin.bobododa.uz ko'chirish) — security audit topilmasi 3a:
+  // yagona umumiy CORS ro'yxat staff sessiyasiga HECH QANDAY real
+  // izolyatsiya bermas edi. `staff/*` prefiksli yo'llar endi ALOHIDA,
+  // torroq ro'yxatdan (`STAFF_CORS_ORIGINS`) o'tadi — qurilish
+  // `common/http/cors.ts`da (YAGONA MANBA, `test/support/build-app.ts`
+  // ham shu funksiyadan foydalanadi — ikkinchi security ko'rib chiqishida
+  // topilgan: qo'lda ikki marta yozilsa, ikkisi ajralib ketishi mumkin
+  // edi va test nusxani, haqiqiy faylni emas, sinardi).
+  app.enableCors(buildStaffAwareCorsDelegate(config, `/${API_GLOBAL_PREFIX}/staff`));
 
   // Bosqich 12, bo'lim 44 — aniq signallar (Nest'ning "barcha signal"
   // sukutiga ishonib qolmaymiz): SIGTERM (deployment platform normal

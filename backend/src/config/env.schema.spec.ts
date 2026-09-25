@@ -46,6 +46,7 @@ describe('validateEnv', () => {
     expect(env.LOG_LEVEL).toBe('info');
     expect(env.SWAGGER_ENABLED).toBe(true);
     expect(env.CORS_ORIGINS).toEqual(['http://localhost:3000']);
+    expect(env.STAFF_CORS_ORIGINS).toEqual(['http://localhost:3000']);
     expect(env.DATABASE_URL).toBe(base.DATABASE_URL);
   });
 
@@ -87,6 +88,61 @@ describe('validateEnv', () => {
     expect(env.CORS_ORIGINS).toEqual(['http://a.test', 'http://b.test', 'http://c.test']);
   });
 
+  it('STAFF_CORS_ORIGINS — CORS_ORIGINS’dan mustaqil, o‘zining ro‘yxatiga aylanadi (bo‘lim 3 — admin.bobododa.uz izolyatsiyasi)', () => {
+    const env = validateEnv({
+      ...base,
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+    });
+    expect(env.CORS_ORIGINS).toEqual(['https://app.bobododa.uz']);
+    expect(env.STAFF_CORS_ORIGINS).toEqual(['https://admin.bobododa.uz']);
+  });
+
+  it('production’da STAFF_CORS_ORIGINS sukuti (localhost) rad etiladi (fail closed — ikkinchi security ko‘rib chiqishi topilmasi)', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        ...playMobileCreds,
+        NODE_ENV: 'production',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+        CORS_ORIGINS: 'https://app.bobododa.uz',
+        // STAFF_CORS_ORIGINS berilmagan — sukut http://localhost:3000 qoladi.
+      }),
+    ).toThrow(/STAFF_CORS_ORIGINS/);
+  });
+
+  it('production’da STAFF_CORS_ORIGINS va CORS_ORIGINS bir xil manzilni o‘z ichiga olsa rad etiladi (izolyatsiya kafolati)', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        ...playMobileCreds,
+        NODE_ENV: 'production',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+        CORS_ORIGINS: 'https://app.bobododa.uz,https://admin.bobododa.uz',
+        STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      }),
+    ).toThrow(/STAFF_CORS_ORIGINS/);
+  });
+
+  it('production’da STAFF_CORS_ORIGINS va CORS_ORIGINS mustaqil (ustma-ust tushmaydigan) https ro‘yxatlar bilan o‘tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+    });
+    expect(env.CORS_ORIGINS).toEqual(['https://app.bobododa.uz']);
+    expect(env.STAFF_CORS_ORIGINS).toEqual(['https://admin.bobododa.uz']);
+  });
+
   it('SWAGGER_ENABLED "0"/"false" ni boolean false qiladi', () => {
     expect(validateEnv({ ...base, SWAGGER_ENABLED: '0' }).SWAGGER_ENABLED).toBe(false);
     expect(validateEnv({ ...base, SWAGGER_ENABLED: 'false' }).SWAGGER_ENABLED).toBe(false);
@@ -104,6 +160,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -125,6 +183,8 @@ describe('validateEnv', () => {
         ...base,
         ...paymeCreds,
         NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
         SWAGGER_ENABLED: 'false',
         DB_ROLE_ASSERTION: 'off',
         PAYMENT_PROVIDER: 'PAYME',
@@ -138,6 +198,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -163,6 +225,8 @@ describe('validateEnv', () => {
       ...base,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENTS_ENABLED: 'false',
     });
@@ -181,6 +245,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -279,6 +345,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -310,6 +378,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...textUpCreds,
       NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -322,6 +392,8 @@ describe('validateEnv', () => {
         ...base,
         ...paymeCreds,
         NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
         SWAGGER_ENABLED: 'false',
         PAYMENT_PROVIDER: 'PAYME',
         SMS_PROVIDER: 'TEXTUP',
@@ -336,6 +408,8 @@ describe('validateEnv', () => {
         ...paymeCreds,
         ...playMobileCreds,
         NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
         SWAGGER_ENABLED: 'false',
         PAYMENT_PROVIDER: 'PAYME',
         DEV_EXPOSE_OTP: 'true',
@@ -349,6 +423,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });

@@ -12,6 +12,7 @@ import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
 import { adminLogout, getCurrentAdmin, getAdminCounters } from "@/lib/api/admin";
 import { DATA_CHANGED_EVENT } from "@/lib/api";
 import type { AdminAccount, AdminPermission } from "@/lib/admin-types";
+import { adminHref, toLogicalAdminPath } from "@/lib/admin-routes";
 
 import { feedbackService } from "@/lib/feedback";
 
@@ -46,28 +47,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [admin, setAdmin] = useState<AdminAccount | null>(null);
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
-  const isLogin = pathname === "/admin/kirish";
+  /* `logicalPath` — prefikssiz mantiqiy yo'l. Lokal dev/xom Railway
+     domenida `pathname` haqiqatan `/admin/...` (fayl yo'liga to'g'ri
+     keladi); kanonik admin.bobododa.uz'da `proxy.ts` prefiksni allaqachon
+     striplagan, `pathname` esa `/kirish` kabi ko'rinadi. Ikkalasini ham
+     bitta shaklga keltiramiz — qolgan guard mantiqi shu bittasiga ishonadi
+     (`lib/admin-routes.ts`). */
+  const logicalPath = toLogicalAdminPath(pathname);
+  const isLogin = logicalPath === "/kirish";
   /* Bo'lim 91-J — `mustChangePassword` qattiq darvoza: backend HAR QANDAY
      boshqa amalni `PASSWORD_CHANGE_REQUIRED` bilan rad etadi, shuning
      uchun UI ham shu holatda faqat shu sahifaga ruxsat beradi. */
-  const isChangePassword = pathname === "/admin/parolni-almashtirish";
+  const isChangePassword = logicalPath === "/parolni-almashtirish";
 
   useEffect(() => {
     const current = getCurrentAdmin();
     if (isLogin) {
-      if (current) router.replace("/admin");
+      if (current) router.replace(adminHref("/", pathname));
       else setReady(true);
       return;
     }
     if (!current) {
-      const dest = pathname.startsWith("/admin/super")
-        ? "/rahbariyat/kirish"
-        : "/admin/kirish";
+      const dest = logicalPath.startsWith("/super") ? "/rahbariyat/kirish" : adminHref("/kirish", pathname);
       if (pathname !== dest) router.replace(dest);
       return;
     }
     if (current.mustChangePassword && !isChangePassword) {
-      router.replace("/admin/parolni-almashtirish");
+      router.replace(adminHref("/parolni-almashtirish", pathname));
       return;
     }
     if (isChangePassword) {
@@ -75,18 +81,32 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       setReady(true);
       return;
     }
-    if (pathname.startsWith("/admin/super") && current.role !== "super_admin") {
-      if (pathname !== "/admin/ruxsat-yoq") router.replace("/admin/ruxsat-yoq");
+    const ruxsatYoqHref = adminHref("/ruxsat-yoq", pathname);
+    if (logicalPath.startsWith("/super") && current.role !== "super_admin") {
+      if (pathname !== ruxsatYoqHref) router.replace(ruxsatYoqHref);
       return;
     }
-    const permission = routePermission(pathname);
-    if (permission && !current.permissions.includes(permission)) {
-      if (pathname !== "/admin/ruxsat-yoq") router.replace("/admin/ruxsat-yoq");
+    /* `/ruxsat-yoq`ning o'zi hech qanday ruxsatga bog'liq emas — aks holda
+       kirish taqiqlangan foydalanuvchi o'ziga qayta-qayta yo'naltirilib,
+       hech qachon `ready` bo'lmas edi (bo'sh ekran). Xaritalanmagan
+       (`routePermission` → null) BOSHQA HAR QANDAY yo'l esa endi ATAYLAB
+       rad etiladi (default-deny) — ilgari bu holatda ruxsat tekshiruvi
+       jimgina o'tkazib yuborilardi (security audit topilmasi: admin host
+       prefikssiz yo'llarda bu "sukut ruxsat" holatiga osongina tushib
+       qolardi). Backend baribir yakuniy nazoratchi — bu faqat UI qatlami. */
+    if (logicalPath === "/ruxsat-yoq") {
+      setAdmin(current);
+      setReady(true);
+      return;
+    }
+    const permission = routePermission(logicalPath);
+    if (!permission || !current.permissions.includes(permission)) {
+      if (pathname !== ruxsatYoqHref) router.replace(ruxsatYoqHref);
       return;
     }
     setAdmin(current);
     setReady(true);
-  }, [isLogin, isChangePassword, pathname, router]);
+  }, [isLogin, isChangePassword, logicalPath, pathname, router]);
 
   /* Mobil menyu Escape bilan yopiladi — modal xatti-harakati (`aria-modal`)
      e'lon qilingan joyda klaviatura bilan chiqib ketolmaslik a11y xatosi. */
@@ -151,27 +171,27 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     {
       title: "Boshqaruv",
       items: [
-        { permission: "dashboard", href: "/admin", label: "Boshqaruv Paneli", icon: "dashboard", exact: true },
+        { permission: "dashboard", href: adminHref("/", pathname), label: "Boshqaruv Paneli", icon: "dashboard", exact: true },
       ],
     },
     {
       title: "Bozor",
       items: [
-        { permission: "users", href: "/admin/foydalanuvchilar", label: "Foydalanuvchilar", icon: "users" },
-        { permission: "orders", href: "/admin/shartnomalar", label: "Shartnomalar", icon: "orders" },
+        { permission: "users", href: adminHref("/foydalanuvchilar", pathname), label: "Foydalanuvchilar", icon: "users" },
+        { permission: "orders", href: adminHref("/shartnomalar", pathname), label: "Shartnomalar", icon: "orders" },
       ],
     },
     {
       title: "Moliya & Nizolar",
       items: [
-        { permission: "disputes", href: "/admin/nizolar", label: "Nizolar & Arbitraj", icon: "disputes", badgeCount: counts.disputes },
-        { permission: "payments", href: "/admin/tolovlar", label: "To‘lovlar, Qaytarish & Chiqarish", icon: "payments" },
+        { permission: "disputes", href: adminHref("/nizolar", pathname), label: "Nizolar & Arbitraj", icon: "disputes", badgeCount: counts.disputes },
+        { permission: "payments", href: adminHref("/tolovlar", pathname), label: "To‘lovlar, Qaytarish & Chiqarish", icon: "payments" },
       ],
     },
     {
       title: "Tizim",
       items: [
-        { permission: "audit", href: "/admin/audit", label: "Audit Jurnali", icon: "audit" },
+        { permission: "audit", href: adminHref("/audit", pathname), label: "Audit Jurnali", icon: "audit" },
         // Bosqich 24 — QA audit: staff-boshqaruv backend'i (`getAdminAccounts`/
         // `addAdmin`/...) hali real emas (`disabledAsync`) — bu yagona
         // sidebar-havola bo'lib, super_admin uni bosganda doim xato
@@ -186,7 +206,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   function logout() {
     const loginPath =
-      admin?.role === "super_admin" ? "/rahbariyat/kirish" : "/admin/kirish";
+      admin?.role === "super_admin" ? "/rahbariyat/kirish" : adminHref("/kirish", pathname);
     adminLogout();
     router.replace(loginPath);
   }
@@ -249,7 +269,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-surface lg:flex">
         <div className="flex h-16 items-center px-6 border-b border-line/60">
-          <Logo href="/admin" />
+          <Logo href={adminHref("/", pathname)} />
         </div>
         <div className="flex-1 overflow-y-auto py-3">{renderNav}</div>
         <div className="border-t border-line p-3 bg-surface/50">
@@ -280,7 +300,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           />
           <aside className="fixed inset-y-0 left-0 flex w-72 flex-col border-r border-line bg-surface shadow-2xl">
             <div className="flex h-16 items-center justify-between px-6 border-b border-line">
-              <Logo href="/admin" />
+              <Logo href={adminHref("/", pathname)} />
               <button
                 type="button"
                 aria-label="Menyuni yopish"
@@ -344,24 +364,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   );
 }
 
-function routePermission(pathname: string): AdminPermission | null {
-  if (pathname === "/admin") return "dashboard";
-  if (pathname.startsWith("/admin/foydalanuvchilar")) return "users";
-  if (pathname.startsWith("/admin/xizmatlar")) return "services";
-  if (pathname.startsWith("/admin/loyihalar")) return "jobs";
-  if (pathname.startsWith("/admin/shartnomalar")) return "orders";
-  if (pathname.startsWith("/admin/verifikatsiya")) return "kyc";
-  if (pathname.startsWith("/admin/nizolar")) return "disputes";
-  if (pathname.startsWith("/admin/shikoyatlar")) return "reports";
-  if (pathname.startsWith("/admin/apellyatsiyalar")) return "appeals";
-  if (pathname.startsWith("/admin/sharhlar")) return "reviews";
-  if (pathname.startsWith("/admin/tolovlar")) return "payments";
-  if (pathname.startsWith("/admin/yordam")) return "support";
-  if (pathname.startsWith("/admin/fikrlar")) return "support";
-  if (pathname.startsWith("/admin/kategoriyalar")) return "categories";
-  if (pathname.startsWith("/admin/sozlamalar")) return "settings";
-  if (pathname.startsWith("/admin/audit")) return "audit";
-  if (pathname.startsWith("/admin/super/adminlar")) return "admins";
+/** `logicalPath` kutadi (prefikssiz — `toLogicalAdminPath()` natijasi), xom `pathname` emas. */
+function routePermission(logicalPath: string): AdminPermission | null {
+  if (logicalPath === "/") return "dashboard";
+  if (logicalPath.startsWith("/foydalanuvchilar")) return "users";
+  if (logicalPath.startsWith("/xizmatlar")) return "services";
+  if (logicalPath.startsWith("/loyihalar")) return "jobs";
+  if (logicalPath.startsWith("/shartnomalar")) return "orders";
+  if (logicalPath.startsWith("/verifikatsiya")) return "kyc";
+  if (logicalPath.startsWith("/nizolar")) return "disputes";
+  if (logicalPath.startsWith("/shikoyatlar")) return "reports";
+  if (logicalPath.startsWith("/apellyatsiyalar")) return "appeals";
+  if (logicalPath.startsWith("/sharhlar")) return "reviews";
+  if (logicalPath.startsWith("/tolovlar")) return "payments";
+  if (logicalPath.startsWith("/yordam")) return "support";
+  if (logicalPath.startsWith("/fikrlar")) return "support";
+  if (logicalPath.startsWith("/kategoriyalar")) return "categories";
+  if (logicalPath.startsWith("/sozlamalar")) return "settings";
+  if (logicalPath.startsWith("/audit")) return "audit";
+  if (logicalPath.startsWith("/super/adminlar")) return "admins";
   return null;
 }
 

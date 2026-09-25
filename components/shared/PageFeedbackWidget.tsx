@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { feedbackService, type FeedbackType } from "@/lib/feedback";
 import { useToast } from "@/components/ui/Toast";
 import { useT } from "@/lib/i18n";
+import { isAdminSurfaceHost } from "@/lib/admin-routes";
 
 export function PageFeedbackWidget() {
   const pathname = usePathname();
@@ -45,8 +46,11 @@ export function PageFeedbackWidget() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen]);
 
-  // Admin panel sahifalarida vidjet xalal bermasin
-  if (!mounted || pathname.startsWith("/admin") || pathname.startsWith("/rahbariyat")) {
+  // Admin panel sahifalarida vidjet xalal bermasin. `mounted` allaqachon
+  // client-only edi — admin.bobododa.uz'da (proxy.ts prefiksni striplagani
+  // uchun) pathname `/admin` bilan boshlanmaydi, shuning uchun host
+  // tekshiruvi ham qo'shildi (`mounted` gate ostida — hydration xavfsiz).
+  if (!mounted || pathname.startsWith("/admin") || pathname.startsWith("/rahbariyat") || isAdminSurfaceHost()) {
     return null;
   }
 

@@ -41,6 +41,18 @@ export const envSchema = z
       .string()
       .default('http://localhost:3000')
       .transform(csv),
+    // Admin domen ko'chirishi (2026-09, bo'lim 3) — security audit topilmasi
+    // 3a: yagona umumiy CORS ro'yxat staff sessiyasiga HECH QANDAY izolyatsiya
+    // bermaydi (`app.bobododa.uz`dagi har qanday skript `/staff/auth/refresh`ni
+    // credentialed so'rov bilan chaqira olardi). `staff/*` yo'llari endi
+    // ALOHIDA, TORROQ ro'yxatdan o'tadi (`main.ts`dagi CORS delegate) — faqat
+    // admin.bobododa.uz, hech qachon app.bobododa.uz. Marketplace `CORS_ORIGINS`
+    // esa o'zgarishsiz qoladi (admin frontend staff/* dan tashqari umumiy
+    // endpoint chaqirmaydi).
+    STAFF_CORS_ORIGINS: z
+      .string()
+      .default('http://localhost:3000')
+      .transform(csv),
     // Bosqich 12, bo'lim 38 — reverse proxy (Railway/Nginx/Cloudflare va h.k.)
     // ortida `req.ip`/`X-Forwarded-For` to'g'ri o'qilishi uchun. Ko'r-ko'rona
     // `true` (hamma narsaga ishonish) EMAS — sukut `false` (ishonilmaydi).
@@ -320,6 +332,32 @@ export const envSchema = z
           code: z.ZodIssueCode.custom,
           path: ['DEV_EXPOSE_OTP'],
           message: "production'da DEV_EXPOSE_OTP=true IMKONSIZ (fail closed) — OTP javobda hech qachon ko'rsatilmasligi shart",
+        });
+      }
+      // Bo'lim 3 (admin.bobododa.uz) — ikkinchi mustaqil security ko'rib
+      // chiqishi topilmasi: `STAFF_CORS_ORIGINS` sukuti (`http://localhost:3000`)
+      // production `superRefine`da HECH QACHON tekshirilmagan edi — operator
+      // uni Railway'da o'rnatishni unutsa (yoki "yordam" deb `CORS_ORIGINS`
+      // bilan bir xil qilib qo'ysa), izolyatsiya jimgina yo'qolardi va
+      // `production-check.ts`ning o'zi ham (faqat "bo'sh/wildcard emas"
+      // tekshirardi) buni tutolmas edi. Bu yerda IKKI shart: (1) har bir
+      // yozuv https va localhost EMAS, (2) `CORS_ORIGINS` bilan BITTA HAM
+      // umumiy yozuv YO'Q — aynan shu ikkinchisi izolyatsiya kafolati.
+      for (const origin of env.STAFF_CORS_ORIGINS) {
+        if (!origin.startsWith('https://')) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['STAFF_CORS_ORIGINS'],
+            message: `production'da STAFF_CORS_ORIGINS faqat https:// (localhost emas) bo'lishi shart: "${origin}" yaroqsiz`,
+          });
+        }
+      }
+      const staffCorsOverlap = env.STAFF_CORS_ORIGINS.filter((o) => env.CORS_ORIGINS.includes(o));
+      if (staffCorsOverlap.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['STAFF_CORS_ORIGINS'],
+          message: `STAFF_CORS_ORIGINS va CORS_ORIGINS bir xil manzil(lar)ni o'z ichiga oladi (${staffCorsOverlap.join(', ')}) — bu admin.bobododa.uz izolyatsiyasini yo'qqa chiqaradi, ikkalasi mustaqil bo'lishi shart`,
         });
       }
       // Bosqich 7 — Payout uchun hozircha Zod darajasida DUBLIKAT qilinmadi
