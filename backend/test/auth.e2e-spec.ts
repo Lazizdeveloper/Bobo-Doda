@@ -7,6 +7,7 @@ import { waitFor } from './support/wait-for';
 import { SMS_PROVIDER, type SmsProvider, type SmsSendResult } from '@/infra/sms/sms-provider.interface';
 import { RedisService } from '@/infra/redis/redis.service';
 import { IdFactory } from '@/common/id/id.factory';
+import { OTP_VERIFY_IP_MAX_ATTEMPTS } from '@/modules/auth/constants/otp.constants';
 
 /**
  * Bosqich 21 — parol bilan login. Oddiy LOGIN endi telefon+PAROL (SMS
@@ -132,6 +133,16 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
   async function flushIpCounter(): Promise<void> {
     const redis = app!.get(RedisService).client;
     const keys = await redis.keys('ratelimit:hit:otp:ip:*');
+    if (keys.length) await redis.del(...keys);
+  }
+
+  /** `flushIpCounter()` bilan bir xil naqsh, `verify-otp`ning IP chegarasi
+      (`otp:verify:ip:`) uchun — RACE testlari o'nlab chinakam parallel
+      verify so'rovi yuboradi (bir xil test-jarayoni IP'sidan), bu keyingi
+      testlarning maqsadiga aloqasi yo'q yon ta'sir. */
+  async function flushVerifyIpCounter(): Promise<void> {
+    const redis = app!.get(RedisService).client;
+    const keys = await redis.keys('ratelimit:hit:otp:verify:ip:*');
     if (keys.length) await redis.del(...keys);
   }
 
@@ -648,6 +659,99 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
   });
 
+  // ── OTP verify attempt-counter — atomiklik (chinakam parallel poyga) ──
+
+  /**
+   * OTP verify xavfsizlik mustahkamlash — `attempts` hisoblagichi ILGARI
+   * "o'qi → JS'da +1 → yoz" (uchta alohida Prisma chaqiruvi, tranzaksiyasiz)
+   * edi: parallel noto'g'ri so'rovlar bir xil ESKI qiymatni o'qib, bir xil
+   * natijani yozardi — "lost update". Bu ANIQ shu bug bilan
+   * reproduksiya qilingan (scratch test, 5 mustaqil urinishda barchasi):
+   * 20 ta chinakam parallel noto'g'ri urinishdan keyin DB'da `attempts`
+   * FAQAT 1ga ko'tarilgan, kod HECH QACHON kuymagan. Endi bitta atomik
+   * UPDATE (`WHERE "attempts" < MAX AND "consumedAt" IS NULL`) — Postgres
+   * bir xil qatorga parallel UPDATE'larni qator-qulfi bilan tabiiy
+   * serializatsiya qiladi, shuning uchun N ta parallel bo'lsa ham ANIQ
+   * "joy qolgan" miqdorda g'olib chiqadi.
+   */
+  t('RACE: 20 ta chinakam PARALLEL noto‘g‘ri urinish — attempts yo‘qolgan yozuvlarsiz ANIQ 5ga yetadi va kuyadi', async () => {
+    // backend-engineer cross-review topilmasi — tozalash try/finally ichida:
+    // aks holda yuqoridagi assert'lardan biri yiqilsa, bu test 21 ta
+    // verify-otp so'rov yuborgani keyingi testlar uchun tozalanmay qoladi
+    // (kaskadli, aloqasiz 429 xatolari).
+    try {
+      const phone = uniquePhone();
+      const code = await requestAndGetCode(phone, 'REGISTER');
+      const wrong = code === '000000' ? '111111' : '000000';
+
+      const CONCURRENCY = 20;
+      const results = await Promise.all(
+        Array.from({ length: CONCURRENCY }, () =>
+          request(app!.getHttpServer()).post('/api/v1/auth/register/verify-otp').send({ phone, code: wrong }),
+        ),
+      );
+
+      const invalidCode = results.filter((r) => r.status === 422 && r.body.code === 'INVALID_CODE').length;
+      const attemptsExceeded = results.filter((r) => r.status === 422 && r.body.code === 'OTP_ATTEMPTS_EXCEEDED').length;
+      expect(invalidCode + attemptsExceeded).toBe(CONCURRENCY);
+      // qa-engineer cross-review topilmasi (mustaqil reproduksiya bilan
+      // tasdiqlangan): aniq "4 ta INVALID_CODE, qolgani EXCEEDED" bo'linishi
+      // KAFOLATLANMAYDI — birinchi 4 ta atomik "joy band qilish" (burn'dan
+      // OLDIN) va 5-chi (kuydiruvchi) natija DETERMINISTIK, lekin bir qator
+      // "kech qolgan" so'rovlarning `findFirst`i burn'dan KEYIN o'qilishi
+      // mumkin (u holda `consumedAt: null` filtridan o'tmay, generic
+      // INVALID_CODE'ga tushadi — atomik UPDATE'gacha yetib bormaydi ham).
+      // Haqiqiy, poyga-mustaqil kafolat — pastdagi DB tekshiruvi (`attempts
+      // === 5`, `consumedAt` o'rnatilgan) va shu ikki QUYI CHEGARA:
+      expect(invalidCode).toBeGreaterThanOrEqual(4); // birinchi 4 ta HAR DOIM shu
+      expect(attemptsExceeded).toBeGreaterThanOrEqual(1); // kuydiruvchi HAR DOIM shu
+
+      const row = await withDb((db) =>
+        db.otpCode.findFirst({ where: { phone, purpose: 'REGISTER' }, orderBy: { createdAt: 'desc' } }),
+      );
+      expect(row?.attempts).toBe(5); // yo'qolgan yozuv yo'q — ANIQ 5, ortiq ham kam ham EMAS
+      expect(row?.consumedAt).not.toBeNull(); // kuygan
+
+      // TO'G'RI kod ham endi ishlamaydi — limit chinakam qattiq, poyga bilan chetlab o'tilmaydi.
+      await request(app!.getHttpServer())
+        .post('/api/v1/auth/register/verify-otp')
+        .send({ phone, code })
+        .expect(422)
+        .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+    } finally {
+      await flushVerifyIpCounter(); // bu test 21 ta verify-otp so'rov yuborgan, keyingi testlar uchun tiklaymiz
+    }
+  });
+
+  /**
+   * Muvaffaqiyat yo'li (`updateMany` CAS, `consumedAt: null` shart) bu
+   * o'zgarishdan OLDIN ham atomik edi — lekin buni chinakam parallel bilan
+   * tasdiqlovchi maxsus test yo'q edi. Bo'lim 23dagi "10 MUSTAQIL grant"
+   * testi PARALLEL `complete`ni (har biri O'Z grant'i bilan) sinaydi, bu esa
+   * BIR XIL kodni PARALLEL `verify`ni sinaydi — boshqa qatlam.
+   */
+  t('RACE: BIR XIL to‘g‘ri kod bilan 10 ta chinakam PARALLEL verify — FAQAT bitta muvaffaqiyatli', async () => {
+    try {
+      const phone = uniquePhone();
+      const code = await requestAndGetCode(phone, 'REGISTER');
+
+      const CONCURRENCY = 10;
+      const results = await Promise.all(
+        Array.from({ length: CONCURRENCY }, () =>
+          request(app!.getHttpServer()).post('/api/v1/auth/register/verify-otp').send({ phone, code }),
+        ),
+      );
+
+      const succeeded = results.filter((r) => r.status === 200);
+      const rejected = results.filter((r) => r.status === 422 && r.body.code === 'INVALID_CODE');
+      expect(succeeded.length).toBe(1);
+      expect(rejected.length).toBe(CONCURRENCY - 1);
+      expect(typeof succeeded[0]!.body.registrationToken).toBe('string');
+    } finally {
+      await flushVerifyIpCounter(); // bu test 10 ta verify-otp so'rov yuborgan, keyingi testlar uchun tiklaymiz
+    }
+  });
+
   t('Telefon formati normallashadi — so‘rash E.164’da, tasdiqlash milliy formatda BIR XIL OTP’ni topadi', async () => {
     const national = `90${(Date.now() % 10_000_000).toString().padStart(7, '0')}`;
     const e164 = `+998${national}`;
@@ -890,5 +994,57 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       results.push(res.status);
     }
     expect(results.filter((s) => s === 429).length).toBeGreaterThan(0);
+  });
+
+  /**
+   * OTP verify xavfsizlik mustahkamlash — `verify-otp` ILGARI hech qanday
+   * so'rov darajasidagi chegaraga ega emas edi (faqat bitta kodning O'ZI
+   * uchun 5-urinish limiti, endi atomik — yuqoridagi RACE testlarga
+   * qarang). Bu IP chegara turli telefon/kodlarga qarshi hajmli
+   * suiiste'molni (har bir urinish argon2id hisoblaydi — CPU xarajati)
+   * cheklaydi. `otp:verify:ip:` kaliti `otp:ip:` (so'rash tomoni)dan
+   * ALOHIDA — shuning uchun bu test yuqoridagi (fayl davomida to'plangan)
+   * holatdan mustaqil, xuddi tepadagi so'rash-tomoni testi kabi "yetarlicha
+   * ko'p yubor, kamida bitta 429 borligini tekshir" uslubida.
+   */
+  /**
+   * qa-engineer cross-review topilmasi — ilgari faqat "kamida bitta 429
+   * bor" tekshirilardi (limit=1 bo'lsa ham o'tardi) va faqat REGISTER
+   * yo'nalishi sinalardi. Endi: ANIQ chegara (band bo'lmagan `RATE_LIMITED`
+   * kodi bilan) VA hisoblagich REGISTER/PASSWORD_RESET orasida ATAYLAB
+   * UMUMIY ekanligi (`enforceVerifyOtpIpLimit`, bitta `otp:verify:ip:`
+   * kaliti) ham tasdiqlanadi.
+   */
+  t('Verify-otp: bitta IP’dan ANIQ chegaradan oshsa RATE_LIMITED — REGISTER va PASSWORD_RESET bitta hisoblagichni bo‘lishadi', async () => {
+    await flushVerifyIpCounter(); // fayl davomida to'plangan holatdan mustaqil, aniq natija uchun
+    try {
+      const results: number[] = [];
+      for (let i = 0; i < OTP_VERIFY_IP_MAX_ATTEMPTS; i += 1) {
+        const res = await request(app!.getHttpServer())
+          .post('/api/v1/auth/register/verify-otp')
+          .send({ phone: uniquePhone(), code: '000000' });
+        results.push(res.status);
+      }
+      // Chegaragacha (ANIQ shu son) — hech biri rate-limit bilan bloklanmagan
+      // (OTP topilmagani uchun barchasi INVALID_CODE, lekin muhimi — 429 EMAS).
+      expect(results.every((s) => s !== 429)).toBe(true);
+
+      // Chegaradan bitta ortiq — REGISTER yo'nalishida ANIQ shu so'rov 429ga tushadi.
+      const overRegister = await request(app!.getHttpServer())
+        .post('/api/v1/auth/register/verify-otp')
+        .send({ phone: uniquePhone(), code: '000000' })
+        .expect(429);
+      expect(overRegister.body.code).toBe('RATE_LIMITED');
+
+      // Hisoblagich UMUMIY — PASSWORD_RESET yo'nalishi ham DARHOL bloklanadi
+      // (o'z chegarasini alohida boshlamaydi).
+      const overReset = await request(app!.getHttpServer())
+        .post('/api/v1/auth/password-reset/verify-otp')
+        .send({ phone: uniquePhone(), code: '000000' })
+        .expect(429);
+      expect(overReset.body.code).toBe('RATE_LIMITED');
+    } finally {
+      await flushVerifyIpCounter();
+    }
   });
 });
