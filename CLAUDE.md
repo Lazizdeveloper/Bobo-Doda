@@ -619,3 +619,14 @@ Jiddiy muhandislik vazifalari uchun:
    o'tishi SHART — `bobododa-engineering-lead` buni chetlab o'ta olmaydi va
    o'zi yakuniy tasdiqlovchi emas (`.claude/review-matrix.md`dagi
    "Orchestration role" izohiga qarang).
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships. It is a READ-ONLY navigation/impact-analysis aid integrated into the specialist workflow (`.claude/agents/*.md`, `.claude/workflows/change-impact-analysis.md`) — it is never the source of truth. Source-of-truth order for any real claim: (1) actual source code, (2) DB schema/migrations/constraints, (3) generated contracts, (4) tests, (5) runtime evidence, (6) graphify's dependency evidence, last. graphify-out/ is generated and gitignored — regenerate with `graphify update .`, never edit it by hand.
+
+Rules:
+- For codebase questions, prefer `graphify explain "<node>"` (a specific file/symbol) or `graphify affected "<file>"`/`graphify path "<A>" "<B>"` over broad `graphify query "<question>"` phrases when graphify-out/graph.json exists — broad natural-language queries return noisy, low-precision results at this repo's scale; anchored commands are far more precise. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- graphify's edges are same-language static AST import/call edges only — it does **not** cross the frontend<->backend HTTP boundary (a `graphify path` between a frontend file and a backend file returns "no path found" even when the real request wiring is correct) and an edge never proves a check is actually invoked (e.g. "imports RateLimiterService" doesn't mean it's called on every relevant endpoint) — always verify against real source.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

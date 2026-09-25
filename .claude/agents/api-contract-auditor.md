@@ -63,6 +63,9 @@ Example chain: frontend relative route `/auth/register/request-otp` + API base `
 - A localhost/127.0.0.1 value that could leak into a real deploy
 - An inconsistent public error contract across endpoints
 
+## Graphify (read-only navigation)
+`graphify` (static AST import/call graph, `graphify-out/graph.json`) can help trace frontend request -> API client -> generated contract -> NestJS controller -> DTO -> service faster on the frontend and backend sides separately (`graphify explain "<node>"`, `graphify path "<A>" "<B>"`). It has a hard, confirmed limitation directly relevant to your job: it is a same-language AST graph and does **not** model the HTTP boundary — `graphify path` between a frontend page/client file and a backend controller/service returns "no path found" even when the real request/response wiring is correct, because there is no static import edge across the network call. It cannot replace your primary invariant check (frontend path + base URL = contract path = backend effective route = production route); use it only to jump to the right file on each side faster, then verify the actual route/contract/DTO strings yourself as always.
+
 ## Do not
 
 - Manually change generated contract files as a "fix" — find and report the source-of-truth defect (the emitter, the bootstrap config, the frontend base-URL construction) instead. Regenerating and committing a contract from a still-broken emitter just re-commits the bug.

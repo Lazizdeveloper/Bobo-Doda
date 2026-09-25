@@ -58,5 +58,13 @@ next-env.d.ts
 # claude code local settings
 .claude/settings.local.json
 
+# graphify — generated knowledge graph (large binary-ish JSON/HTML, per-machine
+# cache, memory/reflection state). Regenerate with `graphify update .`; never
+# commit it. .claude/settings.json (the PreToolUse hook wiring) and
+# .claude/agents/*.md / .claude/workflows/change-impact-analysis.md (the
+# actual integration) are tracked — only the generated output is ignored here.
+graphify-out/
+.claude/settings.json.graphify-bak
+
 # ikkinchi dev server build papkasi (npm run dev)
 .env*
