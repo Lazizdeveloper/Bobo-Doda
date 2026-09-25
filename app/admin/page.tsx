@@ -10,14 +10,17 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AdminPageHeader, MetricCard } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { getAdminCounters, staffListAuditLogs, type AdminCounters, type StaffAuditLogRow } from "@/lib/api/admin";
 import { formatDate } from "@/lib/format";
+import { adminHref } from "@/lib/admin-routes";
 
 export default function AdminDashboard() {
+  const pathname = usePathname();
   const [counters, setCounters] = useState<AdminCounters | null>(null);
   const [auditLog, setAuditLog] = useState<StaffAuditLogRow[]>([]);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -68,11 +71,11 @@ export default function AdminDashboard() {
       </section>
 
       <section className="grid gap-3.5 sm:grid-cols-2">
-        <Link href="/admin/nizolar" className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
+        <Link href={adminHref("/nizolar", pathname)} className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
           <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">Nizolar markazi</h3>
           <p className="text-3xs text-muted mt-0.5">{counters.openDisputes} ta ochiq nizo ko'rib chiqilishi kerak</p>
         </Link>
-        <Link href="/admin/tolovlar" className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
+        <Link href={adminHref("/tolovlar", pathname)} className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
           <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">To'lovlar & Ledger</h3>
           <p className="text-3xs text-muted mt-0.5">To'lovlar, qaytarishlar va buxgalteriya yozuvlari</p>
         </Link>
@@ -81,7 +84,7 @@ export default function AdminDashboard() {
       <Card padding="lg" className="min-w-0 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
           <h2 className="font-heading text-sm font-bold text-ink">So'nggi Operator Harakatlari</h2>
-          <Link href="/admin/audit" className="text-xs font-semibold text-primary hover:underline shrink-0">
+          <Link href={adminHref("/audit", pathname)} className="text-xs font-semibold text-primary hover:underline shrink-0">
             To'liq jurnal →
           </Link>
         </div>

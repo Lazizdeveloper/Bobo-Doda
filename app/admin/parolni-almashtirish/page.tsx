@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { staffChangePassword } from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/errors";
+import { adminHref } from "@/lib/admin-routes";
 
 /**
  * Bosqich 17, bo'lim 91-J — `mustChangePassword` qattiq darvoza.
@@ -16,6 +17,7 @@ import { ApiError } from "@/lib/api/errors";
  */
 export default function StaffChangePasswordPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -36,7 +38,7 @@ export default function StaffChangePasswordPage() {
     setBusy(true);
     try {
       await staffChangePassword(currentPassword, newPassword);
-      router.replace("/admin");
+      router.replace(adminHref("/", pathname));
     } catch (err) {
       setError(err instanceof ApiError && err.code === "UNAUTHENTICATED" ? "Joriy parol noto'g'ri." : "Xatolik yuz berdi.");
       setBusy(false);

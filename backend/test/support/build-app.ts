@@ -4,8 +4,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@/config/app-config.service';
+import { API_GLOBAL_PREFIX, API_GLOBAL_PREFIX_EXCLUDE } from '@/config/api-prefix';
 import { buildValidationPipe } from '@/common/http/validation';
 import { AllExceptionsFilter } from '@/common/http/all-exceptions.filter';
+import { buildStaffAwareCorsDelegate } from '@/common/http/cors';
 
 /**
  * `main.ts`dagi bootstrap bilan BIR XIL qadamlar (global prefix, pipe,
@@ -25,12 +27,19 @@ export async function buildTestApp(
 
   const app = moduleRef.createNestApplication();
   const config = app.get(AppConfigService);
-  app.setGlobalPrefix('api/v1', {
-    exclude: ['health', 'health/live', 'health/ready', 'docs', 'docs-json'],
+  app.setGlobalPrefix(API_GLOBAL_PREFIX, {
+    exclude: API_GLOBAL_PREFIX_EXCLUDE,
   });
   app.useGlobalPipes(buildValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
   app.use(cookieParser());
+  // `main.ts`dagi BILAN AYNAN BIR XIL funksiya (bo'lim 3 — admin.bobododa.uz
+  // izolyatsiyasi: staff/* alohida, torroq ro'yxatdan o'tadi; `common/http/
+  // cors.ts` — YAGONA MANBA). Ilgari bu yerda `enableCors` UMUMAN
+  // chaqirilmagan edi (birinchi security topilmasi), keyin ikki joyda
+  // qo'lda nusxalangan edi (ikkinchi ko'rib chiqishda topilgan — test
+  // faqat nusxani sinardi, haqiqiy `main.ts`ni emas).
+  app.enableCors(buildStaffAwareCorsDelegate(config, `/${API_GLOBAL_PREFIX}/staff`));
 
   if (config.swaggerEnabled) {
     const doc = SwaggerModule.createDocument(

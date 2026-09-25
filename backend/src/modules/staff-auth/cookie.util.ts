@@ -1,9 +1,12 @@
 import type { CookieOptions, Response } from 'express';
 import { parseDurationMs } from '@/common/security/duration.util';
+import { API_GLOBAL_PREFIX } from '@/config/api-prefix';
 
-/** Marketplace'dan ATAYLAB boshqa nom/yo'l — ikkala cookie bir-biriga aralashmasin. */
+/** Marketplace'dan ATAYLAB boshqa nom/yo'l — ikkala cookie bir-biriga aralashmasin.
+ * `API_GLOBAL_PREFIX`dan olinadi — `backend/src/modules/auth/cookie.util.ts`
+ * dagi izohga qarang (bo'lim 25 cross-review topilmasi). */
 export const STAFF_REFRESH_COOKIE_NAME = 'staff_refresh_token';
-const COOKIE_PATH = '/api/v1/staff/auth';
+const COOKIE_PATH = `/${API_GLOBAL_PREFIX}/staff/auth`;
 
 function baseOptions(secure: boolean): CookieOptions {
   return { httpOnly: true, secure, sameSite: 'strict', path: COOKIE_PATH };

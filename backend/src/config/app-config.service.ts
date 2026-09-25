@@ -43,6 +43,12 @@ export class AppConfigService {
     return this.get('CORS_ORIGINS');
   }
 
+  /** Bo'lim 3 (admin.bobododa.uz) — `staff/*` yo'llari uchun ALOHIDA, torroq
+      ro'yxat (`main.ts`dagi CORS delegate). `corsOrigins`dan mustaqil. */
+  get staffCorsOrigins(): string[] {
+    return this.get('STAFF_CORS_ORIGINS');
+  }
+
   /** Bosqich 12, bo'lim 38 — Express `trust proxy`ga uzatiladigan xom qiymat (`main.ts`). */
   get trustProxy(): string {
     return this.get('TRUST_PROXY');

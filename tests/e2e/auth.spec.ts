@@ -10,7 +10,7 @@ import { freshPhone, latestOtpFor, flushOtpCooldown, E2E_PASSWORD } from "./help
    uchun) — har bir test aniq nechta so'rov yuborishini yuqorida hisoblab
    qo'ying. */
 
-test("login sahifasi telefon+parol bilan render bo'ladi, OTP formasi YO'Q", async ({ page }) => {
+test("login sahifasi telefon+parol bilan render bo'ladi, OTP formasi YO'Q @blocking", async ({ page }) => {
   await page.goto("/kirish");
   await expect(page.getByText("Tizimga kirish")).toBeVisible();
   await expect(page.locator('input[type="password"]')).toBeVisible();
@@ -20,7 +20,7 @@ test("login sahifasi telefon+parol bilan render bo'ladi, OTP formasi YO'Q", asyn
   await expect(page.getByText(/Google|Telegram|Email/i)).toHaveCount(0);
 });
 
-test("register sahifasi to'g'ri render bo'ladi", async ({ page }) => {
+test("register sahifasi to'g'ri render bo'ladi @blocking", async ({ page }) => {
   await page.goto("/royxatdan-otish");
   await expect(page.getByRole("button", { name: /Kod yuborish/i })).toBeVisible();
   await expect(page.getByText(/Google|Telegram|Email/i)).toHaveCount(0);
@@ -130,7 +130,7 @@ test.describe("OTP tasdiqlash xato xaritalash (OTP_INVALID/format ajratilgan)", 
   });
 });
 
-test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanlash → dashboard", async ({ page }) => {
+test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanlash → dashboard @blocking", async ({ page }) => {
   const phone = freshPhone();
   await page.goto("/royxatdan-otish");
   await page.locator("input").first().fill(phone.replace("+998", ""));
@@ -158,7 +158,7 @@ test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanla
   await page.waitForURL((url) => url.pathname.startsWith("/xaridor"), { timeout: 10_000 });
 });
 
-test("LOGIN: mavjud telefon+parol → dashboard, OTP sahifasiga UMUMAN o'tilmaydi", async ({ page }) => {
+test("LOGIN: mavjud telefon+parol → dashboard, OTP sahifasiga UMUMAN o'tilmaydi @blocking", async ({ page }) => {
   // 1-so'rov: to'liq REGISTER (fixture sifatida).
   const phone = freshPhone();
   await page.goto("/royxatdan-otish");
@@ -191,6 +191,15 @@ test("LOGIN: mavjud telefon+parol → dashboard, OTP sahifasiga UMUMAN o'tilmayd
   expect(page.url()).not.toContain("tasdiqlash");
 });
 
+/* frontend-engineer topilmasi (bo'lim 25 findings-closure cross-review):
+   bu test @blocking EMAS — chunki xato xaritalash (`app/(auth)/kirish/page.tsx`)
+   404/tarmoq xatosini HAM umumiy "Telefon raqami yoki parol noto'g'ri"
+   xabariga tushiradi. Ya'ni aynan 2026-09-20 insidenti paytida (login
+   so'rovi 404 qaytarganda) bu test BARCHA uchta assertni "yashil"
+   o'tkazib yuborardi — soxta xotirjamlik berardi. Haqiqiy prefiks/marshrut
+   qoplamasi `@blocking` bilan belgilangan LOGIN happy-path va REGISTER/
+   FORGOT PASSWORD to'liq oqimlaridan keladi (ular real backend javobiga
+   bog'liq navigatsiyani talab qiladi). */
 test("LOGIN: noto'g'ri parol/mavjud bo'lmagan telefon → generic xato, OTP sahifasi YO'Q", async ({ page }) => {
   await page.goto("/kirish");
   await page.locator("input").first().fill(freshPhone().replace("+998", ""));
@@ -248,7 +257,7 @@ test("REGISTER: allaqachon mavjud telefon → parol bosqichida 'hisob allaqachon
   await page.waitForURL("**/kirish", { timeout: 10_000 });
 });
 
-test("FORGOT PASSWORD: /kirish → Parolni unutdim → SMS OTP → yangi parol → eski parol ishlamaydi, yangisi ishlaydi", async ({ page }) => {
+test("FORGOT PASSWORD: /kirish → Parolni unutdim → SMS OTP → yangi parol → eski parol ishlamaydi, yangisi ishlaydi @blocking", async ({ page }) => {
   // 1-so'rov: REGISTER — hisob yaratiladi (eski parol bilan).
   const phone = freshPhone();
   await page.goto("/royxatdan-otish");

@@ -53,7 +53,7 @@
         ]
       }
     },
-    "/auth/register/request-otp": {
+    "/api/v1/auth/register/request-otp": {
       "post": {
         "operationId": "AuthController_requestRegisterOtp",
         "parameters": [],
@@ -84,7 +84,7 @@
         ]
       }
     },
-    "/auth/register/verify-otp": {
+    "/api/v1/auth/register/verify-otp": {
       "post": {
         "operationId": "AuthController_verifyRegisterOtp",
         "parameters": [],
@@ -108,7 +108,7 @@
         ]
       }
     },
-    "/auth/register/complete": {
+    "/api/v1/auth/register/complete": {
       "post": {
         "operationId": "AuthController_completeRegistration",
         "parameters": [],
@@ -139,7 +139,7 @@
         ]
       }
     },
-    "/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -170,7 +170,7 @@
         ]
       }
     },
-    "/auth/password-reset/request-otp": {
+    "/api/v1/auth/password-reset/request-otp": {
       "post": {
         "operationId": "AuthController_requestPasswordResetOtp",
         "parameters": [],
@@ -201,7 +201,7 @@
         ]
       }
     },
-    "/auth/password-reset/verify-otp": {
+    "/api/v1/auth/password-reset/verify-otp": {
       "post": {
         "operationId": "AuthController_verifyPasswordResetOtp",
         "parameters": [],
@@ -225,7 +225,7 @@
         ]
       }
     },
-    "/auth/password-reset/complete": {
+    "/api/v1/auth/password-reset/complete": {
       "post": {
         "operationId": "AuthController_completePasswordReset",
         "parameters": [],
@@ -249,7 +249,7 @@
         ]
       }
     },
-    "/auth/refresh": {
+    "/api/v1/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
@@ -270,7 +270,7 @@
         ]
       }
     },
-    "/auth/logout": {
+    "/api/v1/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -284,7 +284,7 @@
         ]
       }
     },
-    "/me": {
+    "/api/v1/me": {
       "get": {
         "operationId": "MeController_getMe",
         "parameters": [],
@@ -305,7 +305,7 @@
         ]
       }
     },
-    "/me/profile": {
+    "/api/v1/me/profile": {
       "patch": {
         "operationId": "MeController_updateProfile",
         "parameters": [],
@@ -336,7 +336,7 @@
         ]
       }
     },
-    "/me/roles/choose": {
+    "/api/v1/me/roles/choose": {
       "post": {
         "operationId": "MeController_chooseRole",
         "parameters": [],
@@ -367,7 +367,7 @@
         ]
       }
     },
-    "/me/roles/switch": {
+    "/api/v1/me/roles/switch": {
       "post": {
         "operationId": "MeController_switchRole",
         "parameters": [],
@@ -398,7 +398,7 @@
         ]
       }
     },
-    "/me/sessions": {
+    "/api/v1/me/sessions": {
       "get": {
         "operationId": "MeController_listSessions",
         "parameters": [],
@@ -434,7 +434,7 @@
         ]
       }
     },
-    "/me/change-password": {
+    "/api/v1/me/change-password": {
       "post": {
         "operationId": "MeController_changePassword",
         "parameters": [],
@@ -458,7 +458,7 @@
         ]
       }
     },
-    "/me/sessions/{id}": {
+    "/api/v1/me/sessions/{id}": {
       "delete": {
         "operationId": "MeController_revokeSession",
         "parameters": [
@@ -481,7 +481,7 @@
         ]
       }
     },
-    "/staff/auth/login": {
+    "/api/v1/staff/auth/login": {
       "post": {
         "operationId": "StaffAuthController_login",
         "parameters": [],
@@ -512,7 +512,7 @@
         ]
       }
     },
-    "/staff/auth/refresh": {
+    "/api/v1/staff/auth/refresh": {
       "post": {
         "operationId": "StaffAuthController_refresh",
         "parameters": [],
@@ -533,7 +533,7 @@
         ]
       }
     },
-    "/staff/auth/logout": {
+    "/api/v1/staff/auth/logout": {
       "post": {
         "operationId": "StaffAuthController_logout",
         "parameters": [],
@@ -552,7 +552,7 @@
         ]
       }
     },
-    "/staff/me": {
+    "/api/v1/staff/me": {
       "get": {
         "operationId": "StaffMeController_getMe",
         "parameters": [],
@@ -578,7 +578,7 @@
         ]
       }
     },
-    "/staff/me/change-password": {
+    "/api/v1/staff/me/change-password": {
       "post": {
         "operationId": "StaffMeController_changePassword",
         "parameters": [],
@@ -607,7 +607,7 @@
         ]
       }
     },
-    "/staff/me/sessions": {
+    "/api/v1/staff/me/sessions": {
       "get": {
         "operationId": "StaffMeController_listSessions",
         "parameters": [],
@@ -643,7 +643,7 @@
         ]
       }
     },
-    "/staff/me/sessions/{id}": {
+    "/api/v1/staff/me/sessions/{id}": {
       "delete": {
         "operationId": "StaffMeController_revokeSession",
         "parameters": [
@@ -671,7 +671,7 @@
         ]
       }
     },
-    "/staff/me/totp/enroll": {
+    "/api/v1/staff/me/totp/enroll": {
       "post": {
         "operationId": "StaffMeController_enrollTotp",
         "parameters": [],
@@ -697,7 +697,7 @@
         ]
       }
     },
-    "/staff/me/totp/verify": {
+    "/api/v1/staff/me/totp/verify": {
       "post": {
         "operationId": "StaffMeController_verifyTotp",
         "parameters": [],
@@ -726,7 +726,7 @@
         ]
       }
     },
-    "/staff/me/totp/disable": {
+    "/api/v1/staff/me/totp/disable": {
       "post": {
         "operationId": "StaffMeController_disableTotp",
         "parameters": [],
@@ -755,7 +755,7 @@
         ]
       }
     },
-    "/categories": {
+    "/api/v1/categories": {
       "get": {
         "operationId": "CategoryController_list",
         "parameters": [],
@@ -779,7 +779,7 @@
         ]
       }
     },
-    "/staff/categories": {
+    "/api/v1/staff/categories": {
       "get": {
         "operationId": "StaffCategoryController_list",
         "parameters": [
@@ -854,7 +854,7 @@
         ]
       }
     },
-    "/staff/categories/{id}": {
+    "/api/v1/staff/categories/{id}": {
       "get": {
         "operationId": "StaffCategoryController_get",
         "parameters": [
@@ -932,7 +932,7 @@
         ]
       }
     },
-    "/staff/categories/{id}/archive": {
+    "/api/v1/staff/categories/{id}/archive": {
       "post": {
         "operationId": "StaffCategoryController_archive",
         "parameters": [
@@ -967,7 +967,7 @@
         ]
       }
     },
-    "/staff/categories/{id}/activate": {
+    "/api/v1/staff/categories/{id}/activate": {
       "post": {
         "operationId": "StaffCategoryController_activate",
         "parameters": [
@@ -1002,7 +1002,7 @@
         ]
       }
     },
-    "/me/seller-application": {
+    "/api/v1/me/seller-application": {
       "get": {
         "operationId": "SellerApplicationController_getCurrent",
         "parameters": [],
@@ -1052,7 +1052,7 @@
         ]
       }
     },
-    "/staff/seller-applications": {
+    "/api/v1/staff/seller-applications": {
       "get": {
         "operationId": "StaffSellerApplicationController_list",
         "parameters": [],
@@ -1071,7 +1071,7 @@
         ]
       }
     },
-    "/staff/seller-applications/{id}": {
+    "/api/v1/staff/seller-applications/{id}": {
       "get": {
         "operationId": "StaffSellerApplicationController_get",
         "parameters": [
@@ -1106,7 +1106,7 @@
         ]
       }
     },
-    "/staff/seller-applications/{id}/approve": {
+    "/api/v1/staff/seller-applications/{id}/approve": {
       "post": {
         "operationId": "StaffSellerApplicationController_approve",
         "parameters": [
@@ -1141,7 +1141,7 @@
         ]
       }
     },
-    "/staff/seller-applications/{id}/reject": {
+    "/api/v1/staff/seller-applications/{id}/reject": {
       "post": {
         "operationId": "StaffSellerApplicationController_reject",
         "parameters": [
@@ -1186,7 +1186,7 @@
         ]
       }
     },
-    "/staff/sellers": {
+    "/api/v1/staff/sellers": {
       "get": {
         "operationId": "StaffSellerController_list",
         "parameters": [
@@ -1242,7 +1242,7 @@
         ]
       }
     },
-    "/staff/sellers/{userId}": {
+    "/api/v1/staff/sellers/{userId}": {
       "get": {
         "operationId": "StaffSellerController_get",
         "parameters": [
@@ -1277,7 +1277,7 @@
         ]
       }
     },
-    "/staff/sellers/{userId}/suspend": {
+    "/api/v1/staff/sellers/{userId}/suspend": {
       "post": {
         "operationId": "StaffSellerController_suspend",
         "parameters": [
@@ -1315,7 +1315,7 @@
         ]
       }
     },
-    "/staff/sellers/{userId}/reinstate": {
+    "/api/v1/staff/sellers/{userId}/reinstate": {
       "post": {
         "operationId": "StaffSellerController_reinstate",
         "parameters": [
@@ -1343,7 +1343,7 @@
         ]
       }
     },
-    "/services": {
+    "/api/v1/services": {
       "get": {
         "operationId": "ServiceController_list",
         "parameters": [
@@ -1438,7 +1438,7 @@
         ]
       }
     },
-    "/services/{id}": {
+    "/api/v1/services/{id}": {
       "get": {
         "operationId": "ServiceController_get",
         "parameters": [
@@ -1468,7 +1468,7 @@
         ]
       }
     },
-    "/seller/services": {
+    "/api/v1/seller/services": {
       "post": {
         "operationId": "SellerServiceController_create",
         "parameters": [],
@@ -1543,7 +1543,7 @@
         ]
       }
     },
-    "/seller/services/{id}": {
+    "/api/v1/seller/services/{id}": {
       "get": {
         "operationId": "SellerServiceController_get",
         "parameters": [
@@ -1621,7 +1621,7 @@
         ]
       }
     },
-    "/seller/services/{id}/submit": {
+    "/api/v1/seller/services/{id}/submit": {
       "post": {
         "operationId": "SellerServiceController_submit",
         "parameters": [
@@ -1656,7 +1656,7 @@
         ]
       }
     },
-    "/seller/services/{id}/pause": {
+    "/api/v1/seller/services/{id}/pause": {
       "post": {
         "operationId": "SellerServiceController_pause",
         "parameters": [
@@ -1691,7 +1691,7 @@
         ]
       }
     },
-    "/seller/services/{id}/resume": {
+    "/api/v1/seller/services/{id}/resume": {
       "post": {
         "operationId": "SellerServiceController_resume",
         "parameters": [
@@ -1726,7 +1726,7 @@
         ]
       }
     },
-    "/seller/services/{id}/archive": {
+    "/api/v1/seller/services/{id}/archive": {
       "post": {
         "operationId": "SellerServiceController_archive",
         "parameters": [
@@ -1761,7 +1761,7 @@
         ]
       }
     },
-    "/staff/services": {
+    "/api/v1/staff/services": {
       "get": {
         "operationId": "StaffServiceController_list",
         "parameters": [],
@@ -1780,7 +1780,7 @@
         ]
       }
     },
-    "/staff/services/{id}": {
+    "/api/v1/staff/services/{id}": {
       "get": {
         "operationId": "StaffServiceController_get",
         "parameters": [
@@ -1815,7 +1815,7 @@
         ]
       }
     },
-    "/staff/services/{id}/approve": {
+    "/api/v1/staff/services/{id}/approve": {
       "post": {
         "operationId": "StaffServiceController_approve",
         "parameters": [
@@ -1850,7 +1850,7 @@
         ]
       }
     },
-    "/staff/services/{id}/reject": {
+    "/api/v1/staff/services/{id}/reject": {
       "post": {
         "operationId": "StaffServiceController_reject",
         "parameters": [
@@ -1895,7 +1895,7 @@
         ]
       }
     },
-    "/staff/services/{id}/force-pause": {
+    "/api/v1/staff/services/{id}/force-pause": {
       "post": {
         "operationId": "StaffServiceController_forcePause",
         "parameters": [
@@ -1940,7 +1940,7 @@
         ]
       }
     },
-    "/staff/users": {
+    "/api/v1/staff/users": {
       "get": {
         "operationId": "StaffUserController_list",
         "parameters": [
@@ -2047,7 +2047,7 @@
         ]
       }
     },
-    "/staff/users/{id}": {
+    "/api/v1/staff/users/{id}": {
       "get": {
         "operationId": "StaffUserController_get",
         "parameters": [
@@ -2082,7 +2082,7 @@
         ]
       }
     },
-    "/staff/users/{id}/suspend": {
+    "/api/v1/staff/users/{id}/suspend": {
       "post": {
         "operationId": "StaffUserController_suspend",
         "parameters": [
@@ -2120,7 +2120,7 @@
         ]
       }
     },
-    "/staff/users/{id}/block": {
+    "/api/v1/staff/users/{id}/block": {
       "post": {
         "operationId": "StaffUserController_block",
         "parameters": [
@@ -2158,7 +2158,7 @@
         ]
       }
     },
-    "/staff/users/{id}/reactivate": {
+    "/api/v1/staff/users/{id}/reactivate": {
       "post": {
         "operationId": "StaffUserController_reactivate",
         "parameters": [
@@ -2186,7 +2186,7 @@
         ]
       }
     },
-    "/contracts": {
+    "/api/v1/contracts": {
       "post": {
         "operationId": "ContractController_create",
         "parameters": [
@@ -2231,7 +2231,7 @@
         ]
       }
     },
-    "/me/contracts": {
+    "/api/v1/me/contracts": {
       "get": {
         "operationId": "MeContractController_list",
         "parameters": [
@@ -2287,7 +2287,7 @@
         ]
       }
     },
-    "/me/contracts/{id}": {
+    "/api/v1/me/contracts/{id}": {
       "get": {
         "operationId": "MeContractController_get",
         "parameters": [
@@ -2322,7 +2322,7 @@
         ]
       }
     },
-    "/me/contracts/{id}/cancel": {
+    "/api/v1/me/contracts/{id}/cancel": {
       "post": {
         "operationId": "MeContractController_cancel",
         "parameters": [
@@ -2357,7 +2357,7 @@
         ]
       }
     },
-    "/me/contracts/{contractId}/milestones/{milestoneId}/approve": {
+    "/api/v1/me/contracts/{contractId}/milestones/{milestoneId}/approve": {
       "post": {
         "operationId": "MeContractController_approveMilestone",
         "parameters": [
@@ -2400,7 +2400,7 @@
         ]
       }
     },
-    "/me/contracts/{contractId}/milestones/{milestoneId}/request-revision": {
+    "/api/v1/me/contracts/{contractId}/milestones/{milestoneId}/request-revision": {
       "post": {
         "operationId": "MeContractController_requestRevision",
         "parameters": [
@@ -2453,7 +2453,7 @@
         ]
       }
     },
-    "/seller/contracts": {
+    "/api/v1/seller/contracts": {
       "get": {
         "operationId": "SellerContractController_list",
         "parameters": [
@@ -2509,7 +2509,7 @@
         ]
       }
     },
-    "/seller/contracts/{id}": {
+    "/api/v1/seller/contracts/{id}": {
       "get": {
         "operationId": "SellerContractController_get",
         "parameters": [
@@ -2544,7 +2544,7 @@
         ]
       }
     },
-    "/seller/contracts/{id}/accept": {
+    "/api/v1/seller/contracts/{id}/accept": {
       "post": {
         "operationId": "SellerContractController_accept",
         "parameters": [
@@ -2579,7 +2579,7 @@
         ]
       }
     },
-    "/seller/contracts/{id}/reject": {
+    "/api/v1/seller/contracts/{id}/reject": {
       "post": {
         "operationId": "SellerContractController_reject",
         "parameters": [
@@ -2614,7 +2614,7 @@
         ]
       }
     },
-    "/seller/contracts/{contractId}/milestones/{milestoneId}/submit": {
+    "/api/v1/seller/contracts/{contractId}/milestones/{milestoneId}/submit": {
       "post": {
         "operationId": "SellerContractController_submitMilestone",
         "parameters": [
@@ -2667,7 +2667,7 @@
         ]
       }
     },
-    "/staff/contracts": {
+    "/api/v1/staff/contracts": {
       "get": {
         "operationId": "StaffContractController_list",
         "parameters": [
@@ -2747,7 +2747,7 @@
         ]
       }
     },
-    "/staff/contracts/{id}": {
+    "/api/v1/staff/contracts/{id}": {
       "get": {
         "operationId": "StaffContractController_get",
         "parameters": [
@@ -2782,7 +2782,7 @@
         ]
       }
     },
-    "/me/contracts/{contractId}/payment": {
+    "/api/v1/me/contracts/{contractId}/payment": {
       "post": {
         "operationId": "PaymentController_create",
         "parameters": [
@@ -2825,7 +2825,7 @@
         ]
       }
     },
-    "/me/payments": {
+    "/api/v1/me/payments": {
       "get": {
         "operationId": "MePaymentController_list",
         "parameters": [
@@ -2890,7 +2890,7 @@
         ]
       }
     },
-    "/me/payments/{id}": {
+    "/api/v1/me/payments/{id}": {
       "get": {
         "operationId": "MePaymentController_get",
         "parameters": [
@@ -2925,7 +2925,7 @@
         ]
       }
     },
-    "/staff/payments": {
+    "/api/v1/staff/payments": {
       "get": {
         "operationId": "StaffPaymentController_list",
         "parameters": [
@@ -3006,7 +3006,7 @@
         ]
       }
     },
-    "/staff/payments/{id}": {
+    "/api/v1/staff/payments/{id}": {
       "get": {
         "operationId": "StaffPaymentController_get",
         "parameters": [
@@ -3041,7 +3041,7 @@
         ]
       }
     },
-    "/staff/ledger/transactions": {
+    "/api/v1/staff/ledger/transactions": {
       "get": {
         "operationId": "StaffLedgerController_list",
         "parameters": [
@@ -3109,7 +3109,7 @@
         ]
       }
     },
-    "/staff/ledger/transactions/{id}": {
+    "/api/v1/staff/ledger/transactions/{id}": {
       "get": {
         "operationId": "StaffLedgerController_get",
         "parameters": [
@@ -3144,7 +3144,7 @@
         ]
       }
     },
-    "/seller/balance": {
+    "/api/v1/seller/balance": {
       "get": {
         "operationId": "SellerBalanceController_get",
         "parameters": [],
@@ -3170,7 +3170,7 @@
         ]
       }
     },
-    "/staff/refunds": {
+    "/api/v1/staff/refunds": {
       "post": {
         "operationId": "StaffRefundController_create",
         "parameters": [
@@ -3284,7 +3284,7 @@
         ]
       }
     },
-    "/staff/refunds/{id}": {
+    "/api/v1/staff/refunds/{id}": {
       "get": {
         "operationId": "StaffRefundController_get",
         "parameters": [
@@ -3319,7 +3319,7 @@
         ]
       }
     },
-    "/me/refunds": {
+    "/api/v1/me/refunds": {
       "get": {
         "operationId": "MeRefundController_list",
         "parameters": [
@@ -3374,7 +3374,7 @@
         ]
       }
     },
-    "/me/refunds/{id}": {
+    "/api/v1/me/refunds/{id}": {
       "get": {
         "operationId": "MeRefundController_get",
         "parameters": [
@@ -3409,7 +3409,7 @@
         ]
       }
     },
-    "/seller/payouts": {
+    "/api/v1/seller/payouts": {
       "post": {
         "operationId": "SellerPayoutController_create",
         "parameters": [
@@ -3507,7 +3507,7 @@
         ]
       }
     },
-    "/seller/payouts/{id}": {
+    "/api/v1/seller/payouts/{id}": {
       "get": {
         "operationId": "SellerPayoutController_get",
         "parameters": [
@@ -3542,7 +3542,7 @@
         ]
       }
     },
-    "/staff/payouts": {
+    "/api/v1/staff/payouts": {
       "get": {
         "operationId": "StaffPayoutController_list",
         "parameters": [
@@ -3605,7 +3605,7 @@
         ]
       }
     },
-    "/staff/payouts/{id}": {
+    "/api/v1/staff/payouts/{id}": {
       "get": {
         "operationId": "StaffPayoutController_get",
         "parameters": [
@@ -3640,7 +3640,7 @@
         ]
       }
     },
-    "/me/contracts/{contractId}/disputes": {
+    "/api/v1/me/contracts/{contractId}/disputes": {
       "post": {
         "operationId": "OpenDisputeController_open",
         "parameters": [
@@ -3693,7 +3693,7 @@
         ]
       }
     },
-    "/me/disputes": {
+    "/api/v1/me/disputes": {
       "get": {
         "operationId": "MeDisputeController_list",
         "parameters": [
@@ -3749,7 +3749,7 @@
         ]
       }
     },
-    "/me/disputes/{id}": {
+    "/api/v1/me/disputes/{id}": {
       "get": {
         "operationId": "MeDisputeController_get",
         "parameters": [
@@ -3784,7 +3784,7 @@
         ]
       }
     },
-    "/me/disputes/{id}/evidence": {
+    "/api/v1/me/disputes/{id}/evidence": {
       "get": {
         "operationId": "MeDisputeController_listEvidence",
         "parameters": [
@@ -3855,7 +3855,7 @@
         ]
       }
     },
-    "/me/disputes/{id}/events": {
+    "/api/v1/me/disputes/{id}/events": {
       "get": {
         "operationId": "MeDisputeController_listEvents",
         "parameters": [
@@ -3883,7 +3883,7 @@
         ]
       }
     },
-    "/me/disputes/{id}/cancel": {
+    "/api/v1/me/disputes/{id}/cancel": {
       "post": {
         "operationId": "MeDisputeController_cancel",
         "parameters": [
@@ -3918,7 +3918,7 @@
         ]
       }
     },
-    "/staff/disputes": {
+    "/api/v1/staff/disputes": {
       "get": {
         "operationId": "StaffDisputeController_list",
         "parameters": [
@@ -3998,7 +3998,7 @@
         ]
       }
     },
-    "/staff/disputes/{id}": {
+    "/api/v1/staff/disputes/{id}": {
       "get": {
         "operationId": "StaffDisputeController_get",
         "parameters": [
@@ -4033,7 +4033,7 @@
         ]
       }
     },
-    "/staff/disputes/{id}/evidence": {
+    "/api/v1/staff/disputes/{id}/evidence": {
       "get": {
         "operationId": "StaffDisputeController_listEvidence",
         "parameters": [
@@ -4104,7 +4104,7 @@
         ]
       }
     },
-    "/staff/disputes/{id}/events": {
+    "/api/v1/staff/disputes/{id}/events": {
       "get": {
         "operationId": "StaffDisputeController_listEvents",
         "parameters": [
@@ -4132,7 +4132,7 @@
         ]
       }
     },
-    "/staff/disputes/{id}/start-review": {
+    "/api/v1/staff/disputes/{id}/start-review": {
       "post": {
         "operationId": "StaffDisputeController_startReview",
         "parameters": [
@@ -4167,7 +4167,7 @@
         ]
       }
     },
-    "/staff/disputes/{id}/reject": {
+    "/api/v1/staff/disputes/{id}/reject": {
       "post": {
         "operationId": "StaffDisputeController_reject",
         "parameters": [
@@ -4212,7 +4212,7 @@
         ]
       }
     },
-    "/staff/disputes/{id}/resolve": {
+    "/api/v1/staff/disputes/{id}/resolve": {
       "post": {
         "operationId": "StaffDisputeController_resolve",
         "parameters": [
@@ -4265,7 +4265,7 @@
         ]
       }
     },
-    "/staff/reconciliation/anomalies": {
+    "/api/v1/staff/reconciliation/anomalies": {
       "get": {
         "operationId": "StaffReconciliationController_listAnomalies",
         "parameters": [
@@ -4354,7 +4354,7 @@
         ]
       }
     },
-    "/staff/reconciliation/anomalies/{id}/acknowledge": {
+    "/api/v1/staff/reconciliation/anomalies/{id}/acknowledge": {
       "post": {
         "operationId": "StaffReconciliationController_acknowledgeAnomaly",
         "parameters": [
@@ -4399,7 +4399,7 @@
         ]
       }
     },
-    "/staff/reconciliation/summary": {
+    "/api/v1/staff/reconciliation/summary": {
       "get": {
         "operationId": "StaffReconciliationController_summary",
         "parameters": [],
@@ -4418,7 +4418,7 @@
         ]
       }
     },
-    "/staff/reconciliation/payments/{id}/reconcile": {
+    "/api/v1/staff/reconciliation/payments/{id}/reconcile": {
       "post": {
         "operationId": "StaffReconciliationController_reconcilePayment",
         "parameters": [
@@ -4453,7 +4453,7 @@
         ]
       }
     },
-    "/staff/reconciliation/refunds/{id}/reconcile": {
+    "/api/v1/staff/reconciliation/refunds/{id}/reconcile": {
       "post": {
         "operationId": "StaffReconciliationController_reconcileRefund",
         "parameters": [
@@ -4488,7 +4488,7 @@
         ]
       }
     },
-    "/staff/reconciliation/payouts/{id}/reconcile": {
+    "/api/v1/staff/reconciliation/payouts/{id}/reconcile": {
       "post": {
         "operationId": "StaffReconciliationController_reconcilePayout",
         "parameters": [
@@ -4523,7 +4523,7 @@
         ]
       }
     },
-    "/staff/financial-integrity/scan": {
+    "/api/v1/staff/financial-integrity/scan": {
       "post": {
         "operationId": "StaffFinancialIntegrityController_scan",
         "parameters": [],
@@ -4542,7 +4542,7 @@
         ]
       }
     },
-    "/staff/outbox": {
+    "/api/v1/staff/outbox": {
       "get": {
         "operationId": "StaffOutboxController_list",
         "parameters": [
@@ -4614,7 +4614,7 @@
         ]
       }
     },
-    "/staff/outbox/summary": {
+    "/api/v1/staff/outbox/summary": {
       "get": {
         "operationId": "StaffOutboxController_summary",
         "parameters": [],
@@ -4633,7 +4633,7 @@
         ]
       }
     },
-    "/staff/outbox/{id}": {
+    "/api/v1/staff/outbox/{id}": {
       "get": {
         "operationId": "StaffOutboxController_get",
         "parameters": [
@@ -4668,7 +4668,7 @@
         ]
       }
     },
-    "/staff/outbox/{id}/retry": {
+    "/api/v1/staff/outbox/{id}/retry": {
       "post": {
         "operationId": "StaffOutboxController_retry",
         "parameters": [
@@ -4703,7 +4703,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members": {
+    "/api/v1/staff/admin/staff-members": {
       "get": {
         "operationId": "StaffAdminController_list",
         "parameters": [
@@ -4843,7 +4843,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}": {
+    "/api/v1/staff/admin/staff-members/{id}": {
       "get": {
         "operationId": "StaffAdminController_get",
         "parameters": [
@@ -4878,7 +4878,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}/permissions": {
+    "/api/v1/staff/admin/staff-members/{id}/permissions": {
       "patch": {
         "operationId": "StaffAdminController_updatePermissions",
         "parameters": [
@@ -4923,7 +4923,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}/suspend": {
+    "/api/v1/staff/admin/staff-members/{id}/suspend": {
       "post": {
         "operationId": "StaffAdminController_suspend",
         "parameters": [
@@ -4968,7 +4968,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}/disable": {
+    "/api/v1/staff/admin/staff-members/{id}/disable": {
       "post": {
         "operationId": "StaffAdminController_disable",
         "parameters": [
@@ -5013,7 +5013,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}/reactivate": {
+    "/api/v1/staff/admin/staff-members/{id}/reactivate": {
       "post": {
         "operationId": "StaffAdminController_reactivate",
         "parameters": [
@@ -5048,7 +5048,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}/sessions": {
+    "/api/v1/staff/admin/staff-members/{id}/sessions": {
       "delete": {
         "operationId": "StaffAdminController_revokeSessions",
         "parameters": [
@@ -5076,7 +5076,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}/totp/reset": {
+    "/api/v1/staff/admin/staff-members/{id}/totp/reset": {
       "post": {
         "operationId": "StaffAdminController_resetTotp",
         "parameters": [
@@ -5104,7 +5104,7 @@
         ]
       }
     },
-    "/staff/admin/staff-members/{id}/password-reset": {
+    "/api/v1/staff/admin/staff-members/{id}/password-reset": {
       "post": {
         "operationId": "StaffAdminController_resetPassword",
         "parameters": [
@@ -5139,7 +5139,7 @@
         ]
       }
     },
-    "/staff/audit-logs": {
+    "/api/v1/staff/audit-logs": {
       "get": {
         "operationId": "StaffAuditLogController_list",
         "parameters": [
@@ -5251,7 +5251,7 @@
         ]
       }
     },
-    "/staff/audit-logs/{id}": {
+    "/api/v1/staff/audit-logs/{id}": {
       "get": {
         "operationId": "StaffAuditLogController_get",
         "parameters": [

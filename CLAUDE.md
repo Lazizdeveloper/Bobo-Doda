@@ -551,19 +551,71 @@ etayotgan bosqich muddati eng yangi hodisa sanasidan keyin bo'lsin.
 / 1280px+ (360px da gorizontal skroll BO'LMASIN — header o'ng bloki shu
 sababli ixchamlashtirilgan).
 
-**E2E/a11y suitlarini ishga tushirish** (`npm run test:e2e`, `npm run test:a11y`):
-ular ishlab turgan serverga ulanadi. Dev serverda kompilyatsiya 30s timeout'ga
-tiqilib qolishi mumkin, shuning uchun **production build'ga qarshi** yuriting.
-DIQQAT: `npm run build` dev serverning `.next` papkasini ustiga yozadi —
-dev ishlab turgan bo'lsa `NEXT_DIST_DIR` bilan alohida papkaga build qiling:
+**E2E — DIQQAT, ESKIRGAN QISM PASTDA.** Root `npm run test:e2e`
+(`scripts/lifecycle-test.cjs` + `scripts/stress-test.cjs`) va
+`npm run test:a11y` (`scripts/accessibility-test.cjs`) — bu uchtasi haqiqiy
+backend integratsiyasi (real Postgres/Redis/NestJS)dan beri **o'zlari
+BUZILGAN** deb hujjatlashtirilgan (har birining fayl boshidagi izohiga
+qarang): `localStorage.setItem("sb_session", ...)` orqali mock sessiya
+inject qilishadi, real `lib/api/http.ts` esa `bd_session` kalitini va
+OTP-asosli login oqimini kutadi. Hech qanday CI workflow ularni
+chaqirmaydi. **Bularni tuzatilgan deb hisoblamang va yangi "talab
+qilinadigan tekshiruv" ro'yxatiga qo'shmang** — ular faqat tarixiy/mock-rejim
+ma'lumotnomasi sifatida qoldirilgan (qayta yozilmagan).
 
-```bash
-NEXT_DIST_DIR=.next-check npm run build
-NEXT_DIST_DIR=.next-check npx next start -p 3001
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/lifecycle-test.cjs
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/stress-test.cjs
-TEST_BASE_URL=http://127.0.0.1:3001 node scripts/accessibility-test.cjs
-```
+Haqiqiy (real backend'ga ulangan) E2E qoplama endi ikkita joyda:
+- **`npm run test:e2e:blocking`** (`playwright test --grep @blocking`,
+  `tests/e2e/auth.spec.ts`dagi 5 ta test) — CI'da avtomatik ishlaydi
+  (`.github/workflows/e2e-blocking.yml`: ephemeral Postgres+Redis+backend
+  (`SMS_PROVIDER=CONSOLE`, real SMS YO'Q)+frontend). Ro'yxatdan o'tish/
+  login/parolni tiklash marshrutlari VA `NEXT_PUBLIC_API_URL` prefiks
+  to'g'riligini qamraydi — bo'lim 25 production insidenti (registration
+  OTP so'rovi 404) uchun regressiya darvozasi. Hozircha faqat
+  INFORMATIV — `main`ning required status check ro'yxatiga hali
+  qo'shilmagan (release-engineer topilmasi: mavjud 4 ta required
+  check path-filtrlangan bo'lib, bitta tomonlama PR ularning barchasini
+  qondirolmaydi — buni oldin hal qilmasdan yana bitta path-filtrlangan
+  required check qo'shish holatni yomonlashtiradi).
+- **`npm run test:e2e:live`** (`playwright test`, to'liq to'plam — bug-fix
+  regressiyalar, xato xaritalash, DEV-only OTP UI, admin) — qo'lda,
+  `docs/RUNBOOK.md` §14dagi to'liq stack (backend + frontend + real
+  Postgres/Redis) ishlab turganda.
+- Backend Jest e2e (`npm run test:e2e --workspace backend`) — CI'da
+  majburiy (`backend-ci.yml`), real Postgres+Redis bilan.
 
-Har biri `{"ok": true}` qaytarishi shart. accessibility-test axe bilan
-WCAG 2 A/AA ni tekshiradi — rang kontrasti shu yerda ushlanadi.
+`npm run verify` (lint + typecheck + `check:csp` + `check:api-url` +
+`check:openapi-prefix` + build) toza bo'lishi shart. Responsive:
+360–430 / 768–1024 / 1280px+ (360px da gorizontal skroll BO'LMASIN —
+header o'ng bloki shu sababli ixchamlashtirilgan).
+
+## Specialist agents
+
+Jiddiy ish uchun mustaqil ko'rib chiqishni `.claude/agents/`dagi mutaxassis
+subagentlarga topshiring — o'n ikkitasi: backend/frontend/security/database/
+devops/sre/qa/performance/fintech/release-engineer (o'nta ish subagenti) +
+`bobododa-engineering-lead` (orkestrator) + `api-contract-auditor` (frontend/
+backend/kontrakt chegarasi bo'yicha mustaqil auditor). Kim nimani ko'rib
+chiqishi va qaysi tartibda — `.claude/review-matrix.md` va
+`.claude/workflows/`. Xavfli o'zgarish uchun KAMIDA: asosiy mutaxassis ko'rib
+chiqishi + security yoki QA ko'rib chiqishi (tegishli bo'lsa) — bitta agent
+o'z ishini yagona tasdiqlovchi bo'la olmaydi.
+
+## Engineering orchestration
+
+Jiddiy muhandislik vazifalari uchun:
+
+1. `bobododa-engineering-lead` orqali marshrutlang.
+2. `.claude/workflows/task-routing.md`dan foydalaning.
+3. Faqat vazifaga tegishli mutaxassislarni tanlang — "hammasini ishga
+   tushirish" emas, "xavfga yetarli minimal jamoa".
+4. `.claude/review-matrix.md`ni qat'iy qo'llang (yangi endpoint/marshrut/
+   prefiks/kontrakt o'zgarishi — `api-contract-auditor` MAJBURIY).
+5. O'z-o'zini tasdiqlash YO'Q — implementatsiya qilgan agent yagona
+   tekshiruvchi bo'la olmaydi.
+6. Cross-review'dan OLDIN mustaqil tekshiruv — tekshiruvchiga boshqa
+   agentning xulosasi emas, savolning o'zi beriladi.
+7. FAIL/UNKNOWN jimgina PASS'ga aylantirilmaydi.
+8. Production'ga ta'sir qiluvchi o'zgarish `release-engineer` darvozasidan
+   o'tishi SHART — `bobododa-engineering-lead` buni chetlab o'ta olmaydi va
+   o'zi yakuniy tasdiqlovchi emas (`.claude/review-matrix.md`dagi
+   "Orchestration role" izohiga qarang).

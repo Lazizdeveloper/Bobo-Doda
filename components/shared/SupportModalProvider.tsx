@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { SupportModal } from "./SupportModal";
+import { isAdminSurfaceHost } from "@/lib/admin-routes";
 
 interface OpenOptions {
   /** Qayerdan ochilgani — navbar | footer | faq | help-center | project | profile ... */
@@ -27,6 +28,21 @@ export function SupportModalProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState("unknown");
   const [route, setRoute] = useState<string | undefined>(undefined);
+  /* admin.bobododa.uz'da (2026-09 ko'chirish) admin sahifalari pathname'i
+     `/admin` bilan boshlanmaydi (`proxy.ts` prefiksni striplaydi) —
+     shuning uchun host tekshiruvi HAM kerak. Faqat mount'dan keyin
+     ishlatiladi (`mounted`) — render paytida to'g'ridan-to'g'ri chaqirilsa
+     server/client hydration mos kelmay qolishi mumkin edi. */
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAdminRoute = Boolean(
+    (pathname && (pathname.startsWith("/admin") || pathname.startsWith("/rahbariyat"))) ||
+      (mounted && isAdminSurfaceHost())
+  );
 
   // Close modal on route change
   useEffect(() => {
@@ -35,21 +51,19 @@ export function SupportModalProvider({ children }: { children: ReactNode }) {
 
   const openSupportModal = useCallback((opts: OpenOptions) => {
     // Do not open public support modal on admin routes
-    if (pathname && (pathname.startsWith("/admin") || pathname.startsWith("/rahbariyat"))) {
+    if (isAdminRoute) {
       return;
     }
     setSource(opts.source);
     setRoute(opts.route);
     setOpen(true);
-  }, [pathname]);
+  }, [isAdminRoute]);
 
   const closeSupportModal = useCallback(() => {
     setOpen(false);
   }, []);
 
   const value = useMemo(() => ({ openSupportModal, closeSupportModal }), [openSupportModal, closeSupportModal]);
-
-  const isAdminRoute = Boolean(pathname && (pathname.startsWith("/admin") || pathname.startsWith("/rahbariyat")));
 
   return (
     <SupportModalContext.Provider value={value}>

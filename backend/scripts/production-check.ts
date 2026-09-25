@@ -119,6 +119,20 @@ async function main(): Promise<void> {
     detail: corsOk ? `CORS_ORIGINS: ${config.corsOrigins.join(', ')}` : 'CORS_ORIGINS bo‘sh yoki "*" — aniq domenlar kerak',
   });
 
+  // Bo'lim 3 (admin.bobododa.uz) — `STAFF_CORS_ORIGINS` marketplace
+  // ro'yxatidan ALOHIDA (main.ts CORS delegate). Bo'sh/wildcard bo'lsa
+  // staff/* butunlay CORS bilan bloklanadi (fail-closed, o'zi xavfli emas),
+  // lekin bu odatda operator xatosi — shuning uchun shu yerda ham
+  // ogohlantiriladi.
+  const staffCorsOk = config.staffCorsOrigins.length > 0 && !config.staffCorsOrigins.includes('*');
+  results.push({
+    name: 'staff_cors_configured',
+    ok: staffCorsOk,
+    detail: staffCorsOk
+      ? `STAFF_CORS_ORIGINS: ${config.staffCorsOrigins.join(', ')}`
+      : 'STAFF_CORS_ORIGINS bo‘sh yoki "*" — admin.bobododa.uz aniq ko‘rsatilishi kerak',
+  });
+
   results.push(checkMigrationsCurrent());
 
   const integrity = app.get(FinancialIntegrityService);
