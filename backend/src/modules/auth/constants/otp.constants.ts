@@ -51,3 +51,27 @@ export const LOGIN_PHONE_WINDOW_SECONDS = 15 * 60;
 /** Bo'lim 12 — bitta IP uchun (ko'p telefon sinash himoyasi). */
 export const LOGIN_IP_MAX_ATTEMPTS = 30;
 export const LOGIN_IP_WINDOW_SECONDS = 15 * 60;
+
+/**
+ * OTP verify security hardening — `verify-otp` (REGISTER va PASSWORD_RESET)
+ * uchun IP bo'yicha chegara. `OTP_MAX_ATTEMPTS` (yuqorida) endi ATOMIK
+ * bo'lgani uchun bitta kodni "taxmin qilish" allaqachon 5taga qattiq
+ * cheklangan — bu IP chegara shunga QO'SHIMCHA, ko'p turli kod/telefonga
+ * qarshi hajmli/CPU-xarajat suiiste'molini (har bir urinish argon2id
+ * hisoblaydi) cheklaydi. ATAYLAB telefon bo'yicha EMAS, faqat IP bo'yicha:
+ * telefon bo'yicha bo'lganda tajovuzkor qurbonning raqamini bilib, unga
+ * atayin ko'p noto'g'ri so'rov yuborib, uning haqiqiy ro'yxatdan o'tish/
+ * parol tiklash oqimini bloklab qo'yishi mumkin edi.
+ *
+ * Qiymat O'YLAB TOPILMAGAN — mavjud so'rash-tomoni chegaradan HOSILA:
+ * `OTP_IP_HOURLY_LIMIT` (bitta IP soatiga eng ko'p nechta YANGI kod
+ * so'rashi mumkin) × `OTP_MAX_ATTEMPTS` (har bir kodga eng ko'p nechta
+ * urinish) — bu ANIQ shu IP so'rash chegarasi ostida, haqiqiy (baxtsiz,
+ * lekin zararli EMAS — masalan bitta ofis IP'sidan bir nechta foydalanuvchi)
+ * foydalanishda yuzaga kelishi mumkin bo'lgan YUQORI chegara. Undan yuqori
+ * hajm allaqachon boshqa hodisa (suiiste'mol yoki xato)ni bildiradi. Oyna
+ * ham so'rash-tomoni bilan BIR XIL (`OTP_IP_HOURLY_WINDOW_SECONDS`) —
+ * ikkala chegara bir xil vaqt oynasida mantiqan bog'liq.
+ */
+export const OTP_VERIFY_IP_MAX_ATTEMPTS = OTP_IP_HOURLY_LIMIT * OTP_MAX_ATTEMPTS;
+export const OTP_VERIFY_IP_WINDOW_SECONDS = OTP_IP_HOURLY_WINDOW_SECONDS;

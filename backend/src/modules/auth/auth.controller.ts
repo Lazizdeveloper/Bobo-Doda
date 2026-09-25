@@ -65,8 +65,8 @@ export class AuthController {
   @Public()
   @Post('register/verify-otp')
   @HttpCode(200)
-  async verifyRegisterOtp(@Body() dto: VerifyOtpDto): Promise<{ registrationToken: string }> {
-    return this.auth.verifyRegisterOtp(dto.phone, dto.code);
+  async verifyRegisterOtp(@Body() dto: VerifyOtpDto, @Req() req: Request): Promise<{ registrationToken: string }> {
+    return this.auth.verifyRegisterOtp(dto.phone, dto.code, req.ip);
   }
 
   /** Grant valid + parol mos bo'lsa: User yaratiladi, sessiya ochiladi.
@@ -125,8 +125,8 @@ export class AuthController {
   @Public()
   @Post('password-reset/verify-otp')
   @HttpCode(200)
-  async verifyPasswordResetOtp(@Body() dto: VerifyOtpDto): Promise<{ resetToken: string }> {
-    return this.auth.verifyPasswordResetOtp(dto.phone, dto.code);
+  async verifyPasswordResetOtp(@Body() dto: VerifyOtpDto, @Req() req: Request): Promise<{ resetToken: string }> {
+    return this.auth.verifyPasswordResetOtp(dto.phone, dto.code, req.ip);
   }
 
   /** Grant valid + parol mos bo'lsa: parol yangilanadi, BARCHA mavjud
