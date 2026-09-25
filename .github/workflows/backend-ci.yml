@@ -188,6 +188,13 @@ jobs:
           JWT_STAFF_ACCESS_SECRET: ci-production-config-test-staff-secret-32
           STAFF_TOTP_ENCRYPTION_KEY: '1111111111111111111111111111111111111111111111111111111111111111'
           NODE_ENV: production
+          # Bo'lim 3 (admin.bobododa.uz) — STAFF_CORS_ORIGINS ham production
+          # superRefine'da tekshiriladi (https, CORS_ORIGINS bilan ustma-ust
+          # tushmasin). Bu qator qo'shilmasa "to'liq to'g'ri production
+          # config" bilan boot HAR DOIM muvaffaqiyatsiz bo'ladi — ikkalasi
+          # ham sukutda bir xil (http://localhost:3000) qoladi.
+          CORS_ORIGINS: https://app.bobododa.uz
+          STAFF_CORS_ORIGINS: https://admin.bobododa.uz
           SWAGGER_ENABLED: 'false'
         run: |
           BOOT_CMD="node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/boot-check.ts"
