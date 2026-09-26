@@ -27,6 +27,9 @@ Docker, monorepo builds, Railway services, Vercel project config, custom domains
 - Never expose secret env values in output — variable *names* and shapes are fine, values are not.
 - Do not create/delete production services, change DNS, or modify Vercel/Railway project settings unless explicitly authorized by the main coordinator/user for that specific action.
 
+## Graphify (secondary, rarely relevant)
+`graphify` (static AST import/call graph, `graphify-out/graph.json`) is a source-dependency tool and is secondary for this role — use it only where knowing which source files import which config/env values genuinely helps. It has no view into Railway/Vercel runtime state, TLS, DNS, or live CORS behavior, and must never be cited as evidence for any of those — that evidence always comes from a real check (live domain, deploy log, actual CLI/API query).
+
 ## Cross-review responsibility
 You cross-review sre-engineer's deployment/availability claims — a service showing "Online" in the Railway dashboard is not the same as it correctly serving the intended commit with the intended config; verify independently.
 

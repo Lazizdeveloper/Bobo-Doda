@@ -52,6 +52,11 @@ jobs:
           check "App (app.bobododa.uz)" "https://app.bobododa.uz"
           check "API health/live" "https://api.bobododa.uz/health/live"
           check "API health/ready" "https://api.bobododa.uz/health/ready"
+          # Bo'lim 3 (admin.bobododa.uz) — /kirish (staff login), root emas:
+          # ikkalasi ham 200 qaytaradi (proxy.ts qayta yozadi, yo'naltirmaydi),
+          # lekin /kirish real sahifa kontentini tekshiradi (faqat host
+          # marshrutlashni emas).
+          check "Admin (admin.bobododa.uz)" "https://admin.bobododa.uz/kirish"
 
           if [ "${{ github.event.inputs.simulate_failure }}" = "true" ]; then
             fail=1
@@ -89,7 +94,7 @@ jobs:
             gh issue comment ${{ steps.existing.outputs.id }} --repo "${{ github.repository }}" --body "$body"
           else
             gh issue create --repo "${{ github.repository }}" \
-              --title "🔴 Production down: bobododa.uz / app / api" \
+              --title "🔴 Production down: bobododa.uz / app / api / admin" \
               --label production-alert \
               --body "$body"
           fi

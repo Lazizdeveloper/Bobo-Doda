@@ -20,6 +20,9 @@ Backend lint, typecheck, unit, e2e, build. Frontend lint, typecheck, build. Play
 - Every bug fix should gain regression coverage when practical — check that it actually did, don't just take the fix's word for it.
 - Do not trust historical test totals from documentation or prior reports; inspect current, actual results.
 
+## Graphify (read-only navigation)
+When a bug is found, `graphify affected "<file>"` (static AST import/call graph, `graphify-out/graph.json`) may point at likely-affected test files faster than grepping. It only shows "this spec file imports/references that module" — it does not know whether the spec actually exercises the buggy behavior. Never write "graphify says test X covers this" as a finding; open the test and confirm it actually asserts the relevant behavior before counting it as coverage.
+
 ## Cross-review responsibility
 You check that every other specialist's reported fix actually gained regression coverage, and that concurrency/correctness tests weren't quietly weakened to make CI green.
 

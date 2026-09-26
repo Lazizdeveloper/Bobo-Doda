@@ -159,22 +159,50 @@ export class OtpService {
       throw new DomainError('OTP_EXPIRED', 'Kodning amal qilish muddati tugagan');
     }
     // Himoya qatlami: odatda oxirgi noto'g'ri urinishning o'zi (pastda)
-    // darhol `consumedAt`ni belgilaydi, shuning uchun bu shart amalda
-    // deyarli hech qachon ishga tushmaydi — lekin CAS'siz holat qolib
-    // ketsa ham keyingi urinish baribir bloklanadi.
+    // darhol `consumedAt`ni belgilaydi va `findFirst`ning `consumedAt: null`
+    // filtri uni keyingi o'qishda umuman topmaydi — shuning uchun bu shart
+    // amalda deyarli hech qachon ishga tushmaydi. Eski (kuydirilgan
+    // bo'lishi mumkin bo'lgan, atomik tuzatishdan OLDINGI) qatorlar uchun
+    // qo'shimcha himoya sifatida qolgan.
     if (otp.attempts >= OTP_MAX_ATTEMPTS) {
       throw new DomainError('OTP_ATTEMPTS_EXCEEDED', "Urinishlar soni oshib ketdi. Yangi kod oling.");
     }
 
     const valid = await this.hash.verify(otp.codeHash, code);
     if (!valid) {
-      const attempts = otp.attempts + 1;
-      const burned = attempts >= OTP_MAX_ATTEMPTS;
-      await this.prisma.otpCode.update({
-        where: { id: otp.id },
-        data: { attempts, ...(burned ? { consumedAt: new Date() } : {}) },
-      });
-      if (burned) {
+      // OTP verify security hardening — bu ILGARI "o'qi, JS'da +1 hisobla,
+      // yoz" (uchta alohida qadam, tranzaksiyasiz) edi: parallel noto'g'ri
+      // so'rovlar BIR XIL eski `attempts`ni o'qib, BIR XIL qiymatni
+      // yozardi — "lost update". 20 ta chinakam parallel noto'g'ri urinish
+      // bilan reproduksiya qilindi: DB'da `attempts` faqat 1ga ko'tarilgan,
+      // kod HECH QACHON kuymagan (dastlab bitta bir martalik scratch test
+      // bilan tasdiqlangan, keyin doimiy regressiya sifatida
+      // `backend/test/auth.e2e-spec.ts`dagi "RACE:" testlariga ko'chirilgan).
+      //
+      // Endi BITTA atomik UPDATE: `WHERE "attempts" < MAX AND "consumedAt"
+      // IS NULL` — Postgres BIR XIL qatorga parallel UPDATE'larni tabiiy
+      // qator-qulfi bilan serializatsiya qiladi (har biri navbat bilan
+      // qulflanadi, WHERE keyingi UPDATE uchun QAYTA baholanadi), shuning
+      // uchun N ta chinakam parallel noto'g'ri so'rov bo'lsa ham, ROVNO
+      // "joy qolgan" miqdorda (MAX - joriy attempts) g'olib chiqadi —
+      // ortig'i WHERE'dan o'tolmay 0 qator qaytaradi. Limitni to'ldirgan
+      // AYNAN shu so'rov `consumedAt`ni ham SHU BIR UPDATE ichida
+      // (CASE...THEN now()) o'rnatadi — ikkinchi, alohida "keyin kuydir"
+      // qadami YO'Q, demak bu ikkinchi bosqich ham poyga oynasi qoldirmaydi.
+      const rows = await this.prisma.$queryRaw<Array<{ attempts: number; burned: boolean }>>`
+        UPDATE "otp_codes"
+        SET "attempts" = "attempts" + 1,
+            "consumedAt" = CASE WHEN "attempts" + 1 >= ${OTP_MAX_ATTEMPTS} THEN now() ELSE "consumedAt" END
+        WHERE "id" = ${otp.id}::uuid AND "consumedAt" IS NULL AND "attempts" < ${OTP_MAX_ATTEMPTS}
+        RETURNING "attempts", ("consumedAt" IS NOT NULL) AS "burned"
+      `;
+      const result = rows[0];
+      // `result` yo'q — bu so'rov WHERE'dan o'tolmadi: parallel boshqa
+      // so'rov ALLAQACHON kuydirgan/iste'mol qilgan (yoki juda kam
+      // ehtimol — attempts allaqachon MAX'da). `result.burned` — bu
+      // so'rovning O'ZI limitni to'ldirdi. Ikkalasida ham foydalanuvchi
+      // uchun natija bir xil: yangi kod kerak.
+      if (!result || result.burned) {
         throw new DomainError('OTP_ATTEMPTS_EXCEEDED', "Urinishlar soni oshib ketdi. Yangi kod oling.");
       }
       throw new DomainError('INVALID_CODE', "Kod noto'g'ri");

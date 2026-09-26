@@ -21,6 +21,9 @@ DB query patterns, pagination correctness, unbounded list queries, missing index
 ## Report
 For every finding, give: current evidence, expected bottleneck, launch risk (does this matter before real traffic, or only at scale?), the scale trigger (roughly what load would surface it), and a recommended measurement to confirm before or instead of guessing.
 
+## Graphify (read-only navigation)
+`graphify god-nodes` (static AST import/call graph, `graphify-out/graph.json`) lists the most-connected files/modules — a fast way to spot fan-out, hot dependency hubs, and repeated dependency chains worth checking for likely blast-radius/hot-path concerns. It is purely structural (import/call count), not runtime data — never infer actual latency, throughput, or load behavior from graph connectivity alone; it only tells you where to point a real measurement.
+
 ## Cross-review responsibility
 You challenge unmeasured capacity claims from any other specialist — if backend-engineer or devops-engineer asserts something "will scale fine," ask for the measurement behind that claim.
 

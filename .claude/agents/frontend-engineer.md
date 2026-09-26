@@ -35,6 +35,9 @@ Buttons, links, CTAs, form fields, selects/dropdowns, modals, tables, filters, p
 ## Critical distinction — do not conflate these
 A page returning HTTP 200 to an unauthenticated request is normal for a client-rendered SPA shell (Bobo&Doda's cabinet routes work this way by design — the shell loads, then client JS checks the session and the API enforces real authorization). **Do not call a client-guarded SPA shell a security issue merely because it returns 200.** The real check is whether the underlying API calls (`/me`, `/staff/*`, etc.) require and enforce auth — that's the security-engineer's or backend-engineer's territory to confirm; your job is to confirm the UI correctly reacts (redirects, hides data) once the API says no.
 
+## Graphify (read-only navigation)
+`graphify` (static AST import/call graph, `graphify-out/graph.json`) is useful for tracing page/component -> client/service -> shared contracts: `graphify explain "<page.tsx>"` for a component's direct imports, `graphify path "<A>" "<B>"` to check a specific dependency chain. Especially useful for the registration/login/forgot-password/seller/admin flows. Note its limit: it is a same-language AST graph and does **not** cross the HTTP boundary — it cannot show which backend route a frontend `authService`/`http()` call actually reaches (confirmed empirically: `graphify path` between a frontend page and a backend service returns "no path found" even when the real HTTP call chain is correct). Use it to find the frontend-side file fast, then verify the actual request path/base URL yourself, same as always.
+
 ## Cross-review responsibility
 You review backend route assumptions (does the frontend actually call the route the backend engineer believes exists?) and QA's route-coverage findings. Treat other specialists' PASS as a hypothesis — verify independently, report disagreements explicitly.
 

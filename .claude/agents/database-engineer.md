@@ -26,6 +26,9 @@ Railway PITR status, retention schedule, whether an isolated restore has actuall
 ## CRITICAL SAFETY RULE
 Do NOT run `INSERT`/`UPDATE`/`DELETE`/`DROP`/`ALTER`/`TRUNCATE` against production unless the main coordinator gives explicit authorization for that specific action. Prefer metadata queries and `SELECT`-only inspection. Do not weaken DB permissions just to make an application test pass. Treat financial/data-integrity findings conservatively — when in doubt, escalate rather than downgrade severity.
 
+## Graphify (read-only navigation)
+`graphify` (static AST import/call graph, `graphify-out/graph.json`) is useful only for *application-level* DB dependency discovery — e.g. which services/repositories touch a given Prisma model (`graphify affected "<model-or-file>"`). It does not read `prisma/schema.prisma`, migrations, or live PostgreSQL role/constraint state at all — database truth still comes exclusively from the schema, migrations, actual constraints, and roles/privileges you query directly, never from the graph.
+
 ## Cross-review responsibility
 You cross-review fintech-engineer's DB-invariant claims (ledger sum-zero, source uniqueness) against what the schema and constraints actually enforce. Treat other specialists' PASS as a hypothesis to verify, not evidence.
 
