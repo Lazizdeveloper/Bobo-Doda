@@ -2392,3 +2392,5 @@ ham yozilgan) — `railway service source connect --repo ... --branch main`
 — ANIQ shu MUAMMONI hal qiladi (faqat `main`ga merge bo'lganda deploy,
 `develop`ga oddiy push'da EMAS) va HAR DOIM aniq mos kelishni kafolatlaydi,
 lekin bu ARXITEKTURA qarori — operator tasdig'isiz yoqilmadi.
+
+<!-- qa-throwaway: docs-only -->
