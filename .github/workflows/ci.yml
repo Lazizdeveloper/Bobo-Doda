@@ -3,16 +3,8 @@ name: CI / Verification
 on:
   push:
     branches: [main, develop]
-    paths-ignore:
-      - 'backend/**'
-      - 'docs/**'
-      - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [main, develop]
-    paths-ignore:
-      - 'backend/**'
-      - 'docs/**'
-      - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
 concurrency:
@@ -26,30 +18,78 @@ jobs:
   code-quality:
     name: Code Quality & Security
     runs-on: ubuntu-latest
+    outputs:
+      run_frontend: ${{ steps.scope.outputs.run }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # release-engineer dizayni (PR #20 deadlock tuzatishi, backend-ci.yml
+      # bilan bir xil naqsh) — bu job ENDI HAR DOIM ishga tushadi
+      # (paths-ignore olib tashlandi), lekin faqat frontend'ga DAXLDOR
+      # o'zgarish bo'lsa qimmat qadamlarni bajaradi. Filtr JOB darajasidagi
+      # `if:` orqali EMAS (SKIPPED job "muvaffaqiyatli" hisoblanadi) —
+      # qadamlar shartli.
+      - name: O'zgarish ko'lami — frontend'ga daxldormi?
+        id: scope
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "non-PR event (${{ github.event_name }}) -> run=true (to'liq)" >&2
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "### CI / Verification — to'liq ishga tushdi (${{ github.event_name }})" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git rev-parse --verify -q HEAD^2 >/dev/null
+          files=$(git diff --no-renames --name-only HEAD^1 HEAD)
+          result=$(printf '%s\n' "$files" | bash scripts/ci-changed-scope.sh frontend | tee /dev/stderr | tail -1)
+          case "$result" in
+            run=true|run=false) ;;
+            *) echo "::error::ci-changed-scope.sh kutilmagan chiqish berdi: $result" && exit 1 ;;
+          esac
+          echo "$result" >> "$GITHUB_OUTPUT"
+          {
+            echo "### CI / Verification — o'zgarish ko'lami"
+            echo "Base: \`$(git rev-parse HEAD^1)\` · Head (PR): \`$(git rev-parse HEAD^2)\` · Merge: \`$(git rev-parse HEAD)\`"
+            echo "\`\`\`"
+            printf '%s\n' "$files"
+            echo "\`\`\`"
+            echo "**$result**"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Node.js 22
+        if: steps.scope.outputs.run != 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
+        if: steps.scope.outputs.run != 'false'
         run: npm ci
 
       - name: Verify Content Security Policy (CSP)
+        if: steps.scope.outputs.run != 'false'
         run: npm run check:csp
 
       - name: Verify NEXT_PUBLIC_API_URL guard (bo'lim 25)
+        if: steps.scope.outputs.run != 'false'
         run: npm run check:api-url
 
       - name: Run ESLint (frontend)
+        if: steps.scope.outputs.run != 'false'
         run: npm run lint:app
 
       - name: Run TypeScript Typecheck (frontend)
+        if: steps.scope.outputs.run != 'false'
         run: npm run typecheck:app
+
+      - name: Skipped by scope — dalil
+        if: steps.scope.outputs.run == 'false'
+        run: |
+          echo "::notice title=CI skipped by scope::O'zgargan fayllar frontend'ga daxldor emas — to'liq tekshiruv o'tkazib yuborildi (tafsilot yuqoridagi summary'da)."
 
   build:
     name: Production Build
@@ -60,12 +100,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js 22
+        if: needs.code-quality.outputs.run_frontend != 'false'
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Next.js build cache
+        if: needs.code-quality.outputs.run_frontend != 'false'
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.next/cache
@@ -74,15 +116,23 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
       - name: Install dependencies
+        if: needs.code-quality.outputs.run_frontend != 'false'
         run: npm ci
 
       - name: Build Next.js app
+        if: needs.code-quality.outputs.run_frontend != 'false'
         run: npm run build
 
       - name: Summary
+        if: needs.code-quality.outputs.run_frontend != 'false'
         run: |
           echo "### 🚀 CI / Verification Muvaffaqiyatli Tugadi" >> $GITHUB_STEP_SUMMARY
           echo "- **CSP Check:** ✅ O'tdi" >> $GITHUB_STEP_SUMMARY
           echo "- **ESLint:** ✅ O'tdi" >> $GITHUB_STEP_SUMMARY
           echo "- **TypeScript:** ✅ O'tdi" >> $GITHUB_STEP_SUMMARY
           echo "- **Production Build:** ✅ O'tdi" >> $GITHUB_STEP_SUMMARY
+
+      - name: Skipped by scope — dalil
+        if: needs.code-quality.outputs.run_frontend == 'false'
+        run: |
+          echo "::notice title=CI build skipped by scope::'code-quality' job'i o'zgarishlarni frontend'ga daxldor emas deb aniqladi — build o'tkazib yuborildi."
