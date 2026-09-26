@@ -39,7 +39,7 @@ jobs:
     outputs:
       run_backend: ${{ steps.scope.outputs.run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -178,7 +178,7 @@ jobs:
       # YIQILADI ("infra topilmadi"). Lokal ishda flag yo'q — qulay skip.
       CI_REQUIRE_E2E: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         if: needs.quality.outputs.run_backend != 'false'
