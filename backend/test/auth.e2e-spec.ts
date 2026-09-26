@@ -812,6 +812,43 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     await flushIpCounter(); // bu test 2 ta request-otp so'rov yuborgan, keyingi testlar uchun tiklaymiz
   });
 
+  /**
+   * PASSWORD_RESET-maxsus regressiya — qa-engineer'ning mustaqil ko'rib
+   * chiqishida yuqoridagi ikkita "Resend:" testi FAQAT REGISTER'ni
+   * qamrab olgani, aynan jiddiyroq xavf (parolni tiklash) uchun alohida
+   * test yo'qligi topildi. Ssenariy real hayotda mumkin: tajovuzkor
+   * qandaydir yo'l bilan (masalan orqaga tashlangan SMS) ESKI reset
+   * kodini ushlab oladi, lekin haqiqiy foydalanuvchi o'zi qayta so'rab
+   * YANGI kod bilan o'z resetini muvaffaqiyatli tugatadi — tajovuzkorning
+   * eski kodi shundan KEYIN ham resetToken bermasligi shart.
+   */
+  t('Resend (PASSWORD_RESET): eski kod haqiqiy foydalanuvchi YANGISI bilan resetni tugatgandan KEYIN ham resetToken bermasligi shart', async () => {
+    const { phone } = await registerFresh();
+    await flushIpCounter(); // registerFresh() o'zi IP byudjetini iste'mol qildi
+
+    const codeA = await requestAndGetCode(phone, 'PASSWORD_RESET');
+    await flushCooldownOnly();
+    const codeB = await requestAndGetCode(phone, 'PASSWORD_RESET');
+    expect(codeA).not.toBe(codeB);
+
+    // Haqiqiy foydalanuvchi YANGI kod (B) bilan o'z resetini tugatadi.
+    const verifyB = await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code: codeB })
+      .expect(200);
+    expect(typeof verifyB.body.resetToken).toBe('string');
+
+    // Tajovuzkorning qo'lidagi ESKI kod (A) — hali muddati o'tmagan,
+    // hech qachon ishlatilmagan — ENDI ham resetToken BERMASLIGI shart.
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/password-reset/verify-otp')
+      .send({ phone, code: codeA })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+
+    await flushIpCounter(); // bu test 2 ta request-otp so'rov yuborgan, keyingi testlar uchun tiklaymiz
+  });
+
   t('Telefon formati normallashadi — so‘rash E.164’da, tasdiqlash milliy formatda BIR XIL OTP’ni topadi', async () => {
     const national = `90${(Date.now() % 10_000_000).toString().padStart(7, '0')}`;
     const e164 = `+998${national}`;

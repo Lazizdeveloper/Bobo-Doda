@@ -77,6 +77,22 @@ export class OtpService {
    * ISHLATILMAYDI, aks holda faqat BIRINCHI so'rov xarajat to'lardi).
    * OTP qatori YOKI SMS esa hamon yaratilmaydi/yuborilmaydi — xavfsizlik/
    * xarajat xususiyati o'zgarmaydi, faqat VAQT profili mos keladi.
+   *
+   * TUZATISH (qa-engineer'ning mustaqil qayta o'lchovi, 2026-09) — ushbu
+   * o'zgarish qo'shilgan commit xabari natijani "~2ms, taqsimotlar
+   * to'liq kesishadi" deb da'vo qilgan edi. Mustaqil qayta o'lchov (ikki
+   * alohida N=40/tomon yugurish) buni haqiqiy 4 ms atrofidagi (median)
+   * qoldiq farq bilan RAD ETDI — taqsimotlar ~75% kesishadi, TO'LIQ emas.
+   * Qoldiq farq sababi aniq: ro'yxatdan o'tgan yo'l bu yerdan keyin YANA
+   * uchta ish bajaradi (eski qatorlarni `updateMany` bilan yopish, yangi
+   * qatorni `create` qilish, `smsQueue.add()`) — skip yo'li ulardan
+   * birontasini ham qilmaydi. Argon2 xarajati (asosiy, ~45ms bo'lgan
+   * qism) endi ikkala yo'lda ham bir xil — qoldiq ~4ms shu uchta qo'shimcha
+   * DB/navbat operatsiyasi tufayli. Amaliy xavf past baholanadi (internet
+   * orqali 4ms'ni ishonchli o'lchash, ustiga cooldown/kunlik/IP
+   * chegaralar bilan, qiyin) — lekin bu qatordagi raqamlar HAQIQIY
+   * o'lchangan qiymat, keyingi safar bu yerni tuzatganda eski (noto'g'ri)
+   * "~2ms" raqamiga ishonmang.
    */
   async requestOtp(
     rawPhone: string,
@@ -145,12 +161,21 @@ export class OtpService {
     // Tuzatish — DB darajasida, ilova xotirasida EMAS: yangi kod
     // yaratishdan OLDIN shu telefon+maqsad uchun BARCHA hali iste'mol
     // qilinmagan eski qatorlar atomik `updateMany` bilan "iste'mol
-    // qilingan" deb belgilanadi. Bir vaqtli (parallel) ikkita resend
-    // so'rovi bo'lsa ham xavfsiz: har biri O'ZINING navbatida oldingi
-    // hali-iste'mol-qilinmagan qatorlarni (shu jumladan, agar ulgurgan
-    // bo'lsa, bir-birining yangi qatorini ham) yopadi — natijada FAQAT
-    // ENG OXIRGI so'ralgan kod tirik qoladi, aynan talab qilingan
-    // "faqat eng so'nggi OTP haqiqiy" invarianti.
+    // qilingan" deb belgilanadi.
+    //
+    // TUZATISH (qa-engineer ko'rib chiqishi, 2026-09) — pastdagi izoh
+    // ilgari bu `updateMany`ning o'zi bir vaqtli (parallel) resend'larni
+    // xavfsiz qiladi deb da'vo qilardi. Bu noto'g'ri edi: `updateMany` va
+    // pastdagi `create` BITTA tranzaksiyada EMAS (ikkita alohida
+    // statement), shuning uchun ular o'zlaricha atomik juftlik hosil
+    // qilmaydi. Amalda xavfsizlik boshqa joydan keladi — yuqoridagi
+    // `otp:cooldown:${phone}:${purpose}` (60s, `SET NX EX`) bir xil
+    // telefon+maqsad uchun ikkinchi so'rovni shu yerga UMUMAN
+    // yetkazmaydi (`RATE_LIMITED` bilan qaytadi). `updateMany`ning
+    // ishi — faqat KETMA-KET (bir-biridan keyin) yuborilgan resend'lar
+    // orasida eski qatorni yopish; ikkita CHINAKAM bir vaqtli resend
+    // ssenariysi mavjud emas, shuning uchun bunga alohida concurrency
+    // testi ham yozilmagan.
     await this.prisma.otpCode.updateMany({
       where: { phone, purpose, consumedAt: null },
       data: { consumedAt: new Date() },
