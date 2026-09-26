@@ -752,6 +752,66 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
     }
   });
 
+  // ── Resend invalidatsiyasi — auth hardening bosqichi 2 ──────────────────
+
+  /**
+   * Real e2e reproduksiya bilan tasdiqlangan bug: ILGARI eski (hali muddati
+   * o'tmagan) OTP qatori yangi so'ralgan kod bilan BIRGA "tirik" qolardi.
+   * Odatda eski kod shunchaki "noto'g'ri kod" ko'rinardi (`verifyOtp`ning
+   * `findFirst`i ENG YANGI qatorni tanlaydi), LEKIN agar YANGI kod avval
+   * iste'mol qilinsa, eski kod QAYTA "eng yangi iste'molsiz qator" bo'lib
+   * qolar va hali ham TO'LIQ ishlab, o'ZINING alohida grant'ini berardi.
+   * `requestOtp()` endi yangi kod yaratishdan oldin shu telefon+maqsad
+   * uchun barcha eski iste'molsiz qatorlarni atomik ravishda "iste'mol
+   * qilingan" deb belgilaydi (DB darajasida, ilova xotirasida emas).
+   */
+  t('Resend: eski kod YANGISI iste’mol qilingandan KEYIN ham QAYTA ishlab ketmasligi shart', async () => {
+    const phone = uniquePhone();
+    const codeA = await requestAndGetCode(phone, 'REGISTER');
+    await flushCooldownOnly();
+    const codeB = await requestAndGetCode(phone, 'REGISTER');
+    expect(codeA).not.toBe(codeB);
+
+    // Yangi kod (B) muvaffaqiyatli ishlatiladi — bu haqiqiy foydalanuvchi
+    // oqimi (SMS kechikkani uchun qayta so'ragan, keyin YANGI kodni oladi).
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code: codeB })
+      .expect(200);
+
+    // Eski kod (A) — hali muddati o'tmagan, hech qachon ishlatilmagan —
+    // ENDI ham ishlamasligi shart (tajovuzkor uni qandaydir yo'l bilan
+    // ushlab olgan bo'lsa ham, u YANGI grant OLA OLMAYDI).
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code: codeA })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+
+    await flushIpCounter(); // bu test 2 ta request-otp so'rov yuborgan, keyingi testlar uchun tiklaymiz
+  });
+
+  t('Resend: B hali iste’mol qilinmagan bo‘lsa ham, eski kod A ishlamaydi (B eng yangisi)', async () => {
+    const phone = uniquePhone();
+    const codeA = await requestAndGetCode(phone, 'REGISTER');
+    await flushCooldownOnly();
+    const codeB = await requestAndGetCode(phone, 'REGISTER');
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code: codeA })
+      .expect(422)
+      .expect((r) => expect(r.body.code).toBe('INVALID_CODE'));
+
+    // B hamon ishlaydi — faqat A yopilgan, B ga tegilmagan.
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/register/verify-otp')
+      .send({ phone, code: codeB })
+      .expect(200);
+
+    await flushIpCounter(); // bu test 2 ta request-otp so'rov yuborgan, keyingi testlar uchun tiklaymiz
+  });
+
   t('Telefon formati normallashadi — so‘rash E.164’da, tasdiqlash milliy formatda BIR XIL OTP’ni topadi', async () => {
     const national = `90${(Date.now() % 10_000_000).toString().padStart(7, '0')}`;
     const e164 = `+998${national}`;

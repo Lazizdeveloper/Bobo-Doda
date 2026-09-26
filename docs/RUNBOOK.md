@@ -958,11 +958,53 @@ ga yangilang.
 - **CORS** — `CORS_ORIGINS` (allowlist, vergul bilan ajratilgan) allaqachon
   Bosqich 1'dan beri mavjud edi, `origin:'*'` HECH QACHON ishlatilmagan —
   o'zgarishsiz tasdiqlandi.
-- **Trust proxy** — YANGI `TRUST_PROXY` env (`main.ts`, sukut `"false"`).
-  Reverse proxy (Railway/Nginx/Cloudflare) ortida `req.ip` to'g'ri
-  o'qilishi kerak bo'lsa `"true"` (hammasiga ishonish, FAQAT proxy
-  tarmog'i to'liq nazorat qilinsa) yoki konkret hop-soni/CIDR ro'yxati
-  bilan sozlang — ko'r-ko'rona sukut YO'Q.
+- **Trust proxy** — `TRUST_PROXY` env (`main.ts`, sukut `"false"` — dev/test
+  uchun istalgan qiymat qabul qilinadi). **Production'da endi FAQAT ANIQ
+  tasdiqlangan qiymat qabul qilinadi** (`env.schema.ts` production
+  `superRefine`, `PRODUCTION_VERIFIED_TRUST_PROXY_VALUES` — hozircha
+  faqat `"2"`) — quyidagi haqiqiy hodisadan keyin qo'shildi:
+
+  **2026-09 hodisasi — production `TRUST_PROXY=1` bilan ishlagan, va bu
+  NOTO'G'RI edi.** Barcha IP-asoslangan cheklovlar (login, OTP so'rash,
+  OTP tasdiqlash) amalda ISHLAMAY qolgan edi: Railway'ning haqiqiy
+  yo'l ustunligi `client -> Railway edge -> BITTA ICHKI Railway proxy ->
+  backend` (ANIQ 2 ta ishonchli bosqich) ekan, `TRUST_PROXY=1` esa
+  Express'ga faqat 1 bosqichga ishoning deb aytadi — natijada `req.ip`
+  HAQIQIY mijoz IP'si o'rniga Railway'ning ICHKI proxy tugunining
+  manzilini olardi. Bu manzil bir nechta haqiqiy edge tuguniga qarab
+  o'zgarib turardi (bitta mijoz turli so'rovlarda turli "IP" ko'rinardi),
+  demak IP-asoslangan hisoblagichlar HAQIQIY mijozni kuzata olmasdi.
+
+  Vaqtinchalik, alohida (production'ga TEGMAGAN) Railway muhitida
+  diagnostika o'tkazildi: haqiqiy `X-Forwarded-For`/`X-Real-IP`/
+  `Forwarded` qalbakilashtirish bilan `TRUST_PROXY` ning `false`/`1`/`2`/
+  `true` qiymatlari sinaldi. Natija: `TRUST_PROXY=2` BARCHA holatlarda
+  (turli Railway edge'lar, turli qalbakilashtirilgan header shakllari)
+  ANIQ va BARQAROR haqiqiy mijoz IP'sini berdi, qalbakilashtirilgan
+  qiymat HECH QACHON `req.ip`ga ta'sir qilmadi.
+
+  **DIQQAT — bu qiymat FAQAT joriy topologiya uchun to'g'ri.** Railway
+  o'z ICHKI proxy tuzilishini o'zgartirsa, yoki oldiga Cloudflare/boshqa
+  CDN qo'shilsa (hozir YO'Q — to'g'ridan-to'g'ri Railway CNAME), bosqich
+  soni o'zgaradi va `TRUST_PROXY=2` ENDI NOTO'G'RI bo'lib qoladi —
+  jimgina emas, chunki production boot buni tekshirmaydi (faqat qaysi
+  QIYMAT ishonchli ekanini tekshiradi, haqiqiy topologiyaga mosligini
+  EMAS). **Topologiya o'zgarsa, avval yuqoridagi diagnostikani (alohida,
+  production'ga tegmaydigan Railway muhitida) qayta o'tkazing, keyingina
+  `env.schema.ts`dagi ro'yxatga yangi qiymat qo'shing.**
+
+  **Xavfsiz tekshirish usuli (production probe emas):** production'ga
+  qarshi hech qachon rate-limit chegarasini ataylab to'ldirmang yoki
+  OTP/login brute-force sinovi o'tkazmang. Buning o'rniga: (1) mavjud
+  DB yozuvlaridan (`refresh_tokens.ip`, `otp_codes.ip`, `staff_sessions.ip`,
+  `audit_logs.ip`) FAQAT o'qib, xom IP qiymatini HECH QACHON chop
+  etmasdan (masalan tuz bilan hash'lab yoki oraliq/diapazon sifatida)
+  bir xil mijozning bir necha so'rovi bir xil (yoki mos) qiymatga
+  to'g'ri kelishini tekshiring; (2) yoki vaqtinchalik, ALOHIDA
+  non-production Railway muhitida (production emas!) diagnostika
+  marshruti bilan haqiqiy header xatti-harakatini o'lchang. Ikkalasida
+  ham natijada faqat maskalangan/xulosaviy dalil qoldiring, xom IP
+  hech qachon jurnalga yoki hisobotga yozilmasin.
 - **Body limit** — global JSON/urlencoded chegarasi `1mb`
   (`app.useBodyParser`) — provider RPC payload'lari doim kichik.
 - **Graceful shutdown** — `app.enableShutdownHooks(['SIGTERM','SIGINT'])`

@@ -61,9 +61,22 @@ export class OtpService {
    * "cheklovga tegmayapti" degan o'zi bir enumeration signali bo'lardi),
    * lekin OTP qatori yaratilmaydi va SMS navbatga qo'yilmaydi — chaqiruvchi
    * (`AuthService`, PASSWORD_RESET uchun telefon mavjud emasligini
-   * bilganda) shu bilan haqiqiy SMS xarajatidan qochadi. Bu — "reasonable"
-   * (mukammal emas) timing-himoya: DB yozuv + navbat operatsiyasi vaqti
-   * farq qiladi, lekin soxta yozuv yasash ortiqcha murakkablik bo'lardi.
+   * bilganda) shu bilan haqiqiy SMS xarajatidan qochadi.
+   *
+   * Auth hardening bosqichi 2 — bu yerdagi eski izoh "reasonable (mukammal
+   * emas) timing-himoya" derdi, lekin HAQIQIY o'lchov (real Postgres/Redis,
+   * N=40/tomon) buni noto'g'ri isbotladi: ro'yxatdan o'tgan va o'tmagan
+   * telefon o'rtasida ~52ms farq bor edi, ikkala taqsimot BUTUNLAY
+   * kesishmasdi (registered'ning ENG TEZ 10%i ham unknown'ning ENG SEKIN
+   * 90%idan sekinroq) — ya'ni HAR BIR o'lchovda ishonchli farqlanadi, "kam
+   * ehtimolli" emas. Sabab DB yozuvi EMAS (ikkalasi ham allaqachon bir xil
+   * Redis/DB o'qishlarini bajaradi) — `hash.hash(code)` (argon2id, sinov
+   * mashinasida ~45ms) FAQAT haqiqiy yo'lda chaqiriladi. Tuzatish — skip
+   * yo'lida ham HAQIQIY, HAR SAFAR YANGI argon2 operatsiyasi bajariladi
+   * (natija tashlanadi — pastga, `hash.hash()` chaqiruviga qarang; kesh
+   * ISHLATILMAYDI, aks holda faqat BIRINCHI so'rov xarajat to'lardi).
+   * OTP qatori YOKI SMS esa hamon yaratilmaydi/yuborilmaydi — xavfsizlik/
+   * xarajat xususiyati o'zgarmaydi, faqat VAQT profili mos keladi.
    */
   async requestOtp(
     rawPhone: string,
@@ -98,7 +111,50 @@ export class OtpService {
       }
     }
 
-    if (skipDelivery) return {};
+    if (skipDelivery) {
+      // Har safar YANGI hisoblanadi — keshlanmaydi. Sabab: pastdagi haqiqiy
+      // yo'l HAM `hash.hash(code)`ni har so'rovda YANGIDAN chaqiradi;
+      // dastlab sinalgan keshlangan variant (`AuthService.getDummyHash()`
+      // uslubida) FAQAT birinchi so'rovda argon2 xarajatini to'lardi,
+      // keyingilari allaqachon yechilgan Promise'ni qaytarardi — o'lchov
+      // buni ANIQ ko'rsatdi (tuzatishdan keyin ham ~49ms farq qolgan edi).
+      // `AuthService.getDummyHash()`da kesh ishlaydi, chunki u FAQAT
+      // `hash.verify()`ning kirishini (solishtiriladigan hash) tayyorlaydi
+      // — qimmat qism (`verify()`ning o'zi) baribir har chaqiriqda YANGI
+      // ishlaydi. Bu yerda esa qimmat qismning O'ZI (`hash()`) keshlangan
+      // edi — xato shu yerda edi.
+      await this.hash.hash(generateOtpCode());
+      return {};
+    }
+
+    // Auth hardening bosqichi 2 — resend invalidatsiyasi. ILGARI eski
+    // (hali muddati o'tmagan, hali iste'mol qilinmagan) OTP qatori yangi
+    // so'ralgan kod bilan BIRGA "tirik" qolardi: `verifyOtp`ning
+    // `findFirst(... orderBy createdAt desc)` faqat ENG YANGI qatorni
+    // ko'rar edi, shuning uchun ESKI kod ODATDA "noto'g'ri kod" bo'lib
+    // ko'rinardi — LEKIN agar YANGI kod avval iste'mol qilinsa (foydalanuvchi
+    // muvaffaqiyatli tasdiqlasa), ESKI kod QAYTA "eng yangi iste'molsiz
+    // qator" bo'lib qolar va hali ham TO'LIQ ishlab, o'ZINING alohida
+    // grant'ini (`registrationToken`/`resetToken`) berardi — real e2e
+    // reproduksiya bilan tasdiqlangan. PASSWORD_RESET uchun bu jiddiy:
+    // eski kodni ushlagan tajovuzkor (masalan SMS orqaga tashlanishi/
+    // ijtimoiy muhandislik bilan) qurbon O'ZINING resetini muvaffaqiyatli
+    // tugatgandan KEYIN ham parolni almashtirish uchun yaroqli token olishi
+    // mumkin edi.
+    //
+    // Tuzatish — DB darajasida, ilova xotirasida EMAS: yangi kod
+    // yaratishdan OLDIN shu telefon+maqsad uchun BARCHA hali iste'mol
+    // qilinmagan eski qatorlar atomik `updateMany` bilan "iste'mol
+    // qilingan" deb belgilanadi. Bir vaqtli (parallel) ikkita resend
+    // so'rovi bo'lsa ham xavfsiz: har biri O'ZINING navbatida oldingi
+    // hali-iste'mol-qilinmagan qatorlarni (shu jumladan, agar ulgurgan
+    // bo'lsa, bir-birining yangi qatorini ham) yopadi — natijada FAQAT
+    // ENG OXIRGI so'ralgan kod tirik qoladi, aynan talab qilingan
+    // "faqat eng so'nggi OTP haqiqiy" invarianti.
+    await this.prisma.otpCode.updateMany({
+      where: { phone, purpose, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
 
     const code = generateOtpCode();
     await this.prisma.otpCode.create({

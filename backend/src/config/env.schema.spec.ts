@@ -134,6 +134,7 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
       CORS_ORIGINS: 'https://app.bobododa.uz',
@@ -160,6 +161,7 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       CORS_ORIGINS: 'https://app.bobododa.uz',
       STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
@@ -198,6 +200,7 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       CORS_ORIGINS: 'https://app.bobododa.uz',
       STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
@@ -225,6 +228,7 @@ describe('validateEnv', () => {
       ...base,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       CORS_ORIGINS: 'https://app.bobododa.uz',
       STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
@@ -245,6 +249,7 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       CORS_ORIGINS: 'https://app.bobododa.uz',
       STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
@@ -345,6 +350,7 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       CORS_ORIGINS: 'https://app.bobododa.uz',
       STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
@@ -378,6 +384,7 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...textUpCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       CORS_ORIGINS: 'https://app.bobododa.uz',
       STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
@@ -423,6 +430,7 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
+      TRUST_PROXY: '2',
       CORS_ORIGINS: 'https://app.bobododa.uz',
       STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
       SWAGGER_ENABLED: 'false',
@@ -434,6 +442,103 @@ describe('validateEnv', () => {
   it('Bo’lim 25 — dev’da (production emas) DEV_EXPOSE_OTP=true baribir o’tadi (runtime qatlam alohida tekshiradi)', () => {
     const env = validateEnv({ ...base, DEV_EXPOSE_OTP: 'true' });
     expect(env.DEV_EXPOSE_OTP).toBe(true);
+  });
+
+  // ── TRUST_PROXY — auth hardening bosqichi 2 ─────────────────────────────
+
+  it('TRUST_PROXY sukut bo’yicha "false"', () => {
+    expect(validateEnv({ ...base }).TRUST_PROXY).toBe('false');
+  });
+
+  it('dev/test’da TRUST_PROXY istalgan qiymatni qabul qiladi (true/false/butun son/CIDR ro‘yxati)', () => {
+    expect(validateEnv({ ...base, TRUST_PROXY: 'true' }).TRUST_PROXY).toBe('true');
+    expect(validateEnv({ ...base, TRUST_PROXY: 'false' }).TRUST_PROXY).toBe('false');
+    expect(validateEnv({ ...base, TRUST_PROXY: '1' }).TRUST_PROXY).toBe('1');
+    expect(validateEnv({ ...base, TRUST_PROXY: '2' }).TRUST_PROXY).toBe('2');
+    expect(validateEnv({ ...base, TRUST_PROXY: 'loopback,10.0.0.0/8' }).TRUST_PROXY).toBe(
+      'loopback,10.0.0.0/8',
+    );
+  });
+
+  it('production’da TRUST_PROXY=2 (tasdiqlangan Railway topologiyasi) bilan o’tadi', () => {
+    const env = validateEnv({
+      ...base,
+      ...paymeCreds,
+      ...playMobileCreds,
+      NODE_ENV: 'production',
+      TRUST_PROXY: '2',
+      CORS_ORIGINS: 'https://app.bobododa.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      SWAGGER_ENABLED: 'false',
+      PAYMENT_PROVIDER: 'PAYME',
+    });
+    expect(env.TRUST_PROXY).toBe('2');
+  });
+
+  it('production’da TRUST_PROXY sukuti ("false") rad etiladi — hamma foydalanuvchi bitta ichki manzilga to‘planib qolardi', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        ...playMobileCreds,
+        NODE_ENV: 'production',
+        CORS_ORIGINS: 'https://app.bobododa.uz',
+        STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+        // TRUST_PROXY berilmagan — sukut "false" qoladi.
+      }),
+    ).toThrow(/TRUST_PROXY/);
+  });
+
+  it('production’da TRUST_PROXY=true rad etiladi — chap tomondagi qalbakilashtirilgan X-Forwarded-For yozuvini tanlardi', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        ...playMobileCreds,
+        NODE_ENV: 'production',
+        TRUST_PROXY: 'true',
+        CORS_ORIGINS: 'https://app.bobododa.uz',
+        STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+      }),
+    ).toThrow(/TRUST_PROXY/);
+  });
+
+  it('production’da TRUST_PROXY=1 rad etiladi — real production nosozlik: Railway ICHKI proxy tugunini "mijoz IP"si deb hisoblagan', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        ...paymeCreds,
+        ...playMobileCreds,
+        NODE_ENV: 'production',
+        TRUST_PROXY: '1',
+        CORS_ORIGINS: 'https://app.bobododa.uz',
+        STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+        SWAGGER_ENABLED: 'false',
+        PAYMENT_PROVIDER: 'PAYME',
+      }),
+    ).toThrow(/TRUST_PROXY/);
+  });
+
+  it('production’da TRUST_PROXY ixtiyoriy/tekshirilmagan qiymat (masalan boshqa butun son yoki CIDR) rad etiladi', () => {
+    for (const unreviewed of ['0', '3', '10', 'loopback,10.0.0.0/8', 'not-a-number']) {
+      expect(() =>
+        validateEnv({
+          ...base,
+          ...paymeCreds,
+          ...playMobileCreds,
+          NODE_ENV: 'production',
+          TRUST_PROXY: unreviewed,
+          CORS_ORIGINS: 'https://app.bobododa.uz',
+          STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+          SWAGGER_ENABLED: 'false',
+          PAYMENT_PROVIDER: 'PAYME',
+        }),
+      ).toThrow(/TRUST_PROXY/);
+    }
   });
 
   it('Bosqich 10 — OUTBOX_* sukut qiymatlari', () => {

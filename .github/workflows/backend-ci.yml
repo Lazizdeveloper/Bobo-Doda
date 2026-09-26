@@ -243,6 +243,12 @@ jobs:
           CORS_ORIGINS: https://app.bobododa.uz
           STAFF_CORS_ORIGINS: https://admin.bobododa.uz
           SWAGGER_ENABLED: 'false'
+          # Auth hardening bosqichi 2 — TRUST_PROXY endi production
+          # superRefine'da ANIQ tasdiqlangan qiymatga (hozircha faqat "2")
+          # cheklangan. Bu qator qo'shilmasa "to'liq to'g'ri production
+          # config" bilan boot HAR DOIM muvaffaqiyatsiz bo'ladi — sukut
+          # "false" endi production'da rad etiladi.
+          TRUST_PROXY: '2'
         run: |
           BOOT_CMD="node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/boot-check.ts"
           if PAYMENT_PROVIDER=TEST $BOOT_CMD; then
@@ -311,6 +317,29 @@ jobs:
             exit 1
           fi
           echo "OK: production'da DEV_EXPOSE_OTP=true (to'liq to'g'ri qolgan config bilan ham) aynan DEV_EXPOSE_OTP sababli to'g'ri rad etildi"
+          # Auth hardening bosqichi 2 — TRUST_PROXY=1 aynan HAQIQIY production
+          # nosozlikning o'zi (Railway ICHKI proxy tugunini "mijoz IP"si deb
+          # hisoblagan, barcha IP-asoslangan cheklovlarni ishlatib qo'ygan).
+          # DEV_EXPOSE_OTP bilan bir xil naqsh: to'liq to'g'ri qolgan config
+          # bilan HAM aynan TRUST_PROXY sababli rad etilishi real boot bilan
+          # tasdiqlanadi (faqat unit test emas — env.schema.spec.ts allaqachon
+          # Zod darajasida sinaydi, bu yerda esa `scripts/boot-check.ts`ning
+          # o'zi ishlatiladi).
+          BOOT_OUTPUT=$(PAYMENT_PROVIDER=PAYME PAYME_MERCHANT_ID=ci-merchant PAYME_LOGIN=Paycom PAYME_KEY=ci-key PAYME_CHECKOUT_URL=https://test.paycom.uz \
+             SMS_PROVIDER=PLAYMOBILE PLAYMOBILE_API_URL=https://send.example.uz/broker-api PLAYMOBILE_LOGIN=ci-login PLAYMOBILE_PASSWORD=ci-password PLAYMOBILE_SENDER=BoboDoda \
+             PAYOUTS_ENABLED=false \
+             TRUST_PROXY=1 \
+             $BOOT_CMD 2>&1) && BOOT_EXIT=0 || BOOT_EXIT=1
+          echo "$BOOT_OUTPUT"
+          if [ "$BOOT_EXIT" -eq 0 ]; then
+            echo "::error::production'da TRUST_PROXY=1 bilan boot MUVAFFAQIYATLI bo'ldi — aynan haqiqiy production nosozlik qayta ochilgan"
+            exit 1
+          fi
+          if ! echo "$BOOT_OUTPUT" | grep -q "TRUST_PROXY"; then
+            echo "::error::boot TRUST_PROXY TUFAYLI EMAS, boshqa sabab bilan yiqildi — bu tekshiruv o'z maqsadini isbotlamayapti"
+            exit 1
+          fi
+          echo "OK: production'da TRUST_PROXY=1 (to'liq to'g'ri qolgan config bilan ham) aynan TRUST_PROXY sababli to'g'ri rad etildi"
 
       - name: e2e — health + DB-role append-only (A4)
         if: needs.quality.outputs.run_backend != 'false'

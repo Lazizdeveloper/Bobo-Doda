@@ -288,6 +288,40 @@ export const envSchema = z
           message: "production'da DB_ROLE_ASSERTION=off IMKONSIZ (fail closed)",
         });
       }
+      // Auth hardening bosqichi 2 — TRUST_PROXY ilgari production'da HECH
+      // QANDAY tekshiruvsiz, ISTALGAN satrni ("true", "false", noto'g'ri
+      // butun son, ixtiyoriy CIDR) jimgina qabul qilardi. Bu haqiqiy
+      // production nosozlikka olib keldi: `TRUST_PROXY=1` Railway'ning
+      // ICHKI proxy tuguni manzilini "haqiqiy mijoz IP"si deb noto'g'ri
+      // hisobladi (barcha IP-asoslangan cheklovlar — login, OTP so'rash,
+      // OTP tasdiqlash — amalda ishlamay qoldi, chunki HAMMA foydalanuvchi
+      // bitta soxta "IP"ga to'planardi). Alohida, real Railway topologiyasi
+      // ustida o'tkazilgan diagnostika (vaqtinchalik non-production muhitda,
+      // haqiqiy X-Forwarded-For/X-Real-IP/Forwarded qalbakilashtirish bilan)
+      // ANIQ isbotladi: yo'l ustunlik `client -> Railway edge -> bitta ICHKI
+      // Railway proxy -> backend` — ANIQ 2 ta ishonchli bosqich — va shu
+      // sozlamada qalbakilashtirilgan header'lar HECH QACHON `req.ip`ga
+      // ta'sir qilmaydi. Shuning uchun production endi FAQAT shu ANIQ
+      // tekshirilgan qiymatni qabul qiladi — "true" (barcha bosqichlarga
+      // ishonish — noto'g'ri, chap tomondagi qalbakilashtirilgan yozuvni
+      // tanlaydi), "false" (sukut — hech kimga ishonmaydi, HAMMA foydalanuvchi
+      // bitta ichki manzilga to'planadi) va boshqa har qanday butun son ham
+      // ANIQ shu sabab bilan rad etiladi. Railway/CDN topologiyasi
+      // o'zgartirilsa (masalan Cloudflare qo'shilsa), avval `docs/RUNBOOK.md`
+      // TRUST_PROXY bo'limidagi diagnostika qayta o'tkazilishi, keyingina
+      // shu ro'yxatga yangi qiymat qo'shilishi SHART — spekulyativ/tekshirib
+      // ko'rilmagan qiymat qo'shilmasin.
+      const PRODUCTION_VERIFIED_TRUST_PROXY_VALUES: readonly string[] = ['2'];
+      if (!PRODUCTION_VERIFIED_TRUST_PROXY_VALUES.includes(env.TRUST_PROXY)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['TRUST_PROXY'],
+          message:
+            "production'da TRUST_PROXY faqat tasdiqlangan qiymatlardan biri bo'lishi shart: " +
+            `${PRODUCTION_VERIFIED_TRUST_PROXY_VALUES.join(', ')} (hozirgi qiymat: "${env.TRUST_PROXY}"). ` +
+            "Railway/CDN topologiyasi o'zgargan bo'lsa, docs/RUNBOOK.md'dagi TRUST_PROXY diagnostikasini qayta o'tkazing, keyin shu ro'yxatga qo'shing.",
+        });
+      }
       // Bosqich 5, bo'lim 45 — "NODE_ENV=production'da fake provider bilan
       // boot qilish fail bo'lsin". PAYME/CLICK ham hali implement qilinmagan
       // (`payment.module.ts` ikkalasini ham har doim rad etadi) — natijada
