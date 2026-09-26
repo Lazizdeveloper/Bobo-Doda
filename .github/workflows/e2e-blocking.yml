@@ -223,3 +223,5 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+# qa-throwaway: workflow-only comment
