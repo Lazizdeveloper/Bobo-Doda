@@ -986,10 +986,13 @@ ga yangilang.
   **DIQQAT — bu qiymat FAQAT joriy topologiya uchun to'g'ri.** Railway
   o'z ICHKI proxy tuzilishini o'zgartirsa, yoki oldiga Cloudflare/boshqa
   CDN qo'shilsa (hozir YO'Q — to'g'ridan-to'g'ri Railway CNAME), bosqich
-  soni o'zgaradi va `TRUST_PROXY=2` ENDI NOTO'G'RI bo'lib qoladi —
-  jimgina emas, chunki production boot buni tekshirmaydi (faqat qaysi
-  QIYMAT ishonchli ekanini tekshiradi, haqiqiy topologiyaga mosligini
-  EMAS). **Topologiya o'zgarsa, avval yuqoridagi diagnostikani (alohida,
+  soni o'zgaradi va `TRUST_PROXY=2` ENDI NOTO'G'RI bo'lib qoladi — VA BU
+  JIMGINA sodir bo'ladi, chunki production boot faqat QIYMAT ro'yxatda
+  bormi (`"2"` ekanini) tekshiradi, haqiqiy topologiyaga hali ham
+  MOSligini EMAS — boot muvaffaqiyatli davom etaveradi, lekin `req.ip`
+  yana noto'g'ri bo'lib qoladi (aynan shu tekshiruv qo'shilishiga sabab
+  bo'lgan asl xato bilan bir xil, faqat sezilmaydigan holatda).
+  **Topologiya o'zgarsa, avval yuqoridagi diagnostikani (alohida,
   production'ga tegmaydigan Railway muhitida) qayta o'tkazing, keyingina
   `env.schema.ts`dagi ro'yxatga yangi qiymat qo'shing.**
 
@@ -1200,10 +1203,18 @@ bo'lishi YETARLI EMAS edi — bu talab endi mustaqil tasdiqlangan.
 
 ### Fresh production dry-run — TASDIQLANGAN
 
+**ESKIRGAN QISM — DIQQAT.** Quyidagi yozuv shu dry-run o'tkazilgan payt
+uchun tarixiy hisobot, AYNAN shu retsept ENDI ishlamaydi: Auth hardening
+bosqichi 2dan beri production `TRUST_PROXY=true`ni boot vaqtida rad
+etadi (yuqoridagi "Trust proxy" bo'limiga qarang — endi FAQAT `"2"`
+qabul qilinadi). Bu dry-run'ni qayta o'tkazsangiz, `TRUST_PROXY=2`
+ishlating.
+
 Yuqoridagi bo'sh DB'ga to'liq TO'G'RI production-simulyatsiya config bilan
 (`NODE_ENV=production`, real Payme/PlayMobile placeholder credential,
 `PAYOUTS_ENABLED=false`, `SWAGGER_ENABLED=false`, aniq `CORS_ORIGINS`,
-`TRUST_PROXY=true`) boot qilindi:
+`TRUST_PROXY=true` — o'sha payt uchun to'g'ri, ENDI EMAS, yuqoridagi
+ogohlantirishga qarang) boot qilindi:
 
 ```text
 npm run production:check → PRODUCTION_CHECK_OK (barcha 10 tekshiruv PASS)

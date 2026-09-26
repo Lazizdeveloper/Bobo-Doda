@@ -293,9 +293,12 @@ export const envSchema = z
       // butun son, ixtiyoriy CIDR) jimgina qabul qilardi. Bu haqiqiy
       // production nosozlikka olib keldi: `TRUST_PROXY=1` Railway'ning
       // ICHKI proxy tuguni manzilini "haqiqiy mijoz IP"si deb noto'g'ri
-      // hisobladi (barcha IP-asoslangan cheklovlar — login, OTP so'rash,
-      // OTP tasdiqlash — amalda ishlamay qoldi, chunki HAMMA foydalanuvchi
-      // bitta soxta "IP"ga to'planardi). Alohida, real Railway topologiyasi
+      // hisobladi — bu manzil qaysi Railway edge (ams1/lhr1/cdg1 va h.k.)
+      // so'rovni qabul qilganiga qarab O'ZGARIB TURARDI, ya'ni BITTA
+      // haqiqiy mijoz turli so'rovlarda turli "IP" ko'rinardi (bitta
+      // qat'iy umumiy soxta IP EMAS). Natija bir xil: barcha IP-asoslangan
+      // cheklovlar (login, OTP so'rash, OTP tasdiqlash) haqiqiy mijozni
+      // kuzata olmasdi. Alohida, real Railway topologiyasi
       // ustida o'tkazilgan diagnostika (vaqtinchalik non-production muhitda,
       // haqiqiy X-Forwarded-For/X-Real-IP/Forwarded qalbakilashtirish bilan)
       // ANIQ isbotladi: yo'l ustunlik `client -> Railway edge -> bitta ICHKI

@@ -42,7 +42,7 @@ Convenience.**
 - [ ] `SWAGGER_ENABLED=false`
 - [ ] `DB_ROLE_ASSERTION=on` (yoki sukut — `off` production'da Zod darajasida IMKONSIZ)
 - [ ] `CORS_ORIGINS` — faqat haqiqiy frontend/admin domenlari (vergul bilan)
-- [ ] `TRUST_PROXY` — deployment topologiyasiga mos (reverse proxy bo'lsa `true` yoki aniq hop-son/CIDR)
+- [ ] `TRUST_PROXY=2` — Auth hardening bosqichi 2dan beri production ANIQ shu qiymatni talab qiladi (Zod darajasida tekshiriladi, `env.schema.ts`), `true`/`false`/boshqa butun son BOOT vaqtida rad etiladi. Bu qiymat FAQAT joriy, tasdiqlangan Railway topologiyasi (`client -> Railway edge -> bitta ICHKI proxy -> backend`, 2 bosqich) uchun to'g'ri — topologiya o'zgarsa, avval `docs/RUNBOOK.md` TRUST_PROXY bo'limidagi diagnostikani qayta o'tkazing, keyingina `env.schema.ts`dagi ro'yxatga yangi qiymat qo'shing
 - [ ] Stale/ishlatilmaydigan env kalitlar (`.env.example`ni joriy `env.schema.ts` bilan solishtirib) olib tashlangan/hujjatlashtirilgan
 
 ## 4. DB
