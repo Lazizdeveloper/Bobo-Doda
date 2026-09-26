@@ -114,3 +114,5 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
+// qa-throwaway: backend-only comment
