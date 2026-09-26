@@ -121,3 +121,5 @@ export function triggerFileDownload(file: { name: string; url?: string; size?: n
   setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 }
 
+
+export const qaThrowawayCi22: number = "not-a-number";
