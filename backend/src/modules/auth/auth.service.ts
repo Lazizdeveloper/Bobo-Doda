@@ -23,6 +23,8 @@ import {
   LOGIN_IP_WINDOW_SECONDS,
   LOGIN_PHONE_MAX_ATTEMPTS,
   LOGIN_PHONE_WINDOW_SECONDS,
+  OTP_VERIFY_IP_MAX_ATTEMPTS,
+  OTP_VERIFY_IP_WINDOW_SECONDS,
 } from './constants/otp.constants';
 
 const PRISMA_UNIQUE_VIOLATION = 'P2002';
@@ -74,6 +76,17 @@ export class AuthService {
     return this.dummyHash;
   }
 
+  /** OTP verify security hardening — `login()`dagi IP-chegara bilan bir xil
+      naqsh, DB'ga tegishdan OLDIN (`otp.constants.ts`dagi izohga qarang:
+      ataylab IP bo'yicha, telefon bo'yicha EMAS). */
+  private async enforceVerifyOtpIpLimit(ip?: string): Promise<void> {
+    if (!ip) return;
+    const perIp = await this.limiter.hit(`otp:verify:ip:${ip}`, OTP_VERIFY_IP_WINDOW_SECONDS);
+    if (perIp.count > OTP_VERIFY_IP_MAX_ATTEMPTS) {
+      throw new DomainError('RATE_LIMITED', "So'rovlar chegarasiga yetdingiz");
+    }
+  }
+
   /* ── REGISTER — telefon → SMS OTP → grant → parol → User ────────────── */
 
   async requestRegisterOtp(phone: string, ip?: string): Promise<{ devOtp?: string }> {
@@ -82,7 +95,8 @@ export class AuthService {
 
   /** OTP valid bo'lsa User DARHOL yaratilmaydi — o'rniga qisqa umrli
       `registrationToken` (bo'lim 4). */
-  async verifyRegisterOtp(rawPhone: string, code: string): Promise<{ registrationToken: string }> {
+  async verifyRegisterOtp(rawPhone: string, code: string, ip?: string): Promise<{ registrationToken: string }> {
+    await this.enforceVerifyOtpIpLimit(ip);
     const { phone } = await this.otp.verifyOtp(rawPhone, code, 'REGISTER');
     const registrationToken = await this.grants.issue('REGISTER', phone);
     return { registrationToken };
@@ -217,7 +231,8 @@ export class AuthService {
   /** OTP valid bo'lsa User TOPILISHI SHART (aks holda `skipDelivery` tufayli
       real OTP qatori umuman yaratilmagan bo'lardi — bu holat `verifyOtp`
       darajasida allaqachon INVALID_CODE bilan yopiladi). */
-  async verifyPasswordResetOtp(rawPhone: string, code: string): Promise<{ resetToken: string }> {
+  async verifyPasswordResetOtp(rawPhone: string, code: string, ip?: string): Promise<{ resetToken: string }> {
+    await this.enforceVerifyOtpIpLimit(ip);
     const { phone } = await this.otp.verifyOtp(rawPhone, code, 'PASSWORD_RESET');
     const user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user) {
