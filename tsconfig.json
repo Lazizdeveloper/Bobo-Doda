@@ -43,7 +43,11 @@
     ".next-check/types/**/*.ts",
     ".next-check/dev/types/**/*.ts",
     ".next-e2e/types/**/*.ts",
-    ".next-e2e/dev/types/**/*.ts"
+    ".next-e2e/dev/types/**/*.ts",
+    ".next-repro-before/types/**/*.ts",
+    ".next-repro-before/dev/types/**/*.ts",
+    ".next-repro-after/types/**/*.ts",
+    ".next-repro-after/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

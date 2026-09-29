@@ -24,6 +24,7 @@ const E2E_FIXTURE_PASSWORD = "E2eFixturePass1!";
 export const SUPER_ADMIN_EMAIL = "super@e2e.test";
 export const RESET_ADMIN_EMAIL = "reset@e2e.test";
 export const RESTRICTED_ADMIN_EMAIL = "restricted@e2e.test";
+export const SESSION_ADMIN_EMAIL = "session@e2e.test";
 
 function freshPhone(): string {
   const digits = "9" + String(Math.floor(Math.random() * 1e8)).padStart(8, "0");
@@ -42,6 +43,13 @@ export function latestOtpFor(phone: string): string {
 
 function runDbCommand(sql: string): string {
   return execSync(`${DB_CMD} -c "${sql.replace(/"/g, '\\"')}"`).toString();
+}
+
+/** Server tomonida bekor qilish — parol rotatsiyasi/admin revoke bilan bir xil ta'sir (`staff_sessions.revokedAt`). */
+export function revokeStaffSessions(email: string): void {
+  runDbCommand(
+    `UPDATE staff_sessions SET "revokedAt" = now() WHERE "staffId" = (SELECT id FROM staff_members WHERE email = '${email}') AND "revokedAt" IS NULL`,
+  );
 }
 
 /** Real `/staff/auth/login` orqali kiradi — fake JWT/localStorage bypass

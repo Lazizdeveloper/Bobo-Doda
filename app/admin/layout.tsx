@@ -9,9 +9,16 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AdminGlobalSearch } from "@/components/admin/AdminGlobalSearch";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
-import { adminLogout, getCurrentAdmin, getAdminCounters } from "@/lib/api/admin";
+import {
+  adminLogout,
+  ensureStaffSession,
+  getCurrentAdmin,
+  getAdminCounters,
+  STAFF_SESSION_EXPIRED_EVENT,
+  takeExpiredStaffRole,
+} from "@/lib/api/admin";
 import { DATA_CHANGED_EVENT } from "@/lib/api";
-import type { AdminAccount, AdminPermission } from "@/lib/admin-types";
+import type { AdminAccount, AdminPermission, AdminRole } from "@/lib/admin-types";
 import { adminHref, toLogicalAdminPath } from "@/lib/admin-routes";
 
 import { feedbackService } from "@/lib/feedback";
@@ -61,52 +68,100 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const isChangePassword = logicalPath === "/parolni-almashtirish";
 
   useEffect(() => {
+    let cancelled = false;
     const current = getCurrentAdmin();
     if (isLogin) {
-      if (current) router.replace(adminHref("/", pathname));
-      else setReady(true);
-      return;
+      if (!current) {
+        setReady(true);
+        return;
+      }
+      /* localStorage'dagi hisob — faqat UI nusxasi; server sessiyasi
+         o'lgan bo'lsa login sahifasi uni soxta panelga qaytarmasin. */
+      void ensureStaffSession().then((state) => {
+        if (cancelled) return;
+        if (state === "valid") router.replace(adminHref("/", pathname));
+        // Operator login rejects super_admin — send an expired super_admin to its own portal.
+        else if (state === "expired" && current.role === "super_admin") router.replace("/rahbariyat/kirish");
+        else setReady(true);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
     if (!current) {
-      const dest = logicalPath.startsWith("/super") ? "/rahbariyat/kirish" : adminHref("/kirish", pathname);
+      const expired = takeExpiredStaffRole();
+      const dest = expired
+        ? loginHrefFor(expired, pathname)
+        : logicalPath.startsWith("/super")
+          ? "/rahbariyat/kirish"
+          : adminHref("/kirish", pathname);
       if (pathname !== dest) router.replace(dest);
       return;
     }
-    if (current.mustChangePassword && !isChangePassword) {
-      router.replace(adminHref("/parolni-almashtirish", pathname));
-      return;
-    }
-    if (isChangePassword) {
+    /* Panel server sessiyasi tasdiqlanmaguncha ko'rsatilmaydi: ilgari eski
+       `bd_staff_account` bo'yicha to'liq "kirgan" qobiq chizilar, har so'rov
+       401 qaytarsa ham yo'naltirish bo'lmasdi. `offline` (tarmoq/5xx) —
+       sessiya haqida hukm yo'q, sahifa o'z xatosini ko'rsatadi. */
+    void ensureStaffSession().then((state) => {
+      if (cancelled) return;
+      if (state === "expired") {
+        router.replace(loginHrefFor(current.role, pathname));
+        return;
+      }
+      if (current.mustChangePassword && !isChangePassword) {
+        router.replace(adminHref("/parolni-almashtirish", pathname));
+        return;
+      }
+      if (isChangePassword) {
+        setAdmin(current);
+        setReady(true);
+        return;
+      }
+      const ruxsatYoqHref = adminHref("/ruxsat-yoq", pathname);
+      if (logicalPath.startsWith("/super") && current.role !== "super_admin") {
+        if (pathname !== ruxsatYoqHref) router.replace(ruxsatYoqHref);
+        return;
+      }
+      /* `/ruxsat-yoq`ning o'zi hech qanday ruxsatga bog'liq emas — aks holda
+         kirish taqiqlangan foydalanuvchi o'ziga qayta-qayta yo'naltirilib,
+         hech qachon `ready` bo'lmas edi (bo'sh ekran). Xaritalanmagan
+         (`routePermission` → null) BOSHQA HAR QANDAY yo'l esa endi ATAYLAB
+         rad etiladi (default-deny) — ilgari bu holatda ruxsat tekshiruvi
+         jimgina o'tkazib yuborilardi (security audit topilmasi: admin host
+         prefikssiz yo'llarda bu "sukut ruxsat" holatiga osongina tushib
+         qolardi). Backend baribir yakuniy nazoratchi — bu faqat UI qatlami. */
+      if (logicalPath === "/ruxsat-yoq") {
+        setAdmin(current);
+        setReady(true);
+        return;
+      }
+      const permission = routePermission(logicalPath);
+      if (!permission || !current.permissions.includes(permission)) {
+        if (pathname !== ruxsatYoqHref) router.replace(ruxsatYoqHref);
+        return;
+      }
       setAdmin(current);
       setReady(true);
-      return;
-    }
-    const ruxsatYoqHref = adminHref("/ruxsat-yoq", pathname);
-    if (logicalPath.startsWith("/super") && current.role !== "super_admin") {
-      if (pathname !== ruxsatYoqHref) router.replace(ruxsatYoqHref);
-      return;
-    }
-    /* `/ruxsat-yoq`ning o'zi hech qanday ruxsatga bog'liq emas — aks holda
-       kirish taqiqlangan foydalanuvchi o'ziga qayta-qayta yo'naltirilib,
-       hech qachon `ready` bo'lmas edi (bo'sh ekran). Xaritalanmagan
-       (`routePermission` → null) BOSHQA HAR QANDAY yo'l esa endi ATAYLAB
-       rad etiladi (default-deny) — ilgari bu holatda ruxsat tekshiruvi
-       jimgina o'tkazib yuborilardi (security audit topilmasi: admin host
-       prefikssiz yo'llarda bu "sukut ruxsat" holatiga osongina tushib
-       qolardi). Backend baribir yakuniy nazoratchi — bu faqat UI qatlami. */
-    if (logicalPath === "/ruxsat-yoq") {
-      setAdmin(current);
-      setReady(true);
-      return;
-    }
-    const permission = routePermission(logicalPath);
-    if (!permission || !current.permissions.includes(permission)) {
-      if (pathname !== ruxsatYoqHref) router.replace(ruxsatYoqHref);
-      return;
-    }
-    setAdmin(current);
-    setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [isLogin, isChangePassword, logicalPath, pathname, router]);
+
+  /* Sessiya sahifa ochiq turganda o'lsa (bekor qilingan, muddati tugagan,
+     refresh rad etilgan) — eski qobiqni darhol yopib, rolga mos login
+     sahifasiga o'tamiz. */
+  useEffect(() => {
+    if (isLogin) return;
+    const onExpired = (event: Event) => {
+      const role = (event as CustomEvent<{ role: AdminRole | null }>).detail?.role ?? null;
+      setReady(false);
+      setAdmin(null);
+      router.replace(loginHrefFor(role, pathname));
+    };
+    window.addEventListener(STAFF_SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(STAFF_SESSION_EXPIRED_EVENT, onExpired);
+  }, [isLogin, pathname, router]);
 
   /* Mobil menyu Escape bilan yopiladi — modal xatti-harakati (`aria-modal`)
      e'lon qilingan joyda klaviatura bilan chiqib ketolmaslik a11y xatosi. */
@@ -136,6 +191,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
      tasdiqlansa boshqa sahifaga o'tmasdan ham raqam kamayadi). */
   const [counts, setCounts] = useState(EMPTY_COUNTS);
   useEffect(() => {
+    /* Sessiya tasdiqlanmaguncha va login/parol-almashtirish sahifalarida
+       so'rov yo'q — ilgari bu yerdan 401 (tokensiz) va 403
+       (PASSWORD_CHANGE_REQUIRED) to'lqinlari ketardi. */
+    if (!ready || isLogin || isChangePassword) return;
     let cancelled = false;
     getAdminCounters()
       .then((c) => {
@@ -156,7 +215,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [pathname, dataVersion]);
+  }, [pathname, dataVersion, ready, isLogin, isChangePassword]);
 
   if (!ready) return null;
   if (isLogin || isChangePassword) return children;
@@ -362,6 +421,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </div>
     </div>
   );
+}
+
+/* super_admin faqat `/rahbariyat/kirish`da kira oladi — operator login
+   sahifasi uni FORBIDDEN bilan qaytaradi (sessiya tugaganda aynan shu
+   tuzoqqa yo'naltirilardi). */
+function loginHrefFor(role: AdminRole | null | undefined, pathname: string): string {
+  return role === "super_admin" ? "/rahbariyat/kirish" : adminHref("/kirish", pathname);
 }
 
 /** `logicalPath` kutadi (prefikssiz — `toLogicalAdminPath()` natijasi), xom `pathname` emas. */

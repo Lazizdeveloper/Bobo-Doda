@@ -1442,6 +1442,7 @@ bash backend/scripts/e2e-stack-down.sh --purge
 |---|---|---|---|---|
 | `super@e2e.test` | SUPER_ADMIN | barcha 16 ta | `false` | asosiy oqim, kritik ekranlar, refund/resolve |
 | `reset@e2e.test` | SUPER_ADMIN | barcha 16 ta | `true` | hard-gate stsenariysi (bo'lim 5) |
+| `session@e2e.test` | SUPER_ADMIN | barcha 16 ta | `false` | sessiya hayot sikli (`admin-session.spec.ts`: reload/refresh, server tomonida bekor qilingan sessiya → `/rahbariyat/kirish`) — o'z login byudjeti (10/15 daq email bo'yicha) |
 | `restricted@e2e.test` | ADMIN | faqat `DASHBOARD` | `false` | ruxsat/403 stsenariysi (bo'lim 7) — ATAYLAB rol emas, HUQUQ orqali cheklangan, chunki `/admin/kirish`ning `expectedRole="admin"` tekshiruvidan o'tishi kerak (SUPER_ADMIN/`role="super_admin"` bo'lsa avtomatik FORBIDDEN bo'lardi — `AdminLoginForm`) |
 
 Parol — barchasida bir xil, `E2E_STAFF_PASSWORD` env (sukut

@@ -206,4 +206,129 @@ describe('Staff operations — audit log / user & seller admin / moderation hard
     expect(again.status).toBe(409);
     expect(again.body.code).toBe('INVALID_TRANSITION');
   });
+
+  // ── GET /staff/services va /staff/seller-applications query validatsiyasi
+  // (admin.bobododa.uz cutover'dan keyingi ikkinchi ko'rib chiqish topilmasi)
+  // — `@Query() query: PageQueryDto & { status?: X }` (TS intersection)
+  // `emitDecoratorMetadata`da `Object` bo'lib yoziladi, Nest ValidationPipe
+  // esa `Object` metatype'ni "tekshirish shart emas" deb hisoblab, BUTUN
+  // so'rovni transformatsiyasiz o'tkazib yuborardi: `perPage` satr holida
+  // Prisma'ga borib 500 (`PrismaClientValidationError`) berardi — bu esa
+  // `getAdminCounters()`ning `Promise.all`i orqali admin boshqaruv paneli
+  // (`/admin`) VA audit sahifasini (`/admin/audit`) HAR BIR real staff
+  // hisobi uchun butunlay ishlamay qo'yardi (real HTTP bilan tasdiqlangan).
+  // Haqiqiy DTO klassi (`StaffListServicesQueryDto`/
+  // `StaffListSellerApplicationsQueryDto`) muammoni ildizidan tuzatadi.
+  describe('GET /staff/services va /staff/seller-applications — query validatsiya regressiyasi', () => {
+    t('GET /staff/services?perPage=1 — getAdminCounters() chaqirig‘i AYNAN shu ko‘rinishda — 200, perPage RAQAM', async () => {
+      const staff = await fullStaff();
+      const res = await request(app!.getHttpServer())
+        .get('/api/v1/staff/services?perPage=1')
+        .set('Authorization', `Bearer ${staff.accessToken}`)
+        .expect(200);
+      expect(res.body.perPage).toBe(1);
+      expect(typeof res.body.perPage).toBe('number');
+    });
+
+    t('GET /staff/services?status=BOGUS — noto‘g‘ri enum endi 422 (ilgari 500 edi)', async () => {
+      const staff = await fullStaff();
+      const res = await request(app!.getHttpServer())
+        .get('/api/v1/staff/services?status=BOGUS')
+        .set('Authorization', `Bearer ${staff.accessToken}`);
+      expect(res.status).toBe(422);
+    });
+
+    t('GET /staff/services?foo=bar — whitelist endi ishlaydi (noma’lum parametr 422)', async () => {
+      const staff = await fullStaff();
+      const res = await request(app!.getHttpServer())
+        .get('/api/v1/staff/services?foo=bar')
+        .set('Authorization', `Bearer ${staff.accessToken}`);
+      expect(res.status).toBe(422);
+    });
+
+    t('GET /staff/services?perPage=101 — 100 chegarasi endi ishlaydi (422)', async () => {
+      const staff = await fullStaff();
+      const res = await request(app!.getHttpServer())
+        .get('/api/v1/staff/services?perPage=101')
+        .set('Authorization', `Bearer ${staff.accessToken}`);
+      expect(res.status).toBe(422);
+    });
+
+    t('GET /staff/seller-applications?perPage=1 — 200, perPage RAQAM (bir xil ildiz sabab, boshqa controller)', async () => {
+      const staff = await fullStaff();
+      const res = await request(app!.getHttpServer())
+        .get('/api/v1/staff/seller-applications?perPage=1')
+        .set('Authorization', `Bearer ${staff.accessToken}`)
+        .expect(200);
+      expect(res.body.perPage).toBe(1);
+      expect(typeof res.body.perPage).toBe('number');
+    });
+
+    t('GET /staff/services?page=2&perPage=1 — ikkala sahifalash parametri ham RAQAMga aylanadi', async () => {
+      const staff = await fullStaff();
+      const res = await request(app!.getHttpServer())
+        .get('/api/v1/staff/services?page=2&perPage=1')
+        .set('Authorization', `Bearer ${staff.accessToken}`)
+        .expect(200);
+      expect(res.body.page).toBe(2);
+      expect(res.body.perPage).toBe(1);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items.length).toBeLessThanOrEqual(1);
+    });
+
+    t('GET /staff/services — buzilgan sahifalash (abc/0/manfiy/kasr) nazorat ostidagi 422 VALIDATION, hech qachon 500 emas', async () => {
+      const staff = await fullStaff();
+      for (const qs of ['perPage=abc', 'perPage=0', 'perPage=-1', 'perPage=1.5', 'page=0', 'page=-3', 'page=abc']) {
+        const res = await request(app!.getHttpServer())
+          .get(`/api/v1/staff/services?${qs}`)
+          .set('Authorization', `Bearer ${staff.accessToken}`);
+        expect({ qs, status: res.status, code: res.body.code }).toEqual({ qs, status: 422, code: 'VALIDATION' });
+      }
+    });
+
+    t('GET /staff/services?perPage=1 — SERVICES huquqisiz staff 403 (DTO tuzatishi ruxsat tekshiruvini chetlab o‘tmaydi)', async () => {
+      const staff = await createStaffSession(app!, db!, ['DASHBOARD', 'USERS']);
+      await request(app!.getHttpServer())
+        .get('/api/v1/staff/services?perPage=1')
+        .set('Authorization', `Bearer ${staff.accessToken}`)
+        .expect(403);
+    });
+
+    t('GET /staff/services?perPage=1 — tokensiz 401 (sahifalash validatsiyasidan OLDIN auth)', async () => {
+      await request(app!.getHttpServer()).get('/api/v1/staff/services?perPage=abc').expect(401);
+    });
+
+    t('GET /staff/seller-applications?status=BOGUS — 422 (ilgari 500 edi)', async () => {
+      const staff = await fullStaff();
+      const res = await request(app!.getHttpServer())
+        .get('/api/v1/staff/seller-applications?status=BOGUS')
+        .set('Authorization', `Bearer ${staff.accessToken}`);
+      expect(res.status).toBe(422);
+    });
+
+    // getAdminCounters() (lib/api/admin.ts) haqiqatda chaqiradigan BARCHA
+    // olti so'rov — kelajakda shu ro'yxatga o'xshash regressiya kirsa,
+    // admin boshqaruv paneli sinishidan OLDIN shu yerda ushlanadi.
+    t('getAdminCounters() ning barcha 6ta chaqirig‘i — hammasi 200', async () => {
+      // `fullStaff()` bu faylning boshqa testlari uchun mo'ljallangan
+      // ro'yxat (DISPUTES yo'q) — bu yerda haqiqiy `getAdminCounters()`
+      // chaqiradigan HAMMA endpoint uchun to'liq huquq kerak.
+      const staff = await createStaffSession(app!, db!, [
+        'DASHBOARD', 'USERS', 'SERVICES', 'ORDERS', 'DISPUTES', 'AUDIT',
+      ]);
+      const auth = { Authorization: `Bearer ${staff.accessToken}` };
+      const urls = [
+        '/api/v1/staff/users?perPage=1',
+        '/api/v1/staff/services?perPage=1',
+        '/api/v1/staff/contracts?perPage=1',
+        '/api/v1/staff/disputes?status=OPEN&perPage=1',
+        '/api/v1/staff/disputes?status=UNDER_REVIEW&perPage=1',
+        '/api/v1/staff/audit-logs?perPage=1',
+      ];
+      for (const url of urls) {
+        const res = await request(app!.getHttpServer()).get(url).set(auth);
+        expect(res.status).toBe(200);
+      }
+    });
+  });
 });
