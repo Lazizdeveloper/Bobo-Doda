@@ -15,6 +15,7 @@ import {
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { adminErrorText } from "@/lib/admin-error-text";
 import { formatDate } from "@/lib/format";
 import type { Review } from "@/lib/types";
@@ -148,7 +149,17 @@ export default function ReviewsModerationPage() {
     );
   }
 
-  if (!page) return <p className="text-muted">Yuklanmoqda...</p>;
+  if (!page) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Sharhlar moderatsiyasi"
+          description="Foydalanuvchilar qoldirgan sharhlarni nazorat qilish va noo‘rin sharhlarni o‘chirish."
+        />
+        <LoadingState message="Sharhlar ro'yxati yuklanmoqda..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

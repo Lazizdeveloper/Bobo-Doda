@@ -98,6 +98,154 @@ test.describe("Password Visibility Toggle Suite", () => {
     await expect(passwordInput).toHaveAttribute("type", "password");
   });
 
+  test("Enter key on password input submits the form correctly (Requirement 6)", async ({ page }) => {
+    await page.goto("/rahbariyat/kirish");
+    await page.waitForLoadState("networkidle");
+
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[autocomplete="current-password"]');
+
+    await emailInput.fill("admin@bobododa.uz");
+    await passwordInput.fill("WrongPassword123!");
+
+    // Focus password input and press Enter
+    await passwordInput.focus();
+    await page.keyboard.press("Enter");
+
+    // Form submit triggered -> error message or loading is displayed
+    await expect(
+      page.locator('p[role="alert"], button[type="submit"][aria-busy="true"]')
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("Registration password form (/royxatdan-otish/parol) has independent toggles for password and confirmation", async ({
+    page,
+  }) => {
+    // Seed registration token into sessionStorage before navigating
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem("bd_registration_token", "test-reg-token-e2e");
+    });
+
+    await page.goto("/royxatdan-otish/parol");
+    await page.waitForLoadState("networkidle");
+
+    const passwordInputs = page.locator('input[type="password"], input[autocomplete="new-password"]');
+    await expect(passwordInputs).toHaveCount(2);
+
+    const firstInput = passwordInputs.nth(0);
+    const secondInput = passwordInputs.nth(1);
+
+    // Both hidden initially
+    await expect(firstInput).toHaveAttribute("type", "password");
+    await expect(secondInput).toHaveAttribute("type", "password");
+    await expect(firstInput).toHaveAttribute("autocomplete", "new-password");
+    await expect(secondInput).toHaveAttribute("autocomplete", "new-password");
+
+    const toggleButtons = page.locator('button[aria-label="Parolni ko‘rsatish"]');
+    await expect(toggleButtons).toHaveCount(2);
+
+    await firstInput.fill("NewPass12345!");
+    await secondInput.fill("ConfirmPass12345!");
+
+    // Toggle only the first password
+    await toggleButtons.nth(0).click();
+    await expect(firstInput).toHaveAttribute("type", "text");
+    await expect(secondInput).toHaveAttribute("type", "password"); // second remains hidden!
+
+    // Toggle the second password
+    await page.locator('button[aria-label="Parolni ko‘rsatish"]').click();
+    await expect(firstInput).toHaveAttribute("type", "text");
+    await expect(secondInput).toHaveAttribute("type", "text");
+
+    // Hide first password again
+    const hideButtons = page.locator('button[aria-label="Parolni yashirish"]');
+    await hideButtons.nth(0).click();
+    await expect(firstInput).toHaveAttribute("type", "password");
+    await expect(secondInput).toHaveAttribute("type", "text");
+  });
+
+  test("Password reset form (/parolni-unutdim/parol) has independent toggles for new and confirm password", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem("bd_reset_token", "test-reset-token-e2e");
+    });
+
+    await page.goto("/parolni-unutdim/parol");
+    await page.waitForLoadState("networkidle");
+
+    const passwordInputs = page.locator('input[autocomplete="new-password"]');
+    await expect(passwordInputs).toHaveCount(2);
+
+    const toggleButtons = page.locator('button[aria-label="Parolni ko‘rsatish"]');
+    await expect(toggleButtons).toHaveCount(2);
+
+    await passwordInputs.nth(0).fill("ResetSecret987!");
+    await toggleButtons.nth(0).click();
+    await expect(passwordInputs.nth(0)).toHaveAttribute("type", "text");
+    await expect(passwordInputs.nth(1)).toHaveAttribute("type", "password");
+  });
+
+  test("Admin forced password change (/admin/parolni-almashtirish) has 3 independent toggles", async ({
+    page,
+  }) => {
+    // Seed staff account and session with mustChangePassword = true
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        "bd_staff_account",
+        JSON.stringify({
+          id: "admin-1",
+          fullName: "Test Admin",
+          email: "admin@bobododa.uz",
+          role: "operator",
+          title: "Operator",
+          permissions: ["moderation"],
+          mustChangePassword: true,
+        })
+      );
+      window.localStorage.setItem(
+        "bd_staff_session",
+        JSON.stringify({
+          adminId: "admin-1",
+          role: "operator",
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        })
+      );
+    });
+
+    await page.route("**/staff/auth/refresh", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          accessToken: "header." + btoa(JSON.stringify({ sub: "admin-1" })) + ".sig",
+          role: "operator",
+        }),
+      });
+    });
+
+    await page.goto("/admin/parolni-almashtirish");
+    await page.waitForLoadState("networkidle");
+
+    const inputs = page.locator('input[type="password"]');
+    await expect(inputs).toHaveCount(3);
+
+    const currentPass = page.locator('input[autocomplete="current-password"]');
+    const newPassInputs = page.locator('input[autocomplete="new-password"]');
+    await expect(currentPass).toHaveCount(1);
+    await expect(newPassInputs).toHaveCount(2);
+
+    const toggleButtons = page.locator('button[aria-label="Parolni ko‘rsatish"]');
+    await expect(toggleButtons).toHaveCount(3);
+
+    // Toggle 2nd input (yangi parol)
+    await newPassInputs.nth(0).fill("BrandNewPassword123!");
+    await toggleButtons.nth(1).click();
+    await expect(newPassInputs.nth(0)).toHaveAttribute("type", "text");
+    await expect(currentPass).toHaveAttribute("type", "password");
+    await expect(newPassInputs.nth(1)).toHaveAttribute("type", "password");
+  });
+
   test("Mobile responsive viewports render password toggle properly", async ({
     page,
   }) => {

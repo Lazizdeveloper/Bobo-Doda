@@ -31,10 +31,10 @@ export default function RoyxatdanOtishTasdiqlashPage() {
 
   useEffect(() => {
     if (countdown <= 0) return;
-    const timer = setInterval(() => {
+    const timer = setTimeout(() => {
       setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
-    return () => clearInterval(timer);
+    return () => clearTimeout(timer);
   }, [countdown]);
 
   useEffect(() => {

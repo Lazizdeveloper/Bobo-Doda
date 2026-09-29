@@ -160,10 +160,10 @@ export default function AdminsPage() {
       )} />
       <Modal open={open} onClose={() => setOpen(false)} title="Yangi operatsion admin">
         <form onSubmit={create} className="flex flex-col gap-4">
-          <Input label="To‘liq ism" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required maxLength={100} />
-          <Input label="Korporativ email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-          <Input label="Lavozim" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required maxLength={100} />
-          <Input label="Vaqtinchalik parol" type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={10} hint="Kamida 10 belgi, katta-kichik harf va raqam" />
+          <Input label="To‘liq ism" value={form.fullName} onChange={(e) => { setForm({ ...form, fullName: e.target.value }); if (error) setError(""); }} required maxLength={100} />
+          <Input label="Korporativ email" type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); if (error) setError(""); }} required />
+          <Input label="Lavozim" value={form.title} onChange={(e) => { setForm({ ...form, title: e.target.value }); if (error) setError(""); }} required maxLength={100} />
+          <Input label="Vaqtinchalik parol" type="password" autoComplete="new-password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); if (error) setError(""); }} required minLength={10} hint="Kamida 10 belgi, katta-kichik harf va raqam" />
           <fieldset>
             <legend className="mb-2 text-xs font-medium text-muted">Modul ruxsatlari</legend>
             <div className="grid grid-cols-2 gap-2">

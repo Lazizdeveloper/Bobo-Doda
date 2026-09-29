@@ -122,7 +122,7 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
         </div>
       </header>
       <main className="mx-auto max-w-4xl px-4 py-10 sm:py-16">
-        <Link href="/" className="text-xs text-primary hover:text-ink">
+        <Link href="/" className="text-xs text-primary-deep hover:text-ink">
           ← Bobo&Doda
         </Link>
         <h1 className="mt-5 font-heading text-2xl font-extrabold text-ink sm:text-3xl">
@@ -140,7 +140,7 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
         </div>
         <p className="mt-8 text-xs text-faint">
           Legal contact:{" "}
-          <a className="text-primary" href="mailto:legal@bobododa.uz">
+          <a className="text-primary-deep hover:underline" href="mailto:legal@bobododa.uz">
             legal@bobododa.uz
           </a>
         </p>

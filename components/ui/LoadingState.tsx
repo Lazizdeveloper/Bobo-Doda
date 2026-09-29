@@ -42,7 +42,6 @@ export function LoadingState({ message, className = "" }: LoadingStateProps) {
         </svg>
       </span>
       <p className="max-w-sm text-sm font-medium text-muted">{displayMessage}</p>
-      <span className="sr-only">{displayMessage}</span>
     </div>
   );
 }

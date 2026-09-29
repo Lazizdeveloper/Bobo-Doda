@@ -22,6 +22,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { Table, type TableColumn } from "@/components/ui/Table";
 import {
   staffListPayments,
@@ -164,7 +165,14 @@ export default function PaymentsPage() {
   }
 
   const activePage = tab === "payments" ? paymentPage : tab === "refunds" ? refundPage : tab === "payouts" ? payoutPage : ledgerPage;
-  if (!activePage) return <p className="text-muted">Yuklanmoqda...</p>;
+  if (!activePage) {
+    return (
+      <>
+        {header}
+        <LoadingState message="To'lov ma'lumotlari yuklanmoqda..." />
+      </>
+    );
+  }
 
   return (
     <>

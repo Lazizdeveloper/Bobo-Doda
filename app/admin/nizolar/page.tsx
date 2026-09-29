@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminPageHeader, MetricCard, Pagination } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -224,7 +225,14 @@ export default function DisputesCenterPage() {
       </>
     );
   }
-  if (!page) return <p className="text-muted">Yuklanmoqda...</p>;
+  if (!page) {
+    return (
+      <>
+        <AdminPageHeader title="Nizolar markazi" description="Shartnomalar bo'yicha kelishmovchiliklarni ko'rib chiqish va arbitraj." />
+        <LoadingState message="Nizolar ro'yxati yuklanmoqda..." />
+      </>
+    );
+  }
 
   return (
     <>

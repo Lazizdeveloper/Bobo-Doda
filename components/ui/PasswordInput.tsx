@@ -42,10 +42,12 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           <button
             type="button"
             tabIndex={0}
+            disabled={rest.disabled}
+            aria-controls={inputId}
             onClick={() => setVisible((prev) => !prev)}
             aria-label={visible ? "Parolni yashirish" : "Parolni ko‘rsatish"}
             title={visible ? "Parolni yashirish" : "Parolni ko‘rsatish"}
-            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-input text-muted hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-colors"
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-input text-muted hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-colors disabled:opacity-40 disabled:pointer-events-none touch-manipulation"
           >
             {visible ? (
               <svg

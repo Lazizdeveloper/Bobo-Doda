@@ -34,9 +34,9 @@ test("register sahifasi to'g'ri render bo'ladi @blocking", async ({ page }) => {
 test.describe("OTP input validatsiyasi (bug fix — bosh nol, stale xato)", () => {
   async function gotoTasdiqlash(page: import("@playwright/test").Page): Promise<void> {
     const phone = freshPhone();
+    await page.addInitScript((p) => window.sessionStorage.setItem("bd_register_otp_phone", p), phone);
     await page.goto("/royxatdan-otish/tasdiqlash");
-    await page.evaluate((p) => window.sessionStorage.setItem("bd_register_otp_phone", p), phone);
-    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForLoadState("networkidle");
   }
 
   test("olti xonali kod (345654) — input string sifatida to'g'ri saqlanadi, oldindan xato yo'q", async ({ page }) => {
@@ -93,9 +93,9 @@ test.describe("OTP tasdiqlash xato xaritalash (OTP_INVALID/format ajratilgan)", 
     page,
   }) => {
     const phone = freshPhone();
+    await page.addInitScript((p) => window.sessionStorage.setItem("bd_register_otp_phone", p), phone);
     await page.goto("/royxatdan-otish/tasdiqlash");
-    await page.evaluate((p) => window.sessionStorage.setItem("bd_register_otp_phone", p), phone);
-    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForLoadState("networkidle");
 
     let verifyRequested = false;
     page.on("request", (req) => {

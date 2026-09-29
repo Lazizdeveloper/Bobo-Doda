@@ -120,14 +120,14 @@ export default function KirishPage() {
       </form>
 
       <p className="mt-4 text-center text-sm">
-        <Link href="/parolni-unutdim" className="font-semibold text-primary hover:underline">
+        <Link href="/parolni-unutdim" className="font-semibold text-primary-deep hover:underline">
           {t("auth.forgotPassword")}
         </Link>
       </p>
 
       <p className="mt-6 text-center text-sm text-muted">
         {t("auth.noAccount")}{" "}
-        <Link href="/royxatdan-otish" className="font-semibold text-primary hover:underline">
+        <Link href="/royxatdan-otish" className="font-semibold text-primary-deep hover:underline">
           {t("auth.tabRegister")}
         </Link>
       </p>

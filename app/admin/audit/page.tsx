@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminPageHeader, MetricCard, Pagination } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { Input } from "@/components/ui/Input";
 import { Table, type TableColumn } from "@/components/ui/Table";
 import { staffListAuditLogs, getAdminCounters, type StaffAuditLogRow } from "@/lib/api/admin";
@@ -112,7 +113,14 @@ export default function AuditTrailPage() {
     );
   }
 
-  if (!page) return <p className="text-muted">Yuklanmoqda...</p>;
+  if (!page) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <LoadingState message="Audit jurnali yuklanmoqda..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
