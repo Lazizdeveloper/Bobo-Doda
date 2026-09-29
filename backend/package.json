@@ -34,6 +34,7 @@
     "financial:check": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/financial-check.ts",
     "outbox:cutover": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/outbox-cutover.ts",
     "production:check": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/production-check.ts",
+    "qa:bootstrap": "node --require ts-node/register/transpile-only --require tsconfig-paths/register scripts/bootstrap-qa-accounts.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
