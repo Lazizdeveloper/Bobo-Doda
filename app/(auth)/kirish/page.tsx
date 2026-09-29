@@ -53,7 +53,14 @@ export default function KirishPage() {
     setError("");
     try {
       const session = await authService.login(phone.trim(), password);
-      router.push(!session.role ? "/rol-tanlash" : session.role === "xaridor" ? "/xaridor" : "/mutaxassis");
+      const dest = !session.role
+        ? "/rol-tanlash"
+        : session.role === "xaridor"
+          ? "/xaridor"
+          : session.profileDone
+            ? "/mutaxassis"
+            : "/mutaxassis/royxat";
+      router.push(dest);
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
       setError(
@@ -101,7 +108,13 @@ export default function KirishPage() {
           }}
           error={error}
         />
-        <Button type="submit" size="lg" loading={loading} className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl">
+        <Button
+          type="submit"
+          size="lg"
+          loading={loading}
+          disabled={loading || !password}
+          className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl"
+        >
           {t("auth.loginBtn")}
         </Button>
       </form>
