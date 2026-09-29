@@ -7,13 +7,13 @@ import { RequirePermission } from '@/modules/staff-auth/decorators/require-permi
 import { CurrentStaff } from '@/modules/staff-auth/decorators/current-staff.decorator';
 import type { StaffAccessTokenPayload } from '@/modules/auth/types/token-payload';
 import { AuditService } from '@/common/audit/audit.service';
-import { PageQueryDto } from '@/common/pagination/page-query.dto';
 import { SellerApplicationService } from './seller-application.service';
 import {
   SellerApplicationResponseDto,
   toSellerApplicationResponseDto,
 } from './dto/seller-application-response.dto';
 import { RejectSellerApplicationDto } from './dto/reject-seller-application.dto';
+import { StaffListSellerApplicationsQueryDto } from './dto/staff-list-seller-applications-query.dto';
 import type { Page } from '@/common/pagination/page-query.dto';
 
 /**
@@ -34,7 +34,7 @@ export class StaffSellerApplicationController {
 
   @Get()
   async list(
-    @Query() query: PageQueryDto & { status?: 'PENDING' | 'APPROVED' | 'REJECTED' },
+    @Query() query: StaffListSellerApplicationsQueryDto,
   ): Promise<Page<SellerApplicationResponseDto>> {
     const page = await this.applications.listForStaff(query.page ?? 1, query.perPage ?? 20, query.status);
     return { ...page, items: page.items.map(toSellerApplicationResponseDto) };

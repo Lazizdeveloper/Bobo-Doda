@@ -1,6 +1,5 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import type { ServiceStatus } from '@prisma/client';
 import { Public } from '@/modules/auth/decorators/public.decorator';
 import { StaffJwtAuthGuard } from '@/modules/staff-auth/guards/staff-jwt-auth.guard';
 import { StaffPermissionGuard } from '@/modules/staff-auth/guards/staff-permission.guard';
@@ -8,10 +7,10 @@ import { RequirePermission } from '@/modules/staff-auth/decorators/require-permi
 import { CurrentStaff } from '@/modules/staff-auth/decorators/current-staff.decorator';
 import type { StaffAccessTokenPayload } from '@/modules/auth/types/token-payload';
 import { AuditService } from '@/common/audit/audit.service';
-import { PageQueryDto } from '@/common/pagination/page-query.dto';
 import { ServiceService } from './service.service';
 import { ServiceResponseDto, toServiceResponseDto } from './dto/service-response.dto';
 import { RejectServiceDto } from './dto/reject-service.dto';
+import { StaffListServicesQueryDto } from './dto/staff-list-services-query.dto';
 import type { Page } from '@/common/pagination/page-query.dto';
 
 /** Staff moderatsiyasi — mavjud `SERVICES` huquqi. */
@@ -29,7 +28,7 @@ export class StaffServiceController {
 
   @Get()
   async list(
-    @Query() query: PageQueryDto & { status?: ServiceStatus },
+    @Query() query: StaffListServicesQueryDto,
   ): Promise<Page<ServiceResponseDto>> {
     const page = await this.services.listForStaff(query.page ?? 1, query.perPage ?? 20, query.status);
     return { ...page, items: page.items.map(toServiceResponseDto) };

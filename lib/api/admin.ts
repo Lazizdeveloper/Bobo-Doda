@@ -24,12 +24,15 @@ import type * as adminMock from "@/lib/admin-api";
 import {
   bootstrapStaffSession,
   decodeStaffJwtSub,
+  ensureStaffSession,
   roleToLower,
   setStaffAccessToken,
   staffAccountStore,
   staffHttp,
   staffSessionStore,
   staffToQuery,
+  STAFF_SESSION_EXPIRED_EVENT,
+  takeExpiredStaffRole,
 } from "./staff-http";
 import type { AdminAccount, AdminPermission, AdminRole, AdminSession } from "@/lib/admin-types";
 
@@ -59,11 +62,15 @@ export function getCurrentAdmin(): AdminAccount | null {
 export function hasPermission(permission: AdminPermission): boolean {
   return getCurrentAdmin()?.permissions.includes(permission) ?? false;
 }
+/** The stored account is only a UI snapshot; this checks the server still honours it. */
+export { ensureStaffSession, STAFF_SESSION_EXPIRED_EVENT, takeExpiredStaffRole };
 export function adminLogout(): void {
-  void staffHttp("/staff/auth/logout", { method: "POST" }, false).catch(() => {});
+  const request = staffHttp("/staff/auth/logout", { method: "POST" }, false).catch(() => {});
   setStaffAccessToken(null);
   staffSessionStore.clear();
   staffAccountStore.clear();
+  // If the token had to be restored first, the refresh lands after the clear above.
+  void request.finally(() => setStaffAccessToken(null));
 }
 
 interface StaffSessionResponse {

@@ -97,6 +97,16 @@ async function main() {
       permissions: ALL_PERMISSIONS,
       mustChangePassword: true,
     });
+    // tests/e2e/admin-session.spec.ts — o'z login byudjetiga ega (staff login
+    // email bo'yicha 10/15 daqiqa; super@ allaqachon boshqa spec'larda sarflanadi).
+    await upsertStaff(prisma, hasher, {
+      email: "session@e2e.test",
+      fullName: "E2E Session Admin",
+      title: "E2E Fixture (session lifecycle)",
+      role: StaffRole.SUPER_ADMIN,
+      permissions: ALL_PERMISSIONS,
+      mustChangePassword: false,
+    });
     await upsertStaff(prisma, hasher, {
       email: "restricted@e2e.test",
       fullName: "E2E Restricted Admin",

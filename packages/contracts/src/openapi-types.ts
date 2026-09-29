@@ -3634,7 +3634,11 @@ export interface operations {
     };
     StaffSellerApplicationController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "PENDING" | "APPROVED" | "REJECTED";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4026,7 +4030,11 @@ export interface operations {
     };
     StaffServiceController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "REJECTED" | "PAUSED" | "ARCHIVED";
+            };
             header?: never;
             path?: never;
             cookie?: never;
