@@ -80,8 +80,11 @@ if [ ! -f "$REPO_ROOT/backend/.env.e2e" ]; then
   exit 1
 fi
 if ! curl -s -o /dev/null "http://localhost:$BACKEND_PORT/health/ready" 2>/dev/null; then
+  # SMS_PROVIDER ATAYLAB pin: .env.e2e uni bermasa, dotenv backend/.env'dagi
+  # SMS_PROVIDER=TEXTUP'ni o'qib, Playwright OTP ro'yxatdan o'tishlari REAL
+  # TextUp API'ga ketardi (2026-09-29 lokal hodisa; jest-e2e.setup.ts bilan bir xil qoida).
   ( cd "$REPO_ROOT/backend" && set -a && source .env.e2e && set +a && \
-    node --enable-source-maps dist/main > "$INFRA_DIR/backend.log" 2>&1 & )
+    SMS_PROVIDER=CONSOLE node --enable-source-maps dist/main > "$INFRA_DIR/backend.log" 2>&1 & )
 fi
 if ! curl -s -o /dev/null "http://localhost:$FRONTEND_PORT/kirish" 2>/dev/null; then
   ( cd "$REPO_ROOT" && \

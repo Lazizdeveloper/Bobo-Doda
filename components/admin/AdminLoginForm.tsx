@@ -6,7 +6,7 @@ import { Logo } from "@/components/shared/Logo";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { adminLogin, getCurrentAdmin } from "@/lib/api/admin";
+import { adminLogin, ensureStaffSession, getCurrentAdmin } from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/errors";
 import type { AdminRole } from "@/lib/admin-types";
 import { adminAbsoluteHref, adminDashboardHref } from "@/lib/admin-routes";
@@ -34,12 +34,22 @@ export function AdminLoginForm({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const current = getCurrentAdmin();
-    if (current && (role !== "super_admin" || current.role === "super_admin")) {
-      router.replace(adminDashboardHref());
+    if (!current || (role === "super_admin" && current.role !== "super_admin")) {
+      setReady(true);
       return;
     }
-    setReady(true);
+    /* Saqlangan hisob faqat UI nusxasi — server sessiyasi tirik bo'lsagina
+       panelga o'tkazamiz, aks holda (bekor qilingan/muddati o'tgan) forma. */
+    void ensureStaffSession().then((state) => {
+      if (cancelled) return;
+      if (state === "valid") router.replace(adminDashboardHref());
+      else setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [role, router]);
 
   async function submit(event: FormEvent) {

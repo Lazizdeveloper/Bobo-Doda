@@ -1,4 +1,4 @@
-import { toApiError, toNetworkError } from "./errors";
+import { ApiError, toApiError, toNetworkError } from "./errors";
 import type { AdminAccount, AdminRole, AdminSession } from "@/lib/admin-types";
 
 /**
@@ -72,29 +72,75 @@ function decodeJwtSub(token: string): string {
 }
 export { decodeJwtSub as decodeStaffJwtSub };
 
-let refreshInFlight: Promise<string | null> | null = null;
+/**
+ * Server session verdict is gone: local staff state is cleared and the admin
+ * shell is told to leave (the event carries the role so a super_admin is sent
+ * to `/rahbariyat/kirish`, not the operator login that rejects that role).
+ */
+export const STAFF_SESSION_EXPIRED_EVENT = "bd:staff-session-expired";
 
-async function performRefresh(): Promise<string | null> {
+/** Auth endpoints whose 401 is an answer about credentials, not an expired access token. */
+const NO_REFRESH_PATHS = new Set(["/staff/auth/login", "/staff/auth/refresh"]);
+
+type RefreshOutcome = { kind: "ok" } | { kind: "rejected" } | { kind: "unavailable"; cause: unknown };
+
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
+
+/* The page-load refresh can clear the stored account before the admin layout
+   runs its guard; keep the role in memory so it still picks the right login. */
+let expiredRole: AdminRole | null = null;
+export function takeExpiredStaffRole(): AdminRole | null {
+  const role = expiredRole;
+  expiredRole = null;
+  return role;
+}
+
+function expireSession(): void {
+  const role = readAccount()?.role ?? null;
+  clearSession();
+  clearAccount();
+  setStaffAccessToken(null);
+  // No stored account = no logged-in UI to tear down (e.g. during adminLogout).
+  if (role && typeof window !== "undefined") {
+    expiredRole = role;
+    window.dispatchEvent(new CustomEvent(STAFF_SESSION_EXPIRED_EVENT, { detail: { role } }));
+  }
+}
+
+async function performRefresh(): Promise<RefreshOutcome> {
+  let res: Response;
   try {
-    const res = await fetch(`${API_BASE}/staff/auth/refresh`, {
+    res = await fetch(`${API_BASE}/staff/auth/refresh`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
     });
-    if (!res.ok) {
-      clearSession();
-      clearAccount();
-      setStaffAccessToken(null);
-      return null;
-    }
-    const body = (await res.json()) as { accessToken: string };
-    setStaffAccessToken(body.accessToken);
-    return body.accessToken;
-  } catch {
-    return null;
+  } catch (cause) {
+    return { kind: "unavailable", cause };
   }
+  // Only 401/403 are a verdict on the session; a 5xx/429 during a deploy must not log staff out.
+  if (res.status === 401 || res.status === 403) {
+    expireSession();
+    return { kind: "rejected" };
+  }
+  if (!res.ok) return { kind: "unavailable", cause: new Error(`refresh ${res.status}`) };
+  let body: { accessToken: string; role: string };
+  try {
+    body = (await res.json()) as { accessToken: string; role: string };
+  } catch (cause) {
+    return { kind: "unavailable", cause };
+  }
+  setStaffAccessToken(body.accessToken);
+  if (readAccount()) {
+    writeSession({
+      adminId: decodeJwtSub(body.accessToken),
+      role: roleToLower(body.role),
+      expiresAt: new Date(Date.now() + 14 * 60 * 1000).toISOString(),
+    });
+  }
+  return { kind: "ok" };
 }
-function refreshOnce(): Promise<string | null> {
+function refreshOnce(): Promise<RefreshOutcome> {
   if (!refreshInFlight) {
     refreshInFlight = performRefresh().finally(() => {
       refreshInFlight = null;
@@ -106,8 +152,28 @@ function refreshOnce(): Promise<string | null> {
 export function bootstrapStaffSession(): void {
   if (typeof window === "undefined") return;
   if (accessToken) return;
-  if (!readSession()) return;
+  // Keyed on the stored account (what the UI trusts), not the 14-minute
+  // session record: after 14 minutes the old gate skipped the refresh and
+  // every page load sent its first requests without a token.
+  if (!readAccount()) return;
   void refreshOnce();
+}
+
+/**
+ * Confirms the stored account still has a live server session before the UI
+ * trusts it. `offline` = refresh could not get a verdict (network/5xx); the
+ * caller keeps the session and lets requests surface their own error.
+ */
+export async function ensureStaffSession(): Promise<"valid" | "expired" | "offline"> {
+  if (accessToken) return "valid";
+  if (!readAccount()) return "expired";
+  const outcome = await refreshOnce();
+  if (outcome.kind === "ok") return "valid";
+  return outcome.kind === "rejected" ? "expired" : "offline";
+}
+
+function sessionExpiredError(): ApiError {
+  return new ApiError({ code: "UNAUTHENTICATED", status: 401, retryable: false, message: "TOKEN_EXPIRED" });
 }
 
 export interface StaffHttpInit extends Omit<RequestInit, "body"> {
@@ -130,15 +196,23 @@ async function rawFetch(path: string, init: StaffHttpInit): Promise<Response> {
 }
 
 export async function staffHttp<T>(path: string, init: StaffHttpInit = {}, allowRetry = true): Promise<T> {
+  const refreshable = !NO_REFRESH_PATHS.has(path.split("?")[0]);
+  // After a full page load the access token (memory only) is gone: restore it
+  // BEFORE sending, instead of sending unauthenticated requests that 401.
+  if (refreshable && !accessToken && readAccount()) {
+    const outcome = await refreshOnce();
+    if (outcome.kind === "rejected") throw sessionExpiredError();
+    if (outcome.kind === "unavailable") throw toNetworkError(outcome.cause);
+  }
   let res: Response;
   try {
     res = await rawFetch(path, init);
   } catch (cause) {
     throw toNetworkError(cause);
   }
-  if (res.status === 401 && allowRetry) {
-    const token = await refreshOnce();
-    if (token) return staffHttp<T>(path, init, false);
+  if (res.status === 401 && allowRetry && refreshable) {
+    const outcome = await refreshOnce();
+    if (outcome.kind === "ok") return staffHttp<T>(path, init, false);
     throw await toApiError(res);
   }
   if (!res.ok) throw await toApiError(res);
