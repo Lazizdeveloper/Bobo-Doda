@@ -161,7 +161,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
     setSavingNotif(true);
     try {
       await usersService.savePreferences(preferences);
-      toast(t("bset.notifSaved") || "Bildirishnoma sozlamalari saqlandi");
+      toast(t("bset.notifSaved"));
     } catch {
       toast(t("common.error"), "error");
     } finally {

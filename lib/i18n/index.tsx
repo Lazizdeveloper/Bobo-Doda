@@ -17,17 +17,49 @@ interface LanguageContextValue {
   t: (key: string) => string;
 }
 
+function humanizeFallback(key: string): string {
+  const segment = key.includes(".") ? (key.split(".").pop() || key) : key;
+  const words = segment
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim();
+  if (!words) return key;
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /* Ingliz tili alohida faylda (en.ts) — dictionary.ts (uz/ru) tuzilishiga
    tegmasdan qo'shildi. en topilmasa uz'ga tushadi. */
-function translate(lang: Lang, key: string): string {
-  if (lang === "en") return en[key] ?? dictionary[key]?.uz ?? key;
-  return dictionary[key]?.[lang] ?? dictionary[key]?.uz ?? key;
+export function translate(lang: Lang, key: string): string {
+  let val: string | undefined;
+
+  if (lang === "en") {
+    val = en[key] ?? dictionary[key]?.uz ?? dictionary[key]?.ru;
+  } else if (lang === "ru") {
+    val = dictionary[key]?.ru ?? dictionary[key]?.uz ?? en[key];
+  } else {
+    val = dictionary[key]?.uz ?? dictionary[key]?.ru ?? en[key];
+  }
+
+  if (val !== undefined && val !== "") {
+    return val;
+  }
+
+  /* Dev/test'da yetishmayotgan kalitlar testlarda va konsolda ko'rinsin */
+  if (process.env.NODE_ENV !== "production") {
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn(`[i18n] Missing translation for key: "${key}" (lang: ${lang})`);
+    }
+    return key;
+  }
+
+  /* Production'da xom i18n kaliti (nav.home) foydalanuvchiga ko'rinmasin */
+  return humanizeFallback(key);
 }
 
 const LanguageContext = createContext<LanguageContextValue>({
   lang: "uz",
   setLang: () => {},
-  t: (key) => dictionary[key]?.uz ?? key,
+  t: (key) => translate("uz", key),
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
