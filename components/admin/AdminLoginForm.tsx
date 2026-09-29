@@ -96,7 +96,10 @@ export function AdminLoginForm({
                   type="email"
                   autoComplete="username"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    if (error) setError("");
+                  }}
                   required
                 />
                 <Input
@@ -104,7 +107,10 @@ export function AdminLoginForm({
                   type="password"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    if (error) setError("");
+                  }}
                   required
                   minLength={8}
                 />
@@ -117,7 +123,10 @@ export function AdminLoginForm({
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   value={totpCode}
-                  onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(event) => {
+                    setTotpCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+                    if (error) setError("");
+                  }}
                   autoFocus
                   required
                 />

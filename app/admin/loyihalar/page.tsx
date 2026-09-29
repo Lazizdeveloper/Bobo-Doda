@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminPageHeader, MetricCard, Pagination } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -168,7 +169,17 @@ export default function JobsModerationPage() {
     );
   }
 
-  if (!page) return <p className="text-muted">Yuklanmoqda...</p>;
+  if (!page) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Mijoz Loyihalari & E'lonlar Boshqaruvi"
+          description="Xaridorlar tomonidan e'lon qilingan ochiq ishlar, byudjetlar, screening savollari va qabul qilingan takliflar nazorati."
+        />
+        <LoadingState message="Loyihalar ro'yxati yuklanmoqda..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

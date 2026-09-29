@@ -59,7 +59,10 @@ export default function StaffChangePasswordPage() {
               type="password"
               autoComplete="current-password"
               value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
+              onChange={(e) => {
+                setCurrentPassword(e.target.value);
+                if (error) setError("");
+              }}
               required
             />
             <Input
@@ -67,7 +70,10 @@ export default function StaffChangePasswordPage() {
               type="password"
               autoComplete="new-password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                if (error) setError("");
+              }}
               minLength={12}
               required
             />
@@ -76,7 +82,10 @@ export default function StaffChangePasswordPage() {
               type="password"
               autoComplete="new-password"
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                if (error) setError("");
+              }}
               minLength={12}
               required
             />

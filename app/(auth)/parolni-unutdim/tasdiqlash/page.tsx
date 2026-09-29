@@ -21,9 +21,18 @@ export default function ParolniUnutdimTasdiqlashPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [countdown, setCountdown] = useState(60);
   /** Bosqich 22 — FAQAT development (`dev-otp-bridge.ts`), hech qachon
       Storage'ga yozilmaydi. */
   const [devOtp, setDevOtp] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setTimeout(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   useEffect(() => {
     const session = authService.getSession();
@@ -60,13 +69,16 @@ export default function ParolniUnutdimTasdiqlashPage() {
   }
 
   async function handleResend() {
+    if (countdown > 0 || resending) return;
     setResending(true);
     setError("");
     try {
       const res = await authService.requestPasswordResetOtp(phone);
       setDevOtp(res.devOtp);
-    } catch {
-      /* jimgina — foydalanuvchi baribir kodni qayta kiritishga urinadi */
+      setCountdown(60);
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      setError(code === "RATE_LIMITED" ? t("auth.errRateLimited") : t("common.error"));
     } finally {
       setResending(false);
     }
@@ -129,10 +141,14 @@ export default function ParolniUnutdimTasdiqlashPage() {
         <button
           type="button"
           onClick={handleResend}
-          disabled={resending}
-          className="text-xs sm:text-sm font-semibold text-primary hover:underline py-1 disabled:opacity-50"
+          disabled={resending || countdown > 0}
+          className="text-xs sm:text-sm font-semibold text-primary hover:underline py-1 disabled:opacity-50 disabled:no-underline"
         >
-          {resending ? t("common.loading") : t("auth.resendCode")}
+          {resending
+            ? t("common.loading")
+            : countdown > 0
+              ? `${t("auth.resendCode")} (${countdown}s)`
+              : t("auth.resendCode")}
         </button>
       </form>
     </div>

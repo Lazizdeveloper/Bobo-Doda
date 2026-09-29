@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminPageHeader, MetricCard, Pagination } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -121,7 +122,14 @@ export default function ContractsLifecyclePage() {
       </div>
     );
   }
-  if (!page) return <p className="text-muted">Yuklanmoqda...</p>;
+  if (!page) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader title="Shartnomalar" description="Platformadagi barcha xavfsiz bitimlar (escrow) va bosqichlar — faqat kuzatuv." />
+        <LoadingState message="Shartnomalar ro'yxati yuklanmoqda..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -221,7 +229,7 @@ export default function ContractsLifecyclePage() {
             </div>
           </div>
         ) : (
-          <p className="text-xs text-muted">Yuklanmoqda...</p>
+          <LoadingState message="Shartnoma ma'lumotlari yuklanmoqda..." className="py-6" />
         )}
       </Modal>
     </div>

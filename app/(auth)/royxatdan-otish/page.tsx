@@ -94,7 +94,7 @@ export default function RoyxatdanOtishPage() {
 
       <p className="mt-6 text-center text-sm text-muted">
         {t("auth.haveAccount")}{" "}
-        <Link href="/kirish" className="font-semibold text-primary hover:underline">
+        <Link href="/kirish" className="font-semibold text-primary-deep hover:underline">
           {t("auth.tabLogin")}
         </Link>
       </p>

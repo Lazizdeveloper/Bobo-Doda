@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminPageHeader, MetricCard, Pagination } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -236,7 +237,17 @@ export default function SupportTicketsPage() {
     );
   }
 
-  if (!page) return <p className="text-muted font-sans">Yuklanmoqda...</p>;
+  if (!page) {
+    return (
+      <>
+        <AdminPageHeader
+          title="Yordam so'rovlari va chiptalar"
+          description="Foydalanuvchilardan kelgan support chiptalari navbati, hisob-kitob, shartnoma va texnik yordam."
+        />
+        <LoadingState message="Chiptalar ro'yxati yuklanmoqda..." />
+      </>
+    );
+  }
 
   return (
     <>
