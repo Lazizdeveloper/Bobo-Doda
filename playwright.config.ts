@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -32,6 +33,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    launchOptions: {
+      executablePath:
+        process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
+        (process.platform === "linux" &&
+        existsSync("/home/laziz/.nix-profile/bin/google-chrome-stable")
+          ? "/home/laziz/.nix-profile/bin/google-chrome-stable"
+          : undefined),
+      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });
