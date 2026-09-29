@@ -203,9 +203,11 @@ export const dictionary: Record<string, Entry> = {
 
   /* Navigatsiya */
   "nav.dashboard": { uz: "Boshqaruv", ru: "Обзор" },
+  "nav.home": { uz: "Bosh sahifa", ru: "На главную" },
   "nav.services": { uz: "Xizmatlarim", ru: "Мои услуги" },
   "nav.jobs": { uz: "Ish e'lonlari", ru: "Объявления" },
   "nav.proposals": { uz: "Takliflarim", ru: "Мои предложения" },
+  "nav.offers": { uz: "Takliflarim", ru: "Мои предложения" },
   "nav.contracts": { uz: "Shartnomalar", ru: "Контракты" },
   "nav.messages": { uz: "Xabarlar", ru: "Сообщения" },
   "nav.earnings": { uz: "Daromad", ru: "Доход" },
@@ -2084,6 +2086,7 @@ export const dictionary: Record<string, Entry> = {
   "bset.securityHint": { uz: "Parol, tasdiqlangan identifikatsiya va bog'langan xizmatlar", ru: "Пароль, подтвержденная верификация и привязанные сервисы" },
   "bset.notifSection": { uz: "Bildirishnoma sozlamalari", ru: "Настройки уведомлений" },
   "bset.notifHint": { uz: "Muhim loyiha yangilanishlari va xabarlar haqida qanday xabardor bo'lishni tanlang", ru: "Выберите, как получать важные обновления по проектам и сообщениям" },
+  "bset.notifSaved": { uz: "Bildirishnoma sozlamalari saqlandi", ru: "Настройки уведомлений сохранены" },
   "bset.ntfProposals": { uz: "Yangi takliflar (frilanser loyihangizga taklif yuborganda)", ru: "Новые отклики (когда фрилансер откликается на проект)" },
   "bset.ntfMilestones": { uz: "Bosqichlar topshirilishi (mutaxassis ish natijasini yuborganda)", ru: "Сдача этапов (когда специалист сдает работу)" },
   "bset.ntfMessages": { uz: "Yangi chat xabarlari", ru: "Новые сообщения в чате" },
@@ -2116,6 +2119,10 @@ export const dictionary: Record<string, Entry> = {
     uz: "Bosqich qabul qilindi — to'lov hisobingizga o'tdi: {title}",
     ru: "Этап принят — оплата зачислена: {title}",
   },
+  "ntf.milestoneApproved": {
+    uz: "Bosqich tasdiqlandi — to'lov hisobingizga o'tdi: {title}",
+    ru: "Этап подтверждён — оплата зачислена: {title}",
+  },
   "ntf.revisionRequested": {
     uz: "Buyurtmachi o'zgartirish so'radi: {title}",
     ru: "Заказчик запросил правки: {title}",
@@ -2139,6 +2146,10 @@ export const dictionary: Record<string, Entry> = {
   "hire.errDuePast": {
     uz: "Muddat o'tgan sana bo'lishi mumkin emas",
     ru: "Срок не может быть в прошлом",
+  },
+  "ntf.newContract": {
+    uz: "Yangi shartnoma tuzildi: {title}",
+    ru: "Заключён новый контракт: {title}",
   },
   "ntf.contractCancelled": {
     uz: "Shartnoma bekor qilindi: {title}",
