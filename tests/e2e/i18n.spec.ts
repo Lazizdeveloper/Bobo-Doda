@@ -69,18 +69,38 @@ test.describe("i18n & Translation Keys Audit", () => {
   });
 
   const routesToCheck = [
+    // 1. Public / Landing
     { name: "Landing", path: "/" },
+    { name: "FAQ", path: "/savol-javob" },
+    { name: "Terms", path: "/shartlar" },
+    { name: "Privacy", path: "/maxfiylik" },
+    { name: "Public Offer", path: "/oferta" },
+    // 2. Help Center
+    { name: "Help Center", path: "/yordam-markazi" },
+    // 3. Auth pages
     { name: "Login", path: "/kirish" },
     { name: "Register", path: "/royxatdan-otish" },
     { name: "Forgot Password", path: "/parolni-unutdim" },
-    { name: "FAQ", path: "/savol-javob" },
+    // 4. Buyer panel
+    { name: "Buyer Marketplace", path: "/xaridor/bozor" },
+    { name: "Buyer Jobs", path: "/xaridor/elonlarim" },
+    { name: "Buyer Dashboard", path: "/xaridor" },
+    // 5. Seller panel
+    { name: "Seller Jobs", path: "/mutaxassis/ish-elonlari" },
+    { name: "Seller Services", path: "/mutaxassis/xizmatlarim" },
+    { name: "Seller Dashboard", path: "/mutaxassis" },
+    // 6. Admin panel
+    { name: "Admin Login", path: "/admin/kirish" },
+    { name: "Admin Dashboard", path: "/admin" },
+    // 7. SuperAdmin panel
+    { name: "SuperAdmin Login", path: "/rahbariyat/kirish" },
   ];
 
   for (const { name, path } of routesToCheck) {
     test(`No leaked translation keys on ${name} (${path}) across locales`, async ({
       page,
     }) => {
-      // Test across RU and UZ
+      // Test across UZ, RU, and EN
       for (const lang of ["uz", "ru", "en"] as const) {
         await page.addInitScript((l) => {
           window.localStorage.setItem("sb_lang", l);
@@ -89,8 +109,10 @@ test.describe("i18n & Translation Keys Audit", () => {
         await page.goto(path);
         await page.waitForLoadState("domcontentloaded");
 
-        // Common leaked prefixes must not be visible as raw dot-separated keys
-        const forbiddenPatterns = [
+        const bodyText = await page.locator("body").innerText();
+
+        // 1. Explicit critical key assertions
+        const criticalForbidden = [
           "nav.home",
           "nav.dashboard",
           "nav.offers",
@@ -100,11 +122,27 @@ test.describe("i18n & Translation Keys Audit", () => {
           "ntf.milestoneApproved",
           "ntf.newContract",
         ];
-
-        const bodyText = await page.locator("body").innerText();
-        for (const pattern of forbiddenPatterns) {
+        for (const pattern of criticalForbidden) {
           expect(bodyText).not.toContain(pattern);
         }
+
+        // 2. Pattern-based check for leaked translation keys
+        // Namespaces like nav.*, auth.*, common.*, errors.*, err.*, profile.*, help.*, hc.*,
+        // marketplace.*, admin.*, seller.*, buyer.*, support.*, validation.*, val.*, bset.*,
+        // ntf.*, cat.*, ms.*, cstatus.*, pstatus.*, ostatus.*, svcStatus.*, badge.*, verify.*
+        const leakPattern =
+          /\b(nav|auth|common|errors|err|profile|help|hc|marketplace|admin|seller|buyer|support|validation|val|bset|ntf|cat|ms|cstatus|pstatus|ostatus|svcStatus|badge|verify)\.[a-zA-Z0-9_]+\b/g;
+
+        const matches = bodyText.match(leakPattern) || [];
+        // Filter out benign domain references if any (e.g. admin.bobododa.uz)
+        const leakedKeys = matches.filter(
+          (m) => !m.endsWith(".uz") && !m.endsWith(".com") && !m.endsWith(".org")
+        );
+
+        expect(
+          leakedKeys,
+          `Leaked translation keys found on ${name} (${path}) in [${lang}]: ${leakedKeys.join(", ")}`
+        ).toEqual([]);
       }
     });
   }

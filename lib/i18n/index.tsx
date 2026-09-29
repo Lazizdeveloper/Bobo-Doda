@@ -30,21 +30,23 @@ function humanizeFallback(key: string): string {
 /* Ingliz tili alohida faylda (en.ts) — dictionary.ts (uz/ru) tuzilishiga
    tegmasdan qo'shildi. en topilmasa uz'ga tushadi. */
 export function translate(lang: Lang, key: string): string {
-  let val: string | undefined;
+  if (!key) return "";
 
+  // 1. Direct target locale lookup
+  let targetVal: string | undefined;
   if (lang === "en") {
-    val = en[key] ?? dictionary[key]?.uz ?? dictionary[key]?.ru;
+    targetVal = en[key];
   } else if (lang === "ru") {
-    val = dictionary[key]?.ru ?? dictionary[key]?.uz ?? en[key];
+    targetVal = dictionary[key]?.ru;
   } else {
-    val = dictionary[key]?.uz ?? dictionary[key]?.ru ?? en[key];
+    targetVal = dictionary[key]?.uz;
   }
 
-  if (val !== undefined && val !== "") {
-    return val;
+  if (targetVal !== undefined && targetVal.trim() !== "") {
+    return targetVal;
   }
 
-  /* Dev/test'da yetishmayotgan kalitlar testlarda va konsolda ko'rinsin */
+  // 2. Dev / test environment: missing translation must be detectable in tests & console
   if (process.env.NODE_ENV !== "production") {
     if (typeof console !== "undefined" && console.warn) {
       console.warn(`[i18n] Missing translation for key: "${key}" (lang: ${lang})`);
@@ -52,7 +54,20 @@ export function translate(lang: Lang, key: string): string {
     return key;
   }
 
-  /* Production'da xom i18n kaliti (nav.home) foydalanuvchiga ko'rinmasin */
+  // 3. Production environment: safe fallback chain
+  // Fallback to default locale (uz)
+  const defaultVal = dictionary[key]?.uz;
+  if (defaultVal !== undefined && defaultVal.trim() !== "") {
+    return defaultVal;
+  }
+
+  // Fallback to alternative locale
+  const altVal = lang === "en" ? dictionary[key]?.ru : en[key];
+  if (altVal !== undefined && altVal.trim() !== "") {
+    return altVal;
+  }
+
+  // Final production safety: human-readable label, never raw dot-separated key
   return humanizeFallback(key);
 }
 
