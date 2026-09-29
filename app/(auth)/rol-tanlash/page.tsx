@@ -18,23 +18,37 @@ export default function RolTanlashPage() {
      bosgan, undan yana bir marta so'rash ortiqcha qadam. */
   const autoRoleRef = useRef(false);
 
-  /* Tasdiqlangan va rol tanlagan foydalanuvchilar o'z kabinetiga qaytariladi */
   useEffect(() => {
-    const session = authService.getSession();
-    /* Sessiyasiz bu sahifada turib bo'lmaydi: `chooseRole` NO_SESSION bilan
-       yiqilar va sahifa qotib qolardi. Kirishga qaytaramiz. */
-    if (!session) {
-      if (pathname !== "/kirish") router.replace("/kirish");
-      return;
+    let active = true;
+
+    async function checkSession() {
+      let session = authService.getSession();
+      if (!session) {
+        session = await authService.refresh();
+        if (!active) return;
+      }
+
+      /* Sessiyasiz bu sahifada turib bo'lmaydi: `chooseRole` NO_SESSION bilan
+         yiqilar va sahifa qotib qolardi. Kirishga qaytaramiz. */
+      if (!session) {
+        if (pathname !== "/kirish") router.replace("/kirish");
+        return;
+      }
+
+      let dest = null;
+      if (session.role === "xaridor") dest = "/xaridor";
+      else if (session.role === "mutaxassis" && session.profileDone) dest = "/mutaxassis";
+
+      if (dest && pathname !== dest) {
+        router.replace(dest);
+      }
     }
 
-    let dest = null;
-    if (session.role === "xaridor") dest = "/xaridor";
-    else if (session.role === "mutaxassis" && session.profileDone) dest = "/mutaxassis";
-    
-    if (dest && pathname !== dest) {
-      router.replace(dest);
-    }
+    void checkSession();
+
+    return () => {
+      active = false;
+    };
   }, [router, pathname]);
 
   /* Xato bo'lsa tugmalar qayta ochilishi SHART — aks holda foydalanuvchi

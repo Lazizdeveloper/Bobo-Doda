@@ -179,6 +179,7 @@ test("LOGIN: mavjud telefon+parol → dashboard, OTP sahifasiga UMUMAN o'tilmayd
 
   // Sessiyadan chiqamiz — endi MAVJUD telefon bilan haqiqiy telefon+parol
   // LOGIN oqimini sinaymiz (SMS SO'RALMAYDI, cooldown/IP budjetiga tegmaydi).
+  await page.context().clearCookies();
   await page.evaluate(() => window.localStorage.clear());
 
   await page.goto("/kirish");
@@ -229,6 +230,7 @@ test("REGISTER: allaqachon mavjud telefon → parol bosqichida 'hisob allaqachon
   await page.getByRole("button", { name: /Hisob yaratish/i }).click();
   await page.waitForURL("**/rol-tanlash", { timeout: 10_000 });
 
+  await page.context().clearCookies();
   await page.evaluate(() => window.localStorage.clear());
   // Bir xil telefon+REGISTER uchun cooldown'ni tozalaymiz (real 60s
   // kutmasdan) — production'da foydalanuvchi haqiqatan 60s kutgan bo'lardi.
@@ -275,6 +277,7 @@ test("FORGOT PASSWORD: /kirish → Parolni unutdim → SMS OTP → yangi parol �
   await page.waitForURL("**/rol-tanlash", { timeout: 10_000 });
   await page.getByText("Xaridor", { exact: false }).first().click();
   await page.waitForURL((url) => url.pathname.startsWith("/xaridor"), { timeout: 10_000 });
+  await page.context().clearCookies();
   await page.evaluate(() => window.localStorage.clear());
 
   // /kirish → "Parolni unutdingizmi?" havolasi orqali forgot-password oqimiga.
@@ -363,6 +366,7 @@ test.describe("DEV-only OTP ko'rsatish (DEV_EXPOSE_OTP=true)", () => {
     await page.waitForURL("**/rol-tanlash", { timeout: 10_000 });
     await page.getByText("Xaridor", { exact: false }).first().click();
     await page.waitForURL((url) => url.pathname.startsWith("/xaridor"), { timeout: 10_000 });
+    await page.context().clearCookies();
     await page.evaluate(() => window.localStorage.clear());
 
     await page.goto("/kirish");

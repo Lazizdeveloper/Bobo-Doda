@@ -16,24 +16,40 @@ export default function MutaxassisLayout({ children }: { children: ReactNode }) 
   const isOnboarding = pathname === "/mutaxassis/royxat";
 
   useEffect(() => {
-    const session = authService.getSession();
-    if (!session) {
-      if (pathname !== "/kirish") router.replace("/kirish");
-      return;
+    let active = true;
+
+    async function check() {
+      let session = authService.getSession();
+      if (!session) {
+        // Yangi tab yoki tozalangan localStorage bo'lsa, httpOnly cookie orqali sessiyani tiklash
+        session = await authService.refresh();
+        if (!active) return;
+      }
+
+      if (!session) {
+        if (pathname !== "/kirish") router.replace("/kirish");
+        return;
+      }
+      if (session.role !== "mutaxassis") {
+        const dest = session.role === "xaridor" ? "/xaridor" : "/rol-tanlash";
+        if (pathname !== dest) router.replace(dest);
+        return;
+      }
+      if (!session.profileDone && !isOnboarding) {
+        if (pathname !== "/mutaxassis/royxat") router.replace("/mutaxassis/royxat");
+        return;
+      }
+      // Bosqich 21 — `session.verified` endi HAR DOIM true: tasdiqlash
+      // (SMS OTP) hisob yaratishning O'ZIDA sodir bo'ladi (register/complete),
+      // login'da alohida "tasdiqlanmagan sessiya" bosqichi umuman yo'q.
+      setReady(true);
     }
-    if (session.role !== "mutaxassis") {
-      const dest = session.role === "xaridor" ? "/xaridor" : "/rol-tanlash";
-      if (pathname !== dest) router.replace(dest);
-      return;
-    }
-    if (!session.profileDone && !isOnboarding) {
-      if (pathname !== "/mutaxassis/royxat") router.replace("/mutaxassis/royxat");
-      return;
-    }
-    // Bosqich 21 — `session.verified` endi HAR DOIM true: tasdiqlash
-    // (SMS OTP) hisob yaratishning O'ZIDA sodir bo'ladi (register/complete),
-    // login'da alohida "tasdiqlanmagan sessiya" bosqichi umuman yo'q.
-    setReady(true);
+
+    void check();
+
+    return () => {
+      active = false;
+    };
   }, [router, pathname, isOnboarding]);
 
   if (!ready) return null;

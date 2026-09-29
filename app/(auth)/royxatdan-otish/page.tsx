@@ -23,24 +23,47 @@ export default function RoyxatdanOtishPage() {
   const [phoneValid, setPhoneValid] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   /* Sessiya tekshiruvi: allaqachon kirgan foydalanuvchi o'z kabinetiga qaytariladi */
   useEffect(() => {
-    const session = authService.getSession();
-    if (!session) {
-      // "Hisob topilmadi" CTA'dan kelgan bo'lsa telefon oldindan to'ldiriladi.
-      const prefill = window.sessionStorage.getItem("bd_prefill_phone");
-      if (prefill) {
-        setPhone(prefill);
-        setPhoneValid(true);
-        window.sessionStorage.removeItem("bd_prefill_phone");
+    let active = true;
+
+    async function checkAuth() {
+      try {
+        const session = await authService.refresh();
+        if (!active) return;
+        if (session) {
+          let dest = "/rol-tanlash";
+          if (session.role === "xaridor") dest = "/xaridor";
+          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/royxat";
+          if (pathname !== dest) router.replace(dest);
+          return;
+        }
+      } catch {
+        // Tarmoq xatosi bo'lsa ham pastga tushadi
       }
-      return;
+
+      if (!active) return;
+
+      if (typeof window !== "undefined") {
+        // "Hisob topilmadi" CTA'dan kelgan bo'lsa telefon oldindan to'ldiriladi.
+        const prefill = window.sessionStorage.getItem("bd_prefill_phone");
+        if (prefill) {
+          setPhone(prefill);
+          setPhoneValid(true);
+          window.sessionStorage.removeItem("bd_prefill_phone");
+        }
+      }
+
+      setChecking(false);
     }
-    let dest = "/rol-tanlash";
-    if (session.role === "xaridor") dest = "/xaridor";
-    else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/royxat";
-    if (pathname !== dest) router.replace(dest);
+
+    void checkAuth();
+
+    return () => {
+      active = false;
+    };
   }, [router, pathname]);
 
   async function handleSubmit(e: FormEvent) {
@@ -61,6 +84,25 @@ export default function RoyxatdanOtishPage() {
       setError(code === "RATE_LIMITED" ? t("auth.errRateLimited") : t("common.error"));
       setLoading(false);
     }
+  }
+
+  if (checking) {
+    return (
+      <div className="rounded-3xl sm:rounded-[32px] border border-line/80 bg-card p-7 sm:p-12 lg:p-14 shadow-2xl shadow-black/5 flex flex-col items-center justify-center min-h-[380px]">
+        <div className="mb-6 inline-flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.png" alt="Bobo&Doda" className="h-9 w-9 object-contain" />
+          <span className="font-heading font-black text-lg tracking-tight text-ink">BOBO&amp;DODA</span>
+        </div>
+        <div className="my-auto flex flex-col items-center justify-center gap-3 py-8" role="status" aria-live="polite">
+          <svg className="h-8 w-8 animate-spin text-primary" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+            <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+          <p className="text-sm font-medium text-muted">{t("common.loading") || "Yuklanmoqda..."}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
