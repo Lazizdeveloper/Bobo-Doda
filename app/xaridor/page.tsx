@@ -8,31 +8,36 @@ import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
-import { contractsService, milestonesService, usersService } from "@/lib/api";
-import type { Contract, Milestone } from "@/lib/types";
+import { contractsService, milestonesService, usersService, jobsService } from "@/lib/api";
+import type { Contract, Milestone, Job } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 /**
- * Bosqich 17 — real backendda Job/Proposal/Message modellari yo'q, shuning
- * uchun "Ish e'lonlarim"/"Kelgan takliflar"/"So'nggi xabarlar" bloklari
- * olib tashlangan. Harakat markazi endi FAQAT real signallardan: to'lov
- * kutayotgan shartnomalar (`!fundedAt`) va ko'rib chiqilishi kerak bosqichlar.
+ * Ish beruvchi dashboardi — shartnomalar, mablag'lar,
+ * ko'rib chiqish kutayotgan bosqichlar va ish e'lonlari boshqaruvi.
  */
 export default function XaridorDashboardPage() {
   const { t, lang } = useT();
   const [contracts, setContracts] = useState<Contract[] | null>(null);
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
+  const [jobs, setJobs] = useState<Job[] | null>(null);
   const [name, setName] = useState("");
   const [loadError, setLoadError] = useState<unknown>(null);
 
   const load = useCallback(() => {
     setLoadError(null);
-    Promise.all([contractsService.list(), milestonesService.listMine(), usersService.getCurrent()])
-      .then(([contractList, milestoneList, user]) => {
+    Promise.all([
+      contractsService.list(),
+      milestonesService.listMine(),
+      usersService.getCurrent(),
+      jobsService.listMine(),
+    ])
+      .then(([contractList, milestoneList, user, jobList]) => {
         setContracts(contractList);
         setMilestones(milestoneList);
         if (user) setName(user.fullName);
+        setJobs(jobList);
       })
       .catch(setLoadError);
   }, []);
@@ -41,9 +46,10 @@ export default function XaridorDashboardPage() {
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
 
-  const loading = !contracts || !milestones;
+  const loading = !contracts || !milestones || !jobs;
 
   const activeContracts = contracts?.filter((c) => c.status === "faol") || [];
+  const openJobs = jobs?.filter((j) => j.status === "ochiq") || [];
   const contractById = new Map(contracts?.map((c) => [c.id, c]));
 
   const toReview = (milestones ?? []).filter(
@@ -65,14 +71,24 @@ export default function XaridorDashboardPage() {
             </p>
           )}
         </div>
-        <Link href="/xaridor/bozor">
-          <Button>{t("bdash.findSpecialist")}</Button>
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/xaridor/bozor">
+            <Button variant="secondary">{t("bdash.findSpecialist")}</Button>
+          </Link>
+          <Link href="/xaridor/elonlarim/yangi">
+            <Button className="flex items-center gap-1.5">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              {t("bdash.postJob")}
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
+          Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="mt-4 h-8 w-16" />
@@ -88,6 +104,15 @@ export default function XaridorDashboardPage() {
               <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.activeProjects")}</p>
               <p className="mt-2 font-heading text-2xl font-black text-ink">{activeContracts.length}</p>
             </Card>
+            <Link href="/xaridor/elonlarim" className="block">
+              <Card hoverable className="flex flex-col justify-center border-l-4 border-l-primary-deep h-full">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.openJobs")}</p>
+                  <span className="text-xs text-primary-deep font-medium hover:underline">→</span>
+                </div>
+                <p className="mt-2 font-heading text-2xl font-black text-primary-deep">{openJobs.length}</p>
+              </Card>
+            </Link>
             <Card className="flex flex-col justify-center border-l-4 border-l-warning">
               <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.toReview")}</p>
               <p className={`mt-2 font-heading text-2xl font-black ${toReview.length > 0 ? "text-warning" : "text-ink"}`}>{toReview.length}</p>
@@ -98,6 +123,28 @@ export default function XaridorDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-w-0">
         <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
+          {/* Yangi e'lon joylash banneri */}
+          <div className="rounded-card border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-heading text-base font-bold text-ink">
+                  {t("bdash.postJobBannerTitle")}
+                </h3>
+                <p className="mt-1 text-xs text-muted max-w-xl">
+                  {t("bdash.postJobBannerBody")}
+                </p>
+              </div>
+              <Link href="/xaridor/elonlarim/yangi" className="shrink-0">
+                <Button size="sm" className="flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  {t("bdash.postJobBannerBtn")}
+                </Button>
+              </Link>
+            </div>
+          </div>
+
           <section>
             <h2 className="font-heading text-xl font-bold text-ink mb-4">{t("bdash.actionCenter")}</h2>
 
@@ -166,7 +213,7 @@ export default function XaridorDashboardPage() {
               <SkeletonCard />
             ) : recentContracts.length === 0 ? (
               <Card className="text-center py-8">
-                <p className="text-sm text-muted">{t("contracts.emptyAll")}</p>
+                <p className="text-sm text-muted">{t("contracts.emptyBuyer")}</p>
               </Card>
             ) : (
               <div className="flex flex-col gap-3">

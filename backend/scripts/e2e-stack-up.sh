@@ -62,7 +62,7 @@ psql -h 127.0.0.1 -p "$PGPORT" -U bobododa_app -d bobododa_e2e -tc \
   "SELECT 1 FROM categories LIMIT 1" | grep -q 1 || \
   psql -h 127.0.0.1 -p "$PGPORT" -U bobododa_app -d bobododa_e2e -c "
     INSERT INTO categories (id, slug, \"nameUz\", \"nameRu\", \"nameEn\", status, \"sortOrder\", \"createdAt\", \"updatedAt\")
-    VALUES (gen_random_uuid(), 'dizayn', 'Dizayn', 'Дизайн', 'Design', 'ACTIVE', 1, now(), now());
+    VALUES ('01a092fb-037e-740b-9b72-83002432b73c', 'dizayn', 'Dizayn', 'Дизайн', 'Design', 'ACTIVE', 1, now(), now());
   " >/dev/null
 
 echo "▶ [5/6] Redis (:$REDIS_PORT)"
@@ -84,11 +84,11 @@ if ! curl -s -o /dev/null "http://localhost:$BACKEND_PORT/health/ready" 2>/dev/n
   # SMS_PROVIDER=TEXTUP'ni o'qib, Playwright OTP ro'yxatdan o'tishlari REAL
   # TextUp API'ga ketardi (2026-09-29 lokal hodisa; jest-e2e.setup.ts bilan bir xil qoida).
   ( cd "$REPO_ROOT/backend" && set -a && source .env.e2e && set +a && \
-    SMS_PROVIDER=CONSOLE node --enable-source-maps dist/main > "$INFRA_DIR/backend.log" 2>&1 & )
+    nohup env SMS_PROVIDER=CONSOLE node --enable-source-maps dist/main > "$INFRA_DIR/backend.log" 2>&1 & )
 fi
 if ! curl -s -o /dev/null "http://localhost:$FRONTEND_PORT/kirish" 2>/dev/null; then
   ( cd "$REPO_ROOT" && \
-    NEXT_PUBLIC_API_URL="http://localhost:$BACKEND_PORT/api/v1" NEXT_DIST_DIR=.next-e2e \
+    nohup env NEXT_PUBLIC_API_URL="http://localhost:$BACKEND_PORT/api/v1" NEXT_DIST_DIR=.next-e2e \
     npx next dev -p "$FRONTEND_PORT" > "$INFRA_DIR/frontend.log" 2>&1 & )
 fi
 

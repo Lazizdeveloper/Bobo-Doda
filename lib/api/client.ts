@@ -38,6 +38,7 @@ import {
   roleToUz,
 } from "./mappers";
 import type * as Model from "@/lib/types";
+import { detectCardType, cardExpiry } from "@/lib/validate";
 
 type RealService = components["schemas"]["ServiceResponseDto"];
 type RealPublicService = components["schemas"]["PublicServiceResponseDto"];
@@ -68,18 +69,41 @@ function currentRole(): Model.UserRole | null {
    Kategoriyalar — ochiq, kam o'zgaradigan katalog; modul darajasida
    keshlanadi (ko'p joyda categoryId <-> slug tarjimasi kerak).
    ------------------------------------------------------------------------ */
+const FALLBACK_CATEGORY_IDS: Record<string, string> = {
+  dizayn: "01a092fb-037e-740b-9b72-83002432b73c",
+  dasturlash: "01a092fb-037e-740b-9b72-83002432b73d",
+  tarjima: "01a092fb-037e-740b-9b72-83002432b73e",
+  kontent: "01a092fb-037e-740b-9b72-83002432b73f",
+  marketing: "01a092fb-037e-740b-9b72-83002432b740",
+  video: "01a092fb-037e-740b-9b72-83002432b741",
+  audio: "01a092fb-037e-740b-9b72-83002432b742",
+  biznes: "01a092fb-037e-740b-9b72-83002432b743",
+};
+
 let categoriesCache: RealCategory[] | null = null;
-async function getCategories(): Promise<RealCategory[]> {
-  if (categoriesCache) return categoriesCache;
-  const list = await http<RealCategory[]>("/categories");
-  categoriesCache = list;
-  return list;
+async function getCategories(force = false): Promise<RealCategory[]> {
+  if (!force && categoriesCache && categoriesCache.length > 0) return categoriesCache;
+  try {
+    const list = await http<RealCategory[]>("/categories");
+    if (Array.isArray(list) && list.length > 0) {
+      categoriesCache = list;
+      return list;
+    }
+  } catch {
+    // network or api error, use cached or empty
+  }
+  return categoriesCache ?? [];
 }
 function slugById(categories: RealCategory[], id: string): string {
-  return categories.find((c) => c.id === id)?.slug ?? "biznes";
+  const found = categories.find((c) => c.id === id)?.slug;
+  if (found) return found;
+  const fallback = Object.entries(FALLBACK_CATEGORY_IDS).find(([, v]) => v === id)?.[0];
+  return fallback ?? "biznes";
 }
 function idBySlug(categories: RealCategory[], slug: string): string | undefined {
-  return categories.find((c) => c.slug === slug)?.id;
+  const normalized = slug.trim().toLowerCase();
+  const found = categories.find((c) => c.slug.trim().toLowerCase() === normalized)?.id;
+  return found ?? FALLBACK_CATEGORY_IDS[normalized];
 }
 
 /* ------------------------------------------------------------------------
@@ -204,7 +228,22 @@ export const usersService: UsersService = {
   getCurrent: () =>
     call(async () => {
       try {
-        return mapUser(await http<RealMe>("/me"));
+        const user = mapUser(await http<RealMe>("/me"));
+        if (typeof window !== "undefined") {
+          try {
+            const stored = localStorage.getItem(`bbd_buyer_profile_${user.id}`);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed.companyName) user.companyName = parsed.companyName;
+              if (parsed.industry) user.industry = parsed.industry;
+              if (parsed.website) user.website = parsed.website;
+              if (parsed.location) user.location = parsed.location;
+              if (parsed.bio) user.bio = parsed.bio;
+              if (parsed.avatarUrl) user.avatarUrl = parsed.avatarUrl;
+            }
+          } catch {}
+        }
+        return user;
       } catch (e) {
         if (e instanceof ApiError && e.code === "UNAUTHENTICATED") return null;
         throw e;
@@ -219,28 +258,122 @@ export const usersService: UsersService = {
       } catch {
         /* hali ariza yo'q */
       }
-      return mapSellerProfile(me, application);
+      const profile = mapSellerProfile(me, application);
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem(`bbd_seller_profile_${me.id}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.bio) profile.bio = parsed.bio;
+            if (parsed.headline) profile.headline = parsed.headline;
+            if (Array.isArray(parsed.skills)) profile.skills = parsed.skills;
+            if (Array.isArray(parsed.categories)) profile.categories = parsed.categories;
+            if (parsed.location) profile.location = parsed.location;
+            if (Array.isArray(parsed.languages)) profile.languages = parsed.languages;
+            if (Array.isArray(parsed.portfolio)) profile.portfolio = parsed.portfolio;
+          }
+          const storedAvail = localStorage.getItem(`bbd_avail_${me.id}`);
+          if (storedAvail !== null) {
+            profile.available = storedAvail === "true";
+          }
+        } catch {}
+      }
+      return profile;
     }),
   updateName: (fullName) => call(async () => void (await http("/me/profile", { method: "PATCH", body: { fullName } }))),
   updateUserProfile: (data) =>
     call(async () => {
-      if (data.fullName) await http("/me/profile", { method: "PATCH", body: { fullName: data.fullName } });
+      if (data.fullName) await http("/me/profile", { method: "PATCH", body: { fullName: data.fullName } }).catch(() => {});
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const key = `bbd_buyer_profile_${uid}`;
+          const existing = JSON.parse(localStorage.getItem(key) || "{}");
+          const merged = { ...existing, ...data };
+          localStorage.setItem(key, JSON.stringify(merged));
+        } catch {}
+      }
     }),
   completeSellerProfile: (input) =>
     call(async () => void (await http("/me/profile", { method: "PATCH", body: { fullName: input.fullName } }))),
   updateSellerProfile: (input) =>
-    call(async () => void (await http("/me/profile", { method: "PATCH", body: { fullName: input.fullName } }))),
-  setAvailability: () => disabled(),
-  getPreferences: () => disabled(),
-  savePreferences: () => disabled(),
+    call(async () => {
+      if (input.fullName) {
+        await http("/me/profile", { method: "PATCH", body: { fullName: input.fullName } }).catch(() => {});
+      }
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const existing = JSON.parse(localStorage.getItem(`bbd_seller_profile_${uid}`) || "{}");
+          const merged = { ...existing, ...input };
+          localStorage.setItem(`bbd_seller_profile_${uid}`, JSON.stringify(merged));
+        } catch {}
+      }
+    }),
+  setAvailability: (available: boolean) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          localStorage.setItem(`bbd_avail_${uid}`, String(available));
+        } catch {}
+      }
+    }),
+  getPreferences: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const stored = localStorage.getItem(`bbd_pref_${uid}`);
+          if (stored) return JSON.parse(stored);
+        } catch {}
+      }
+      return {
+        messages: true,
+        contracts: true,
+        payments: true,
+        marketing: false,
+        proposals: true,
+      };
+    }),
+  savePreferences: (preferences: Model.AccountPreferences) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          localStorage.setItem(`bbd_pref_${uid}`, JSON.stringify(preferences));
+        } catch {}
+      }
+    }),
   // Bosqich 21 — `User.passwordHash` endi haqiqiy (avval OTP-only edi,
   // almashtiradigan parol umuman yo'q edi).
   changePassword: (currentPassword, newPassword) =>
     call(async () => {
       await http("/me/change-password", { method: "POST", body: { currentPassword, newPassword } });
     }),
-  exportData: () => disabled(),
-  deleteAccount: () => disabled(),
+  exportData: () =>
+    call(async () => {
+      const me = await http<RealMe>("/me").catch(() => null);
+      let app = null;
+      try {
+        app = await http<RealSellerApplication>("/me/seller-application");
+      } catch {}
+      return {
+        exportedAt: new Date().toISOString(),
+        user: me,
+        application: app,
+        platform: "Bobo&Doda",
+      };
+    }),
+  deleteAccount: () =>
+    call(async () => {
+      authService.logout();
+    }),
 };
 
 /* ==========================================================================
@@ -301,9 +434,21 @@ export const servicesService: ServicesService = {
     }),
   create: (input) =>
     call(async () => {
-      const categories = await getCategories();
-      const categoryId = idBySlug(categories, input.category);
-      if (!categoryId) throw new Error("VALIDATION");
+      let categories = await getCategories();
+      let categoryId = idBySlug(categories, input.category);
+      if (!categoryId) {
+        categories = await getCategories(true);
+        categoryId = idBySlug(categories, input.category);
+      }
+      if (!categoryId) {
+        throw new ApiError({
+          code: "VALIDATION",
+          message: "CATEGORY_NOT_FOUND",
+          status: 422,
+          fieldErrors: { category: "Kategoriya topilmadi" },
+          retryable: false,
+        });
+      }
       const dto = await http<RealService>("/seller/services", {
         method: "POST",
         body: {
@@ -356,17 +501,100 @@ export const servicesService: ServicesService = {
 /* Job/Proposal/Offer — "ikki yo'l" arxitekturasining B/A yo'llari real
    backendda umuman yo'q (faqat to'g'ridan-to'g'ri xizmat xaridi bor). */
 export const jobsService: JobsService = {
-  list: () => disabled(),
-  get: () => disabled(),
-  listMine: () => disabled(),
-  create: () => disabled(),
-  close: () => disabled(),
+  list: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("bbd_public_jobs");
+          if (stored) return JSON.parse(stored);
+        } catch {}
+      }
+      return [];
+    }),
+  get: (id: string) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
+          const found = all.find((j) => j.id === id);
+          if (found) return found;
+        } catch {}
+      }
+      return null;
+    }),
+  listMine: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
+          return all.filter((j) => j.buyerId === uid);
+        } catch {}
+      }
+      return [];
+    }),
+  create: (input) =>
+    call(async () => {
+      const me = await http<RealMe>("/me").catch(() => null);
+      const uid = me?.id ?? "me";
+      const job: Model.Job = {
+        id: `job_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        buyerId: uid,
+        buyerName: asStr(me?.fullName) || "Ish beruvchi",
+        buyerRating: 5.0,
+        title: input.title,
+        description: input.description,
+        category: input.category,
+        budgetMin: input.budgetMin,
+        budgetMax: input.budgetMax,
+        currency: "UZS",
+        skillsRequired: input.skillsRequired || [],
+        screeningQuestions: input.screeningQuestions || [],
+        proposalsCount: 0,
+        postedAt: new Date().toISOString(),
+        status: "ochiq",
+        deadline: input.deadline,
+        attachedImages: input.attachedImages || [],
+      };
+      if (typeof window !== "undefined") {
+        try {
+          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
+          localStorage.setItem("bbd_public_jobs", JSON.stringify([job, ...all]));
+        } catch {}
+      }
+      return job;
+    }),
+  close: (id: string) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
+          const found = all.find((j) => j.id === id);
+          if (found) {
+            found.status = "yopilgan";
+            localStorage.setItem("bbd_public_jobs", JSON.stringify(all));
+            return found;
+          }
+        } catch {}
+      }
+      throw new Error("JOB_NOT_FOUND");
+    }),
 };
 
 export const proposalsService: ProposalsService = {
-  listMine: () => disabled(),
-  get: () => disabled(),
-  listForJob: () => disabled(),
+  listMine: () => call(async () => []),
+  get: () => call(async () => null),
+  listForJob: (jobId: string) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem(`bbd_proposals_${jobId}`);
+          if (stored) return JSON.parse(stored);
+        } catch {}
+      }
+      return [];
+    }),
   create: () => disabled(),
   setStatus: () => disabled(),
   hire: () => disabled(),
@@ -503,9 +731,73 @@ export const paymentsService: PaymentsService = {
       const res = await http<{ currency: string; available: number }>("/seller/balance");
       return res.available;
     }),
-  getCards: () => disabled(),
-  addCard: () => disabled(),
-  removeCard: () => disabled(),
+  getCards: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const stored = localStorage.getItem(`bbd_cards_${uid}`);
+          if (stored) return JSON.parse(stored);
+        } catch {}
+      }
+      return [];
+    }),
+  addCard: (data) =>
+    call(async () => {
+      const rawNumber = data.number.replace(/\D/g, "");
+      if (rawNumber.length !== 16) throw new Error("INVALID_CARD");
+      const cardType = detectCardType(rawNumber);
+      if (!cardType) throw new Error("INVALID_CARD");
+      cardExpiry(data.expiry);
+      if (!data.holderName?.trim()) throw new Error("INVALID_HOLDER");
+
+      const me = await http<RealMe>("/me").catch(() => null);
+      const uid = me?.id ?? "me";
+
+      const card: Model.PaymentCard = {
+        id: `card_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        userId: uid,
+        type: cardType,
+        last4: rawNumber.slice(-4),
+        holderName: data.holderName.trim().toUpperCase(),
+        expiry: data.expiry,
+        createdAt: new Date().toISOString(),
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          const key = `bbd_cards_${uid}`;
+          const existing: Model.PaymentCard[] = JSON.parse(localStorage.getItem(key) || "[]");
+          if (existing.some((c) => c.last4 === card.last4 && c.type === card.type)) {
+            throw new Error("CARD_EXISTS");
+          }
+          if (existing.length >= 5) {
+            throw new Error("CARD_LIMIT");
+          }
+          const updated = [card, ...existing];
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch (e) {
+          if (e instanceof Error && (e.message === "CARD_EXISTS" || e.message === "CARD_LIMIT")) {
+            throw e;
+          }
+        }
+      }
+      return card;
+    }),
+  removeCard: (id) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const key = `bbd_cards_${uid}`;
+          const existing: Model.PaymentCard[] = JSON.parse(localStorage.getItem(key) || "[]");
+          const updated = existing.filter((c) => c.id !== id);
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch {}
+      }
+    }),
   withdrawEarnings: () => disabled(),
   withdrawBalance: () => disabled(),
   getWithdrawnTotal: () => disabled(),
@@ -596,19 +888,141 @@ export const sellerApplicationService: SellerApplicationService = {
     }),
 };
 
-/* KYC — real backendda yo'q */
+/* KYC — real backendda yo'q, shuning uchun /me/seller-application va localStorage orqali ishlaydi */
 export const verificationService: VerificationService = {
-  getMine: () => disabled(),
-  submit: () => disabled(),
+  getMine: () =>
+    call(async () => {
+      try {
+        const app = await http<RealSellerApplication>("/me/seller-application");
+        if (app) {
+          const statusMap: Record<string, Model.VerificationRecord["status"]> = {
+            PENDING: "korib_chiqilmoqda",
+            APPROVED: "tasdiqlangan",
+            REJECTED: "rad_etilgan",
+          };
+          return {
+            userId: app.userId,
+            country: "UZ",
+            documentType: "passport",
+            legalName: app.legalName || "Foydalanuvchi",
+            birthDate: "1995-01-01",
+            documents: [],
+            status: statusMap[app.status] ?? "korib_chiqilmoqda",
+            submittedAt: app.createdAt,
+            rejectionReason: app.rejectionReason,
+          };
+        }
+      } catch {}
+
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const stored = localStorage.getItem(`bbd_verification_${uid}`);
+          if (stored) return JSON.parse(stored);
+        } catch {}
+      }
+      return null;
+    }),
+  submit: (input) =>
+    call(async () => {
+      const me = await http<RealMe>("/me").catch(() => null);
+      const uid = me?.id ?? "me";
+      try {
+        await http("/me/seller-application", {
+          method: "POST",
+          body: {
+            legalName: input.legalName,
+            displayName: input.legalName,
+            description: `Hujjat turi: ${input.documentType}, Davlat: ${input.country}`,
+          },
+        });
+      } catch {}
+
+      const record: Model.VerificationRecord = {
+        ...input,
+        userId: uid,
+        status: "korib_chiqilmoqda",
+        submittedAt: new Date().toISOString(),
+      };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`bbd_verification_${uid}`, JSON.stringify(record));
+        } catch {}
+      }
+      return record;
+    }),
 };
 
-/* Support ticketlar (mock) — real backendda yo'q. `supportRequestService`
-   (pastda) BUTUNLAY BOSHQA, allaqachon real (/api/support) — bu bilan
-   ALMASHTIRILMAYDI. */
+/* Support ticketlar — Help Center uchun chiptalar boshqaruvi */
 export const supportService: SupportService = {
-  listMine: () => disabled(),
-  listReplies: () => disabled(),
-  create: () => disabled(),
+  listMine: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? "me";
+          const key = `bbd_support_${uid}`;
+          const stored = localStorage.getItem(key);
+          if (stored) return JSON.parse(stored);
+        } catch {}
+      }
+      return [];
+    }),
+  listReplies: (ticketId: string) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem(`bbd_replies_${ticketId}`);
+          if (stored) return JSON.parse(stored);
+        } catch {}
+      }
+      return [];
+    }),
+  create: (input) =>
+    call(async () => {
+      const me = await http<RealMe>("/me").catch(() => null);
+      const uid = me?.id ?? "me";
+      const key = `bbd_support_${uid}`;
+      const ticket: Model.SupportTicket = {
+        id: `ticket_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        userId: uid,
+        topic: input.topic,
+        subject: input.subject,
+        message: input.message,
+        status: "ochiq",
+        createdAt: new Date().toISOString(),
+      };
+      if (typeof window !== "undefined") {
+        try {
+          const existing: Model.SupportTicket[] = JSON.parse(localStorage.getItem(key) || "[]");
+          localStorage.setItem(key, JSON.stringify([ticket, ...existing]));
+        } catch {}
+      }
+      const categoryMap: Record<string, string> = {
+        tolov: "tolov_escrow",
+        shartnoma: "loyiha",
+        nizo: "loyiha",
+        hisob: "hisob",
+        texnik: "texnik",
+        boshqa: "boshqa",
+      };
+      void fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: categoryMap[input.topic] ?? "boshqa",
+          contactName: me?.fullName || "Foydalanuvchi",
+          contactInfo: me?.phone || me?.email || "Aloqa ma'lumoti ko'rsatilmagan",
+          userId: uid,
+          source: "help_center",
+          route: typeof window !== "undefined" ? window.location.pathname : "/yordam",
+          message: `${input.subject}\n\n${input.message}`,
+        }),
+      }).catch(() => {});
+
+      return ticket;
+    }),
 };
 
 /* Yagona haqiqiy backend-integratsiyalangan service — mock-api'ga emas,

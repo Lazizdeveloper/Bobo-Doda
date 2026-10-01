@@ -499,6 +499,13 @@ export const en: Record<string, string> = {
   "wizard.errDesc": "Description must be at least 30 characters",
   "wizard.errPrice": "Price must be greater than 0",
   "wizard.errDays": "Duration must be at least 1 day",
+  "wizard.errNotApproved": "Your seller application must be approved before you can create services. Your application is under review.",
+  "wizard.errValidation": "Please fill all required fields correctly",
+  "wizard.errCategoryInvalid": "Selected category is not available",
+  "wizard.errNoApplication": "You must submit a specialist application before creating services",
+  "wizard.appRequiredTitle": "Specialist application required",
+  "wizard.appRequiredDesc": "You must submit and get approved as a specialist before creating services.",
+  "wizard.applyBtn": "Submit application",
 
   /* Job posts (path B) */
   "jobs.title": "Job posts",
@@ -571,6 +578,7 @@ export const en: Record<string, string> = {
   "contracts.tabAll": "All",
   "contracts.empty": "No contracts with this status",
   "contracts.emptyAll": "No contracts yet — post a service or respond to job posts",
+  "contracts.emptyBuyer": "No contracts yet — post a job or choose a specialist from the marketplace",
   "contracts.colBuyer": "Client",
   "contracts.colTitle": "Contract",
   "contracts.colAmount": "Amount",
@@ -927,6 +935,9 @@ export const en: Record<string, string> = {
   "bdash.helpTeaserTitle": "Need help?",
   "bdash.helpTeaserBody": "Read our guide on how to hire the best specialists for your project.",
   "bdash.helpTeaserBtn": "Read Guide",
+  "bdash.postJobBannerTitle": "Have a new project?",
+  "bdash.postJobBannerBody": "Post a job and receive competitive proposals from qualified specialists.",
+  "bdash.postJobBannerBtn": "Post a job",
   "bdash.escrowNote": "Your payments are protected by escrow: money goes to the specialist only after you accept the work",
 
   /* Marketplace (catalog) */
@@ -1532,10 +1543,24 @@ export const en: Record<string, string> = {
   "settings.portfolioEmptyDesc": "Upload examples of your previous work — this significantly boosts buyer trust and conversions.",
 
   "settings.availTitle": "Available for new projects?",
+  "settings.tabAvailabilityDesc": "Let clients know your current workload and response speed.",
   "settings.availOnDesc": "Your profile and services will display a green 'Available for work' badge in the catalog.",
   "settings.availOffDesc": "You will be marked as busy; buyers can only send you non-urgent inquiries.",
   "settings.responseSpeed": "Average response time",
   "settings.responseSpeedDesc": "Responding within 1-2 hours increases the likelihood of closing new orders.",
+  "settings.languagesHint": "Which languages do you speak fluently?",
+  "settings.platformAverage": "Platform average",
+  "settings.notificationsHint": "Which events would you like to receive notifications for?",
+  "settings.ntfOffersTitle": "Direct proposals & offers",
+  "settings.ntfOffersDesc": "When a buyer sends you a direct project offer",
+  "settings.ntfOffersLabel": "Direct proposals & offers",
+  "settings.ntfContractsTitle": "Contracts & milestones",
+  "settings.ntfContractsDesc": "Escrow funding, milestone submissions, and approvals",
+  "settings.ntfMessagesTitle": "Chat messages",
+  "settings.ntfMessagesDesc": "When a client writes a new chat message",
+  "settings.ntfPaymentsTitle": "Payouts & billing",
+  "settings.ntfPaymentsDesc": "Withdrawals and transaction updates",
+  "settings.accountSectionDesc": "Safely log out of your account or begin a new session.",
 
   /* Market discovery filters */
   "market.filterPrice": "Budget / Price (UZS)",

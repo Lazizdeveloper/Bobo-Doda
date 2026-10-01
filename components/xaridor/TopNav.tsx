@@ -65,6 +65,7 @@ export function TopNav({ base }: TopNavProps) {
   const items = [
     { href: "/xaridor", label: t("nav.dashboard"), exact: true },
     { href: "/xaridor/bozor", label: t("nav.market") },
+    { href: "/xaridor/elonlarim", label: t("nav.myJobs") },
     { href: "/xaridor/shartnomalar", label: t("nav.contracts") },
   ];
 
@@ -96,6 +97,16 @@ export function TopNav({ base }: TopNavProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/xaridor/elonlarim/yangi"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-btn bg-primary text-white hover:bg-primary-deep transition-colors shadow-sm"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {t("bjobs.post")}
+          </Link>
+
           <LangSwitch />
 
           {/* Mobile menu button */}
@@ -146,6 +157,15 @@ export function TopNav({ base }: TopNavProps) {
           className="border-t border-line bg-surface px-4 py-3 lg:hidden"
         >
           <nav className="flex flex-col gap-2">
+            <Link
+              href="/xaridor/elonlarim/yangi"
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-btn text-sm font-semibold bg-primary text-white hover:bg-primary-deep shadow-sm mb-1"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              {t("bjobs.post")}
+            </Link>
             {items.map((item) => (
               <Link key={item.href} href={item.href} className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
                 {item.label}

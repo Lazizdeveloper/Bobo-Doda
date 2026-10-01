@@ -737,7 +737,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                   {t("profile.languages")}
                 </span>
                 <p className="mt-0.5 text-2xs text-muted">
-                  Qaysi tillarda erkin muloqot qila olasiz?
+                  {t("settings.languagesHint")}
                 </p>
 
                 {languages.length > 0 && (
@@ -897,7 +897,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                   {t("settings.tabAvailability")}
                 </h2>
                 <p className="mt-1 text-xs text-muted">
-                  Buyurtmachilarga joriy ish yuklamangiz va javob berish tezligingizni bildiring.
+                  {t("settings.tabAvailabilityDesc")}
                 </p>
               </div>
 
@@ -924,7 +924,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                 <p className="mt-1 text-xs text-muted">{t("settings.responseSpeedDesc")}</p>
                 <div className="mt-3 flex items-center gap-3">
                   <Badge tone="success">~ 1-2 {t("common.hours")}</Badge>
-                  <span className="text-2xs text-faint">Platforma o&apos;rtacha ko&apos;rsatkichi</span>
+                  <span className="text-2xs text-faint">{t("settings.platformAverage")}</span>
                 </div>
               </div>
             </Card>
@@ -970,19 +970,19 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                   {t("settings.tabNotifications")}
                 </h2>
                 <p className="mt-1 text-xs text-muted">
-                  Qaysi xabarlar bo&apos;yicha bildirishnomalar olishni xohlaysiz?
+                  {t("settings.notificationsHint")}
                 </p>
               </div>
 
               <div className="flex flex-col divide-y divide-line">
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium text-ink">Yangi to&apos;g&apos;ridan-to&apos;g&apos;ri takliflar (Offers)</p>
-                    <p className="text-2xs text-muted">Xaridor sizga loyiha yuborganda</p>
+                    <p className="text-sm font-medium text-ink">{t("settings.ntfOffersTitle")}</p>
+                    <p className="text-2xs text-muted">{t("settings.ntfOffersDesc")}</p>
                   </div>
                   <Checkbox
                     id="ntf-seller-proposals"
-                    label="Yangi to'g'ridan-to'g'ri takliflar"
+                    label={t("settings.ntfOffersLabel")}
                     checked={preferences.proposals ?? true}
                     onChange={(e) =>
                       setPreferences((p) => ({ ...p, proposals: e.target.checked }))
@@ -991,12 +991,12 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium text-ink">Shartnoma va to&apos;lov holatlari</p>
-                    <p className="text-2xs text-muted">Escrow mablag&apos;lanishi, topshirish va qabul xabarlari</p>
+                    <p className="text-sm font-medium text-ink">{t("settings.ntfContractsTitle")}</p>
+                    <p className="text-2xs text-muted">{t("settings.ntfContractsDesc")}</p>
                   </div>
                   <Checkbox
                     id="ntf-seller-contracts"
-                    label="Shartnoma va to'lov holatlari"
+                    label={t("settings.ntfContractsTitle")}
                     checked={preferences.contracts}
                     onChange={(e) =>
                       setPreferences((p) => ({ ...p, contracts: e.target.checked }))
@@ -1005,12 +1005,12 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium text-ink">Muloqot chat xabarlari</p>
-                    <p className="text-2xs text-muted">Buyurtmachi yangi xabar yozganda</p>
+                    <p className="text-sm font-medium text-ink">{t("settings.ntfMessagesTitle")}</p>
+                    <p className="text-2xs text-muted">{t("settings.ntfMessagesDesc")}</p>
                   </div>
                   <Checkbox
                     id="ntf-seller-messages"
-                    label="Muloqot chat xabarlari"
+                    label={t("settings.ntfMessagesTitle")}
                     checked={preferences.messages}
                     onChange={(e) =>
                       setPreferences((p) => ({ ...p, messages: e.target.checked }))
@@ -1019,12 +1019,12 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                 </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium text-ink">To&apos;lov va hisob-kitoblar</p>
-                    <p className="text-2xs text-muted">Mablag&apos; yechish va tranzaksiya bildirishnomalari</p>
+                    <p className="text-sm font-medium text-ink">{t("settings.ntfPaymentsTitle")}</p>
+                    <p className="text-2xs text-muted">{t("settings.ntfPaymentsDesc")}</p>
                   </div>
                   <Checkbox
                     id="ntf-seller-payments"
-                    label="To'lov va hisob-kitoblar"
+                    label={t("settings.ntfPaymentsTitle")}
                     checked={preferences.payments}
                     onChange={(e) =>
                       setPreferences((p) => ({ ...p, payments: e.target.checked }))
@@ -1055,7 +1055,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                 {t("settings.tabAccount")}
               </h2>
               <p className="mt-1 text-xs text-muted">
-                Hisobingizdan xavfsiz chiqish yoki yangi sessiya boshlash.
+                {t("settings.accountSectionDesc")}
               </p>
 
               <div className="mt-6 flex flex-wrap items-center gap-4">

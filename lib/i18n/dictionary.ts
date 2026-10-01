@@ -849,6 +849,34 @@ export const dictionary: Record<string, Entry> = {
   },
   "wizard.errPrice": { uz: "Narx 0 dan katta bo'lishi kerak", ru: "Цена должна быть больше 0" },
   "wizard.errDays": { uz: "Muddat kamida 1 kun bo'lishi kerak", ru: "Срок должен быть не менее 1 дня" },
+  "wizard.errNotApproved": {
+    uz: "Xizmat yaratish uchun sotuvchi arizangiz tasdiqlangan bo'lishi kerak. Arizangiz moderatsiya jarayonida.",
+    ru: "Для создания услуги ваша заявка продавца должна быть одобрена. Заявка на модерации.",
+  },
+  "wizard.errValidation": {
+    uz: "Maydonlarni to'g'ri to'ldiring",
+    ru: "Заполните поля корректно",
+  },
+  "wizard.errCategoryInvalid": {
+    uz: "Tanlangan kategoriya mavjud emas yoki faol emas",
+    ru: "Выбранная категория недоступна",
+  },
+  "wizard.errNoApplication": {
+    uz: "Xizmat yaratish uchun avval mutaxassis sifatida ariza topshirishingiz kerak",
+    ru: "Для создания услуги сначала необходимо подать заявку специалиста",
+  },
+  "wizard.appRequiredTitle": {
+    uz: "Sotuvchi arizasi talab qilinadi",
+    ru: "Требуется заявка продавца",
+  },
+  "wizard.appRequiredDesc": {
+    uz: "Xizmat yaratishdan oldin mutaxassis sifatida tasdiqlanish uchun ariza topshirishingiz kerak.",
+    ru: "Перед созданием услуги необходимо подать заявку для подтверждения статуса специалиста.",
+  },
+  "wizard.applyBtn": {
+    uz: "Ariza topshirish",
+    ru: "Подать заявку",
+  },
 
   /* Ish e'lonlari (B yo'l) */
   "jobs.title": { uz: "Ish e'lonlari", ru: "Объявления о работе" },
@@ -959,6 +987,10 @@ export const dictionary: Record<string, Entry> = {
   "contracts.emptyAll": {
     uz: "Hozircha shartnoma yo'q — xizmat joylang yoki e'lonlarga taklif yuboring",
     ru: "Контрактов пока нет — разместите услугу или откликнитесь на объявления",
+  },
+  "contracts.emptyBuyer": {
+    uz: "Hozircha shartnoma yo'q — e'lon joylang yoki bozordan mutaxassis tanlang",
+    ru: "Контрактов пока нет — разместите объявление или выберите специалиста на бирже",
   },
   "contracts.colBuyer": { uz: "Buyurtmachi", ru: "Заказчик" },
   "contracts.colTitle": { uz: "Shartnoma", ru: "Контракт" },
@@ -1569,6 +1601,12 @@ export const dictionary: Record<string, Entry> = {
     ru: "Прочитайте руководство о том, как нанять лучших специалистов для вашего проекта.",
   },
   "bdash.helpTeaserBtn": { uz: "Qo'llanmani o'qish", ru: "Читать руководство" },
+  "bdash.postJobBannerTitle": { uz: "Yangi loyihangiz bormi?", ru: "У вас есть новый проект?" },
+  "bdash.postJobBannerBody": {
+    uz: "Ish e'lonini joylang va malakali mutaxassislardan takliflar oling.",
+    ru: "Разместите объявление о работе и получайте предложения от квалифицированных специалистов.",
+  },
+  "bdash.postJobBannerBtn": { uz: "E'lon joylash", ru: "Разместить объявление" },
   "bdash.escrowNote": {
     uz: "To'lovlaringiz escrow'da himoyalangan: mablag' faqat siz ishni qabul qilganingizdan keyin mutaxassisga o'tadi",
     ru: "Ваши платежи защищены эскроу: средства уходят специалисту только после того, как вы примете работу",
@@ -2542,10 +2580,66 @@ export const dictionary: Record<string, Entry> = {
   "settings.portfolioEmptyDesc": { uz: "Oldingi ishlaringizdan namunalar yuklang — bu buyurtma olish imkoniyatingizni sezilarli oshiradi.", ru: "Загрузите примеры выполненных работ — это существенно увеличит шансы получить заказ." },
 
   "settings.availTitle": { uz: "Yangi buyurtmalar uchun ochiqmisiz?", ru: "Открыты для новых заказов?" },
+  "settings.tabAvailabilityDesc": {
+    uz: "Buyurtmachilarga joriy ish yuklamangiz va javob berish tezligingizni bildiring.",
+    ru: "Сообщите клиентам о вашей текущей загрузке и скорости ответа.",
+  },
   "settings.availOnDesc": { uz: "Profilingiz va xizmatlaringiz bozorda 'Buyurtma olishga tayyor' yashil belgisi bilan ko'rinadi.", ru: "Ваш профиль и услуги отображаются в каталоге с зелёной отметкой «Готов к заказам»." },
   "settings.availOffDesc": { uz: "Siz band deb ko'rinasiz, yangi xaridorlar sizga shoshilinch bo'lmagan takliflar yuborishi mumkin.", ru: "Вы отображаетесь как занятый, заказчики смогут отправлять только несрочные предложения." },
   "settings.responseSpeed": { uz: "O'rtacha javob berish tezligi", ru: "Среднее время ответа" },
   "settings.responseSpeedDesc": { uz: "Tezkor javob berish (1-2 soat ichida) buyurtmachi bilan shartnoma tuzish ehtimolini oshiradi.", ru: "Быстрый ответ (в течение 1-2 часов) повышает вероятность заключения сделки." },
+  "settings.languagesHint": {
+    uz: "Qaysi tillarda erkin muloqot qila olasiz?",
+    ru: "На каких языках вы свободно общаетесь?",
+  },
+  "settings.platformAverage": {
+    uz: "Platforma o'rtacha ko'rsatkichi",
+    ru: "Средний показатель платформы",
+  },
+  "settings.notificationsHint": {
+    uz: "Qaysi xabarlar bo'yicha bildirishnomalar olishni xohlaysiz?",
+    ru: "По каким событиям вы хотите получать уведомления?",
+  },
+  "settings.ntfOffersTitle": {
+    uz: "Yangi to'g'ridan-to'g'ri takliflar (Offers)",
+    ru: "Новые прямые предложения (Offers)",
+  },
+  "settings.ntfOffersDesc": {
+    uz: "Xaridor sizga loyiha yuborganda",
+    ru: "Когда клиент отправляет вам проект",
+  },
+  "settings.ntfOffersLabel": {
+    uz: "Yangi to'g'ridan-to'g'ri takliflar",
+    ru: "Новые прямые предложения",
+  },
+  "settings.ntfContractsTitle": {
+    uz: "Shartnoma va to'lov holatlari",
+    ru: "Статусы договоров и выплат",
+  },
+  "settings.ntfContractsDesc": {
+    uz: "Escrow mablag'lanishi, topshirish va qabul xabarlari",
+    ru: "Пополнение эскроу, сдача работы и уведомления о принятии",
+  },
+  "settings.ntfMessagesTitle": {
+    uz: "Muloqot chat xabarlari",
+    ru: "Сообщения в чате",
+  },
+  "settings.ntfMessagesDesc": {
+    uz: "Buyurtmachi yangi xabar yozganda",
+    ru: "Когда заказчик пишет новое сообщение",
+  },
+  "settings.ntfPaymentsTitle": {
+    uz: "To'lov va hisob-kitoblar",
+    ru: "Платежи и расчёты",
+  },
+  "settings.ntfPaymentsDesc": {
+    uz: "Mablag' yechish va tranzaksiya bildirishnomalari",
+    ru: "Вывод средств и уведомления о транзакциях",
+  },
+  "settings.accountSectionDesc": {
+    uz: "Hisobingizdan xavfsiz chiqish yoki yangi sessiya boshlash.",
+    ru: "Безопасный выход из аккаунта или начало новой сессии.",
+  },
 
   /* Market discovery filters */
   "market.filterPrice": { uz: "Byudjet / Narx (so'm)", ru: "Бюджет / Цена (сум)" },

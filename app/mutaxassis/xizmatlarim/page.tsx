@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -10,8 +11,8 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast";
 import { ServiceCard, type ServiceAction } from "@/components/shared/ServiceCard";
-import { servicesService } from "@/lib/api";
-import type { Service, ServiceStatus } from "@/lib/types";
+import { servicesService, sellerApplicationService } from "@/lib/api";
+import type { Service, ServiceStatus, VerificationStatus } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
 type Filter = "all" | ServiceStatus;
@@ -24,10 +25,15 @@ export default function XizmatlarimPage() {
   const [toArchive, setToArchive] = useState<Service | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [applicationStatus, setApplicationStatus] = useState<VerificationStatus | null>(null);
 
   const load = useCallback(() => {
     setLoadError(null);
     servicesService.listMine().then(setServices).catch(setLoadError);
+    sellerApplicationService
+      .getCurrent()
+      .then((app) => setApplicationStatus(app?.status ?? "boshlanmagan"))
+      .catch(() => setApplicationStatus("boshlanmagan"));
   }, []);
 
   useEffect(load, [load]);
@@ -80,6 +86,41 @@ export default function XizmatlarimPage() {
           <Button>{t("services.add")}</Button>
         </Link>
       </div>
+
+      {applicationStatus && applicationStatus !== "tasdiqlangan" && (
+        <Card
+          className={
+            applicationStatus === "rad_etilgan"
+              ? "border-danger/30 bg-danger/5"
+              : "border-warning/30 bg-warning/5"
+          }
+        >
+          <p className="font-heading text-sm font-bold text-ink">
+            {applicationStatus === "rad_etilgan"
+              ? t("dash.applicationRejected")
+              : applicationStatus === "korib_chiqilmoqda"
+              ? t("dash.applicationPending")
+              : t("wizard.appRequiredTitle")}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {applicationStatus === "rad_etilgan"
+              ? t("dash.applicationRejectedDesc")
+              : applicationStatus === "korib_chiqilmoqda"
+              ? t("dash.applicationPendingDesc")
+              : t("wizard.appRequiredDesc")}
+          </p>
+          {applicationStatus !== "korib_chiqilmoqda" && (
+            <div className="mt-2">
+              <Link
+                href="/mutaxassis/royxat"
+                className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+              >
+                {applicationStatus === "rad_etilgan" ? t("onboard.reapplyBtn") : t("wizard.applyBtn")} →
+              </Link>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Tabs
         value={filter}

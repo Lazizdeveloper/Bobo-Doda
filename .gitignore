@@ -60,3 +60,9 @@ next-env.d.ts
 
 # ikkinchi dev server build papkasi (npm run dev)
 .env*
+
+# tooling & ai caches
+.vscode/
+graphify-out/
+.agents/
+.claude/

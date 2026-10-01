@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
@@ -11,8 +12,8 @@ import { Stepper } from "@/components/ui/Stepper";
 import { useToast } from "@/components/ui/Toast";
 import { CATEGORIES } from "@/lib/category-fields";
 import { getSelectableCategories } from "@/lib/categories";
-import { servicesService } from "@/lib/api";
-import type { Service, ServiceCategory } from "@/lib/types";
+import { servicesService, sellerApplicationService, ApiError } from "@/lib/api";
+import type { Service, ServiceCategory, VerificationStatus } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useFormDraft } from "@/lib/hooks/useFormDraft";
@@ -35,6 +36,16 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
   const { toast } = useToast();
   const isEdit = !!initial;
   const canPublish = !isEdit || initial.status === "draft" || initial.status === "rejected";
+
+  const [applicationStatus, setApplicationStatus] = useState<VerificationStatus | null>(null);
+  const [applicationLoading, setApplicationLoading] = useState(true);
+  useEffect(() => {
+    sellerApplicationService
+      .getCurrent()
+      .then((app) => setApplicationStatus(app?.status ?? "boshlanmagan"))
+      .catch(() => setApplicationStatus("boshlanmagan"))
+      .finally(() => setApplicationLoading(false));
+  }, []);
 
   const [selectableCategories, setSelectableCategories] = useState<ServiceCategory[]>(CATEGORIES);
   useEffect(() => setSelectableCategories(getSelectableCategories()), []);
@@ -89,7 +100,24 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
   }
 
   async function save(kind: "publish" | "draft") {
-    if (!category) return;
+    if (!category) {
+      setErrors((prev) => ({ ...prev, category: t("wizard.errCategory") }));
+      setStep(0);
+      return;
+    }
+    if (!validateStep(1) || !validateStep(2)) {
+      return;
+    }
+    if (applicationStatus && applicationStatus !== "tasdiqlangan") {
+      if (applicationStatus === "rad_etilgan") {
+        toast(t("dash.applicationRejectedDesc"), "error");
+      } else if (applicationStatus === "korib_chiqilmoqda") {
+        toast(t("wizard.errNotApproved"), "error");
+      } else {
+        toast(t("wizard.errNoApplication"), "error");
+      }
+      return;
+    }
     setSaving(kind);
     try {
       const data = { category, title: title.trim(), description: description.trim(), price: Number(price), deliveryDays: Number(days) };
@@ -108,8 +136,29 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
       }
       clearDraft();
       router.push("/mutaxassis/xizmatlarim");
-    } catch {
-      toast(t("common.error"), "error");
+    } catch (err) {
+      console.error("ServiceWizard save error:", err);
+      const isApi = err instanceof ApiError;
+      const code = isApi ? (err.message || err.code) : "";
+      const status = isApi ? err.status : 0;
+
+      if (code === "SELLER_NOT_APPROVED" || status === 403) {
+        toast(t("wizard.errNotApproved"), "error");
+      } else if (code === "CATEGORY_NOT_FOUND" || code === "CATEGORY_DISABLED") {
+        setErrors((prev) => ({ ...prev, category: t("wizard.errCategory") }));
+        setStep(0);
+        toast(t("wizard.errCategoryInvalid"), "error");
+      } else if (isApi && err.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...err.fieldErrors }));
+        if (err.fieldErrors.category) setStep(0);
+        else if (err.fieldErrors.title || err.fieldErrors.description) setStep(1);
+        else if (err.fieldErrors.price || err.fieldErrors.deliveryDays) setStep(2);
+        toast(t("wizard.errValidation"), "error");
+      } else if (isApi && err.message && err.message !== "UNKNOWN" && err.message !== "VALIDATION") {
+        toast(err.message, "error");
+      } else {
+        toast(t("common.error"), "error");
+      }
       setSaving(null);
     }
   }
@@ -121,6 +170,41 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
       </div>
 
       <h1 className="font-heading text-2xl font-extrabold text-ink">{isEdit ? t("wizard.editTitle") : t("wizard.newTitle")}</h1>
+
+      {!applicationLoading && applicationStatus && applicationStatus !== "tasdiqlangan" && (
+        <Card
+          className={
+            applicationStatus === "rad_etilgan"
+              ? "border-danger/30 bg-danger/5"
+              : "border-warning/30 bg-warning/5"
+          }
+        >
+          <p className="font-heading text-sm font-bold text-ink">
+            {applicationStatus === "rad_etilgan"
+              ? t("dash.applicationRejected")
+              : applicationStatus === "korib_chiqilmoqda"
+              ? t("dash.applicationPending")
+              : t("wizard.appRequiredTitle")}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {applicationStatus === "rad_etilgan"
+              ? t("dash.applicationRejectedDesc")
+              : applicationStatus === "korib_chiqilmoqda"
+              ? t("dash.applicationPendingDesc")
+              : t("wizard.appRequiredDesc")}
+          </p>
+          {applicationStatus !== "korib_chiqilmoqda" && (
+            <div className="mt-2">
+              <Link
+                href="/mutaxassis/royxat"
+                className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+              >
+                {applicationStatus === "rad_etilgan" ? t("onboard.reapplyBtn") : t("wizard.applyBtn")} →
+              </Link>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Stepper steps={steps} current={step} onStepClick={isEdit ? setStep : undefined} />
 
