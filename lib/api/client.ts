@@ -960,8 +960,8 @@ export const supportService: SupportService = {
     call(async () => {
       if (typeof window !== "undefined") {
         try {
-          const me = await http<RealMe>("/me").catch(() => null);
-          const uid = me?.id ?? "me";
+          const session = sessionStore.read();
+          const uid = session?.userId || "me";
           const key = `bbd_support_${uid}`;
           const stored = localStorage.getItem(key);
           if (stored) return JSON.parse(stored);
@@ -981,8 +981,8 @@ export const supportService: SupportService = {
     }),
   create: (input) =>
     call(async () => {
-      const me = await http<RealMe>("/me").catch(() => null);
-      const uid = me?.id ?? "me";
+      const session = sessionStore.read();
+      const uid = session?.userId || "me";
       const key = `bbd_support_${uid}`;
       const ticket: Model.SupportTicket = {
         id: `ticket_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1012,8 +1012,8 @@ export const supportService: SupportService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           category: categoryMap[input.topic] ?? "boshqa",
-          contactName: me?.fullName || "Foydalanuvchi",
-          contactInfo: me?.phone || me?.email || "Aloqa ma'lumoti ko'rsatilmagan",
+          contactName: "Foydalanuvchi",
+          contactInfo: `ID: ${uid}`,
           userId: uid,
           source: "help_center",
           route: typeof window !== "undefined" ? window.location.pathname : "/yordam",

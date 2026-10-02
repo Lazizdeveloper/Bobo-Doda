@@ -91,6 +91,17 @@ async function performRefresh(): Promise<string | null> {
     if (!res.ok) {
       clearSession();
       setAccessToken(null);
+      if (typeof window !== "undefined") {
+        const path = window.location.pathname;
+        if (
+          path.startsWith("/mutaxassis") ||
+          path.startsWith("/xaridor") ||
+          path.startsWith("/admin")
+        ) {
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.href = "/kirish";
+        }
+      }
       return null;
     }
     const body = (await res.json()) as {

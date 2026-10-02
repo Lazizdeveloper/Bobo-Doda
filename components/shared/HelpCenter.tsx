@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -23,7 +22,6 @@ export function HelpCenter() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [loadError, setLoadError] = useState<unknown>(null);
   /* Ochilgan chipta va uning support javoblari. Javoblar chipta ochilganda
      yuklanadi — hammasini oldindan olish keraksiz so'rov bo'lardi. */
   const [openTicketId, setOpenTicketId] = useState<string | null>(null);
@@ -31,12 +29,10 @@ export function HelpCenter() {
   const [repliesLoading, setRepliesLoading] = useState(false);
 
   const load = useCallback(() => {
-    setLoadError(null);
     supportService
       .listMine()
       .then(setTickets)
-      /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
-      .catch(setLoadError);
+      .catch(() => setTickets([]));
   }, []);
 
   useEffect(load, [load]);
@@ -126,11 +122,8 @@ export function HelpCenter() {
         </div>
       </Card>
 
-      {loadError ? (
-        <ErrorState error={loadError} onRetry={load} />
-      ) : (
-        tickets.length > 0 && (
-          <section>
+      {tickets.length > 0 && (
+        <section>
             <h2 className="mb-3 font-heading text-base font-bold text-ink">
               {t("help.myTickets")}
             </h2>
@@ -223,8 +216,7 @@ export function HelpCenter() {
               })}
             </div>
           </section>
-        )
-      )}
-    </div>
+        )}
+      </div>
   );
 }
