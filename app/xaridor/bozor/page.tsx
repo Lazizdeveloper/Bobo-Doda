@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -140,9 +141,39 @@ export default function BozorPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12">
-      <div>
-        <h1 className="font-heading text-2xl font-extrabold text-ink xl:text-3xl">{t("market.title")}</h1>
-        <p className="mt-1 text-sm text-muted xl:text-base">{t("market.subtitle")}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-2xl font-extrabold text-ink xl:text-3xl">{t("market.title")}</h1>
+          <p className="mt-1 text-sm text-muted xl:text-base">{t("market.subtitle")}</p>
+        </div>
+        <Link href="/xaridor/elonlarim/yangi" className="shrink-0">
+          <Button className="flex items-center gap-2 shadow-sm">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {t("bjobs.postJob")}
+          </Button>
+        </Link>
+      </div>
+
+      {/* Banner: Ish joylash */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-card border border-primary/20 bg-primary/5">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-sm sm:text-base font-bold text-ink">
+            {t("market.postJobBannerTitle")}
+          </h2>
+          <p className="text-xs sm:text-sm text-muted">
+            {t("market.postJobBannerDesc")}
+          </p>
+        </div>
+        <Link href="/xaridor/elonlarim/yangi" className="shrink-0">
+          <Button variant="secondary" className="flex items-center gap-1.5 shadow-sm text-xs">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {t("bjobs.postJob")}
+          </Button>
+        </Link>
       </div>
 
       <div className="xl:grid xl:grid-cols-[300px_1fr] xl:items-start xl:gap-8">
@@ -205,7 +236,24 @@ export default function BozorPage() {
               <SkeletonCard />
             </div>
           ) : filteredServices.length === 0 ? (
-            <EmptyState title={t("market.empty")} />
+            <div className="flex flex-col items-center gap-4 py-8">
+              <EmptyState title={t("market.empty")} />
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {hasActiveFilters && (
+                  <Button variant="secondary" onClick={clearAllFilters}>
+                    {t("market.clearFilters")}
+                  </Button>
+                )}
+                <Link href="/xaridor/elonlarim/yangi">
+                  <Button className="flex items-center gap-1.5 shadow-sm">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    {t("bjobs.postJob")}
+                  </Button>
+                </Link>
+              </div>
+            </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {pagedServices.map((service) => (

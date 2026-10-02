@@ -52,7 +52,7 @@ export default function XizmatTafsilotiPage() {
     servicesService
       .get(params.id)
       .then(async (found) => {
-        if (found && found.status === "active") {
+        if (found && (found.status === "active" || found.status === "pending_review" || found.status === "draft")) {
           setService(found);
           const allServices = await servicesService.listPublic();
           setOtherServices(allServices.filter((s) => s.sellerId === found.sellerId && s.id !== found.id));

@@ -1765,7 +1765,16 @@ export const dictionary: Record<string, Entry> = {
 
   /* E'lonlarim */
   "bjobs.title": { uz: "E'lonlarim", ru: "Мои объявления" },
-  "bjobs.post": { uz: "Yangi e'lon", ru: "Новое объявление" },
+  "bjobs.post": { uz: "+ Ish joylash", ru: "+ Разместить работу" },
+  "bjobs.postJob": { uz: "+ Ish joylash", ru: "+ Разместить работу" },
+  "market.postJobBannerTitle": {
+    uz: "Kerakli mutaxassis yoki xizmatni topmadingizmi?",
+    ru: "Не нашли подходящую услугу или специалиста?",
+  },
+  "market.postJobBannerDesc": {
+    uz: "O'z loyihangiz uchun ish e'loni joylang va malakali mutaxassislardan to'g'ridan-to'g'ri takliflar oling.",
+    ru: "Разместите вакансию для своего проекта и получайте предложения напрямую от специалистов.",
+  },
   "bjobs.empty": {
     uz: "Hali e'lon joylamagansiz — birinchi e'loningizni yarating",
     ru: "У вас пока нет объявлений — создайте первое",

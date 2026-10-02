@@ -1018,7 +1018,10 @@ export const en: Record<string, string> = {
 
   /* My posts (client) */
   "bjobs.title": "My posts",
-  "bjobs.post": "New post",
+  "bjobs.post": "+ Post a job",
+  "bjobs.postJob": "+ Post a job",
+  "market.postJobBannerTitle": "Didn't find what you need?",
+  "market.postJobBannerDesc": "Post a job for your project and receive proposals directly from specialists.",
   "bjobs.empty": "You have no posts yet — create your first one",
   "bjobs.emptyCta": "Create post",
   "bjobs.emptyFiltered": "No posts with this status",

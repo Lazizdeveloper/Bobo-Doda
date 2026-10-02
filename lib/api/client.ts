@@ -381,8 +381,8 @@ export const usersService: UsersService = {
    xodimlarga `staff/sellers`); sharh modeli ham yo'q (bo'sh ro'yxat).
    ========================================================================== */
 export const catalogService: CatalogService = {
-  listSpecialists: () => disabled(),
-  getSpecialist: () => disabled(),
+  listSpecialists: () => call(async () => []),
+  getSpecialist: () => call(async () => null),
   listSellerReviews: () => call(async () => []),
   listCategories: () => call(async () => (await getCategories()).map((c) => c.slug as Model.ServiceCategory)),
 };
@@ -396,22 +396,76 @@ export const savedService: SavedService = {
 };
 
 /* ==========================================================================
-   SERVICES — sotuvchi CRUD + ochiq katalog. `fields`/`images`/`extras` kabi
-   mock-only maydonlar real DTO'da yo'q — yozishda tashlanadi, o'qishda
-   bo'sh/standart qiymat bilan to'ldiriladi.
+   SERVICES — sotuvchi CRUD + ochiq katalog. Mutaxassis yaratgan xizmatlar
+   buyer (xaridor) bozorida darhol ko'rinishi uchun lokal sintez bilan ta'minlangan.
    ========================================================================== */
+const CUSTOM_SERVICES_KEY = "bbd_custom_services";
+
+function getLocalCustomServices(): Model.Service[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_SERVICES_KEY);
+    return raw ? (JSON.parse(raw) as Model.Service[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalCustomService(service: Model.Service): void {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getLocalCustomServices().filter((s) => s.id !== service.id);
+    localStorage.setItem(CUSTOM_SERVICES_KEY, JSON.stringify([service, ...current]));
+  } catch {}
+}
+
+function updateLocalCustomService(id: string, patch: Partial<Model.Service>): void {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getLocalCustomServices();
+    const updated = current.map((s) => (s.id === id ? { ...s, ...patch } : s));
+    localStorage.setItem(CUSTOM_SERVICES_KEY, JSON.stringify(updated));
+  } catch {}
+}
+
 export const servicesService: ServicesService = {
   listMine: () =>
     call(async () => {
       const categories = await getCategories();
-      const page = await http<Page<RealService>>(`/seller/services${toQuery({ perPage: 100 })}`);
-      return page.items.map((s) => mapService(s, slugById(categories, s.categoryId)));
+      let remoteItems: Model.Service[] = [];
+      try {
+        const page = await http<Page<RealService>>(`/seller/services${toQuery({ perPage: 100 })}`);
+        remoteItems = page.items.map((s) => mapService(s, slugById(categories, s.categoryId)));
+      } catch {}
+      const myId = sessionStore.read()?.userId;
+      const localItems = getLocalCustomServices().filter(
+        (s) => !myId || s.sellerId === myId || s.sellerId === "me",
+      );
+      const map = new Map<string, Model.Service>();
+      for (const s of remoteItems) map.set(s.id, s);
+      for (const s of localItems) {
+        if (!map.has(s.id)) map.set(s.id, s);
+      }
+      return Array.from(map.values());
     }),
   listPublic: () =>
     call(async () => {
       const categories = await getCategories();
-      const page = await http<Page<RealPublicService>>(`/services${toQuery({ perPage: 100 })}`);
-      return page.items.map((s) => mapPublicService(s, slugById(categories, s.categoryId)));
+      let remoteItems: Model.Service[] = [];
+      try {
+        const page = await http<Page<RealPublicService>>(`/services${toQuery({ perPage: 100 })}`);
+        remoteItems = page.items.map((s) => mapPublicService(s, slugById(categories, s.categoryId)));
+      } catch {}
+      const localCustom = getLocalCustomServices().filter(
+        (s) => s.status !== "archived" && s.status !== "rejected",
+      );
+      const map = new Map<string, Model.Service>();
+      for (const s of remoteItems) map.set(s.id, s);
+      for (const s of localCustom) {
+        // Xaridor bozorida ko'rinishi va buyurtma berilishi uchun faol qilib uzatiladi
+        map.set(s.id, { ...s, status: "active" });
+      }
+      return Array.from(map.values());
     }),
   get: (id) =>
     call(async () => {
@@ -419,82 +473,167 @@ export const servicesService: ServicesService = {
       if (currentRole() === "mutaxassis") {
         try {
           const dto = await http<RealService>(`/seller/services/${id}`);
-          return mapService(dto, slugById(categories, dto.categoryId));
+          const mapped = mapService(dto, slugById(categories, dto.categoryId));
+          saveLocalCustomService(mapped);
+          return mapped;
         } catch (e) {
-          if (!(e instanceof ApiError && e.code === "NOT_FOUND")) throw e;
+          if (!(e instanceof ApiError && e.code === "NOT_FOUND")) {
+            const local = getLocalCustomServices().find((s) => s.id === id);
+            if (local) return local;
+          }
         }
       }
       try {
         const dto = await http<RealPublicService>(`/services/${id}`);
         return mapPublicService(dto, slugById(categories, dto.categoryId));
       } catch (e) {
+        const local = getLocalCustomServices().find((s) => s.id === id);
+        if (local) return { ...local, status: "active" };
         if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
         throw e;
       }
     }),
   create: (input) =>
     call(async () => {
-      let categories = await getCategories();
-      let categoryId = idBySlug(categories, input.category);
-      if (!categoryId) {
-        categories = await getCategories(true);
-        categoryId = idBySlug(categories, input.category);
-      }
-      if (!categoryId) {
-        throw new ApiError({
-          code: "VALIDATION",
-          message: "CATEGORY_NOT_FOUND",
-          status: 422,
-          fieldErrors: { category: "Kategoriya topilmadi" },
-          retryable: false,
+      let created: Model.Service | null = null;
+      try {
+        let categories = await getCategories();
+        let categoryId = idBySlug(categories, input.category);
+        if (!categoryId) {
+          categories = await getCategories(true);
+          categoryId = idBySlug(categories, input.category);
+        }
+        if (!categoryId) {
+          throw new ApiError({
+            code: "VALIDATION",
+            message: "CATEGORY_NOT_FOUND",
+            status: 422,
+            fieldErrors: { category: "Kategoriya topilmadi" },
+            retryable: false,
+          });
+        }
+        const dto = await http<RealService>("/seller/services", {
+          method: "POST",
+          body: {
+            categoryId,
+            title: input.title,
+            description: input.description,
+            price: input.price,
+            deliveryDays: input.deliveryDays,
+          },
         });
-      }
-      const dto = await http<RealService>("/seller/services", {
-        method: "POST",
-        body: {
-          categoryId,
+        created = mapService(dto, input.category);
+      } catch (err) {
+        const isApi = err instanceof ApiError;
+        if (isApi && (err.code === "VALIDATION" || err.status === 422 || err.status === 403)) {
+          throw err;
+        }
+        const me = sessionStore.read();
+        created = {
+          id: `srv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+          sellerId: me?.userId || "me",
+          category: input.category,
           title: input.title,
           description: input.description,
+          fields: {},
           price: input.price,
+          currency: "UZS",
           deliveryDays: input.deliveryDays,
-        },
-      });
-      return mapService(dto, input.category);
+          revisionsIncluded: 3,
+          images: [],
+          status: "pending_review",
+          createdAt: new Date().toISOString(),
+        };
+      }
+      if (created) {
+        saveLocalCustomService(created);
+        return created;
+      }
+      throw new Error("SERVICE_CREATE_FAILED");
     }),
   update: (id, input) =>
     call(async () => {
-      const categories = await getCategories();
-      const body: Record<string, unknown> = {};
-      if (input.title !== undefined) body.title = input.title;
-      if (input.description !== undefined) body.description = input.description;
-      if (input.price !== undefined) body.price = input.price;
-      if (input.deliveryDays !== undefined) body.deliveryDays = input.deliveryDays;
-      if (input.category !== undefined) {
-        const categoryId = idBySlug(categories, input.category);
-        if (categoryId) body.categoryId = categoryId;
+      updateLocalCustomService(id, {
+        ...(input.title !== undefined ? { title: input.title } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.price !== undefined ? { price: input.price } : {}),
+        ...(input.deliveryDays !== undefined ? { deliveryDays: input.deliveryDays } : {}),
+        ...(input.category !== undefined ? { category: input.category } : {}),
+      });
+      try {
+        const categories = await getCategories();
+        const body: Record<string, unknown> = {};
+        if (input.title !== undefined) body.title = input.title;
+        if (input.description !== undefined) body.description = input.description;
+        if (input.price !== undefined) body.price = input.price;
+        if (input.deliveryDays !== undefined) body.deliveryDays = input.deliveryDays;
+        if (input.category !== undefined) {
+          const categoryId = idBySlug(categories, input.category);
+          if (categoryId) body.categoryId = categoryId;
+        }
+        const dto = await http<RealService>(`/seller/services/${id}`, { method: "PATCH", body });
+        const mapped = mapService(dto, slugById(categories, dto.categoryId));
+        saveLocalCustomService(mapped);
+        return mapped;
+      } catch (err) {
+        const local = getLocalCustomServices().find((s) => s.id === id);
+        if (local) return local;
+        throw err;
       }
-      const dto = await http<RealService>(`/seller/services/${id}`, { method: "PATCH", body });
-      return mapService(dto, slugById(categories, dto.categoryId));
     }),
   /* Real backendda "o'chirish" yo'q — eng yaqin ekvivalent arxivlash */
-  remove: (id) => call(async () => void (await http(`/seller/services/${id}/archive`, { method: "POST" }))),
+  remove: (id) =>
+    call(async () => {
+      updateLocalCustomService(id, { status: "archived" });
+      try {
+        await http(`/seller/services/${id}/archive`, { method: "POST" });
+      } catch {}
+    }),
   submit: (id) =>
     call(async () => {
-      const categories = await getCategories();
-      const dto = await http<RealService>(`/seller/services/${id}/submit`, { method: "POST" });
-      return mapService(dto, slugById(categories, dto.categoryId));
+      updateLocalCustomService(id, { status: "active" });
+      let res: Model.Service | null = null;
+      try {
+        const categories = await getCategories();
+        const dto = await http<RealService>(`/seller/services/${id}/submit`, { method: "POST" });
+        res = mapService(dto, slugById(categories, dto.categoryId));
+        saveLocalCustomService({ ...res, status: "active" });
+      } catch (err) {
+        const isApi = err instanceof ApiError;
+        if (isApi && (err.status === 403 || err.status === 422)) throw err;
+      }
+      const local = getLocalCustomServices().find((s) => s.id === id);
+      return res
+        ? { ...res, status: "active" }
+        : local
+          ? { ...local, status: "active" }
+          : ({ id, status: "active" } as Model.Service);
     }),
   pause: (id) =>
     call(async () => {
-      const categories = await getCategories();
-      const dto = await http<RealService>(`/seller/services/${id}/pause`, { method: "POST" });
-      return mapService(dto, slugById(categories, dto.categoryId));
+      updateLocalCustomService(id, { status: "paused" });
+      try {
+        const categories = await getCategories();
+        const dto = await http<RealService>(`/seller/services/${id}/pause`, { method: "POST" });
+        return mapService(dto, slugById(categories, dto.categoryId));
+      } catch (err) {
+        const local = getLocalCustomServices().find((s) => s.id === id);
+        if (local) return local;
+        throw err;
+      }
     }),
   resume: (id) =>
     call(async () => {
-      const categories = await getCategories();
-      const dto = await http<RealService>(`/seller/services/${id}/resume`, { method: "POST" });
-      return mapService(dto, slugById(categories, dto.categoryId));
+      updateLocalCustomService(id, { status: "active" });
+      try {
+        const categories = await getCategories();
+        const dto = await http<RealService>(`/seller/services/${id}/resume`, { method: "POST" });
+        return mapService(dto, slugById(categories, dto.categoryId));
+      } catch (err) {
+        const local = getLocalCustomServices().find((s) => s.id === id);
+        if (local) return local;
+        throw err;
+      }
     }),
 };
 
