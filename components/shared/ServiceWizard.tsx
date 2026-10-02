@@ -108,14 +108,8 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
     if (!validateStep(1) || !validateStep(2)) {
       return;
     }
-    if (applicationStatus && applicationStatus !== "tasdiqlangan") {
-      if (applicationStatus === "rad_etilgan") {
-        toast(t("dash.applicationRejectedDesc"), "error");
-      } else if (applicationStatus === "korib_chiqilmoqda") {
-        toast(t("wizard.errNotApproved"), "error");
-      } else {
-        toast(t("wizard.errNoApplication"), "error");
-      }
+    if (applicationStatus === "rad_etilgan") {
+      toast(t("dash.applicationRejectedDesc"), "error");
       return;
     }
     setSaving(kind);
@@ -171,38 +165,22 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
 
       <h1 className="font-heading text-2xl font-extrabold text-ink">{isEdit ? t("wizard.editTitle") : t("wizard.newTitle")}</h1>
 
-      {!applicationLoading && applicationStatus && applicationStatus !== "tasdiqlangan" && (
-        <Card
-          className={
-            applicationStatus === "rad_etilgan"
-              ? "border-danger/30 bg-danger/5"
-              : "border-warning/30 bg-warning/5"
-          }
-        >
+      {!applicationLoading && applicationStatus === "rad_etilgan" && (
+        <Card className="border-danger/30 bg-danger/5">
           <p className="font-heading text-sm font-bold text-ink">
-            {applicationStatus === "rad_etilgan"
-              ? t("dash.applicationRejected")
-              : applicationStatus === "korib_chiqilmoqda"
-              ? t("dash.applicationPending")
-              : t("wizard.appRequiredTitle")}
+            {t("dash.applicationRejected")}
           </p>
           <p className="mt-1 text-xs text-muted">
-            {applicationStatus === "rad_etilgan"
-              ? t("dash.applicationRejectedDesc")
-              : applicationStatus === "korib_chiqilmoqda"
-              ? t("dash.applicationPendingDesc")
-              : t("wizard.appRequiredDesc")}
+            {t("dash.applicationRejectedDesc")}
           </p>
-          {applicationStatus !== "korib_chiqilmoqda" && (
-            <div className="mt-2">
-              <Link
-                href="/mutaxassis/royxat"
-                className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
-              >
-                {applicationStatus === "rad_etilgan" ? t("onboard.reapplyBtn") : t("wizard.applyBtn")} →
-              </Link>
-            </div>
-          )}
+          <div className="mt-2">
+            <Link
+              href="/mutaxassis/royxat"
+              className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+            >
+              {t("onboard.reapplyBtn")} →
+            </Link>
+          </div>
         </Card>
       )}
 

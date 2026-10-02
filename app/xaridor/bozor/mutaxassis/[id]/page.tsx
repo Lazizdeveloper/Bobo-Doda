@@ -43,7 +43,7 @@ export default function MutaxassisProfiliPage() {
     ])
       .then(([spec, allServices, reviewList]) => {
         setSpecialist(spec);
-        setServices(allServices.filter((s) => s.sellerId === params.id));
+        setServices(allServices.filter((s) => s.sellerId === params.id || (s.sellerId === "me" && spec?.user?.id === params.id)));
         setReviews(reviewList);
       })
       .catch(setLoadError);

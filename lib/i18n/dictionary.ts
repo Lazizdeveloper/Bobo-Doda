@@ -721,8 +721,8 @@ export const dictionary: Record<string, Entry> = {
   "dash.noContracts": { uz: "Hozircha shartnoma yo'q", ru: "Пока нет контрактов" },
   "dash.applicationPending": { uz: "Arizangiz ko'rib chiqilmoqda", ru: "Ваша заявка на рассмотрении" },
   "dash.applicationPendingDesc": {
-    uz: "Platforma ma'muriyati arizangizni tasdiqlagach, xizmat qo'shish va shartnoma qabul qilish imkoniyati ochiladi.",
-    ru: "После одобрения заявки администрацией вы сможете добавлять услуги и принимать контракты.",
+    uz: "Arizangiz tekshiruvda. Siz hozirdan xizmat yaratishingiz va mavjud ish e'lonlariga taklif yuborishingiz mumkin.",
+    ru: "Ваша заявка на проверке. Вы уже можете создавать услуги и отправлять отклики на вакансии.",
   },
   "dash.applicationRejected": { uz: "Arizangiz rad etildi", ru: "Ваша заявка отклонена" },
   "dash.applicationRejectedDesc": {
@@ -740,6 +740,21 @@ export const dictionary: Record<string, Entry> = {
     uz: "To'lovlar bosqichma-bosqich: har bir bosqich qabul qilingach, mablag' hisobingizga o'tadi",
     ru: "Оплата поэтапная: после приёмки каждого этапа средства поступают на ваш счёт",
   },
+  "dash.openJobs": { uz: "Ochiq ish e'lonlari", ru: "Открытые вакансии" },
+  "dash.availableJobs": { uz: "Mavjud ish e'lonlari", ru: "Доступные объявления" },
+  "dash.availableJobsDesc": {
+    uz: "Mijozlar tomonidan joylangan yangi buyurtmalar va loyihalar. O'zingizga mos loyihani tanlang va taklif yuboring.",
+    ru: "Свежие проекты и задачи от заказчиков. Выберите подходящий проект и отправьте отклик.",
+  },
+  "dash.sendProposal": { uz: "Taklif yuborish", ru: "Отправить отклик" },
+  "dash.allCategories": { uz: "Barchasi", ru: "Все" },
+  "dash.searchJobsPh": { uz: "E'lonlarni qidirish...", ru: "Поиск по объявлениям..." },
+  "dash.noJobsFound": { uz: "Mos keluvchi ish e'lonlari topilmadi", ru: "Подходящих объявлений не найдено" },
+  "dash.noContractsDesc": {
+    uz: "Hozircha shartnomalaringiz yo'q. Birinchi daromadni olish uchun yuqoridagi ish e'lonlariga taklif yuboring yoki yangi xizmat e'lon qiling!",
+    ru: "У вас пока нет контрактов. Отправьте отклик на объявления выше или создайте новую услугу, чтобы получить первый заказ!",
+  },
+  "dash.newService": { uz: "+ Yangi xizmat", ru: "+ Новая услуга" },
 
   /* Xizmatlar (A yo'l) */
   "services.title": { uz: "Xizmatlarim", ru: "Мои услуги" },

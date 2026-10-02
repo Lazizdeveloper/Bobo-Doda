@@ -62,6 +62,7 @@ export function TopNav({ base }: TopNavProps) {
      olib tashlangan (sahifalar o'zi FEATURE_DISABLED bilan qoladi). */
   const items = [
     { href: "/mutaxassis", label: t("nav.dashboard"), exact: true },
+    { href: "/mutaxassis/ish-elonlari", label: t("nav.jobs") },
     { href: "/mutaxassis/xizmatlarim", label: t("nav.services") },
     { href: "/mutaxassis/shartnomalar", label: t("nav.contracts") },
   ];

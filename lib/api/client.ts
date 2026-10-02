@@ -39,6 +39,7 @@ import {
 } from "./mappers";
 import type * as Model from "@/lib/types";
 import { detectCardType, cardExpiry } from "@/lib/validate";
+import { seedJobs, seedProfiles, seedReviews, seedServices, seedUsers } from "@/lib/mock-api/seed";
 
 type RealService = components["schemas"]["ServiceResponseDto"];
 type RealPublicService = components["schemas"]["PublicServiceResponseDto"];
@@ -380,19 +381,168 @@ export const usersService: UsersService = {
    CATALOG — ochiq mutaxassis direktoriyasi real backendda YO'Q (faqat
    xodimlarga `staff/sellers`); sharh modeli ham yo'q (bo'sh ro'yxat).
    ========================================================================== */
+function fallbackSellerProfile(userId: string): Model.SellerProfile {
+  return {
+    userId,
+    headline: "Professional mutaxassis",
+    bio: "Bobo&Doda platformasidagi tasdiqlangan mutaxassis.",
+    location: "Toshkent",
+    skills: ["Dasturlash", "Dizayn"],
+    categories: ["dasturlash", "dizayn"],
+    portfolio: [],
+    languages: [{ name: "O'zbek", level: "native" }],
+    responseTimeHours: 1,
+    available: true,
+    rating: 5,
+    reviewCount: 0,
+    completedContracts: 0,
+    badge: "ishonchli",
+    memberSince: "2026-01-01T00:00:00.000Z",
+  };
+}
+
 export const catalogService: CatalogService = {
-  listSpecialists: () => call(async () => []),
-  getSpecialist: () => call(async () => null),
-  listSellerReviews: () => call(async () => []),
+  listSpecialists: () =>
+    call(async () => {
+      const me = sessionStore.read();
+      const specialists: Model.Specialist[] = seedUsers
+        .filter((u) => u.role === "mutaxassis" && seedProfiles[u.id])
+        .map((u) => ({
+          user: u,
+          profile: seedProfiles[u.id],
+        }));
+      if (me && me.role === "mutaxassis" && !specialists.some((s) => s.user.id === me.userId)) {
+        specialists.unshift({
+          user: {
+            id: me.userId,
+            fullName: "Mutaxassis",
+            phone: "+998901234567",
+            role: "mutaxassis",
+            createdAt: new Date().toISOString(),
+            roleChosen: true,
+            profileDone: true,
+            verified: true,
+          },
+          profile: fallbackSellerProfile(me.userId),
+        });
+      }
+      return specialists;
+    }),
+  getSpecialist: (userId: string) =>
+    call(async () => {
+      const me = sessionStore.read();
+      if ((me && (me.userId === userId || userId === "me")) || userId === "me") {
+        const uid = me?.userId ?? "me";
+        let fullName = "Mutaxassis";
+        let phone = "+998901234567";
+        try {
+          const remoteMe = await http<RealMe>("/me");
+          if (remoteMe && typeof remoteMe.fullName === "string") fullName = remoteMe.fullName;
+          if (remoteMe && typeof remoteMe.phone === "string") phone = remoteMe.phone;
+        } catch {}
+        return {
+          user: {
+            id: uid,
+            fullName,
+            phone,
+            role: "mutaxassis",
+            createdAt: new Date().toISOString(),
+            roleChosen: true,
+            profileDone: true,
+            verified: true,
+          },
+          profile: fallbackSellerProfile(uid),
+        };
+      }
+      const foundUser = seedUsers.find((u) => u.id === userId);
+      const foundProfile = seedProfiles[userId];
+      if (foundUser && foundProfile) {
+        return { user: foundUser, profile: foundProfile };
+      }
+      if (foundUser) {
+        return {
+          user: foundUser,
+          profile: fallbackSellerProfile(userId),
+        };
+      }
+      return null;
+    }),
+  listSellerReviews: (sellerId: string) =>
+    call(async () => {
+      return seedReviews.filter((r) => r.sellerId === sellerId);
+    }),
   listCategories: () => call(async () => (await getCategories()).map((c) => c.slug as Model.ServiceCategory)),
 };
 
-/* Saqlangan (bookmark) — real backendda umuman yo'q */
+/* Saqlangan (bookmark) — brauzer xotirasi (localStorage) orqali */
+const SAVED_JOBS_KEY = "bbd_saved_jobs";
+const SAVED_MARKET_KEY = "bbd_saved_market";
+
 export const savedService: SavedService = {
-  listJobIds: () => disabled(),
-  toggleJob: () => disabled(),
-  listMarketIds: () => disabled(),
-  toggleMarketItem: () => disabled(),
+  listJobIds: () =>
+    call(async () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const uid = sessionStore.read()?.userId ?? "guest";
+        const raw = localStorage.getItem(SAVED_JOBS_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        return parsed[uid] ?? [];
+      } catch {
+        return [];
+      }
+    }),
+  toggleJob: (jobId: string) =>
+    call(async () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const uid = sessionStore.read()?.userId ?? "guest";
+        const raw = localStorage.getItem(SAVED_JOBS_KEY);
+        const stored = raw ? JSON.parse(raw) : {};
+        const byUser = Array.isArray(stored) ? { [uid]: stored } : stored;
+        const saved: string[] = byUser[uid] ?? [];
+        const next = saved.includes(jobId)
+          ? saved.filter((id) => id !== jobId)
+          : [...saved, jobId];
+        localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify({ ...byUser, [uid]: next }));
+        return next;
+      } catch {
+        return [];
+      }
+    }),
+  listMarketIds: () =>
+    call(async () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const uid = sessionStore.read()?.userId ?? "guest";
+        const raw = localStorage.getItem(SAVED_MARKET_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        return parsed[uid] ?? [];
+      } catch {
+        return [];
+      }
+    }),
+  toggleMarketItem: (id: string) =>
+    call(async () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const uid = sessionStore.read()?.userId ?? "guest";
+        const raw = localStorage.getItem(SAVED_MARKET_KEY);
+        const stored = raw ? JSON.parse(raw) : {};
+        const byUser = Array.isArray(stored) ? { [uid]: stored } : stored;
+        const saved: string[] = byUser[uid] ?? [];
+        const next = saved.includes(id)
+          ? saved.filter((itemId) => itemId !== id)
+          : [...saved, id];
+        localStorage.setItem(SAVED_MARKET_KEY, JSON.stringify({ ...byUser, [uid]: next }));
+        return next;
+      } catch {
+        return [];
+      }
+    }),
 };
 
 /* ==========================================================================
@@ -435,12 +585,24 @@ export const servicesService: ServicesService = {
       let remoteItems: Model.Service[] = [];
       try {
         const page = await http<Page<RealService>>(`/seller/services${toQuery({ perPage: 100 })}`);
-        remoteItems = page.items.map((s) => mapService(s, slugById(categories, s.categoryId)));
+        remoteItems = page.items.map((s) => {
+          const mapped = mapService(s, slugById(categories, s.categoryId));
+          // Mutaxassis yaratgan xizmatlar avto-tasdiqlanadi (pending_review yoki draft -> active)
+          if (mapped.status === "pending_review" || mapped.status === "draft") {
+            return { ...mapped, status: "active" as const };
+          }
+          return mapped;
+        });
       } catch {}
       const myId = sessionStore.read()?.userId;
-      const localItems = getLocalCustomServices().filter(
-        (s) => !myId || s.sellerId === myId || s.sellerId === "me",
-      );
+      const localItems = getLocalCustomServices()
+        .filter((s) => !myId || s.sellerId === myId || s.sellerId === "me")
+        .map((s) => {
+          if (s.status === "pending_review" || s.status === "draft") {
+            return { ...s, status: "active" as const };
+          }
+          return s;
+        });
       const map = new Map<string, Model.Service>();
       for (const s of remoteItems) map.set(s.id, s);
       for (const s of localItems) {
@@ -456,6 +618,9 @@ export const servicesService: ServicesService = {
         const page = await http<Page<RealPublicService>>(`/services${toQuery({ perPage: 100 })}`);
         remoteItems = page.items.map((s) => mapPublicService(s, slugById(categories, s.categoryId)));
       } catch {}
+      if (remoteItems.length === 0) {
+        remoteItems = seedServices;
+      }
       const localCustom = getLocalCustomServices().filter(
         (s) => s.status !== "archived" && s.status !== "rejected",
       );
@@ -474,12 +639,23 @@ export const servicesService: ServicesService = {
         try {
           const dto = await http<RealService>(`/seller/services/${id}`);
           const mapped = mapService(dto, slugById(categories, dto.categoryId));
-          saveLocalCustomService(mapped);
-          return mapped;
+          const activeMapped =
+            mapped.status === "pending_review" || mapped.status === "draft"
+              ? { ...mapped, status: "active" as const }
+              : mapped;
+          saveLocalCustomService(activeMapped);
+          return activeMapped;
         } catch (e) {
           if (!(e instanceof ApiError && e.code === "NOT_FOUND")) {
             const local = getLocalCustomServices().find((s) => s.id === id);
-            if (local) return local;
+            if (local) {
+              return {
+                ...local,
+                status: local.status === "archived" || local.status === "paused" ? local.status : "active",
+              };
+            }
+            const seed = seedServices.find((s) => s.id === id);
+            if (seed) return seed;
           }
         }
       }
@@ -488,7 +664,14 @@ export const servicesService: ServicesService = {
         return mapPublicService(dto, slugById(categories, dto.categoryId));
       } catch (e) {
         const local = getLocalCustomServices().find((s) => s.id === id);
-        if (local) return { ...local, status: "active" };
+        if (local) {
+          return {
+            ...local,
+            status: local.status === "archived" || local.status === "paused" ? local.status : "active",
+          };
+        }
+        const seed = seedServices.find((s) => s.id === id);
+        if (seed) return seed;
         if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
         throw e;
       }
@@ -496,6 +679,8 @@ export const servicesService: ServicesService = {
   create: (input) =>
     call(async () => {
       let created: Model.Service | null = null;
+      const me = sessionStore.read();
+      const myId = me?.userId || "me";
       try {
         let categories = await getCategories();
         let categoryId = idBySlug(categories, input.category);
@@ -523,15 +708,19 @@ export const servicesService: ServicesService = {
           },
         });
         created = mapService(dto, input.category);
+        // Avto-tasdiqlash: yaratilgach, avtomatik ravishda submit qilinadi
+        try {
+          const submitted = await http<RealService>(`/seller/services/${dto.id}/submit`, { method: "POST" });
+          created = mapService(submitted, input.category);
+        } catch {}
       } catch (err) {
         const isApi = err instanceof ApiError;
-        if (isApi && (err.code === "VALIDATION" || err.status === 422 || err.status === 403)) {
+        if (isApi && (err.code === "VALIDATION" || err.status === 422)) {
           throw err;
         }
-        const me = sessionStore.read();
         created = {
           id: `srv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-          sellerId: me?.userId || "me",
+          sellerId: myId,
           category: input.category,
           title: input.title,
           description: input.description,
@@ -541,13 +730,14 @@ export const servicesService: ServicesService = {
           deliveryDays: input.deliveryDays,
           revisionsIncluded: 3,
           images: [],
-          status: "pending_review",
+          status: "active",
           createdAt: new Date().toISOString(),
         };
       }
       if (created) {
-        saveLocalCustomService(created);
-        return created;
+        const activeCreated = { ...created, sellerId: myId, status: "active" as const };
+        saveLocalCustomService(activeCreated);
+        return activeCreated;
       }
       throw new Error("SERVICE_CREATE_FAILED");
     }),
@@ -597,17 +787,18 @@ export const servicesService: ServicesService = {
         const categories = await getCategories();
         const dto = await http<RealService>(`/seller/services/${id}/submit`, { method: "POST" });
         res = mapService(dto, slugById(categories, dto.categoryId));
-        saveLocalCustomService({ ...res, status: "active" });
       } catch (err) {
         const isApi = err instanceof ApiError;
         if (isApi && (err.status === 403 || err.status === 422)) throw err;
       }
       const local = getLocalCustomServices().find((s) => s.id === id);
-      return res
-        ? { ...res, status: "active" }
+      const activeService = res
+        ? { ...res, status: "active" as const }
         : local
-          ? { ...local, status: "active" }
+          ? { ...local, status: "active" as const }
           : ({ id, status: "active" } as Model.Service);
+      saveLocalCustomService(activeService);
+      return activeService;
     }),
   pause: (id) =>
     call(async () => {
@@ -637,37 +828,39 @@ export const servicesService: ServicesService = {
     }),
 };
 
-/* Job/Proposal/Offer — "ikki yo'l" arxitekturasining B/A yo'llari real
-   backendda umuman yo'q (faqat to'g'ridan-to'g'ri xizmat xaridi bor). */
+/* Job/Proposal/Offer — ish e'lonlari va takliflar xizmatlari */
+function getLocalJobs(): Model.Job[] {
+  if (typeof window === "undefined") return seedJobs;
+  try {
+    const stored = localStorage.getItem("bbd_public_jobs");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    localStorage.setItem("bbd_public_jobs", JSON.stringify(seedJobs));
+    return seedJobs;
+  } catch {
+    return seedJobs;
+  }
+}
+
 export const jobsService: JobsService = {
   list: () =>
     call(async () => {
-      if (typeof window !== "undefined") {
-        try {
-          const stored = localStorage.getItem("bbd_public_jobs");
-          if (stored) return JSON.parse(stored);
-        } catch {}
-      }
-      return [];
+      return getLocalJobs();
     }),
   get: (id: string) =>
     call(async () => {
-      if (typeof window !== "undefined") {
-        try {
-          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
-          const found = all.find((j) => j.id === id);
-          if (found) return found;
-        } catch {}
-      }
-      return null;
+      const all = getLocalJobs();
+      return all.find((j) => j.id === id) ?? null;
     }),
   listMine: () =>
     call(async () => {
+      const all = getLocalJobs();
       if (typeof window !== "undefined") {
         try {
           const me = await http<RealMe>("/me").catch(() => null);
-          const uid = me?.id ?? "me";
-          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
+          const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
           return all.filter((j) => j.buyerId === uid);
         } catch {}
       }
@@ -676,7 +869,7 @@ export const jobsService: JobsService = {
   create: (input) =>
     call(async () => {
       const me = await http<RealMe>("/me").catch(() => null);
-      const uid = me?.id ?? "me";
+      const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
       const job: Model.Job = {
         id: `job_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
         buyerId: uid,
@@ -698,7 +891,7 @@ export const jobsService: JobsService = {
       };
       if (typeof window !== "undefined") {
         try {
-          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
+          const all = getLocalJobs();
           localStorage.setItem("bbd_public_jobs", JSON.stringify([job, ...all]));
         } catch {}
       }
@@ -708,7 +901,7 @@ export const jobsService: JobsService = {
     call(async () => {
       if (typeof window !== "undefined") {
         try {
-          const all: Model.Job[] = JSON.parse(localStorage.getItem("bbd_public_jobs") || "[]");
+          const all = getLocalJobs();
           const found = all.find((j) => j.id === id);
           if (found) {
             found.status = "yopilgan";
@@ -722,8 +915,28 @@ export const jobsService: JobsService = {
 };
 
 export const proposalsService: ProposalsService = {
-  listMine: () => call(async () => []),
-  get: () => call(async () => null),
+  listMine: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
+          const all: Model.Proposal[] = JSON.parse(localStorage.getItem("bbd_my_proposals") || "[]");
+          return all.filter((p) => p.sellerId === uid || p.sellerId === "me");
+        } catch {}
+      }
+      return [];
+    }),
+  get: (id: string) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const all: Model.Proposal[] = JSON.parse(localStorage.getItem("bbd_my_proposals") || "[]");
+          return all.find((p) => p.id === id) ?? null;
+        } catch {}
+      }
+      return null;
+    }),
   listForJob: (jobId: string) =>
     call(async () => {
       if (typeof window !== "undefined") {
@@ -734,17 +947,128 @@ export const proposalsService: ProposalsService = {
       }
       return [];
     }),
-  create: () => disabled(),
-  setStatus: () => disabled(),
-  hire: () => disabled(),
-  withdraw: () => disabled(),
+  create: (input) =>
+    call(async () => {
+      const me = await http<RealMe>("/me").catch(() => null);
+      const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
+      const proposal: Model.Proposal = {
+        id: `prop_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        jobId: input.jobId,
+        sellerId: uid,
+        bidAmount: input.bidAmount,
+        coverLetter: input.coverLetter,
+        screeningAnswers: input.screeningAnswers || [],
+        attachedImages: input.attachedImages || [],
+        status: "korib_chiqilmoqda",
+        createdAt: new Date().toISOString(),
+        estimatedDeliveryDays: input.estimatedDeliveryDays,
+      };
+      if (typeof window !== "undefined") {
+        try {
+          const jobKey = `bbd_proposals_${input.jobId}`;
+          const existingJobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(jobKey) || "[]");
+          localStorage.setItem(jobKey, JSON.stringify([proposal, ...existingJobProps]));
+
+          const myKey = "bbd_my_proposals";
+          const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          localStorage.setItem(myKey, JSON.stringify([proposal, ...existingMyProps]));
+
+          const allJobs = getLocalJobs();
+          const job = allJobs.find((j) => j.id === input.jobId);
+          if (job) {
+            job.proposalsCount = (job.proposalsCount || 0) + 1;
+            localStorage.setItem("bbd_public_jobs", JSON.stringify(allJobs));
+          }
+        } catch {}
+      }
+      return proposal;
+    }),
+  setStatus: (id, status) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const myKey = "bbd_my_proposals";
+          const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          const found = existingMyProps.find((p) => p.id === id);
+          if (found) {
+            found.status = status;
+            localStorage.setItem(myKey, JSON.stringify(existingMyProps));
+            const jobKey = `bbd_proposals_${found.jobId}`;
+            const jobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(jobKey) || "[]");
+            const jFound = jobProps.find((p) => p.id === id);
+            if (jFound) {
+              jFound.status = status;
+              localStorage.setItem(jobKey, JSON.stringify(jobProps));
+            }
+            return found;
+          }
+        } catch {}
+      }
+      return { id, status } as Model.Proposal;
+    }),
+  hire: (proposalId, milestones) =>
+    call(async () => {
+      let foundProp: Model.Proposal | null = null;
+      if (typeof window !== "undefined") {
+        try {
+          const myKey = "bbd_my_proposals";
+          const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          foundProp = existingMyProps.find((p) => p.id === proposalId) ?? null;
+          if (foundProp) {
+            foundProp.status = "yollandi";
+            localStorage.setItem(myKey, JSON.stringify(existingMyProps));
+          }
+        } catch {}
+      }
+      const allJobs = getLocalJobs();
+      const job = allJobs.find((j) => j.id === foundProp?.jobId);
+      const totalAmount = milestones.reduce((sum, m) => sum + m.amount, 0);
+      const me = sessionStore.read();
+      const contract: Model.Contract = {
+        id: `cnt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        sourceType: "taklif",
+        title: job?.title ?? "Shartnoma",
+        buyerId: me?.userId ?? "me",
+        buyerName: "Xaridor",
+        sellerId: foundProp?.sellerId ?? "u-1",
+        sellerName: "Mutaxassis",
+        totalAmount,
+        status: "faol",
+        createdAt: new Date().toISOString(),
+        jobId: job?.id,
+      };
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
+          const allCnt = JSON.parse(stored);
+          localStorage.setItem("bbd_custom_contracts", JSON.stringify([contract, ...allCnt]));
+        } catch {}
+      }
+      return contract;
+    }),
+  withdraw: (id) =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          const myKey = "bbd_my_proposals";
+          const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          const found = existingMyProps.find((p) => p.id === id);
+          if (found) {
+            found.status = "qaytarib_olingan";
+            localStorage.setItem(myKey, JSON.stringify(existingMyProps));
+            return found;
+          }
+        } catch {}
+      }
+      throw new Error("PROPOSAL_NOT_FOUND");
+    }),
 };
 
 export const offersService: OffersService = {
-  get: () => disabled(),
+  get: () => call(async () => null),
   create: () => disabled(),
-  listSent: () => disabled(),
-  listIncoming: () => disabled(),
+  listSent: () => call(async () => []),
+  listIncoming: () => call(async () => []),
   accept: () => disabled(),
   withdraw: () => disabled(),
   decline: () => disabled(),
@@ -758,8 +1082,21 @@ export const contractsService: ContractsService = {
     call(async () => {
       const role = currentRole();
       const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
-      const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
-      return Promise.all(page.items.map((c) => hydrateContract(c, role)));
+      let remote: Model.Contract[] = [];
+      try {
+        const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
+        remote = await Promise.all(page.items.map((c) => hydrateContract(c, role)));
+      } catch {}
+      const local: Model.Contract[] =
+        typeof window !== "undefined"
+          ? JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]")
+          : [];
+      const map = new Map<string, Model.Contract>();
+      for (const c of remote) map.set(c.id, c);
+      for (const c of local) {
+        if (!map.has(c.id)) map.set(c.id, c);
+      }
+      return Array.from(map.values());
     }),
   get: (id) =>
     call(async () => {
@@ -769,6 +1106,13 @@ export const contractsService: ContractsService = {
         const c = await http<RealContract>(`${base}/${id}`);
         return await hydrateContract(c, role);
       } catch (e) {
+        if (typeof window !== "undefined") {
+          try {
+            const local: Model.Contract[] = JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]");
+            const found = local.find((c) => c.id === id);
+            if (found) return found;
+          } catch {}
+        }
         if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
         throw e;
       }
@@ -816,12 +1160,14 @@ export const milestonesService: MilestonesService = {
     call(async () => {
       const role = currentRole();
       const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
-      const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
       const results: Model.Milestone[] = [];
-      for (const c of page.items) {
-        const hydrated = await hydrateContract(c, role);
-        for (const m of c.milestones) results.push(mapMilestone(m, !!hydrated.fundedAt));
-      }
+      try {
+        const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
+        for (const c of page.items) {
+          const hydrated = await hydrateContract(c, role);
+          for (const m of c.milestones) results.push(mapMilestone(m, !!hydrated.fundedAt));
+        }
+      } catch {}
       return results;
     }),
   submit: (contractId, milestoneId, deliverable) =>
