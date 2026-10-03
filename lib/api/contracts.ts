@@ -167,6 +167,8 @@ export interface CatalogService {
 export interface SavedService {
   listJobIds(): Promise<string[]>;
   toggleJob(jobId: string): Promise<string[]>;
+  listSpecialistIds(): Promise<string[]>;
+  toggleSpecialist(specialistId: string): Promise<string[]>;
   listMarketIds(): Promise<string[]>;
   toggleMarketItem(id: string): Promise<string[]>;
 }

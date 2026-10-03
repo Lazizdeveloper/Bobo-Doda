@@ -19,6 +19,7 @@ import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
+import { ContractWorkroomChat } from "@/components/shared/ContractWorkroomChat";
 import { contractsService, disputesService, milestonesService } from "@/lib/api";
 import type { Contract, Dispute, Milestone } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -236,6 +237,16 @@ export default function ShartnomaWorkroomPage() {
             />
           ))}
         </div>
+      </section>
+
+      {/* Ishchi xona muloqoti va fayllar (Chat & Deliverables) */}
+      <section className="flex flex-col gap-3">
+        <ContractWorkroomChat
+          contract={contract}
+          milestones={milestones}
+          counterpartName={contract.buyerName}
+          role="mutaxassis"
+        />
       </section>
 
       {/* Ishni topshirish modali */}

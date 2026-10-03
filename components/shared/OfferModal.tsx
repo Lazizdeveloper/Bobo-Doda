@@ -22,10 +22,20 @@ export interface OfferModalProps {
   initialBudget?: number;
   /** Tanlangan qo'shimchalar ro'yxati */
   selectedExtras?: { label: string; price: number }[];
+  /** "offer" (default) yoki "message" (to'g'ridan-to'g'ri xabar/suhbat boshlash) */
+  mode?: "offer" | "message";
 }
 
-/** To'lovsiz taklif yuborish modali (xizmat yoki mutaxassis profili sahifasidan) */
-export function OfferModal({ open, onClose, sellerId, service, initialBudget, selectedExtras }: OfferModalProps) {
+/** To'lovsiz taklif yoki xabar yuborish modali (xizmat yoki mutaxassis profili sahifasidan) */
+export function OfferModal({
+  open,
+  onClose,
+  sellerId,
+  service,
+  initialBudget,
+  selectedExtras,
+  mode = "offer",
+}: OfferModalProps) {
   const { t } = useT();
   const router = useRouter();
   const { toast } = useToast();
@@ -33,7 +43,13 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget, se
   const [subject, setSubject] = useState(service?.title ?? "");
   const [message, setMessage] = useState("");
   const [budget, setBudget] = useState(
-    initialBudget !== undefined ? String(initialBudget) : service ? String(service.price) : ""
+    initialBudget !== undefined
+      ? String(initialBudget)
+      : service
+      ? String(service.price)
+      : mode === "message"
+      ? ""
+      : ""
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
@@ -43,15 +59,27 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget, se
      boshlang'ich qiymati faqat birinchi ochilishda ishlaydi. */
   useEffect(() => {
     if (!open) return;
-    setBudget(initialBudget !== undefined ? String(initialBudget) : service ? String(service.price) : "");
+    setBudget(
+      initialBudget !== undefined
+        ? String(initialBudget)
+        : service
+        ? String(service.price)
+        : ""
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function handleSend() {
     const next: Record<string, string> = {};
-    if (!service && !subject.trim()) next.subject = t("offer.errSubject");
-    if (!message.trim()) next.message = t("offer.errMessage");
-    if (!budget || Number(budget) <= 0) next.budget = t("wizard.errPrice");
+    if (!service && mode === "offer" && !subject.trim()) {
+      next.subject = t("offer.errSubject");
+    }
+    if (!message.trim()) {
+      next.message = t("offer.errMessage");
+    }
+    if (mode === "offer" && (!budget || Number(budget) <= 0)) {
+      next.budget = t("wizard.errPrice");
+    }
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -59,16 +87,24 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget, se
     try {
       let finalMessage = message.trim();
       if (selectedExtras && selectedExtras.length > 0) {
-        finalMessage += `\n\n📌 Tanlangan qo'shimcha xizmatlar:\n` + selectedExtras.map((e) => `• ${e.label}`).join("\n");
+        finalMessage +=
+          `\n\n📌 Tanlangan qo'shimcha xizmatlar:\n` +
+          selectedExtras.map((e) => `• ${e.label}`).join("\n");
       }
+      const finalSubject =
+        service?.title ||
+        subject.trim() ||
+        (mode === "message" ? "Loyiha bo'yicha muloqot" : "Yangi taklif");
+      const finalBudget = Number(budget) > 0 ? Number(budget) : 50_000;
+
       const offer = await offersService.create({
         sellerId,
         serviceId: service?.id,
-        title: service?.title ?? subject,
+        title: finalSubject,
         message: finalMessage,
-        budget: Number(budget),
+        budget: finalBudget,
       });
-      toast(t("offer.sent"));
+      toast(mode === "message" ? "Xabaringiz mutaxassisga yuborildi!" : t("offer.sent"));
       router.push(`/xaridor/takliflarim/${offer.id}`);
     } catch (err) {
       if (err instanceof Error && err.message === "DUPLICATE_OFFER") {
@@ -84,14 +120,14 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget, se
     <Modal
       open={open}
       onClose={onClose}
-      title={t("offer.modalTitle")}
+      title={mode === "message" ? t("market.sendMessageBtn") : t("offer.modalTitle")}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={sending}>
             {t("common.cancel")}
           </Button>
           <Button loading={sending} onClick={handleSend}>
-            {t("offer.send")}
+            {mode === "message" ? t("market.sendMessageBtn") : t("offer.send")}
           </Button>
         </>
       }
@@ -103,7 +139,10 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget, se
             {selectedExtras && selectedExtras.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1 border-t border-line/60">
                 {selectedExtras.map((ex, i) => (
-                  <span key={i} className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary">
+                  <span
+                    key={i}
+                    className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-2xs font-medium text-primary"
+                  >
                     + {ex.label}
                   </span>
                 ))}
@@ -118,19 +157,27 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget, se
               setSubject(e.target.value);
               setErrors((prev) => ({ ...prev, subject: "" }));
             }}
-            placeholder={t("offer.subjectPh")}
+            placeholder={
+              mode === "message"
+                ? "Loyiha yoki mavzu nomi (ixtiyoriy)"
+                : t("offer.subjectPh")
+            }
             error={errors.subject}
             maxLength={200}
           />
         )}
         <Textarea
-          label={t("offer.message")}
+          label={mode === "message" ? "Xabar matni" : t("offer.message")}
           value={message}
           onChange={(e) => {
             setMessage(e.target.value);
             setErrors((prev) => ({ ...prev, message: "" }));
           }}
-          placeholder={t("offer.messagePh")}
+          placeholder={
+            mode === "message"
+              ? "Mutaxassisga savolingiz yoki loyiha tafsilotlarini yozing..."
+              : t("offer.messagePh")
+          }
           rows={5}
           error={errors.message}
           maxLength={5000}
@@ -138,16 +185,23 @@ export function OfferModal({ open, onClose, sellerId, service, initialBudget, se
         <Input
           type="number"
           min={0}
-          label={t("offer.budget")}
+          label={
+            mode === "message"
+              ? "Mo'ljallangan byudjet (so'm, ixtiyoriy)"
+              : t("offer.budget")
+          }
           value={budget}
           onChange={(e) => {
             setBudget(e.target.value);
             setErrors((prev) => ({ ...prev, budget: "" }));
           }}
+          placeholder={mode === "message" ? "Masalan: 500000 (ixtiyoriy)" : undefined}
           error={errors.budget}
         />
         <p className="rounded-input border border-accent/25 bg-accent/5 p-3 text-2xs text-muted">
-          {t("offer.budgetHint")}
+          {mode === "message"
+            ? "Xabar yuborilgach, mutaxassis bilan to'g'ridan-to'g'ri suhbat xonasi ochiladi."
+            : t("offer.budgetHint")}
         </p>
       </div>
     </Modal>

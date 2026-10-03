@@ -2,24 +2,32 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
-import { ContractStatusBadge } from "@/components/shared/StatusBadge";
+import {
+  ContractStatusBadge,
+  OfferStatusBadge,
+  ProposalStatusBadge,
+  ServiceStatusBadge,
+} from "@/components/shared/StatusBadge";
 import { JobCard } from "@/components/shared/JobCard";
 import {
   contractsService,
   jobsService,
   milestonesService,
+  offersService,
+  proposalsService,
   savedService,
   sellerApplicationService,
   servicesService,
   usersService,
 } from "@/lib/api";
-import type { Contract, Job, Milestone, Service, VerificationStatus } from "@/lib/types";
+import type { Contract, Job, Milestone, Offer, Proposal, SellerProfile, Service, VerificationStatus } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { sellerNet } from "@/lib/fees";
 import { useT } from "@/lib/i18n";
@@ -27,16 +35,29 @@ import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { searchMatches } from "@/lib/search";
 import { CATEGORIES } from "@/lib/category-fields";
 
+function matchesProfile(job: Job, profile: SellerProfile | null): boolean {
+  if (!profile) return true;
+  if (job.status !== "ochiq") return false;
+  if (profile.categories && profile.categories.includes(job.category)) return true;
+  const skills = (profile.skills || []).map((s) => s.toLowerCase());
+  return (job.skillsRequired || []).some((s) => skills.includes(s.toLowerCase()));
+}
+
 export default function MutaxassisDashboardPage() {
   const { t, lang } = useT();
+
   const [contracts, setContracts] = useState<Contract[] | null>(null);
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [jobs, setJobs] = useState<Job[] | null>(null);
+  const [proposals, setProposals] = useState<Proposal[] | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [profile, setProfile] = useState<SellerProfile | null>(null);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [applicationStatus, setApplicationStatus] = useState<VerificationStatus | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
 
@@ -49,20 +70,25 @@ export default function MutaxassisDashboardPage() {
       milestonesService.listMine(),
       servicesService.listMine(),
       jobsService.list(),
+      proposalsService.listMine(),
+      offersService.listIncoming(),
+      usersService.getSellerProfile().catch(() => null),
       savedService.listJobIds(),
       usersService.getCurrent(),
     ])
-      .then(([contractList, milestoneList, serviceList, jobList, ids, user]) => {
+      .then(([contractList, milestoneList, serviceList, jobList, proposalList, offerList, prof, ids, user]) => {
         setContracts(contractList);
         setMilestones(milestoneList);
         setServices(serviceList);
         setJobs(jobList);
+        setProposals(proposalList);
+        setOffers(offerList);
+        setProfile(prof);
         setSavedIds(ids);
         if (user) setName(user.fullName);
       })
       .catch(setLoadError);
 
-    /* Ariza holati — asosiy yuklashni bloklamaydi */
     sellerApplicationService
       .getCurrent()
       .then((app) => setApplicationStatus(app?.status ?? null))
@@ -75,17 +101,23 @@ export default function MutaxassisDashboardPage() {
     setSavedIds(await savedService.toggleJob(jobId));
   }
 
-  const loading = !contracts || !milestones || jobs === null;
+  const loading = !contracts || !milestones || jobs === null || proposals === null;
 
   const activeContracts = contracts?.filter((c) => c.status === "faol") || [];
   const openJobs = (jobs ?? []).filter((j) => j.status === "ochiq");
+  const matchingJobs = openJobs.filter((j) => matchesProfile(j, profile));
   const totalEarnings = (milestones ?? [])
     .filter((m) => m.status === "qabul_qilindi")
     .reduce((sum, m) => sum + sellerNet(m.amount), 0);
-  const recentContracts = [...(contracts ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+
+  const awaitingResponseProposals = (proposals ?? []).filter(
+    (p) => p.status === "yuborilgan" || p.status === "korib_chiqilmoqda" || p.status === "suhbat"
+  );
+  const activeServices = services.filter((s) => s.status === "active");
 
   const query = debouncedSearch.trim();
-  const filteredJobs = openJobs
+  const jobsToFilter = matchingJobs.length > 0 ? matchingJobs : openJobs;
+  const filteredJobs = jobsToFilter
     .filter((j) => category === "all" || j.category === category)
     .filter(
       (j) =>
@@ -96,26 +128,38 @@ export default function MutaxassisDashboardPage() {
     )
     .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
 
-  const displayedJobs = filteredJobs.slice(0, 6);
+  const displayedJobs = filteredJobs.slice(0, 4);
+  const recentContracts = [...(contracts ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
+  const recentProposals = [...(proposals ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
+
+  const jobById = new Map((jobs ?? []).map((j) => [j.id, j]));
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
-      {/* Sarlavha va Tezkor amallar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-8 pb-12">
+      {/* Top Greeting and Quick CTAs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-card border border-line bg-surface p-6 shadow-card">
         <div>
           <h1 className="font-heading text-3xl font-extrabold text-ink">{t("dash.title")}</h1>
           {name && (
-            <p className="mt-1 text-muted">
-              {t("dash.greeting")}, {name.split(" ")[0]}
+            <p className="mt-1 text-sm text-muted">
+              {t("dash.greeting")}, <span className="font-semibold text-ink">{name.split(" ")[0]}</span>
             </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
+          <Link href="/xaridor/bozor">
+            <Button variant="secondary" size="sm">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
+                <path d="M3 4h14l-1.5 8H4.5L3 4zm2 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              {t("dash.exploreMarket")}
+            </Button>
+          </Link>
           <Link href="/mutaxassis/ish-elonlari">
             <Button variant="secondary" size="sm">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
                 <path d="M4 6h12M4 10h12M4 14h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
               {t("nav.jobs")}
@@ -123,7 +167,7 @@ export default function MutaxassisDashboardPage() {
           </Link>
           <Link href="/mutaxassis/xizmatlarim/yangi">
             <Button size="sm">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
                 <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
               {t("dash.newService")}
@@ -154,10 +198,10 @@ export default function MutaxassisDashboardPage() {
         </Card>
       )}
 
-      {/* 4 ta Statistika kartochkasi */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5 ta Aniq Statistika kartochkasi */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => (
+          Array.from({ length: 5 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="mt-3 h-8 w-24" />
@@ -165,58 +209,75 @@ export default function MutaxassisDashboardPage() {
           ))
         ) : (
           <>
-            <Card className="border-primary/20 bg-primary/5">
-              <p className="text-xs font-bold uppercase text-primary-deep tracking-wider">{t("dash.netIncome")}</p>
-              <p className="mt-2 font-heading text-2xl font-black text-ink">{formatMoney(totalEarnings, lang)}</p>
-            </Card>
-            <Link href="/mutaxassis/shartnomalar">
-              <Card hoverable>
-                <p className="text-xs font-bold uppercase text-muted tracking-wider">{t("dash.activeContracts")}</p>
-                <p className="mt-2 font-heading text-2xl font-black text-ink">{activeContracts.length}</p>
+            <Link href="/mutaxassis/daromad" className="block">
+              <Card hoverable className="border-l-4 border-l-primary h-full">
+                <p className="text-2xs font-bold uppercase text-primary-deep tracking-wider">{t("dash.netIncome")}</p>
+                <p className="mt-2 font-heading text-xl font-black text-ink">{formatMoney(totalEarnings, lang)}</p>
               </Card>
             </Link>
-            <Link href="/mutaxassis/ish-elonlari">
-              <Card hoverable className="border-accent/20 bg-accent/5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase text-primary-deep tracking-wider">{t("dash.openJobs")}</p>
-                  <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-                </div>
-                <p className="mt-2 font-heading text-2xl font-black text-ink">{openJobs.length}</p>
+
+            <Link href="/mutaxassis/shartnomalar" className="block">
+              <Card hoverable className="border-l-4 border-l-success h-full">
+                <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.activeContracts")}</p>
+                <p className="mt-2 font-heading text-xl font-black text-ink">{activeContracts.length}</p>
               </Card>
             </Link>
-            <Link href="/mutaxassis/xizmatlarim">
-              <Card hoverable>
-                <p className="text-xs font-bold uppercase text-muted tracking-wider">{t("nav.services")}</p>
-                <p className="mt-2 font-heading text-2xl font-black text-ink">{services.length}</p>
+
+            <Link href="/mutaxassis/takliflarim" className="block">
+              <Card hoverable className="border-l-4 border-l-accent h-full">
+                <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.proposalsSent")}</p>
+                <p className="mt-2 font-heading text-xl font-black text-ink">{proposals?.length || 0}</p>
+              </Card>
+            </Link>
+
+            <Link href="/mutaxassis/takliflarim" className="block">
+              <Card hoverable className="border-l-4 border-l-warning h-full">
+                <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.awaitingResponse")}</p>
+                <p className={`mt-2 font-heading text-xl font-black ${awaitingResponseProposals.length > 0 ? "text-warning" : "text-ink"}`}>
+                  {awaitingResponseProposals.length}
+                </p>
+              </Card>
+            </Link>
+
+            <Link href="/mutaxassis/xizmatlarim" className="block">
+              <Card hoverable className="border-l-4 border-l-primary-deep h-full">
+                <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.activeServices")}</p>
+                <p className="mt-2 font-heading text-xl font-black text-ink">{activeServices.length}</p>
               </Card>
             </Link>
           </>
         )}
       </div>
 
-      {/* ASOSIY QISM: Ish e'lonlari (Birinchi kirgan mutaxassis darhol ko'radi) */}
+      {/* ASOSIY QISM 1: MENGA MOS ISHLAR (Job Discovery) */}
       <section className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="font-heading text-xl font-bold text-ink">{t("dash.availableJobs")}</h2>
+              <h2 className="font-heading text-xl font-bold text-ink">
+                {matchingJobs.length > 0 ? t("dash.matchingJobs") : t("dash.availableJobs")}
+              </h2>
               {!loading && (
                 <Badge tone="primary">
-                  {openJobs.length} {t("jobs.open").toLowerCase()}
+                  {filteredJobs.length} ta mos ish
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted mt-1">{t("dash.availableJobsDesc")}</p>
+            <p className="text-xs text-muted mt-0.5">
+              {matchingJobs.length > 0
+                ? "Sizning ko'nikmalaringiz va kategoriyalaringizga to'g'ri keladigan ishlar"
+                : t("dash.availableJobsDesc")}
+            </p>
           </div>
           <Link
             href="/mutaxassis/ish-elonlari"
             className="text-sm font-semibold text-primary hover:text-primary-deep hover:underline shrink-0"
           >
-            {t("dash.viewAll")} ({openJobs.length}) →
+            {t("dash.browseJobBoard")} ({openJobs.length}) →
           </Link>
         </div>
 
-        {/* Qidiruv va Kategoriya tanlagich */}
+        {/* Qidiruv va Kategoriya pills */}
         <div className="flex flex-col gap-3">
           <div className="max-w-md">
             <SearchInput
@@ -257,21 +318,20 @@ export default function MutaxassisDashboardPage() {
           </div>
         </div>
 
-        {/* E'lonlar ro'yxati */}
+        {/* Ishlar ro'yxati */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SkeletonCard />
             <SkeletonCard />
           </div>
         ) : displayedJobs.length === 0 ? (
-          <Card className="text-center py-10">
+          <Card className="text-center py-10 flex flex-col items-center justify-center">
             <p className="font-heading text-sm font-bold text-ink">{t("dash.noJobsFound")}</p>
-            <p className="mt-1 text-xs text-muted">{t("jobs.emptyFiltered")}</p>
-            {(search || category !== "all") && (
+            <p className="mt-1 text-xs text-muted max-w-md">{t("dash.noMatchingJobs")}</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
-                className="mt-3"
                 onClick={() => {
                   setSearch("");
                   setCategory("all");
@@ -279,7 +339,10 @@ export default function MutaxassisDashboardPage() {
               >
                 {t("search.clear")}
               </Button>
-            )}
+              <Link href="/mutaxassis/ish-elonlari">
+                <Button size="sm">{t("dash.browseJobBoard")}</Button>
+              </Link>
+            </div>
           </Card>
         ) : (
           <div className="flex flex-col gap-4">
@@ -298,7 +361,7 @@ export default function MutaxassisDashboardPage() {
               <div className="text-center pt-2">
                 <Link href="/mutaxassis/ish-elonlari">
                   <Button variant="secondary" size="sm">
-                    {t("dash.browseJobBoard")} ({openJobs.length} ta loyiha) →
+                    {t("dash.browseJobBoard")} ({filteredJobs.length} ta loyiha) →
                   </Button>
                 </Link>
               </div>
@@ -307,56 +370,192 @@ export default function MutaxassisDashboardPage() {
         )}
       </section>
 
-      {/* So'nggi shartnomalar */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-xl font-bold text-ink">{t("dash.recentContracts")}</h2>
-          <Link href="/mutaxassis/shartnomalar" className="text-sm font-medium text-primary hover:underline">
-            {t("dash.viewAll")}
-          </Link>
-        </div>
-        {loading ? (
-          <SkeletonCard />
-        ) : recentContracts.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center py-8 text-center">
-            <p className="font-heading text-sm font-bold text-ink">{t("dash.noContracts")}</p>
-            <p className="mt-1 max-w-md text-xs text-muted">{t("dash.noContractsDesc")}</p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <Link href="/mutaxassis/ish-elonlari">
+      {/* 2 USTUNLI QISM: Arizalarim va Kelgan takliflar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Arizalarim */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="font-heading text-lg font-bold text-ink">{t("dash.myProposals")}</h2>
+              <span className="text-xs text-muted">({proposals?.length || 0})</span>
+            </div>
+            <Link href="/mutaxassis/takliflarim" className="text-xs font-semibold text-primary hover:underline">
+              {t("dash.viewAll")} →
+            </Link>
+          </div>
+
+          {loading ? (
+            <SkeletonCard />
+          ) : recentProposals.length === 0 ? (
+            <Card className="text-center py-8">
+              <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyProposalsCta")}</p>
+              <p className="mt-1 text-xs text-muted">Mavjud ishlarni ko'rib, birinchi arizangizni yuboring.</p>
+              <Link href="/mutaxassis/ish-elonlari" className="mt-3 inline-block">
                 <Button size="sm">{t("dash.browseJobBoard")}</Button>
               </Link>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {recentProposals.map((prop) => {
+                const job = jobById.get(prop.jobId);
+                return (
+                  <Link key={prop.id} href={`/mutaxassis/takliflarim/${prop.id}`} className="block">
+                    <Card hoverable padding="md" className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-ink text-sm truncate">{job?.title || "Loyiha"}</p>
+                        <div className="flex items-center gap-3 text-2xs text-muted mt-1">
+                          <span className="font-semibold text-ink">{formatMoney(prop.bidAmount, lang)}</span>
+                          <span>{formatDate(prop.createdAt, lang)}</span>
+                        </div>
+                      </div>
+                      <ProposalStatusBadge status={prop.status} />
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Kelgan takliflar (Direct offers) */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="font-heading text-lg font-bold text-ink">{t("dash.incomingOffers")}</h2>
+              <span className="text-xs text-muted">({offers.length})</span>
+            </div>
+            {offers.length > 0 && (
+              <Link href="/mutaxassis/takliflarim" className="text-xs font-semibold text-primary hover:underline">
+                {t("dash.viewAll")} →
+              </Link>
+            )}
+          </div>
+
+          {loading ? (
+            <SkeletonCard />
+          ) : offers.length === 0 ? (
+            <Card className="text-center py-8">
+              <p className="font-heading text-sm font-bold text-ink">Hozircha kelgan takliflar yo'q</p>
+              <p className="mt-1 text-xs text-muted">
+                Profilingizni to'liq qiling va xizmatlar qo'shing — mijozlar sizga to'g'ridan-to'g'ri taklif yuborishadi.
+              </p>
+              <Link href="/mutaxassis/profil" className="mt-3 inline-block">
+                <Button variant="secondary" size="sm">{t("dash.completeProfile")}</Button>
+              </Link>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {offers.slice(0, 4).map((offer) => (
+                <Link key={offer.id} href={`/mutaxassis/takliflarim/kelgan/${offer.id}`} className="block">
+                  <Card hoverable padding="md" className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <Avatar name={offer.buyerName} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-bold text-ink text-sm truncate">{offer.title}</p>
+                        <p className="text-2xs text-muted mt-0.5">
+                          {offer.buyerName} • <span className="font-medium text-ink">{formatMoney(offer.budget, lang)}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <OfferStatusBadge status={offer.status} />
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* 2 USTUNLI QISM: Faol shartnomalar va Xizmatlarim */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Faol shartnomalar */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg font-bold text-ink">{t("dash.recentContracts")}</h2>
+            <Link href="/mutaxassis/shartnomalar" className="text-xs font-semibold text-primary hover:underline">
+              {t("dash.viewAll")} ({contracts?.length || 0}) →
+            </Link>
+          </div>
+
+          {loading ? (
+            <SkeletonCard />
+          ) : recentContracts.length === 0 ? (
+            <Card className="text-center py-8">
+              <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyContractsCta")}</p>
+              <p className="mt-1 text-xs text-muted">{t("dash.noContractsDesc")}</p>
+              <Link href="/mutaxassis/ish-elonlari" className="mt-3 inline-block">
+                <Button size="sm">{t("dash.browseJobBoard")}</Button>
+              </Link>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {recentContracts.map((c) => (
+                <Link key={c.id} href={`/mutaxassis/shartnomalar/${c.id}`} className="block">
+                  <Card hoverable padding="md" className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-ink text-sm truncate">{c.title}</p>
+                      <p className="text-2xs text-muted mt-0.5">
+                        {c.buyerName} • {formatDate(c.createdAt, lang)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="font-bold text-ink text-xs">{formatMoney(c.totalAmount, lang)}</span>
+                      <ContractStatusBadge status={c.status} />
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Xizmatlarim */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg font-bold text-ink">{t("dash.myServices")}</h2>
+            <div className="flex items-center gap-2">
+              <Link href="/mutaxassis/xizmatlarim" className="text-xs font-semibold text-primary hover:underline">
+                {t("dash.viewAll")} ({services.length}) →
+              </Link>
               <Link href="/mutaxassis/xizmatlarim/yangi">
-                <Button variant="secondary" size="sm">
-                  {t("dash.newService")}
+                <Button size="sm" variant="secondary" className="text-xs h-7 py-0">
+                  + Yangi
                 </Button>
               </Link>
             </div>
-          </Card>
-        ) : (
-          <Card padding="none" stitch>
-            {recentContracts.map((c, i) => (
-              <Link
-                key={c.id}
-                href={`/mutaxassis/shartnomalar/${c.id}`}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 hover:bg-card-hover transition-colors ${
-                  i > 0 ? "border-t border-line" : ""
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="font-bold text-ink text-base truncate">{c.title}</p>
-                  <p className="text-sm text-muted mt-1">{formatDate(c.createdAt, lang)}</p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="font-bold text-ink whitespace-nowrap text-sm">
-                    {formatMoney(c.totalAmount, lang)}
-                  </span>
-                  <ContractStatusBadge status={c.status} />
-                </div>
+          </div>
+
+          {loading ? (
+            <SkeletonCard />
+          ) : services.length === 0 ? (
+            <Card className="text-center py-8">
+              <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyServicesCta")}</p>
+              <p className="mt-1 text-xs text-muted">Xizmat yarating va bozorga taklif qiling.</p>
+              <Link href="/mutaxassis/xizmatlarim/yangi" className="mt-3 inline-block">
+                <Button size="sm">{t("dash.newService")}</Button>
               </Link>
-            ))}
-          </Card>
-        )}
-      </section>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {services.slice(0, 4).map((s) => (
+                <Link key={s.id} href={`/mutaxassis/xizmatlarim/${s.id}`} className="block">
+                  <Card hoverable padding="md" className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-ink text-sm truncate">{s.title}</p>
+                      <div className="flex items-center gap-2 text-2xs text-muted mt-0.5">
+                        <Badge tone="primary">{t(`cat.${s.category}`)}</Badge>
+                        <span className="font-semibold text-ink">{formatMoney(s.price, lang)}</span>
+                        <span>• {s.deliveryDays} kun</span>
+                      </div>
+                    </div>
+                    <ServiceStatusBadge status={s.status} />
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

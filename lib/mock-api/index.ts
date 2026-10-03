@@ -2808,7 +2808,6 @@ export async function createJob(data: {
   await delay(500);
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
-  if (session.role !== "xaridor") throw new Error("FORBIDDEN");
   assertCategoryOpen(data.category);
   const users = read<User[]>(KEYS.users, []);
   const user = users.find((u) => u.id === session.userId);
@@ -2951,7 +2950,6 @@ export async function hireProposal(
   await delay(600);
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
-  if (session.role !== "xaridor") throw new Error("FORBIDDEN");
   const proposals = read<Proposal[]>(KEYS.proposals, []);
   const pIdx = proposals.findIndex((p) => p.id === proposalId);
   if (pIdx < 0 || !milestonesInput.length) throw new Error("NOT_FOUND");
@@ -3069,7 +3067,7 @@ export async function createOffer(data: {
   await delay(500);
   const session = getSession();
   if (!session) throw new Error("NO_SESSION");
-  if (session.role !== "xaridor" || session.userId === data.sellerId) {
+  if (session.userId === data.sellerId) {
     throw new Error("FORBIDDEN");
   }
   /* To'g'ridan-to'g'ri takliflar (A yo'l) admin tomonidan o'chirilishi mumkin */

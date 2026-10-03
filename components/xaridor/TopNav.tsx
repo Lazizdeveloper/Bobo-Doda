@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
@@ -19,14 +19,26 @@ export function TopNav({ base }: TopNavProps) {
   const { t } = useT();
   const [name, setName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  /* Bosqich 24 — QA audit: chiqish tugmasi ilgari FAQAT Sozlamalar
-     sahifasining pastida (uzoq scroll + modal) topilardi — bosh navigatsiyada
-     "obvious logout" yo'q edi. Endi header'da doim ko'rinadi (bitta bosishda,
-     Sozlamalardagi tasdiqlash modali esa o'z holicha qoladi). */
   function handleLogout() {
     authService.logout();
     router.push("/kirish");
+  }
+
+  async function handleSwitchRole(targetRole: "mutaxassis" | "xaridor") {
+    if (switching) return;
+    setSwitching(true);
+    try {
+      await authService.chooseRole(targetRole);
+      router.push(targetRole === "xaridor" ? "/xaridor" : "/mutaxassis");
+    } catch {
+      router.push(targetRole === "xaridor" ? "/xaridor" : "/mutaxassis");
+    } finally {
+      setSwitching(false);
+    }
   }
 
   useEffect(() => {
@@ -36,70 +48,201 @@ export function TopNav({ base }: TopNavProps) {
       }).catch(() => {});
     }
     refresh();
-    /* Sozlamalarda ism o'zgarsa avatar harflari ham darhol yangilansin —
-       ilgari `refresh` faqat bir marta chaqirilar va sahifa qayta
-       yuklanmaguncha eski ism qolardi. */
     window.addEventListener(DATA_CHANGED_EVENT, refresh);
     return () => window.removeEventListener(DATA_CHANGED_EVENT, refresh);
   }, []);
 
-  /* TopNav layout ichida bo'lgani uchun sahifalar orasida qayta mount bo'lmaydi —
-     menyu o'zi yopilmasa, yangi sahifa ustida ochiq qolib ketadi. */
   useEffect(() => {
     setMenuOpen(false);
+    setActiveDropdown(null);
   }, [pathname]);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !activeDropdown) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setActiveDropdown(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [menuOpen]);
+  }, [menuOpen, activeDropdown]);
 
-  /* Bosqich 17 — Job/Proposal/Offer va Xabarlar real backendda yo'q
-     (mock-only "ikki yo'l" arxitekturasi): nav'dan olib tashlangan, lekin
-     sahifalar o'zi o'chirilmagan (to'g'ridan-to'g'ri URL orqali kirilsa
-     `<ErrorState code="FEATURE_DISABLED">` ko'rsatadi). */
-  const items = [
-    { href: "/xaridor", label: t("nav.dashboard"), exact: true },
-    { href: "/xaridor/bozor", label: t("nav.market") },
-    { href: "/xaridor/elonlarim", label: t("nav.myJobs") },
-    { href: "/xaridor/shartnomalar", label: t("nav.contracts") },
+  function handleDropdownEnter(key: string) {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+    setActiveDropdown(key);
+  }
+
+  function handleDropdownLeave() {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 150);
+  }
+
+  const bozorSubItems = [
+    { href: "/xaridor/bozor?tab=services", label: t("nav.bozorServices"), icon: "🛍️" },
+    { href: "/xaridor/bozor?tab=jobs", label: t("nav.bozorJobs"), icon: "💼" },
+    { href: "/xaridor/bozor?tab=specialists", label: t("nav.bozorSpecialists"), icon: "👥" },
   ];
+
+  const jobsSubItems = [
+    { href: "/xaridor/elonlarim?tab=my_jobs", label: t("nav.clientMyJobs"), icon: "💼" },
+    { href: "/xaridor/elonlarim?tab=proposals", label: t("nav.clientProposals"), icon: "📬" },
+    { href: "/xaridor/elonlarim?tab=saved_specialists", label: t("nav.clientSavedSpecialists"), icon: "⭐" },
+  ];
+
+  const isBozorActive = pathname.startsWith("/xaridor/bozor");
+  const isJobsActive = pathname.startsWith("/xaridor/elonlarim");
+  const isContractsActive = pathname.startsWith("/xaridor/shartnomalar");
+  const isMessagesActive = pathname.startsWith("/xaridor/xabarlar");
+  const isDashboardActive = pathname === "/xaridor";
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6 lg:gap-8">
           <Logo href={base} />
-          
+
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex gap-1">
-            {items.map((item) => {
-              const active = item.exact
-                ? pathname === item.href
-                : pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
-                    active ? "bg-primary/10 text-primary-deep" : "text-muted hover:bg-card-hover hover:text-ink"
+          <nav className="hidden lg:flex items-center gap-1">
+            {/* Boshqaruv */}
+            <Link
+              href="/xaridor"
+              className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                isDashboardActive
+                  ? "bg-primary/10 text-primary-deep font-semibold"
+                  : "text-muted hover:bg-card-hover hover:text-ink"
+              }`}
+            >
+              {t("nav.dashboard")}
+            </Link>
+
+            {/* Bozor Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => handleDropdownEnter("bozor")}
+              onMouseLeave={handleDropdownLeave}
+            >
+              <Link
+                href="/xaridor/bozor"
+                className={`flex items-center gap-1 px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                  isBozorActive
+                    ? "bg-primary/10 text-primary-deep font-semibold"
+                    : "text-muted hover:bg-card-hover hover:text-ink"
+                }`}
+                aria-expanded={activeDropdown === "bozor"}
+              >
+                <span>{t("nav.market")}</span>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  className={`transition-transform duration-200 ${
+                    activeDropdown === "bozor" ? "rotate-180 text-primary" : "text-muted"
                   }`}
                 >
-                  {item.label}
-                </Link>
-              );
-            })}
+                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+
+              {activeDropdown === "bozor" && (
+                <div className="absolute left-0 top-full pt-1.5 w-56 z-50 animate-in fade-in-0 zoom-in-95">
+                  <div className="rounded-xl border border-line bg-surface p-1.5 shadow-lg">
+                    {bozorSubItems.map((sub) => (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-btn text-xs font-semibold text-ink hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        <span className="text-base">{sub.icon}</span>
+                        <span>{sub.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Ishlar Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => handleDropdownEnter("ishlar")}
+              onMouseLeave={handleDropdownLeave}
+            >
+              <Link
+                href="/xaridor/elonlarim"
+                className={`flex items-center gap-1 px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                  isJobsActive
+                    ? "bg-primary/10 text-primary-deep font-semibold"
+                    : "text-muted hover:bg-card-hover hover:text-ink"
+                }`}
+                aria-expanded={activeDropdown === "ishlar"}
+              >
+                <span>{t("nav.jobs")}</span>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  className={`transition-transform duration-200 ${
+                    activeDropdown === "ishlar" ? "rotate-180 text-primary" : "text-muted"
+                  }`}
+                >
+                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+
+              {activeDropdown === "ishlar" && (
+                <div className="absolute left-0 top-full pt-1.5 w-60 z-50 animate-in fade-in-0 zoom-in-95">
+                  <div className="rounded-xl border border-line bg-surface p-1.5 shadow-lg">
+                    {jobsSubItems.map((sub) => (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-btn text-xs font-semibold text-ink hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        <span className="text-base">{sub.icon}</span>
+                        <span>{sub.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Shartnomalar */}
+            <Link
+              href="/xaridor/shartnomalar"
+              className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                isContractsActive
+                  ? "bg-primary/10 text-primary-deep font-semibold"
+                  : "text-muted hover:bg-card-hover hover:text-ink"
+              }`}
+            >
+              {t("nav.contracts")}
+            </Link>
+
+            {/* Xabarlar */}
+            <Link
+              href="/xaridor/xabarlar"
+              className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                isMessagesActive
+                  ? "bg-primary/10 text-primary-deep font-semibold"
+                  : "text-muted hover:bg-card-hover hover:text-ink"
+              }`}
+            >
+              {t("nav.messages")}
+            </Link>
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <Link
             href="/xaridor/elonlarim/yangi"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-btn bg-primary text-white hover:bg-primary-deep transition-colors shadow-sm"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-btn bg-primary text-white hover:bg-primary-deep transition-colors shadow-sm"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -107,28 +250,43 @@ export function TopNav({ base }: TopNavProps) {
             {t("bjobs.post")}
           </Link>
 
+          {/* Role switcher button */}
+          <button
+            type="button"
+            onClick={() => handleSwitchRole("mutaxassis")}
+            disabled={switching}
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-btn text-xs font-semibold bg-surface border border-line text-ink hover:border-accent hover:text-accent transition-all shadow-2xs"
+            title={t("nav.switchToSpecialist")}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-accent" aria-hidden="true">
+              <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 14l-3-3 3-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>{t("nav.switchToSpecialist")}</span>
+          </button>
+
           <LangSwitch />
 
           {/* Mobile menu button */}
           <button
             type="button"
-            className="lg:hidden p-2 text-muted"
+            className="lg:hidden p-2 text-muted hover:text-ink"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? t("a11y.closeMenu") : t("a11y.openMenu")}
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
           >
-             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
 
           <div className="hidden lg:flex items-center gap-3">
+            <Link href="/xaridor/xarajatlar" className="text-xs font-medium text-muted hover:text-ink">
+              {t("nav.spending")}
+            </Link>
             <Link href="/xaridor/yordam" className="text-xs font-medium text-muted hover:text-ink">
               {t("nav.help")}
             </Link>
-            {/* Avatar `aria-hidden` — havola nomsiz qolmasligi uchun
-                aria-label SHART (axe: link-name). */}
             <Link
               href="/xaridor/sozlamalar"
               aria-label={t("nav.settings")}
@@ -157,25 +315,74 @@ export function TopNav({ base }: TopNavProps) {
           className="border-t border-line bg-surface px-4 py-3 lg:hidden"
         >
           <nav className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => handleSwitchRole("mutaxassis")}
+              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-btn text-sm font-semibold bg-accent/10 text-accent hover:bg-accent hover:text-white transition-colors mb-2"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 14l-3-3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {t("nav.switchToSpecialist")}
+            </button>
             <Link
               href="/xaridor/elonlarim/yangi"
-              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-btn text-sm font-semibold bg-primary text-white hover:bg-primary-deep shadow-sm mb-1"
+              className="flex items-center justify-center gap-2 px-3 py-2 rounded-btn text-sm font-semibold bg-primary text-white hover:bg-primary-deep shadow-sm mb-1"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
               {t("bjobs.post")}
             </Link>
-            {items.map((item) => (
-              <Link key={item.href} href={item.href} className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-                {item.label}
+
+            <Link href="/xaridor" className="block px-3 py-2 rounded-btn text-sm font-semibold text-ink hover:bg-card-hover">
+              {t("nav.dashboard")}
+            </Link>
+
+            {/* Bozor with sub-items */}
+            <div className="flex flex-col gap-1 border-y border-line/60 py-2 my-1">
+              <Link href="/xaridor/bozor" className="px-3 py-1 text-sm font-bold text-ink">
+                {t("nav.market")}
               </Link>
-            ))}
+              <div className="pl-4 flex flex-col gap-1">
+                {bozorSubItems.map((sub) => (
+                  <Link key={sub.href} href={sub.href} className="px-3 py-1.5 rounded-btn text-xs font-medium text-muted hover:text-ink hover:bg-card-hover flex items-center gap-2">
+                    <span>{sub.icon}</span>
+                    <span>{sub.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Ishlar with sub-items */}
+            <div className="flex flex-col gap-1 border-b border-line/60 pb-2 mb-1">
+              <Link href="/xaridor/elonlarim" className="px-3 py-1 text-sm font-bold text-ink">
+                {t("nav.jobs")}
+              </Link>
+              <div className="pl-4 flex flex-col gap-1">
+                {jobsSubItems.map((sub) => (
+                  <Link key={sub.href} href={sub.href} className="px-3 py-1.5 rounded-btn text-xs font-medium text-muted hover:text-ink hover:bg-card-hover flex items-center gap-2">
+                    <span>{sub.icon}</span>
+                    <span>{sub.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <Link href="/xaridor/shartnomalar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
+              {t("nav.contracts")}
+            </Link>
+            <Link href="/xaridor/xabarlar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
+              {t("nav.messages")}
+            </Link>
+            <Link href="/xaridor/xarajatlar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
+              {t("nav.spending")}
+            </Link>
             <Link href="/xaridor/yordam" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-               {t("nav.help")}
+              {t("nav.help")}
             </Link>
             <Link href="/xaridor/sozlamalar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-               {t("nav.settings")}
+              {t("nav.settings")}
             </Link>
             <button
               type="button"

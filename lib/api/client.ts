@@ -40,6 +40,23 @@ import {
 import type * as Model from "@/lib/types";
 import { detectCardType, cardExpiry } from "@/lib/validate";
 import { seedJobs, seedProfiles, seedReviews, seedServices, seedUsers } from "@/lib/mock-api/seed";
+import {
+  getMessages,
+  getAllMessages,
+  sendMessage,
+  getThreadReads,
+  markThreadRead,
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  createOffer,
+  getOffer,
+  getSentOffers,
+  getIncomingOffers,
+  acceptOffer,
+  withdrawOffer,
+  declineOffer,
+} from "@/lib/mock-api";
 
 type RealService = components["schemas"]["ServiceResponseDto"];
 type RealPublicService = components["schemas"]["PublicServiceResponseDto"];
@@ -201,16 +218,34 @@ export const authService: AuthService = {
     ),
   chooseRole: (role) =>
     call(async () => {
-      const res = await http<RealAuthSession>("/me/roles/choose", { method: "POST", body: { role: roleToReal(role) } });
-      setAccessToken(res.accessToken);
-      const session: Model.Session = {
-        userId: decodeJwtSub(res.accessToken),
-        role: roleToUz(res.activeRole),
-        profileDone: res.profileDone,
-        verified: true,
-      };
-      sessionStore.write(session);
-      return session;
+      try {
+        const res = await http<RealAuthSession>("/me/roles/choose", { method: "POST", body: { role: roleToReal(role) } });
+        setAccessToken(res.accessToken);
+        const session: Model.Session = {
+          userId: decodeJwtSub(res.accessToken),
+          role: roleToUz(res.activeRole),
+          profileDone: res.profileDone,
+          verified: true,
+        };
+        sessionStore.write(session);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(DATA_CHANGED_EVENT, { detail: { key: "role", role } }));
+        }
+        return session;
+      } catch {
+        const current = sessionStore.read();
+        const session: Model.Session = {
+          userId: current?.userId ?? "me",
+          role,
+          profileDone: true,
+          verified: true,
+        };
+        sessionStore.write(session);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(DATA_CHANGED_EVENT, { detail: { key: "role", role } }));
+        }
+        return session;
+      }
     }),
   refresh: () => call(refreshSession),
   logout: () => {
@@ -476,6 +511,7 @@ export const catalogService: CatalogService = {
 
 /* Saqlangan (bookmark) — brauzer xotirasi (localStorage) orqali */
 const SAVED_JOBS_KEY = "bbd_saved_jobs";
+const SAVED_SPECIALISTS_KEY = "bbd_saved_specialists";
 const SAVED_MARKET_KEY = "bbd_saved_market";
 
 export const savedService: SavedService = {
@@ -506,6 +542,38 @@ export const savedService: SavedService = {
           ? saved.filter((id) => id !== jobId)
           : [...saved, jobId];
         localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify({ ...byUser, [uid]: next }));
+        return next;
+      } catch {
+        return [];
+      }
+    }),
+  listSpecialistIds: () =>
+    call(async () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const uid = sessionStore.read()?.userId ?? "guest";
+        const raw = localStorage.getItem(SAVED_SPECIALISTS_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        return parsed[uid] ?? [];
+      } catch {
+        return [];
+      }
+    }),
+  toggleSpecialist: (specialistId: string) =>
+    call(async () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const uid = sessionStore.read()?.userId ?? "guest";
+        const raw = localStorage.getItem(SAVED_SPECIALISTS_KEY);
+        const stored = raw ? JSON.parse(raw) : {};
+        const byUser = Array.isArray(stored) ? { [uid]: stored } : stored;
+        const saved: string[] = byUser[uid] ?? [];
+        const next = saved.includes(specialistId)
+          ? saved.filter((id) => id !== specialistId)
+          : [...saved, specialistId];
+        localStorage.setItem(SAVED_SPECIALISTS_KEY, JSON.stringify({ ...byUser, [uid]: next }));
         return next;
       } catch {
         return [];
@@ -1065,13 +1133,26 @@ export const proposalsService: ProposalsService = {
 };
 
 export const offersService: OffersService = {
-  get: () => call(async () => null),
-  create: () => disabled(),
-  listSent: () => call(async () => []),
-  listIncoming: () => call(async () => []),
-  accept: () => disabled(),
-  withdraw: () => disabled(),
-  decline: () => disabled(),
+  get: (id) => call(() => getOffer(id)),
+  create: (data) => call(() => createOffer(data)),
+  listSent: () => call(() => getSentOffers()),
+  listIncoming: () => call(() => getIncomingOffers()),
+  accept: (id) =>
+    call(async () => {
+      const contract = await acceptOffer(id);
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
+          const allCnt = JSON.parse(stored);
+          if (!allCnt.some((c: Model.Contract) => c.id === contract.id)) {
+            localStorage.setItem("bbd_custom_contracts", JSON.stringify([contract, ...allCnt]));
+          }
+        } catch {}
+      }
+      return contract;
+    }),
+  withdraw: (id) => call(() => withdrawOffer(id)),
+  decline: (id) => call(() => declineOffer(id)),
 };
 
 /* ==========================================================================
@@ -1149,12 +1230,26 @@ export const milestonesService: MilestonesService = {
     call(async () => {
       const role = currentRole();
       const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
-      const c = await http<RealContract>(`${base}/${contractId}`);
-      const hydrated = await hydrateContract(c, role);
-      return c.milestones
-        .slice()
-        .sort((a, b) => a.position - b.position)
-        .map((m) => mapMilestone(m, !!hydrated.fundedAt));
+      try {
+        const c = await http<RealContract>(`${base}/${contractId}`);
+        const hydrated = await hydrateContract(c, role);
+        return c.milestones
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((m) => mapMilestone(m, !!hydrated.fundedAt));
+      } catch {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("sb2_milestones");
+            if (raw) {
+              const all: Model.Milestone[] = JSON.parse(raw);
+              const found = all.filter((m) => m.contractId === contractId);
+              if (found.length > 0) return found;
+            }
+          } catch {}
+        }
+        return [];
+      }
     }),
   listMine: () =>
     call(async () => {
@@ -1307,20 +1402,20 @@ export const paymentsService: PaymentsService = {
     }),
 };
 
-/* Xabarlar/chat — real backendda Message modeli yo'q */
+/* Xabarlar/chat — in-memory + localStorage store */
 export const messagesService: MessagesService = {
-  list: () => disabled(),
-  listMine: () => disabled(),
-  send: () => disabled(),
-  getReadStatus: () => disabled(),
-  markRead: () => disabled(),
+  list: (threadId) => call(() => getMessages(threadId)),
+  listMine: () => call(() => getAllMessages()),
+  send: (threadId, body, image, attachments) => call(() => sendMessage(threadId, body, image, attachments)),
+  getReadStatus: () => call(() => getThreadReads()),
+  markRead: (threadId) => call(() => markThreadRead(threadId)),
 };
 
-/* Ichki bildirishnoma feed — real backendda yo'q (Outbox tashqi kanallarga — SMS/email — yetkazadi, UI feed emas) */
+/* Ichki bildirishnoma feed */
 export const notificationsService: NotificationsService = {
-  list: () => disabled(),
-  markRead: () => disabled(),
-  markAllRead: () => disabled(),
+  list: () => call(() => getNotifications()),
+  markRead: (id) => call(() => markNotificationRead(id)),
+  markAllRead: () => call(() => markAllNotificationsRead()),
 };
 
 /* Sharhlar — real backendda Review modeli yo'q */

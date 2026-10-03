@@ -30,6 +30,7 @@ export default function MutaxassisProfiliPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [offerOpen, setOfferOpen] = useState(false);
+  const [messageOpen, setMessageOpen] = useState(false);
   const [viewingPortfolio, setViewingPortfolio] = useState<PortfolioItem | null>(null);
   const [selectedRatingFilter, setSelectedRatingFilter] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -380,13 +381,23 @@ export default function MutaxassisProfiliPage() {
               </p>
             </div>
 
-            <Button
-              size="lg"
-              onClick={() => setOfferOpen(true)}
-              className="w-full justify-center shadow-btn"
-            >
-              {t("offer.send")} →
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                size="lg"
+                onClick={() => setOfferOpen(true)}
+                className="w-full justify-center shadow-btn"
+              >
+                {t("offer.send")} →
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setMessageOpen(true)}
+                className="w-full justify-center text-xs"
+              >
+                💬 {t("market.sendMessageBtn")}
+              </Button>
+            </div>
 
             {/* Quick Metrics */}
             <div className="flex flex-col divide-y divide-line rounded-input border border-line bg-surface text-xs">
@@ -497,6 +508,15 @@ export default function MutaxassisProfiliPage() {
         open={offerOpen}
         onClose={() => setOfferOpen(false)}
         sellerId={user.id}
+        mode="offer"
+      />
+
+      {/* Xabar yuborish modali */}
+      <OfferModal
+        open={messageOpen}
+        onClose={() => setMessageOpen(false)}
+        sellerId={user.id}
+        mode="message"
       />
     </div>
   );

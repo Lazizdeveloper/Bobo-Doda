@@ -18,6 +18,7 @@ import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
 import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
+import { ContractWorkroomChat } from "@/components/shared/ContractWorkroomChat";
 import {
   ContractStatusBadge,
   MilestoneStatusBadge,
@@ -25,7 +26,7 @@ import {
 import { contractsService, disputesService, milestonesService, paymentsService } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Contract, Dispute, Milestone } from "@/lib/types";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatFileSize, formatMoney, triggerFileDownload } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
 /** Bounded polling — real to'lov holati webhook orqali keladi, query
@@ -386,7 +387,9 @@ export default function XaridorWorkroomPage() {
                 )}
               </div>
 
-              {(milestone.deliverableLink || milestone.deliverableNote) && (
+              {(milestone.deliverableLink ||
+                milestone.deliverableNote ||
+                (milestone.deliverableFiles && milestone.deliverableFiles.length > 0)) && (
                 <div className="ml-9 flex flex-col gap-2 rounded-input border border-primary/20 bg-surface/80 p-3 text-xs">
                   {milestone.deliverableLink && (
                     <div className="flex items-center gap-2">
@@ -403,6 +406,31 @@ export default function XaridorWorkroomPage() {
                   )}
                   {milestone.deliverableNote && (
                     <p className="text-muted whitespace-pre-line bg-card/60 rounded-btn p-2 border border-line/40">{milestone.deliverableNote}</p>
+                  )}
+                  {milestone.deliverableFiles && milestone.deliverableFiles.length > 0 && (
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      <span className="text-2xs font-medium text-muted">{t("sm.deliverableFiles")}:</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {milestone.deliverableFiles.map((file, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between gap-2 rounded-btn border border-line bg-card p-2 text-xs"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-ink text-2xs">{file.name}</p>
+                              <p className="text-[10px] text-faint">{formatFileSize(file.size)}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => triggerFileDownload(file)}
+                              className="shrink-0 rounded-btn bg-surface hover:bg-card-hover px-2 py-1 text-[11px] font-medium text-primary border border-line cursor-pointer"
+                            >
+                              {t("workroom.download")}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -448,6 +476,16 @@ export default function XaridorWorkroomPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Ishchi xona muloqoti va fayllar (Chat & Deliverables) */}
+      <section className="flex flex-col gap-3">
+        <ContractWorkroomChat
+          contract={contract}
+          milestones={milestones}
+          counterpartName={contract.sellerName}
+          role="xaridor"
+        />
       </section>
 
       {(canCancel || contract.status === "faol") && (

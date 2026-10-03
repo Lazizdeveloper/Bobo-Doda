@@ -204,7 +204,21 @@ export const dictionary: Record<string, Entry> = {
   /* Navigatsiya */
   "nav.dashboard": { uz: "Boshqaruv", ru: "Обзор" },
   "nav.services": { uz: "Xizmatlarim", ru: "Мои услуги" },
-  "nav.jobs": { uz: "Ish e'lonlari", ru: "Объявления" },
+  "nav.jobs": { uz: "Ishlar", ru: "Работа" },
+  "nav.bozorServices": { uz: "Xizmatlar", ru: "Услуги" },
+  "nav.bozorJobs": { uz: "Ishlar", ru: "Работа" },
+  "nav.bozorSpecialists": { uz: "Mutaxassislar", ru: "Специалисты" },
+  "nav.jobsMatching": { uz: "Menga mos ishlar", ru: "Подходящие мне" },
+  "nav.jobsProposals": { uz: "Arizalarim", ru: "Мои отклики" },
+  "nav.jobsSaved": { uz: "Saqlangan ishlar", ru: "Сохраненные заказы" },
+  "nav.jobsOffers": { uz: "Takliflar", ru: "Прямые предложения" },
+  "nav.clientMyJobs": { uz: "Mening ishlarim", ru: "Мои вакансии" },
+  "nav.clientProposals": { uz: "Arizalar", ru: "Отклики на вакансии" },
+  "nav.clientSavedSpecialists": { uz: "Tanlangan mutaxassislar", ru: "Избранные специалисты" },
+  "dash.awaitingSelection": { uz: "Tanlash kutilayotgan mutaxassislar", ru: "Ожидают выбора" },
+  "dash.awaitingSelectionDesc": { uz: "Arizalarni solishtiring va loyihangiz uchun eng mos mutaxassisni tanlang", ru: "Сравните отклики и выберите специалиста для проекта" },
+  "dash.noSelectionPending": { uz: "Hozircha tanlash kutilayotgan arizalar yo'q", ru: "Пока нет откликов, ожидающих выбора" },
+  "dash.noSelectionPendingDesc": { uz: "Yangi ish e'lonini joylashtiring yoki mutaxassislar bo'limidan to'g'ridan-to'g'ri taklif yuboring", ru: "Опубликуйте вакансию или найдите специалиста в каталоге" },
   "nav.proposals": { uz: "Takliflarim", ru: "Мои предложения" },
   "nav.contracts": { uz: "Shartnomalar", ru: "Контракты" },
   "nav.messages": { uz: "Xabarlar", ru: "Сообщения" },
@@ -215,6 +229,11 @@ export const dictionary: Record<string, Entry> = {
   "nav.help": { uz: "Yordam", ru: "Помощь" },
   "nav.openMenu": { uz: "Menyuni ochish", ru: "Открыть меню" },
   "nav.closeMenu": { uz: "Menyuni yopish", ru: "Закрыть меню" },
+  "nav.switchRole": { uz: "Rolni almashtirish", ru: "Сменить роль" },
+  "nav.switchToBuyer": { uz: "Buyurtmachi rejimi", ru: "Режим заказчика" },
+  "nav.switchToSpecialist": { uz: "Mutaxassis rejimi", ru: "Режим исполнителя" },
+  "nav.currentRoleSpecialist": { uz: "Mutaxassis", ru: "Исполнитель" },
+  "nav.currentRoleBuyer": { uz: "Ish beruvchi", ru: "Заказчик" },
 
   /* Ishonch va yordam markazi */
   "verify.title": { uz: "Shaxsni tasdiqlash", ru: "Подтверждение личности" },
@@ -1505,6 +1524,32 @@ export const dictionary: Record<string, Entry> = {
   "dash.you": { uz: "Siz", ru: "Вы" },
   "dash.client": { uz: "Mijoz", ru: "Клиент" },
   "dash.specialist": { uz: "Mutaxassis", ru: "Специалист" },
+  "dash.proposalsSent": { uz: "Yuborilgan arizalar", ru: "Отправленные заявки" },
+  "dash.awaitingResponse": { uz: "Javob kutilmoqda", ru: "Ожидают ответа" },
+  "dash.activeServices": { uz: "Faol xizmatlar", ru: "Активные услуги" },
+  "dash.myProposals": { uz: "Arizalarim", ru: "Мои заявки" },
+  "dash.myServices": { uz: "Xizmatlarim", ru: "Мои услуги" },
+  "dash.receivedProposals": { uz: "Kelgan arizalar", ru: "Входящие заявки" },
+  "dash.activeJobs": { uz: "Faol ishlar", ru: "Активные заказы" },
+  "dash.recentProposals": { uz: "Oxirgi arizalar", ru: "Последние заявки" },
+  "dash.findSpecialist": { uz: "Mutaxassis topish", ru: "Найти специалиста" },
+  "dash.exploreMarket": { uz: "Bozorni ko'rish", ru: "Открыть маркет" },
+  "dash.emptyServicesCta": {
+    uz: "Birinchi xizmatingizni yarating va uni mijozlarga taklif qiling.",
+    ru: "Создайте свою первую услугу и предложите её клиентам.",
+  },
+  "dash.emptyJobsCta": {
+    uz: "Birinchi ish e'loningizni joylashtiring.",
+    ru: "Разместите своё первое объявление.",
+  },
+  "dash.emptyProposalsCta": {
+    uz: "Hozircha arizalar kelmagan.",
+    ru: "Пока нет заявок.",
+  },
+  "dash.emptyContractsCta": {
+    uz: "Hozircha faol shartnomangiz yo'q.",
+    ru: "Пока нет активных контрактов.",
+  },
 
   /* Holat (available) */
   "avail.on": { uz: "Ishga tayyor", ru: "Открыт к работе" },
@@ -1630,16 +1675,43 @@ export const dictionary: Record<string, Entry> = {
   /* Bozor (katalog) */
   "market.title": { uz: "Bozor", ru: "Маркет" },
   "market.subtitle": {
-    uz: "Tayyor xizmatni buyurtma qiling yoki mutaxassis tanlab, taklifini o'rganing",
-    ru: "Закажите готовую услугу или выберите специалиста",
+    uz: "Tayyor xizmatni buyurtma qiling, ish e'lonlariga ariza bering yoki mutaxassis tanlang",
+    ru: "Закажите готовую услугу, откликнитесь на заказ или выберите специалиста",
   },
   "market.filtersTitle": { uz: "Filtrlar", ru: "Фильтры" },
   "market.tabServices": { uz: "Xizmatlar", ru: "Услуги" },
+  "market.tabJobs": { uz: "Ishlar", ru: "Заказы / Ishlar" },
   "market.tabSpecialists": { uz: "Mutaxassislar", ru: "Специалисты" },
   "market.searchPh": {
     uz: "Xizmat yoki mutaxassis qidirish...",
     ru: "Поиск услуги или специалиста...",
   },
+  "market.searchJobsPh": {
+    uz: "Ish, ko'nikma yoki kategoriya qidiring...",
+    ru: "Поиск заказов, навыков или категорий...",
+  },
+  "market.searchSpecsPh": {
+    uz: "Mutaxassis, ko'nikma yoki xizmat qidiring...",
+    ru: "Поиск специалистов, навыков или услуг...",
+  },
+  "market.sendOfferBtn": { uz: "Ish taklif qilish", ru: "Предложить работу" },
+  "market.sendMessageBtn": { uz: "Xabar yuborish", ru: "Отправить сообщение" },
+  "market.applyBtn": { uz: "Ariza berish", ru: "Откликнуться" },
+  "market.detailsBtn": { uz: "Batafsil", ru: "Подробнее" },
+  "market.emptyServices": {
+    uz: "Birinchi xizmatingizni yarating va uni mijozlarga taklif qiling.",
+    ru: "Создайте свою первую услугу и предложите её клиентам.",
+  },
+  "market.emptyJobs": {
+    uz: "Hozircha ish topilmadi. Filtrlarni o'zgartirib ko'ring.",
+    ru: "Пока нет заказов. Попробуйте изменить фильтры.",
+  },
+  "market.emptySpecialists": {
+    uz: "Hozircha mutaxassis topilmadi. Filtrlarni tozalab ko'ring.",
+    ru: "Пока нет специалистов. Попробуйте сбросить фильтры.",
+  },
+  "market.createServiceCta": { uz: "+ Xizmat yaratish", ru: "+ Создать услугу" },
+  "market.postJobCta": { uz: "+ Ish e'lon qilish", ru: "+ Разместить заказ" },
   "market.recentSearches": { uz: "Oxirgi qidiruvlar:", ru: "Недавние запросы:" },
   "market.empty": {
     uz: "Hech narsa topilmadi — filtrlarni o'zgartirib ko'ring",
@@ -1806,6 +1878,49 @@ export const dictionary: Record<string, Entry> = {
     ru: "Новые предложения приниматься не будут. Это действие нельзя отменить.",
   },
   "bjobs.closed": { uz: "E'lon yopildi", ru: "Объявление закрыто" },
+  "bjobs.tabMyJobs": { uz: "Mening ishlarim", ru: "Мои вакансии" },
+  "bjobs.tabProposals": { uz: "Arizalar", ru: "Отклики и предложения" },
+  "bjobs.tabSavedSpecialists": { uz: "Tanlangan mutaxassislar", ru: "Избранные специалисты" },
+  "bjobs.emptyProposals": {
+    uz: "Hali birorta taklif yoki ariza kelib tushmadi",
+    ru: "Пока нет откликов или предложений",
+  },
+  "bjobs.emptySavedSpecs": {
+    uz: "Tanlangan mutaxassislar ro'yxati bo'sh",
+    ru: "Список избранных специалистов пуст",
+  },
+  "bjobs.emptySavedSpecsCta": { uz: "Mutaxassislarni ko'rish", ru: "Найти специалистов" },
+  "bjobs.forJob": { uz: "E'lon", ru: "Вакансия" },
+  "bjobs.viewJob": { uz: "E'lonni ko'rish", ru: "Посмотреть вакансию" },
+  "bjobs.savedSuccess": { uz: "Mutaxassis saqlandi", ru: "Специалист сохранен" },
+  "bjobs.unsavedSuccess": { uz: "Mutaxassis ro'yxatdan olib tashlandi", ru: "Специалист удален из сохраненных" },
+  "bjobs.allProposalsCount": { uz: "ta ariza", ru: "откликов" },
+  "bjobs.removeSaved": { uz: "Saqlanganlardan o'chirish", ru: "Удалить из избранных" },
+  "workroom.chatTitle": { uz: "Ishchi xona muloqoti", ru: "Общение в рабочей комнате" },
+  "workroom.chatDesc": {
+    uz: "Shartnoma doirasidagi barcha xabarlar, fayllar va topshirilgan ishlar bu yerda xavfsiz saqlanadi.",
+    ru: "Все сообщения, файлы и результаты работ по проекту безопасно сохраняются здесь.",
+  },
+  "workroom.tabChat": { uz: "Xabarlar va muhokama", ru: "Сообщения и обсуждение" },
+  "workroom.tabDeliverables": { uz: "Topshirilgan fayllar va natijalar", ru: "Сданные файлы и результаты" },
+  "workroom.emptyDeliverables": {
+    uz: "Hali topshirilgan ish natijalari mavjud emas",
+    ru: "Пока нет сданных результатов работ",
+  },
+  "workroom.emptyDeliverablesHint": {
+    uz: "Mutaxassis biror bosqichni topshirganda, havolalar, fayllar va izohlar bu yerda avtomatik jamlanadi.",
+    ru: "Когда специалист сдаст этап, ссылки, файлы и комментарии автоматически отобразятся здесь.",
+  },
+  "workroom.escrowNotice": {
+    uz: "Escrow xavfsizligi: Barcha to'lovlar, kelishuvlar va topshirilgan fayllar platforma kafolati ostida.",
+    ru: "Безопасность Escrow: Все платежи, договорённости и сданные файлы находятся под защитой платформы.",
+  },
+  "workroom.sendPh": {
+    uz: "Xabar yozing... (Ctrl+Enter yuborish uchun)",
+    ru: "Напишите сообщение... (Ctrl+Enter для отправки)",
+  },
+  "workroom.attachDeliverables": { uz: "Fayl biriktirish", ru: "Прикрепить файл" },
+  "workroom.download": { uz: "Yuklab olish", ru: "Скачать" },
   "jobs.newBuyer": { uz: "Yangi xaridor", ru: "Новый заказчик" },
 
   /* Ish e'loni wizard'i */
