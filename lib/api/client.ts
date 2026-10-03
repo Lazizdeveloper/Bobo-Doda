@@ -1220,10 +1220,12 @@ export const paymentsService: PaymentsService = {
     call(async () => {
       if (typeof window !== "undefined") {
         try {
-          const me = await http<RealMe>("/me").catch(() => null);
-          const uid = me?.id ?? "me";
+          const session = sessionStore.read();
+          const uid = session?.userId || "me";
           const stored = localStorage.getItem(`bbd_cards_${uid}`);
           if (stored) return JSON.parse(stored);
+          const fallback = localStorage.getItem("bbd_cards_me");
+          if (fallback) return JSON.parse(fallback);
         } catch {}
       }
       return [];
@@ -1237,8 +1239,8 @@ export const paymentsService: PaymentsService = {
       cardExpiry(data.expiry);
       if (!data.holderName?.trim()) throw new Error("INVALID_HOLDER");
 
-      const me = await http<RealMe>("/me").catch(() => null);
-      const uid = me?.id ?? "me";
+      const session = sessionStore.read();
+      const uid = session?.userId || "me";
 
       const card: Model.PaymentCard = {
         id: `card_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1251,22 +1253,26 @@ export const paymentsService: PaymentsService = {
       };
 
       if (typeof window !== "undefined") {
+        const key = `bbd_cards_${uid}`;
+        let existing: Model.PaymentCard[] = [];
         try {
-          const key = `bbd_cards_${uid}`;
-          const existing: Model.PaymentCard[] = JSON.parse(localStorage.getItem(key) || "[]");
-          if (existing.some((c) => c.last4 === card.last4 && c.type === card.type)) {
-            throw new Error("CARD_EXISTS");
-          }
-          if (existing.length >= 5) {
-            throw new Error("CARD_LIMIT");
-          }
-          const updated = [card, ...existing];
-          localStorage.setItem(key, JSON.stringify(updated));
-        } catch (e) {
-          if (e instanceof Error && (e.message === "CARD_EXISTS" || e.message === "CARD_LIMIT")) {
-            throw e;
-          }
+          existing = JSON.parse(localStorage.getItem(key) || "[]");
+        } catch {
+          existing = [];
         }
+        if (existing.some((c) => c.last4 === card.last4 && c.type === card.type)) {
+          throw new Error("CARD_EXISTS");
+        }
+        if (existing.length >= 5) {
+          throw new Error("CARD_LIMIT");
+        }
+        const updated = [card, ...existing];
+        try {
+          localStorage.setItem(key, JSON.stringify(updated));
+          if (uid !== "me") {
+            localStorage.setItem("bbd_cards_me", JSON.stringify(updated));
+          }
+        } catch {}
       }
       return card;
     }),
@@ -1274,12 +1280,15 @@ export const paymentsService: PaymentsService = {
     call(async () => {
       if (typeof window !== "undefined") {
         try {
-          const me = await http<RealMe>("/me").catch(() => null);
-          const uid = me?.id ?? "me";
+          const session = sessionStore.read();
+          const uid = session?.userId || "me";
           const key = `bbd_cards_${uid}`;
           const existing: Model.PaymentCard[] = JSON.parse(localStorage.getItem(key) || "[]");
           const updated = existing.filter((c) => c.id !== id);
           localStorage.setItem(key, JSON.stringify(updated));
+          if (uid !== "me") {
+            localStorage.setItem("bbd_cards_me", JSON.stringify(updated));
+          }
         } catch {}
       }
     }),

@@ -79,6 +79,18 @@ export function decodeJwtSub(token: string): string {
    retry YO'Q, chunki `http()` refresh'dan keyin so'rovni FAQAT bir marta
    qayta yuboradi (`retryAfterRefresh=false` bilan).
    ------------------------------------------------------------------------ */
+const NO_REFRESH_PATHS = new Set([
+  "/auth/login",
+  "/auth/refresh",
+  "/auth/logout",
+  "/auth/register/request-otp",
+  "/auth/register/verify-otp",
+  "/auth/register/complete",
+  "/auth/password-reset/request-otp",
+  "/auth/password-reset/verify-otp",
+  "/auth/password-reset/complete",
+]);
+
 let refreshInFlight: Promise<string | null> | null = null;
 
 async function performRefresh(): Promise<string | null> {
@@ -184,7 +196,7 @@ export async function http<T>(path: string, init: HttpInit = {}, allowRetry = tr
     throw toNetworkError(cause);
   }
 
-  if (res.status === 401 && allowRetry) {
+  if (res.status === 401 && allowRetry && !NO_REFRESH_PATHS.has(path)) {
     const token = await refreshOnce();
     if (token) return http<T>(path, init, false);
     throw await toApiError(res);

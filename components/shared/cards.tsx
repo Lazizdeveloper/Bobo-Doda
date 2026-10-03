@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { paymentsService } from "@/lib/api";
 import type { CardType, PaymentCard } from "@/lib/types";
-import { detectCardType } from "@/lib/validate";
+import { detectCardType, cardExpiry } from "@/lib/validate";
 import { useT } from "@/lib/i18n";
 
 /** Karta raqamini "8600 1234 5678 9012" ko'rinishida guruhlaydi */
@@ -103,6 +103,25 @@ export function AddCardModal({
   const detected = digits.length >= 4 ? detectCardType(digits) : null;
 
   async function handleAdd() {
+    const rawNumber = number.replace(/\D/g, "");
+    const newErrors: Record<string, string> = {};
+    if (rawNumber.length !== 16 || !detectCardType(rawNumber)) {
+      newErrors.number = t("card.errNumber");
+    }
+    if (!holder.trim()) {
+      newErrors.holder = t("card.errHolder");
+    }
+    try {
+      cardExpiry(expiry);
+    } catch {
+      newErrors.expiry = t("card.errExpiry");
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     setSaving(true);
     try {
       const card = await paymentsService.addCard({ number, holderName: holder, expiry });
@@ -112,12 +131,22 @@ export function AddCardModal({
       onClose();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
-      if (msg === "INVALID_CARD") setErrors({ number: t("card.errNumber") });
-      else if (msg === "INVALID_EXPIRY") setErrors({ expiry: t("card.errExpiry") });
-      else if (msg === "INVALID_HOLDER") setErrors({ holder: t("card.errHolder") });
-      else if (msg === "CARD_EXISTS") toast(t("card.exists"), "error");
-      else if (msg === "CARD_LIMIT") toast(t("card.limit"), "error");
-      else toast(t("common.error"), "error");
+      const code =
+        (e && typeof e === "object" && "code" in e ? String((e as { code?: unknown }).code) : "") ||
+        msg;
+      if (msg === "INVALID_CARD" || code === "INVALID_CARD") {
+        setErrors((prev) => ({ ...prev, number: t("card.errNumber") }));
+      } else if (msg === "INVALID_EXPIRY" || code === "INVALID_EXPIRY") {
+        setErrors((prev) => ({ ...prev, expiry: t("card.errExpiry") }));
+      } else if (msg === "INVALID_HOLDER" || code === "INVALID_HOLDER") {
+        setErrors((prev) => ({ ...prev, holder: t("card.errHolder") }));
+      } else if (msg === "CARD_EXISTS" || code === "CARD_EXISTS" || code === "CONFLICT") {
+        toast(t("card.exists"), "error");
+      } else if (msg === "CARD_LIMIT" || code === "CARD_LIMIT") {
+        toast(t("card.limit"), "error");
+      } else {
+        toast(t("common.error"), "error");
+      }
     } finally {
       /* Modal yopilganda ham komponent mount holida qoladi — `saving` bu yerda
          tozalanmasa, keyingi ochilishda tugma abadiy "loading" bo'lib turadi

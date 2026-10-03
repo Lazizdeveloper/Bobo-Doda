@@ -69,7 +69,7 @@ export type DetectedCardType = "visa" | "mastercard" | "uzcard" | "humo";
 
 /** Karta turini raqam prefiksidan aniqlaydi (16 raqam kutiladi). */
 export function detectCardType(digits: string): DetectedCardType | null {
-  if (digits.startsWith("8600")) return "uzcard";
+  if (digits.startsWith("8600") || digits.startsWith("5614")) return "uzcard";
   if (digits.startsWith("9860")) return "humo";
   if (digits.startsWith("4")) return "visa";
   const p2 = Number(digits.slice(0, 2));
