@@ -3,9 +3,9 @@ import { TokenService } from './token.service';
 import type { AppConfigService } from '@/config/app-config.service';
 import { DomainError } from '@/common/errors/domain-error';
 
-function fakeConfig(): AppConfigService {
+function fakeConfig(accessTtl = '15m'): AppConfigService {
   return {
-    jwt: { accessSecret: 'marketplace-secret-marketplace-secret-32', accessTtl: '1s', refreshTtl: '30d' },
+    jwt: { accessSecret: 'marketplace-secret-marketplace-secret-32', accessTtl, refreshTtl: '30d' },
     staffJwt: { accessSecret: 'staff-secret-staff-secret-staff-secret-32', accessTtl: '15m', refreshTtl: '8h' },
   } as unknown as AppConfigService;
 }
@@ -36,10 +36,11 @@ describe('TokenService', () => {
   });
 
   it('muddati tugagan token — TOKEN_EXPIRED kodi bilan', async () => {
-    const token = svc.signAccessToken({ sub: 'user-1', activeRole: null, familyId: 'fam-1' });
+    const shortSvc = new TokenService(new JwtService(), fakeConfig('1s'));
+    const token = shortSvc.signAccessToken({ sub: 'user-1', activeRole: null, familyId: 'fam-1' });
     await new Promise((r) => setTimeout(r, 1_100)); // accessTtl=1s
     try {
-      svc.verifyAccessToken(token);
+      shortSvc.verifyAccessToken(token);
       fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(DomainError);
