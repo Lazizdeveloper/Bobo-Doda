@@ -133,6 +133,8 @@ export const en: Record<string, string> = {
   "dash.awaitingSelectionDesc": "Compare proposals and choose the best specialist for your project",
   "dash.noSelectionPending": "No proposals awaiting selection",
   "dash.noSelectionPendingDesc": "Post a new job or send a direct offer to a specialist",
+  "nav.offers": "Offers",
+  "nav.home": "Home",
   "nav.proposals": "My proposals",
   "nav.contracts": "Contracts",
   "nav.messages": "Messages",
@@ -554,6 +556,7 @@ export const en: Record<string, string> = {
   "jobs.open": "Open",
   "jobs.closed": "Closed",
   "jobs.postedAt": "Posted",
+  "jobs.buyer": "Buyer",
 
   /* Job detail */
   "job.budget": "Budget",
@@ -661,6 +664,7 @@ export const en: Record<string, string> = {
   "ms.ozgartirish_soraldi": "Revision requested",
   "ms.progressDone": "milestones completed",
   "ms.due": "Due",
+  "ms.submittedAt": "Submitted at",
   "ms.paid": "Paid",
   "ms.submitAction": "Deliver work",
   "ms.resubmitAction": "Deliver again",
@@ -795,6 +799,9 @@ export const en: Record<string, string> = {
   "cat.video": "Video editing",
   "cat.audio": "Audio & Voice",
   "cat.biznes": "Business help",
+  "cat.matnlar": "Writing & Articles",
+  "cat.talim": "Education & Tutoring",
+  "cat.boshqa": "Other Services",
 
   /* Category fields */
   "field.portfolio": "Portfolio images (up to 5)",
@@ -894,6 +901,7 @@ export const en: Record<string, string> = {
   "dash.noMatchingJobs": "No matching posts yet",
   "dash.netIncome": "Net Income",
   "dash.directOffers": "Direct Offers",
+  "dash.incomingOffers": "Incoming Offers",
   "dash.reviewOfferBtn": "Review Offer",
   "dash.browseJobBoard": "Browse Job Board",
   "dash.proposalsSuffix": "proposals",
@@ -1262,6 +1270,7 @@ export const en: Record<string, string> = {
   "bset.escrowSecurityDesc": "Funds are securely frozen in Escrow and only released when you approve completed milestones.",
   "bset.viewInvoices": "Expense History & Invoices",
   "bset.savedSuccess": "Settings saved successfully",
+  "bset.notifSaved": "Notification settings saved",
   "bset.profileSection": "Company & Contact Information",
   "bset.profileHint": "Freelancers view these details when submitting proposals and collaborating",
   "bset.billingSection": "Payment Cards & Security",

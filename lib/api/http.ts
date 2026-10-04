@@ -32,10 +32,12 @@ export function setAccessToken(token: string | null): void {
    Bu yerda faqat "kim kirgan" ko'rinadi — haqiqiy tekshiruv har so'rovda
    server tomonida (Bearer token + cookie).
    ------------------------------------------------------------------------ */
+const FALLBACK_SESSION_KEY = "sb_session";
+
 function readSession(): Model.Session | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
+    const raw = window.localStorage.getItem(SESSION_KEY) || window.localStorage.getItem(FALLBACK_SESSION_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as Model.Session;
   } catch {
@@ -45,12 +47,15 @@ function readSession(): Model.Session | null {
 
 function writeSession(session: Model.Session): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  const raw = JSON.stringify(session);
+  window.localStorage.setItem(SESSION_KEY, raw);
+  window.localStorage.setItem(FALLBACK_SESSION_KEY, raw);
 }
 
 function clearSession(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(SESSION_KEY);
+  window.localStorage.removeItem(FALLBACK_SESSION_KEY);
 }
 
 export const sessionStore = { read: readSession, write: writeSession, clear: clearSession };

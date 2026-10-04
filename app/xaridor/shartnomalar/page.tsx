@@ -14,7 +14,7 @@ import type { Contract, ContractStatus, Milestone } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
-const STATUSES: ContractStatus[] = ["faol", "yakunlangan", "bekor_qilingan", "nizo"];
+const STATUSES: ContractStatus[] = ["imzolangan", "faol", "yakunlangan", "bekor_qilingan", "nizo"];
 
 type Filter = "all" | ContractStatus;
 

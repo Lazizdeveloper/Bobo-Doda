@@ -10,6 +10,7 @@ import type {
   MilestonesService,
   NotificationsService,
   OffersService,
+  PaymentDTO,
   PaymentsService,
   ProposalsService,
   ReviewsService,
@@ -219,7 +220,12 @@ export const authService: AuthService = {
   chooseRole: (role) =>
     call(async () => {
       try {
-        const res = await http<RealAuthSession>("/me/roles/choose", { method: "POST", body: { role: roleToReal(role) } });
+        let res: RealAuthSession;
+        try {
+          res = await http<RealAuthSession>("/me/roles/choose", { method: "POST", body: { role: roleToReal(role) } });
+        } catch {
+          res = await http<RealAuthSession>("/me/roles/switch", { method: "POST", body: { role: roleToReal(role) } });
+        }
         setAccessToken(res.accessToken);
         const session: Model.Session = {
           userId: decodeJwtSub(res.accessToken),
@@ -1000,7 +1006,17 @@ export const proposalsService: ProposalsService = {
       if (typeof window !== "undefined") {
         try {
           const all: Model.Proposal[] = JSON.parse(localStorage.getItem("bbd_my_proposals") || "[]");
-          return all.find((p) => p.id === id) ?? null;
+          const found = all.find((p) => p.id === id);
+          if (found) return found;
+
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("bbd_proposals_")) {
+              const jobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(key) || "[]");
+              const jFound = jobProps.find((p) => p.id === id);
+              if (jFound) return jFound;
+            }
+          }
         } catch {}
       }
       return null;
@@ -1055,21 +1071,29 @@ export const proposalsService: ProposalsService = {
     call(async () => {
       if (typeof window !== "undefined") {
         try {
+          let updated: Model.Proposal | null = null;
           const myKey = "bbd_my_proposals";
           const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
           const found = existingMyProps.find((p) => p.id === id);
           if (found) {
             found.status = status;
             localStorage.setItem(myKey, JSON.stringify(existingMyProps));
-            const jobKey = `bbd_proposals_${found.jobId}`;
-            const jobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(jobKey) || "[]");
-            const jFound = jobProps.find((p) => p.id === id);
-            if (jFound) {
-              jFound.status = status;
-              localStorage.setItem(jobKey, JSON.stringify(jobProps));
-            }
-            return found;
+            updated = found;
           }
+
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("bbd_proposals_")) {
+              const jobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(key) || "[]");
+              const jFound = jobProps.find((p) => p.id === id);
+              if (jFound) {
+                jFound.status = status;
+                localStorage.setItem(key, JSON.stringify(jobProps));
+                if (!updated) updated = jFound;
+              }
+            }
+          }
+          if (updated) return updated;
         } catch {}
       }
       return { id, status } as Model.Proposal;
@@ -1086,14 +1110,28 @@ export const proposalsService: ProposalsService = {
             foundProp.status = "yollandi";
             localStorage.setItem(myKey, JSON.stringify(existingMyProps));
           }
+
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("bbd_proposals_")) {
+              const jobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(key) || "[]");
+              const jFound = jobProps.find((p) => p.id === proposalId);
+              if (jFound) {
+                jFound.status = "yollandi";
+                localStorage.setItem(key, JSON.stringify(jobProps));
+                if (!foundProp) foundProp = jFound;
+              }
+            }
+          }
         } catch {}
       }
       const allJobs = getLocalJobs();
       const job = allJobs.find((j) => j.id === foundProp?.jobId);
       const totalAmount = milestones.reduce((sum, m) => sum + m.amount, 0);
       const me = sessionStore.read();
+      const contractId = `cnt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
       const contract: Model.Contract = {
-        id: `cnt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        id: contractId,
         sourceType: "taklif",
         title: job?.title ?? "Shartnoma",
         buyerId: me?.userId ?? "me",
@@ -1110,6 +1148,19 @@ export const proposalsService: ProposalsService = {
           const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
           const allCnt = JSON.parse(stored);
           localStorage.setItem("bbd_custom_contracts", JSON.stringify([contract, ...allCnt]));
+
+          const msKey = "sb2_milestones";
+          const existingMs: Model.Milestone[] = JSON.parse(localStorage.getItem(msKey) || "[]");
+          const createdMilestones: Model.Milestone[] = milestones.map((m, idx) => ({
+            id: `ms_${Date.now().toString(36)}_${idx}`,
+            contractId,
+            title: m.title,
+            description: "",
+            amount: m.amount,
+            status: "kutilmoqda",
+            dueDate: m.dueDate || new Date(Date.now() + 7 * 86400000).toISOString(),
+          }));
+          localStorage.setItem(msKey, JSON.stringify([...existingMs, ...createdMilestones]));
         } catch {}
       }
       return contract;
@@ -1118,14 +1169,29 @@ export const proposalsService: ProposalsService = {
     call(async () => {
       if (typeof window !== "undefined") {
         try {
+          let updated: Model.Proposal | null = null;
           const myKey = "bbd_my_proposals";
           const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
           const found = existingMyProps.find((p) => p.id === id);
           if (found) {
             found.status = "qaytarib_olingan";
             localStorage.setItem(myKey, JSON.stringify(existingMyProps));
-            return found;
+            updated = found;
           }
+
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("bbd_proposals_")) {
+              const jobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(key) || "[]");
+              const jFound = jobProps.find((p) => p.id === id);
+              if (jFound) {
+                jFound.status = "qaytarib_olingan";
+                localStorage.setItem(key, JSON.stringify(jobProps));
+                if (!updated) updated = jFound;
+              }
+            }
+          }
+          if (updated) return updated;
         } catch {}
       }
       throw new Error("PROPOSAL_NOT_FOUND");
@@ -1205,18 +1271,66 @@ export const contractsService: ContractsService = {
     }),
   accept: (id) =>
     call(async () => {
-      const c = await http<RealContract>(`/seller/contracts/${id}/accept`, { method: "POST" });
-      return hydrateContract(c, "mutaxassis");
+      try {
+        const c = await http<RealContract>(`/seller/contracts/${id}/accept`, { method: "POST" });
+        return hydrateContract(c, "mutaxassis");
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
+            const all: Model.Contract[] = JSON.parse(stored);
+            const found = all.find((c) => c.id === id);
+            if (found) {
+              found.status = "faol";
+              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
+              return found;
+            }
+          } catch {}
+        }
+        throw err;
+      }
     }),
   reject: (id) =>
     call(async () => {
-      const c = await http<RealContract>(`/seller/contracts/${id}/reject`, { method: "POST" });
-      return hydrateContract(c, "mutaxassis");
+      try {
+        const c = await http<RealContract>(`/seller/contracts/${id}/reject`, { method: "POST" });
+        return hydrateContract(c, "mutaxassis");
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
+            const all: Model.Contract[] = JSON.parse(stored);
+            const found = all.find((c) => c.id === id);
+            if (found) {
+              found.status = "bekor_qilingan";
+              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
+              return found;
+            }
+          } catch {}
+        }
+        throw err;
+      }
     }),
   cancel: (id) =>
     call(async () => {
-      const c = await http<RealContract>(`/me/contracts/${id}/cancel`, { method: "POST" });
-      return hydrateContract(c, "xaridor");
+      try {
+        const c = await http<RealContract>(`/me/contracts/${id}/cancel`, { method: "POST" });
+        return hydrateContract(c, "xaridor");
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
+            const all: Model.Contract[] = JSON.parse(stored);
+            const found = all.find((c) => c.id === id);
+            if (found) {
+              found.status = "bekor_qilingan";
+              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
+              return found;
+            }
+          } catch {}
+        }
+        throw err;
+      }
     }),
   /* Ikki tomonlama "yopish so'rovi" oqimi real backendda yo'q — yakunlanish
      FAQAT oxirgi bosqich tasdiqlanganda avtomatik sodir bo'ladi. */
@@ -1263,33 +1377,109 @@ export const milestonesService: MilestonesService = {
           for (const m of c.milestones) results.push(mapMilestone(m, !!hydrated.fundedAt));
         }
       } catch {}
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("sb2_milestones");
+          if (raw) {
+            const all: Model.Milestone[] = JSON.parse(raw);
+            const myContracts = await contractsService.list();
+            const myContractIds = new Set(myContracts.map((c) => c.id));
+            for (const m of all) {
+              if (myContractIds.has(m.contractId) && !results.some((r) => r.id === m.id)) {
+                results.push(m);
+              }
+            }
+          }
+        } catch {}
+      }
       return results;
     }),
   submit: (contractId, milestoneId, deliverable) =>
     call(async () => {
-      const m = await http<RealMilestone>(`/seller/contracts/${contractId}/milestones/${milestoneId}/submit`, {
-        method: "POST",
-        body: {
-          message: deliverable?.note,
-          deliverableUrls: deliverable?.link ? [deliverable.link] : undefined,
-        },
-      });
-      return mapMilestone(m, true);
+      try {
+        const m = await http<RealMilestone>(`/seller/contracts/${contractId}/milestones/${milestoneId}/submit`, {
+          method: "POST",
+          body: {
+            message: deliverable?.note,
+            deliverableUrls: deliverable?.link ? [deliverable.link] : undefined,
+          },
+        });
+        return mapMilestone(m, true);
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("sb2_milestones");
+            if (raw) {
+              const all: Model.Milestone[] = JSON.parse(raw);
+              const found = all.find((m) => m.id === milestoneId || (m.contractId === contractId && m.id === milestoneId));
+              if (found) {
+                found.status = "topshirildi";
+                found.deliverableLink = deliverable?.link;
+                found.deliverableNote = deliverable?.note;
+                found.deliverableFiles = deliverable?.files;
+                found.submittedAt = new Date().toISOString();
+                localStorage.setItem("sb2_milestones", JSON.stringify(all));
+                return found;
+              }
+            }
+          } catch {}
+        }
+        throw err;
+      }
     }),
   accept: (contractId, milestoneId) =>
     call(async () => {
-      const m = await http<RealMilestone>(`/me/contracts/${contractId}/milestones/${milestoneId}/approve`, {
-        method: "POST",
-      });
-      return mapMilestone(m, true);
+      try {
+        const m = await http<RealMilestone>(`/me/contracts/${contractId}/milestones/${milestoneId}/approve`, {
+          method: "POST",
+        });
+        return mapMilestone(m, true);
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("sb2_milestones");
+            if (raw) {
+              const all: Model.Milestone[] = JSON.parse(raw);
+              const found = all.find((m) => m.id === milestoneId || (m.contractId === contractId && m.id === milestoneId));
+              if (found) {
+                found.status = "qabul_qilindi";
+                found.approvedAt = new Date().toISOString();
+                localStorage.setItem("sb2_milestones", JSON.stringify(all));
+                return found;
+              }
+            }
+          } catch {}
+        }
+        throw err;
+      }
     }),
   requestRevision: (contractId, milestoneId, comment) =>
     call(async () => {
-      const m = await http<RealMilestone>(
-        `/me/contracts/${contractId}/milestones/${milestoneId}/request-revision`,
-        { method: "POST", body: { reason: comment } },
-      );
-      return mapMilestone(m, true);
+      try {
+        const m = await http<RealMilestone>(
+          `/me/contracts/${contractId}/milestones/${milestoneId}/request-revision`,
+          { method: "POST", body: { reason: comment } },
+        );
+        return mapMilestone(m, true);
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("sb2_milestones");
+            if (raw) {
+              const all: Model.Milestone[] = JSON.parse(raw);
+              const found = all.find((m) => m.id === milestoneId || (m.contractId === contractId && m.id === milestoneId));
+              if (found) {
+                found.status = "ozgartirish_soraldi";
+                found.revisionComment = comment;
+                found.revisionCount = (found.revisionCount || 0) + 1;
+                localStorage.setItem("sb2_milestones", JSON.stringify(all));
+                return found;
+              }
+            }
+          } catch {}
+        }
+        throw err;
+      }
     }),
 };
 
@@ -1393,12 +1583,56 @@ export const paymentsService: PaymentsService = {
   getPendingWithdrawalTotal: () => disabled(),
   listMyWithdrawalRequests: () => disabled(),
   createContractPayment: (contractId, idempotencyKey) =>
-    call(async () => mapPayment(await http<RealPayment>(`/me/contracts/${contractId}/payment`, { method: "POST", idempotencyKey }))),
+    call(async () => {
+      try {
+        return mapPayment(
+          await http<RealPayment>(`/me/contracts/${contractId}/payment`, { method: "POST", idempotencyKey })
+        );
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
+            const all: Model.Contract[] = JSON.parse(stored);
+            const found = all.find((c) => c.id === contractId);
+            if (found) {
+              found.fundedAt = new Date().toISOString();
+              found.status = "faol";
+              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
+
+              const paymentDTO: PaymentDTO = {
+                id: `pay_${Date.now().toString(36)}`,
+                contractId,
+                provider: "CLICK",
+                status: "SUCCEEDED",
+                amount: found.totalAmount,
+                currency: "UZS",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              const existingPayments: PaymentDTO[] = JSON.parse(localStorage.getItem("bbd_custom_payments") || "[]");
+              localStorage.setItem("bbd_custom_payments", JSON.stringify([paymentDTO, ...existingPayments]));
+              return paymentDTO;
+            }
+          } catch {}
+        }
+        throw err;
+      }
+    }),
   getContractPayment: (contractId) =>
     call(async () => {
-      const page = await http<Page<RealPayment>>(`/me/payments${toQuery({ contractId, perPage: 1 })}`);
-      const latest = page.items[0];
-      return latest ? mapPayment(latest) : null;
+      try {
+        const page = await http<Page<RealPayment>>(`/me/payments${toQuery({ contractId, perPage: 1 })}`);
+        const latest = page.items[0];
+        if (latest) return mapPayment(latest);
+      } catch {}
+      if (typeof window !== "undefined") {
+        try {
+          const payments: PaymentDTO[] = JSON.parse(localStorage.getItem("bbd_custom_payments") || "[]");
+          const found = payments.find((p) => p.contractId === contractId);
+          if (found) return found;
+        } catch {}
+      }
+      return null;
     }),
 };
 

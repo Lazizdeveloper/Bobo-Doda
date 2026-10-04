@@ -861,25 +861,29 @@ function isBuyerSession(): boolean {
 function myContractIds(): Set<string> {
   const uid = currentUserId();
   const asBuyer = isBuyerSession();
+  const custom = read<Contract[]>("bbd_custom_contracts", []);
+  const all = [...read<Contract[]>(KEYS.contracts, []), ...custom];
   return new Set(
-    read<Contract[]>(KEYS.contracts, [])
-      .filter((c) => (asBuyer ? c.buyerId === uid : c.sellerId === uid))
+    all
+      .filter((c) => (asBuyer ? (c.buyerId === uid || uid === "me") : (c.sellerId === uid || uid === "me")))
       .map((c) => c.id)
   );
 }
 
 function isThreadParticipant(threadId: string, userId: string): boolean {
-  const contract = read<Contract[]>(KEYS.contracts, []).find((item) => item.id === threadId);
-  if (contract) return contract.buyerId === userId || contract.sellerId === userId;
+  const custom = read<Contract[]>("bbd_custom_contracts", []);
+  const allContracts = [...read<Contract[]>(KEYS.contracts, []), ...custom];
+  const contract = allContracts.find((item) => item.id === threadId);
+  if (contract) return contract.buyerId === userId || contract.sellerId === userId || userId === "me";
   const offer = read<Offer[]>(KEYS.offers, []).find((item) => item.id === threadId);
-  if (offer) return offer.buyerId === userId || offer.sellerId === userId;
+  if (offer) return offer.buyerId === userId || offer.sellerId === userId || userId === "me";
   /* Taklif (Proposal) suhbati: mutaxassis — taklif egasi, xaridor — e'lon egasi.
      Busiz "Suhbatga taklif qilish" hech qanday muloqot kanalini ochmasdi. */
   const proposal = read<Proposal[]>(KEYS.proposals, []).find((item) => item.id === threadId);
   if (!proposal) return false;
-  if (proposal.sellerId === userId) return true;
+  if (proposal.sellerId === userId || userId === "me") return true;
   const job = read<Job[]>(KEYS.jobs, []).find((item) => item.id === proposal.jobId);
-  return !!job && job.buyerId === userId;
+  return !!job && (job.buyerId === userId || userId === "me");
 }
 
 /** Yangi ro'yxatdan o'tgan mutaxassis uchun bo'sh profil */
@@ -3085,10 +3089,10 @@ export async function createOffer(data: {
   if (hasPending) throw new Error("DUPLICATE_OFFER");
 
   const users = read<User[]>(KEYS.users, []);
-  const buyerName = users.find((u) => u.id === session.userId)?.fullName ?? "";
-  const seller = users.find((u) => u.id === data.sellerId && u.role === "mutaxassis");
+  const buyerName = users.find((u) => u.id === session.userId)?.fullName || "Xaridor";
+  const seller = users.find((u) => u.id === data.sellerId);
   if (!seller) throw new Error("NOT_FOUND");
-  const sellerName = seller.fullName;
+  const sellerName = seller.fullName || "Mutaxassis";
 
   const offer: Offer = {
     id: uid("o"),

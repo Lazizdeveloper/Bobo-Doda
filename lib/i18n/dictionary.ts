@@ -219,6 +219,8 @@ export const dictionary: Record<string, Entry> = {
   "dash.awaitingSelectionDesc": { uz: "Arizalarni solishtiring va loyihangiz uchun eng mos mutaxassisni tanlang", ru: "Сравните отклики и выберите специалиста для проекта" },
   "dash.noSelectionPending": { uz: "Hozircha tanlash kutilayotgan arizalar yo'q", ru: "Пока нет откликов, ожидающих выбора" },
   "dash.noSelectionPendingDesc": { uz: "Yangi ish e'lonini joylashtiring yoki mutaxassislar bo'limidan to'g'ridan-to'g'ri taklif yuboring", ru: "Опубликуйте вакансию или найдите специалиста в каталоге" },
+  "nav.offers": { uz: "Takliflar", ru: "Предложения" },
+  "nav.home": { uz: "Bosh sahifa", ru: "Главная страница" },
   "nav.proposals": { uz: "Takliflarim", ru: "Мои предложения" },
   "nav.contracts": { uz: "Shartnomalar", ru: "Контракты" },
   "nav.messages": { uz: "Xabarlar", ru: "Сообщения" },
@@ -937,6 +939,7 @@ export const dictionary: Record<string, Entry> = {
   "jobs.open": { uz: "Ochiq", ru: "Открыто" },
   "jobs.closed": { uz: "Yopilgan", ru: "Закрыто" },
   "jobs.postedAt": { uz: "E'lon qilingan", ru: "Опубликовано" },
+  "jobs.buyer": { uz: "Buyurtmachi", ru: "Заказчик" },
 
   /* E'lon tafsiloti */
   "job.budget": { uz: "Byudjet", ru: "Бюджет" },
@@ -1153,6 +1156,7 @@ export const dictionary: Record<string, Entry> = {
   "ms.ozgartirish_soraldi": { uz: "O'zgartirish so'raldi", ru: "Запрошены правки" },
   "ms.progressDone": { uz: "bosqich yakunlandi", ru: "этапов завершено" },
   "ms.due": { uz: "Muddat", ru: "Срок" },
+  "ms.submittedAt": { uz: "Topshirilgan vaqt", ru: "Время сдачи" },
   "ms.paid": { uz: "To'landi", ru: "Выплачено" },
   "ms.submitAction": { uz: "Ishni topshirish", ru: "Сдать работу" },
   "ms.resubmitAction": { uz: "Qayta topshirish", ru: "Сдать повторно" },
@@ -1380,6 +1384,9 @@ export const dictionary: Record<string, Entry> = {
   "cat.video": { uz: "Video montaj", ru: "Видеомонтаж" },
   "cat.audio": { uz: "Audio & Ovoz", ru: "Аудио и озвучка" },
   "cat.biznes": { uz: "Biznes yordam", ru: "Бизнес-помощь" },
+  "cat.matnlar": { uz: "Matnlar va maqolalar", ru: "Тексты и статьи" },
+  "cat.talim": { uz: "Ta'lim va repetitorlik", ru: "Обучение и репетиторство" },
+  "cat.boshqa": { uz: "Boshqa xizmatlar", ru: "Другие услуги" },
 
   /* Kategoriya maydonlari */
   "field.portfolio": { uz: "Portfolio rasmlari (5 tagacha)", ru: "Работы из портфолио (до 5)" },
@@ -1515,6 +1522,7 @@ export const dictionary: Record<string, Entry> = {
   },
   "dash.netIncome": { uz: "Sof daromad", ru: "Чистый доход" },
   "dash.directOffers": { uz: "To'g'ridan-to'g'ri takliflar", ru: "Прямые предложения" },
+  "dash.incomingOffers": { uz: "Kelib tushgan takliflar", ru: "Входящие предложения" },
   "dash.reviewOfferBtn": { uz: "Taklifni ko'rish", ru: "Просмотреть предложение" },
   "dash.browseJobBoard": { uz: "Ish e'lonlarini ko'rish", ru: "Смотреть доску объявлений" },
   "dash.proposalsSuffix": { uz: "ta taklif", ru: "предложений" },
@@ -2253,6 +2261,7 @@ export const dictionary: Record<string, Entry> = {
   "bset.escrowSecurityDesc": { uz: "Mablag'ingiz faqat siz tasdiqlagan shartnoma bosqichi uchun muzlatiladi va ish to'liq topshirilmaguncha mutaxassisga berilmaydi.", ru: "Средства замораживаются только на одобренные этапы и не выплачиваются до сдачи работы." },
   "bset.viewInvoices": { uz: "Xarajatlar tarixi va Invoyslar", ru: "История расходов и инвойсы" },
   "bset.savedSuccess": { uz: "Sozlamalar muvaffaqiyatli saqlandi", ru: "Настройки успешно сохранены" },
+  "bset.notifSaved": { uz: "Bildirishnoma sozlamalari saqlandi", ru: "Настройки уведомлений сохранены" },
   "bset.profileSection": { uz: "Kompaniya va Aloqa ma'lumotlari", ru: "Компания и Контактные данные" },
   "bset.profileHint": { uz: "Frilanserlar taklif yuborishda va hamkorlikda ushbu ma'lumotlarni ko'rishadi", ru: "Фрилансеры видят эти данные при подаче предложений и сотрудничестве" },
   "bset.billingSection": { uz: "To'lov kartalari va Xavfsizlik", ru: "Платежные карты и Безопасность" },

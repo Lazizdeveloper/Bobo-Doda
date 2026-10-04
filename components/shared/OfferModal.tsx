@@ -105,6 +105,7 @@ export function OfferModal({
         budget: finalBudget,
       });
       toast(mode === "message" ? "Xabaringiz mutaxassisga yuborildi!" : t("offer.sent"));
+      onClose();
       router.push(`/xaridor/takliflarim/${offer.id}`);
     } catch (err) {
       if (err instanceof Error && err.message === "DUPLICATE_OFFER") {
