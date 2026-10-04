@@ -2,20 +2,30 @@
 
 /**
  * Bosqich 17 — real backend: `GET /staff/audit-logs` (offset sahifalash,
- * append-only jurnal). Eski mock `AuditEvent`/`listAuditQueue` bilan
- * ALMASHTIRILDI — real DTO erkin matn qidiruvini emas, aniq maydon
- * filtrlarini (`action`/`resourceType`) qo'llab-quvvatlaydi.
+ * append-only jurnal). Harakatlar va ob'ekt turlari odam o'qiydigan
+ * toza tilda ko'rsatiladi va saralanadi.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminPageHeader, MetricCard, Pagination } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 import { Table, type TableColumn } from "@/components/ui/Table";
 import { staffListAuditLogs, getAdminCounters, type StaffAuditLogRow } from "@/lib/api/admin";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/lib/i18n";
+import {
+  AUDIT_RESOURCE_OPTIONS,
+  AUDIT_ACTIONS_BY_RESOURCE,
+  ALL_AUDIT_ACTIONS,
+  formatAuditAction,
+  formatAuditResource,
+  formatAuditActorType,
+  formatAuditActorName,
+} from "@/lib/audit-format";
 
 interface PageResult {
   items: StaffAuditLogRow[];
@@ -26,6 +36,7 @@ interface PageResult {
 }
 
 export default function AuditTrailPage() {
+  const { lang, t } = useT();
   const [page, setPage] = useState<PageResult | null>(null);
   const [totalAuditEvents, setTotalAuditEvents] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -37,6 +48,13 @@ export default function AuditTrailPage() {
 
   const debouncedAction = useDebouncedValue(action, 300);
   const debouncedResourceType = useDebouncedValue(resourceType, 300);
+
+  const availableActions = useMemo(() => {
+    if (resourceType && AUDIT_ACTIONS_BY_RESOURCE[resourceType]) {
+      return AUDIT_ACTIONS_BY_RESOURCE[resourceType];
+    }
+    return ALL_AUDIT_ACTIONS;
+  }, [resourceType]);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -66,7 +84,12 @@ export default function AuditTrailPage() {
     {
       key: "action",
       header: "Harakat",
-      render: (e) => <p className="font-bold text-ink truncate">{e.action}</p>,
+      render: (e) => (
+        <div className="min-w-0">
+          <p className="font-bold text-ink truncate">{formatAuditAction(e.action, lang)}</p>
+          <span className="text-3xs text-muted font-mono">{e.action}</span>
+        </div>
+      ),
     },
     {
       key: "actorName",
@@ -74,10 +97,12 @@ export default function AuditTrailPage() {
       render: (e) => (
         <div className="flex items-center gap-1.5">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-3xs font-bold">
-            {e.actorName.slice(0, 1).toUpperCase()}
+            {formatAuditActorName(e.actorName, lang).slice(0, 1).toUpperCase()}
           </span>
-          <span className="font-semibold text-xs text-ink">{e.actorName}</span>
-          <span className="text-3xs text-faint">({e.actorType})</span>
+          <span className="font-semibold text-xs text-ink">{formatAuditActorName(e.actorName, lang)}</span>
+          {e.actorType && (
+            <span className="text-3xs text-faint">({formatAuditActorType(e.actorType, lang)})</span>
+          )}
         </div>
       ),
     },
@@ -85,15 +110,22 @@ export default function AuditTrailPage() {
       key: "resource",
       header: "Ob'ekt",
       render: (e) => (
-        <span className="font-mono text-xs text-primary font-semibold">
-          {e.resourceType} #{e.resourceId.slice(0, 8)}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-xs font-semibold text-primary">
+            {formatAuditResource(e.resourceType, lang)}
+          </span>
+          {e.resourceId && (
+            <span className="font-mono text-3xs text-muted">
+              #{e.resourceId.slice(0, 8)}
+            </span>
+          )}
+        </div>
       ),
     },
     {
       key: "createdAt",
       header: "Vaqt",
-      render: (e) => <span className="text-xs text-muted whitespace-nowrap">{formatDate(e.createdAt)}</span>,
+      render: (e) => <span className="text-xs text-muted whitespace-nowrap">{formatDate(e.createdAt, lang)}</span>,
     },
   ];
 
@@ -128,17 +160,61 @@ export default function AuditTrailPage() {
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard label="Jami Audit Yozuvlari" value={totalAuditEvents ?? 0} detail="Tizim faoliyati bo'yicha" />
-        <MetricCard label="Filtrga mos yozuvlar" value={page.total} detail={page.items[0]?.action ?? "—"} tone="success" />
+        <MetricCard
+          label="Filtrga mos yozuvlar"
+          value={page.total}
+          detail={page.items[0]?.action ? formatAuditAction(page.items[0].action, lang) : "—"}
+          tone="success"
+        />
       </section>
 
       <Card padding="md" className="space-y-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <div className="w-full sm:w-56">
-            <Input aria-label="Harakat" placeholder="Harakat (masalan CONTRACT_CREATED)" value={action} onChange={(e) => setAction(e.target.value)} />
+          <div className="w-full sm:w-64">
+            <Select
+              aria-label="Ob'ekt turi"
+              value={resourceType}
+              onChange={(e) => {
+                setResourceType(e.target.value);
+                setAction("");
+              }}
+              options={[
+                { value: "", label: t("audit.filterAllResources") },
+                ...AUDIT_RESOURCE_OPTIONS.map((r) => ({
+                  value: r,
+                  label: formatAuditResource(r, lang),
+                })),
+              ]}
+            />
           </div>
-          <div className="w-full sm:w-56">
-            <Input aria-label="Ob'ekt turi" placeholder="Ob'ekt turi (masalan CONTRACT)" value={resourceType} onChange={(e) => setResourceType(e.target.value)} />
+          <div className="w-full sm:w-72">
+            <Select
+              aria-label="Harakat"
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+              options={[
+                { value: "", label: t("audit.filterAllActions") },
+                ...availableActions.map((a) => ({
+                  value: a,
+                  label: formatAuditAction(a, lang),
+                })),
+              ]}
+            />
           </div>
+          {(action || resourceType) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setAction("");
+                setResourceType("");
+              }}
+              className="text-xs shrink-0"
+            >
+              {t("audit.filterClear")}
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -152,12 +228,17 @@ export default function AuditTrailPage() {
               renderMobileCard={(e) => (
                 <div className="flex items-start justify-between gap-3 p-3 border border-line rounded-xl bg-card">
                   <div>
-                    <p className="font-bold text-ink">{e.action}</p>
-                    <p className="text-2xs text-muted">
-                      {e.actorName} · {e.resourceType} #{e.resourceId.slice(0, 8)}
+                    <p className="font-bold text-ink">{formatAuditAction(e.action, lang)}</p>
+                    <p className="text-2xs text-muted mt-0.5">
+                      <span className="font-semibold text-ink/80">{formatAuditActorName(e.actorName, lang)}</span>{" "}
+                      {e.actorType && <span className="text-faint">({formatAuditActorType(e.actorType, lang)})</span>} ·{" "}
+                      {formatAuditResource(e.resourceType, lang)}{" "}
+                      {e.resourceId && (
+                        <span className="font-mono text-primary font-medium">#{e.resourceId.slice(0, 8)}</span>
+                      )}
                     </p>
                   </div>
-                  <span className="text-3xs text-muted">{formatDate(e.createdAt)}</span>
+                  <span className="text-3xs text-muted shrink-0">{formatDate(e.createdAt, lang)}</span>
                 </div>
               )}
             />

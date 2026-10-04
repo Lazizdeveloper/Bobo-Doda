@@ -18,9 +18,12 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { getAdminCounters, staffListAuditLogs, type AdminCounters, type StaffAuditLogRow } from "@/lib/api/admin";
 import { formatDate } from "@/lib/format";
 import { adminHref } from "@/lib/admin-routes";
+import { useT } from "@/lib/i18n";
+import { formatAuditAction, formatAuditResource, formatAuditActorName } from "@/lib/audit-format";
 
 export default function AdminDashboard() {
   const pathname = usePathname();
+  const { lang } = useT();
   const [counters, setCounters] = useState<AdminCounters | null>(null);
   const [auditLog, setAuditLog] = useState<StaffAuditLogRow[]>([]);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -95,12 +98,15 @@ export default function AdminDashboard() {
             auditLog.map((event) => (
               <div key={event.id} className="flex items-start justify-between rounded-xl border border-line bg-surface/40 p-2.5 text-xs hover:bg-surface transition">
                 <div className="min-w-0 pr-3">
-                  <p className="font-bold text-ink">{event.action}</p>
+                  <p className="font-bold text-ink">{formatAuditAction(event.action, lang)}</p>
                   <p className="text-2xs text-muted truncate mt-0.5">
-                    <span className="font-semibold text-ink/80">{event.actorName}</span> · {event.resourceType} <span className="font-mono">#{event.resourceId.slice(0, 8)}</span>
+                    <span className="font-semibold text-ink/80">{formatAuditActorName(event.actorName, lang)}</span> · {formatAuditResource(event.resourceType, lang)}{" "}
+                    {event.resourceId && (
+                      <span className="font-mono text-primary font-medium">#{event.resourceId.slice(0, 8)}</span>
+                    )}
                   </p>
                 </div>
-                <span className="text-3xs text-muted whitespace-nowrap shrink-0">{formatDate(event.createdAt)}</span>
+                <span className="text-3xs text-muted whitespace-nowrap shrink-0">{formatDate(event.createdAt, lang)}</span>
               </div>
             ))
           )}
