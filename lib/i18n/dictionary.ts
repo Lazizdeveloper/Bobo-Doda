@@ -1651,6 +1651,7 @@ export const dictionary: Record<string, Entry> = {
   },
   "bdash.findSpecialist": { uz: "Mutaxassis topish", ru: "Найти специалиста" },
   "bdash.postJob": { uz: "Ish e'lon qilish", ru: "Разместить объявление" },
+  "bdash.postNewJob": { uz: "Yangi ish joylash", ru: "Разместить новую работу" },
   "bdash.totalSpent": { uz: "Umumiy sarflangan", ru: "Общие расходы" },
   "bdash.activeProjects": { uz: "Faol loyihalar", ru: "Активные проекты" },
   "bdash.actionCenter": { uz: "Harakatlar markazi", ru: "Центр действий" },

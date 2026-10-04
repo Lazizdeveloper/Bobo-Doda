@@ -973,6 +973,7 @@ export const en: Record<string, string> = {
   "bdash.fundNeeded": "Pay to activate the contract",
   "bdash.findSpecialist": "Find a specialist",
   "bdash.postJob": "Post a job",
+  "bdash.postNewJob": "Post a new job",
   "bdash.totalSpent": "Total Spent",
   "bdash.activeProjects": "Active Projects",
   "bdash.actionCenter": "Action Center",

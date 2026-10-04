@@ -106,29 +106,29 @@ export default function XaridorDashboardPage() {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/xaridor/bozor?tab=services">
-            <Button variant="secondary" size="sm">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
-                <path d="M3 4h14l-1.5 8H4.5L3 4zm2 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              {t("market.tabServices")}
-            </Button>
-          </Link>
-          <Link href="/xaridor/bozor?tab=specialists">
-            <Button variant="secondary" size="sm">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
-                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              {t("bdash.findSpecialist")}
-            </Button>
-          </Link>
-          <Link href="/xaridor/elonlarim/yangi">
-            <Button size="sm" className="flex items-center gap-1.5 shadow-sm">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          <Link href="/xaridor/elonlarim/yangi" className="shrink-0">
+            <Button size="sm">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              {t("bdash.postJob")}
+              <span>{t("bdash.postNewJob")}</span>
+            </Button>
+          </Link>
+          <Link href="/xaridor/bozor?tab=specialists" className="shrink-0">
+            <Button variant="secondary" size="sm">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              <span>{t("bdash.findSpecialist")}</span>
+            </Button>
+          </Link>
+          <Link href="/xaridor/bozor?tab=services" className="shrink-0">
+            <Button variant="secondary" size="sm">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M3 4h14l-1.5 8H4.5L3 4zm2 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              <span>{t("market.tabServices")}</span>
             </Button>
           </Link>
         </div>
@@ -196,7 +196,7 @@ export default function XaridorDashboardPage() {
                 </Link>
                 <Link href="/xaridor/elonlarim/yangi">
                   <Button size="sm" variant="secondary" className="text-xs h-7 py-0">
-                    + Yangi e'lon
+                    + {t("bdash.postNewJob")}
                   </Button>
                 </Link>
               </div>
