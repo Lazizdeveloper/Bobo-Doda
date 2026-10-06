@@ -231,9 +231,6 @@ export const dictionary: Record<string, Entry> = {
   "nav.help": { uz: "Yordam", ru: "Помощь" },
   "nav.openMenu": { uz: "Menyuni ochish", ru: "Открыть меню" },
   "nav.closeMenu": { uz: "Menyuni yopish", ru: "Закрыть меню" },
-  "nav.switchRole": { uz: "Rolni almashtirish", ru: "Сменить роль" },
-  "nav.switchToBuyer": { uz: "Buyurtmachi rejimi", ru: "Режим заказчика" },
-  "nav.switchToSpecialist": { uz: "Mutaxassis rejimi", ru: "Режим исполнителя" },
   "nav.currentRoleSpecialist": { uz: "Mutaxassis", ru: "Исполнитель" },
   "nav.currentRoleBuyer": { uz: "Ish beruvchi", ru: "Заказчик" },
 
