@@ -19,26 +19,12 @@ export function TopNav({ base }: TopNavProps) {
   const { t } = useT();
   const [name, setName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [switching, setSwitching] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   function handleLogout() {
     authService.logout();
     router.push("/kirish");
-  }
-
-  async function handleSwitchRole(targetRole: "mutaxassis" | "xaridor") {
-    if (switching) return;
-    setSwitching(true);
-    try {
-      await authService.chooseRole(targetRole);
-      router.push(targetRole === "xaridor" ? "/xaridor" : "/mutaxassis");
-    } catch {
-      router.push(targetRole === "xaridor" ? "/xaridor" : "/mutaxassis");
-    } finally {
-      setSwitching(false);
-    }
   }
 
   useEffect(() => {
@@ -200,20 +186,6 @@ export function TopNav({ base }: TopNavProps) {
             {t("dash.newService")}
           </Link>
 
-          {/* Role switcher button */}
-          <button
-            type="button"
-            onClick={() => handleSwitchRole("xaridor")}
-            disabled={switching}
-            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-btn text-xs font-semibold bg-surface border border-line text-ink hover:border-primary hover:text-primary transition-all shadow-2xs"
-            title={t("nav.switchToBuyer")}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-primary" aria-hidden="true">
-              <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 14l-3-3 3-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span>{t("nav.switchToBuyer")}</span>
-          </button>
-
           <LangSwitch />
 
           {/* Mobile menu button */}
@@ -265,16 +237,6 @@ export function TopNav({ base }: TopNavProps) {
           className="border-t border-line bg-surface px-4 py-3 lg:hidden"
         >
           <nav className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => handleSwitchRole("xaridor")}
-              className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-btn text-sm font-semibold bg-primary/10 text-primary-deep hover:bg-primary hover:text-white transition-colors mb-2"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 14l-3-3 3-3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {t("nav.switchToBuyer")}
-            </button>
             <Link
               href="/mutaxassis/xizmatlarim/yangi"
               className="flex items-center justify-center gap-2 px-3 py-2 rounded-btn text-sm font-semibold bg-primary text-white hover:bg-primary-deep shadow-sm mb-1"
