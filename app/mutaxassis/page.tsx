@@ -148,32 +148,7 @@ export default function MutaxassisDashboardPage() {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/xaridor/bozor">
-            <Button variant="secondary" size="sm">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
-                <path d="M3 4h14l-1.5 8H4.5L3 4zm2 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              {t("dash.exploreMarket")}
-            </Button>
-          </Link>
-          <Link href="/mutaxassis/ish-elonlari">
-            <Button variant="secondary" size="sm">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
-                <path d="M4 6h12M4 10h12M4 14h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-              {t("nav.jobs")}
-            </Button>
-          </Link>
-          <Link href="/mutaxassis/xizmatlarim/yangi">
-            <Button size="sm">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" className="mr-1.5" aria-hidden="true">
-                <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              {t("dash.newService")}
-            </Button>
-          </Link>
-        </div>
+
       </div>
 
       {applicationStatus && applicationStatus !== "tasdiqlangan" && (
@@ -277,46 +252,7 @@ export default function MutaxassisDashboardPage() {
           </Link>
         </div>
 
-        {/* Qidiruv va Kategoriya pills */}
-        <div className="flex flex-col gap-3">
-          <div className="max-w-md">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={t("dash.searchJobsPh")}
-              aria-label={t("dash.searchJobsPh")}
-              clearLabel={t("search.clear")}
-            />
-          </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1">
-            <button
-              type="button"
-              onClick={() => setCategory("all")}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                category === "all"
-                  ? "bg-primary text-white"
-                  : "bg-surface text-muted hover:bg-card-hover hover:text-ink border border-line"
-              }`}
-            >
-              {t("dash.allCategories")}
-            </button>
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setCategory(cat)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  category === cat
-                    ? "bg-primary text-white"
-                    : "bg-surface text-muted hover:bg-card-hover hover:text-ink border border-line"
-                }`}
-              >
-                {t(`cat.${cat}`)}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Ishlar ro'yxati */}
         {loading ? (
@@ -329,16 +265,6 @@ export default function MutaxassisDashboardPage() {
             <p className="font-heading text-sm font-bold text-ink">{t("dash.noJobsFound")}</p>
             <p className="mt-1 text-xs text-muted max-w-md">{t("dash.noMatchingJobs")}</p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setCategory("all");
-                }}
-              >
-                {t("search.clear")}
-              </Button>
               <Link href="/mutaxassis/ish-elonlari">
                 <Button size="sm">{t("dash.browseJobBoard")}</Button>
               </Link>
@@ -513,16 +439,9 @@ export default function MutaxassisDashboardPage() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-bold text-ink">{t("dash.myServices")}</h2>
-            <div className="flex items-center gap-2">
-              <Link href="/mutaxassis/xizmatlarim" className="text-xs font-semibold text-primary hover:underline">
-                {t("dash.viewAll")} ({services.length}) →
-              </Link>
-              <Link href="/mutaxassis/xizmatlarim/yangi">
-                <Button size="sm" variant="secondary" className="text-xs h-7 py-0">
-                  + Yangi
-                </Button>
-              </Link>
-            </div>
+            <Link href="/mutaxassis/xizmatlarim" className="text-xs font-semibold text-primary hover:underline">
+              {t("dash.viewAll")} ({services.length}) →
+            </Link>
           </div>
 
           {loading ? (

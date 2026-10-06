@@ -87,12 +87,7 @@ export function TopNav({ base }: TopNavProps) {
     { href: "/xaridor/bozor?tab=specialists", label: t("nav.bozorSpecialists"), icon: "👥" },
   ];
 
-  const jobsSubItems = [
-    { href: "/mutaxassis/ish-elonlari?tab=matching", label: t("nav.jobsMatching"), icon: "🎯" },
-    { href: "/mutaxassis/ish-elonlari?tab=proposals", label: t("nav.jobsProposals"), icon: "📋" },
-    { href: "/mutaxassis/ish-elonlari?tab=saved", label: t("nav.jobsSaved"), icon: "⭐" },
-    { href: "/mutaxassis/ish-elonlari?tab=offers", label: t("nav.jobsOffers"), icon: "📬" },
-  ];
+
 
   const isBozorActive = pathname.startsWith("/xaridor/bozor");
   const isJobsActive = pathname.startsWith("/mutaxassis/ish-elonlari");
@@ -167,52 +162,7 @@ export function TopNav({ base }: TopNavProps) {
               )}
             </div>
 
-            {/* Ishlar Dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={() => handleDropdownEnter("ishlar")}
-              onMouseLeave={handleDropdownLeave}
-            >
-              <Link
-                href="/mutaxassis/ish-elonlari"
-                className={`flex items-center gap-1 px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
-                  isJobsActive
-                    ? "bg-primary/10 text-primary-deep font-semibold"
-                    : "text-muted hover:bg-card-hover hover:text-ink"
-                }`}
-                aria-expanded={activeDropdown === "ishlar"}
-              >
-                <span>{t("nav.jobs")}</span>
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  className={`transition-transform duration-200 ${
-                    activeDropdown === "ishlar" ? "rotate-180 text-primary" : "text-muted"
-                  }`}
-                >
-                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Link>
 
-              {activeDropdown === "ishlar" && (
-                <div className="absolute left-0 top-full pt-1.5 w-60 z-50 animate-in fade-in-0 zoom-in-95">
-                  <div className="rounded-xl border border-line bg-surface p-1.5 shadow-lg">
-                    {jobsSubItems.map((sub) => (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-btn text-xs font-semibold text-ink hover:bg-primary/10 hover:text-primary transition-colors"
-                      >
-                        <span className="text-base">{sub.icon}</span>
-                        <span>{sub.label}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Shartnomalar */}
             <Link
@@ -355,20 +305,7 @@ export function TopNav({ base }: TopNavProps) {
               </div>
             </div>
 
-            {/* Ishlar with sub-items */}
-            <div className="flex flex-col gap-1 border-b border-line/60 pb-2 mb-1">
-              <Link href="/mutaxassis/ish-elonlari" className="px-3 py-1 text-sm font-bold text-ink">
-                {t("nav.jobs")}
-              </Link>
-              <div className="pl-4 flex flex-col gap-1">
-                {jobsSubItems.map((sub) => (
-                  <Link key={sub.href} href={sub.href} className="px-3 py-1.5 rounded-btn text-xs font-medium text-muted hover:text-ink hover:bg-card-hover flex items-center gap-2">
-                    <span>{sub.icon}</span>
-                    <span>{sub.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
+
 
             <Link href="/mutaxassis/shartnomalar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
               {t("nav.contracts")}

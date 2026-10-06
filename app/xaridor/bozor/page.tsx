@@ -251,24 +251,7 @@ export default function BozorPage() {
           <h1 className="font-heading text-2xl font-extrabold text-ink xl:text-3xl">{t("market.title")}</h1>
           <p className="mt-1 text-sm text-muted xl:text-base">{t("market.subtitle")}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/xaridor/elonlarim/yangi">
-            <Button className="flex items-center gap-1.5 shadow-sm">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              {t("bjobs.post")}
-            </Button>
-          </Link>
-          <Link href="/mutaxassis/xizmatlarim/yangi">
-            <Button variant="secondary" className="flex items-center gap-1.5 shadow-sm">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              {t("dash.newService")}
-            </Button>
-          </Link>
-        </div>
+
       </div>
 
       {/* Main 3-Tab Navigator */}

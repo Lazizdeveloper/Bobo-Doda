@@ -21,7 +21,7 @@ import type { Job, JobStatus, Proposal, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
-type MainTab = "my_jobs" | "proposals" | "saved_specialists";
+type MainTab = "my_jobs" | "proposals";
 type JobFilter = "all" | JobStatus;
 type ProposalFilter = "all" | "yuborilgan" | "suhbat" | "yollandi" | "rad_etildi";
 
@@ -38,8 +38,8 @@ export default function ElonlarimPage() {
 
   const tabParam = searchParams.get("tab") as MainTab | null;
   const [mainTab, setMainTab] = useState<MainTab>(
-    tabParam && ["my_jobs", "proposals", "saved_specialists"].includes(tabParam)
-      ? tabParam
+    tabParam && ["my_jobs", "proposals"].includes(tabParam)
+      ? tabParam as MainTab
       : "my_jobs"
   );
 
@@ -169,7 +169,7 @@ export default function ElonlarimPage() {
         </Link>
       </div>
 
-      {/* 3 ta asosiy tab: Mening ishlarim | Arizalar | Tanlangan mutaxassislar */}
+      {/* 2 ta asosiy tab: Mening ishlarim | Arizalar */}
       <Tabs
         value={mainTab}
         onChange={(val) => handleTabChange(val as MainTab)}
@@ -183,11 +183,6 @@ export default function ElonlarimPage() {
             value: "proposals",
             label: t("bjobs.tabProposals"),
             count: allProposalsWithJobs.length,
-          },
-          {
-            value: "saved_specialists",
-            label: t("bjobs.tabSavedSpecialists"),
-            count: savedSpecialistIds.length,
           },
         ]}
       />
@@ -431,111 +426,7 @@ export default function ElonlarimPage() {
             </div>
           )}
 
-          {/* TAB 3: TANLANGAN MUTAXASSISLAR */}
-          {mainTab === "saved_specialists" && (
-            <div className="flex flex-col gap-4">
-              {savedSpecialistsList.length === 0 ? (
-                <EmptyState
-                  title={t("bjobs.emptySavedSpecs")}
-                  action={
-                    <Link href="/xaridor/bozor?tab=specialists">
-                      <Button>{t("bjobs.emptySavedSpecsCta")}</Button>
-                    </Link>
-                  }
-                />
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {savedSpecialistsList.map((spec) => (
-                    <Card
-                      key={spec.user.id}
-                      padding="lg"
-                      hoverable
-                      className="flex flex-col justify-between gap-4 shadow-2xs"
-                    >
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <Avatar name={spec.user.fullName} size="md" />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <h3 className="font-heading text-sm font-bold text-ink truncate">
-                                  {spec.user.fullName}
-                                </h3>
-                                <TrustBadge badge={spec.profile.badge} />
-                              </div>
-                              <p className="text-xs text-primary font-medium truncate mt-0.5">
-                                {spec.profile.headline}
-                              </p>
-                              <div className="flex items-center gap-2 text-2xs text-muted mt-1">
-                                <RatingStars value={spec.profile.rating} size="sm" showValue />
-                                <span>•</span>
-                                <span>{spec.profile.completedContracts} ta ish</span>
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleSaveSpecialist(spec.user.id)}
-                            className="rounded-btn p-1.5 text-primary hover:bg-card-hover transition-colors shrink-0"
-                            title={t("bjobs.removeSaved")}
-                            aria-label={t("bjobs.removeSaved")}
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
-                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                            </svg>
-                          </button>
-                        </div>
 
-                        <p className="text-xs text-muted line-clamp-2 leading-relaxed">
-                          {spec.profile.bio}
-                        </p>
-
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {spec.profile.skills.slice(0, 4).map((skill) => (
-                            <span
-                              key={skill}
-                              className="px-2 py-0.5 rounded-full text-2xs bg-surface border border-line text-muted"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                          {spec.profile.skills.length > 4 && (
-                            <span className="text-2xs text-faint">
-                              +{spec.profile.skills.length - 4}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="border-t border-line pt-3 mt-1 flex flex-col gap-2.5">
-                        <div className="flex items-center justify-between text-2xs text-muted">
-                          <span>{spec.profile.location || "O'zbekiston"}</span>
-                          <span className={spec.profile.available ? "text-success font-semibold" : "text-muted"}>
-                            {spec.profile.available ? "● Yangi ishlarga tayyor" : "○ Band"}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <Link href={`/xaridor/bozor/mutaxassis/${spec.user.id}`} className="w-full">
-                            <Button variant="secondary" size="sm" className="w-full text-xs">
-                              {t("market.viewProfile")}
-                            </Button>
-                          </Link>
-                          <Button
-                            size="sm"
-                            className="w-full text-xs"
-                            onClick={() => setOfferSpecialist(spec)}
-                          >
-                            {t("market.sendOfferBtn")}
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </>
       )}
 

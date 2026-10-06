@@ -106,32 +106,7 @@ export default function XaridorDashboardPage() {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-          <Link href="/xaridor/elonlarim/yangi" className="shrink-0">
-            <Button size="sm">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <span>{t("bdash.postNewJob")}</span>
-            </Button>
-          </Link>
-          <Link href="/xaridor/bozor?tab=specialists" className="shrink-0">
-            <Button variant="secondary" size="sm">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              <span>{t("bdash.findSpecialist")}</span>
-            </Button>
-          </Link>
-          <Link href="/xaridor/bozor?tab=services" className="shrink-0">
-            <Button variant="secondary" size="sm">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path d="M3 4h14l-1.5 8H4.5L3 4zm2 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm10 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              <span>{t("market.tabServices")}</span>
-            </Button>
-          </Link>
-        </div>
+
       </div>
 
       {/* 4 ta Asosiy Statistika kartochkasi */}
@@ -193,11 +168,6 @@ export default function XaridorDashboardPage() {
               <div className="flex items-center gap-3">
                 <Link href="/xaridor/elonlarim" className="text-xs font-semibold text-primary hover:underline">
                   {t("dash.viewAll")} ({jobs?.length || 0}) →
-                </Link>
-                <Link href="/xaridor/elonlarim/yangi">
-                  <Button size="sm" variant="secondary" className="text-xs h-7 py-0">
-                    + {t("bdash.postNewJob")}
-                  </Button>
                 </Link>
               </div>
             </div>
@@ -322,134 +292,23 @@ export default function XaridorDashboardPage() {
             )}
           </section>
 
-          {/* Tanlash kutilayotgan mutaxassislar / Harakatlar markazi */}
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-heading text-xl font-bold text-ink">{t("dash.awaitingSelection")}</h2>
-                <p className="text-xs text-muted mt-0.5">{t("dash.awaitingSelectionDesc")}</p>
-              </div>
-              {awaitingSelectionProposals.length > 0 && (
-                <Link href="/xaridor/elonlarim?tab=proposals" className="text-xs font-semibold text-primary hover:underline">
-                  {t("dash.viewAll")} ({awaitingSelectionProposals.length}) →
-                </Link>
-              )}
-            </div>
 
-            {loading ? (
-              <SkeletonCard />
-            ) : awaitingSelectionProposals.length === 0 && toReview.length === 0 && fundNeeded.length === 0 && pendingOffers.length === 0 ? (
-              <Card className="text-center py-10 border-dashed">
-                <h3 className="font-heading text-base font-bold text-ink">{t("dash.noSelectionPending")}</h3>
-                <p className="text-xs text-muted mt-1 max-w-md mx-auto">{t("dash.noSelectionPendingDesc")}</p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <Link href="/xaridor/elonlarim/yangi">
-                    <Button size="sm">{t("bdash.postJob")}</Button>
-                  </Link>
-                  <Link href="/xaridor/bozor?tab=specialists">
-                    <Button variant="secondary" size="sm">{t("bdash.findSpecialist")}</Button>
-                  </Link>
-                </div>
-              </Card>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {/* Tanlash kutilayotgan arizalar */}
-                {awaitingSelectionProposals.slice(0, 3).map((prop) => (
-                  <Card key={prop.id} padding="md" hoverable className="flex flex-col gap-3 border-l-4 border-l-primary">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <Avatar name={prop.specialistName || "?"} size="md" />
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-ink text-sm truncate">{prop.specialistName}</h3>
-                          <p className="text-2xs text-muted truncate">
-                            Loyiha: <span className="font-semibold text-ink">{prop.jobTitle}</span>
-                          </p>
-                          <div className="flex items-center gap-2 text-2xs text-muted mt-0.5">
-                            <span className="font-bold text-primary">{formatMoney(prop.bidAmount, lang)}</span>
-                            {prop.estimatedDeliveryDays && <span>• {prop.estimatedDeliveryDays} kun</span>}
-                            <span>• {formatDate(prop.createdAt, lang)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Link href={`/xaridor/elonlarim/${prop.jobId}/suhbat/${prop.id}`}>
-                          <Button size="sm" variant="secondary" className="text-xs">
-                            💬 Suhbat
-                          </Button>
-                        </Link>
-                        <Link href={`/xaridor/elonlarim/${prop.jobId}/yollash/${prop.id}`}>
-                          <Button size="sm" className="text-xs">
-                            🤝 Yollash
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-
-                {/* To'lov yoki tekshiruv kutilayotgan shartnomalar */}
-                {(fundNeeded.length > 0 || toReview.length > 0) && (
-                  <Card padding="none" stitch className="overflow-hidden">
-                    {fundNeeded.map((c, i) => (
-                      <Link
-                        key={c.id}
-                        href={`/xaridor/shartnomalar/${c.id}`}
-                        className={`flex flex-wrap items-center justify-between gap-4 p-4 transition-colors hover:bg-card-hover ${i > 0 ? "border-t border-line" : ""}`}
-                      >
-                        <div>
-                          <p className="text-xs font-bold text-danger uppercase tracking-wider">{t("bdash.fundNeeded")}</p>
-                          <p className="text-sm font-semibold text-ink mt-0.5">{c.title}</p>
-                          <p className="text-2xs text-muted mt-1">
-                            {t("bdash.contractWith")} {c.sellerName} • {formatMoney(c.totalAmount, lang)}
-                          </p>
-                        </div>
-                        <Button variant="secondary" size="sm">
-                          {t("bdash.fundBtn")}
-                        </Button>
-                      </Link>
-                    ))}
-
-                    {toReview.map((m, i) => {
-                      const contract = contractById.get(m.contractId);
-                      return (
-                        <Link
-                          key={m.id}
-                          href={`/xaridor/shartnomalar/${m.contractId}`}
-                          className={`flex flex-wrap items-center justify-between gap-4 p-4 transition-colors hover:bg-card-hover ${i > 0 || fundNeeded.length > 0 ? "border-t border-line" : ""}`}
-                        >
-                          <div>
-                            <p className="text-xs font-bold text-warning uppercase tracking-wider">{t("bdash.reviewSubmitted")}</p>
-                            <p className="text-sm font-semibold text-ink mt-0.5">{m.title}</p>
-                            <p className="text-2xs text-muted mt-1">
-                              {contract?.title} • {formatMoney(m.amount, lang)}
-                            </p>
-                          </div>
-                          {m.reviewDeadline && <CountdownBadge deadline={m.reviewDeadline} />}
-                        </Link>
-                      );
-                    })}
-                  </Card>
-                )}
-              </div>
-            )}
-          </section>
         </div>
 
         {/* O'NG USTUN: So'nggi shartnomalar va Foydali takliflar */}
         <div className="flex flex-col gap-6 min-w-0">
-          {/* So'nggi shartnomalar */}
+          {/* Faol shartnomalar */}
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-heading text-xl font-bold text-ink">{t("bdash.recentContracts")}</h2>
+              <h2 className="font-heading text-xl font-bold text-ink">{t("dash.activeContracts")}</h2>
               <Link href="/xaridor/shartnomalar" className="text-xs font-semibold text-primary hover:underline">
-                {t("dash.viewAll")} ({contracts?.length || 0}) →
+                {t("dash.viewAll")} ({activeContracts.length}) →
               </Link>
             </div>
 
             {loading ? (
               <SkeletonCard />
-            ) : recentContracts.length === 0 ? (
+            ) : activeContracts.length === 0 ? (
               <Card className="text-center py-8">
                 <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyContractsCta")}</p>
                 <p className="text-xs text-muted mt-1">Tayyor xizmat buyurtma qiling yoki ish e'loni bering.</p>
@@ -459,7 +318,7 @@ export default function XaridorDashboardPage() {
               </Card>
             ) : (
               <div className="flex flex-col gap-2.5">
-                {recentContracts.map((contract) => (
+                {activeContracts.slice(0, 5).map((contract) => (
                   <Link key={contract.id} href={`/xaridor/shartnomalar/${contract.id}`} className="block">
                     <Card hoverable padding="md" className="flex flex-col gap-2">
                       <div className="flex justify-between items-start gap-2">
