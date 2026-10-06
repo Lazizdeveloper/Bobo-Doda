@@ -13,10 +13,10 @@ import { RatingStars } from "@/components/ui/RatingStars";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { TrustBadge } from "@/components/ui/TrustBadge";
-import { useToast } from "@/components/ui/Toast";
+
 import { JobStatusBadge, ProposalStatusBadge } from "@/components/shared/StatusBadge";
 import { OfferModal } from "@/components/shared/OfferModal";
-import { catalogService, jobsService, proposalsService, savedService } from "@/lib/api";
+import { catalogService, jobsService, proposalsService } from "@/lib/api";
 import type { Job, JobStatus, Proposal, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -34,8 +34,6 @@ export default function ElonlarimPage() {
   const { t, lang } = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
-
   const tabParam = searchParams.get("tab") as MainTab | null;
   const [mainTab, setMainTab] = useState<MainTab>(
     tabParam && ["my_jobs", "proposals"].includes(tabParam)
@@ -46,7 +44,7 @@ export default function ElonlarimPage() {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [jobProposalsMap, setJobProposalsMap] = useState<Map<string, Proposal[]>>(new Map());
   const [specialists, setSpecialists] = useState<Map<string, Specialist>>(new Map());
-  const [savedSpecialistIds, setSavedSpecialistIds] = useState<string[]>([]);
+  
   const [jobFilter, setJobFilter] = useState<JobFilter>("all");
   const [proposalFilter, setProposalFilter] = useState<ProposalFilter>("all");
   const [offerSpecialist, setOfferSpecialist] = useState<Specialist | null>(null);
@@ -74,12 +72,10 @@ export default function ElonlarimPage() {
     Promise.all([
       jobsService.listMine(),
       catalogService.listSpecialists(),
-      savedService.listSpecialistIds(),
     ])
-      .then(async ([myJobs, allSpecs, savedIds]) => {
+      .then(async ([myJobs, allSpecs]) => {
         setJobs(myJobs);
         setSpecialists(new Map(allSpecs.map((s) => [s.user.id, s])));
-        setSavedSpecialistIds(savedIds);
 
         // Barcha e'lonlar uchun arizalarni yuklash
         const results = await Promise.all(
@@ -131,26 +127,7 @@ export default function ElonlarimPage() {
     );
   }, [allProposalsWithJobs, proposalFilter]);
 
-  // Tanlangan mutaxassislar
-  const savedSpecialistsList = useMemo(() => {
-    return savedSpecialistIds
-      .map((id) => specialists.get(id))
-      .filter((s): s is Specialist => Boolean(s));
-  }, [savedSpecialistIds, specialists]);
-
-  async function handleToggleSaveSpecialist(specId: string) {
-    try {
-      const next = await savedService.toggleSpecialist(specId);
-      setSavedSpecialistIds(next);
-      if (next.includes(specId)) {
-        toast(t("bjobs.savedSuccess"));
-      } else {
-        toast(t("bjobs.unsavedSuccess"));
-      }
-    } catch {
-      toast(t("common.error"), "error");
-    }
-  }
+  
 
   return (
     <div className="flex flex-col gap-6">

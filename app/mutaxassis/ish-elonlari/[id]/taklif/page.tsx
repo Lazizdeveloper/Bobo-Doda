@@ -117,7 +117,7 @@ export default function TaklifYuborishPage() {
     <div className="flex max-w-2xl flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.jobs"), href: "/mutaxassis/ish-elonlari" },
+          { label: t("nav.jobs"), href: "/xaridor/bozor?tab=jobs" },
           { label: job.title, href: `/mutaxassis/ish-elonlari/${job.id}` },
           { label: t("prop.formTitle") },
         ]}

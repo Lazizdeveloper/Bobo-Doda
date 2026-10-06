@@ -68,7 +68,7 @@ export default function IshEloniPage() {
     <div className="flex flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.jobs"), href: "/mutaxassis/ish-elonlari" },
+          { label: t("nav.jobs"), href: "/xaridor/bozor?tab=jobs" },
           { label: job.title },
         ]}
       />

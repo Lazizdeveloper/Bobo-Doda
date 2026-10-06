@@ -90,7 +90,6 @@ export function TopNav({ base }: TopNavProps) {
 
 
   const isBozorActive = pathname.startsWith("/xaridor/bozor");
-  const isJobsActive = pathname.startsWith("/mutaxassis/ish-elonlari");
   const isContractsActive = pathname.startsWith("/mutaxassis/shartnomalar");
   const isMessagesActive = pathname.startsWith("/mutaxassis/xabarlar");
   const isDashboardActive = pathname === "/mutaxassis";

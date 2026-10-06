@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import {
   ContractStatusBadge,
@@ -31,9 +30,6 @@ import type { Contract, Job, Milestone, Offer, Proposal, SellerProfile, Service,
 import { formatDate, formatMoney } from "@/lib/format";
 import { sellerNet } from "@/lib/fees";
 import { useT } from "@/lib/i18n";
-import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
-import { searchMatches } from "@/lib/search";
-import { CATEGORIES } from "@/lib/category-fields";
 
 function matchesProfile(job: Job, profile: SellerProfile | null): boolean {
   if (!profile) return true;
@@ -57,11 +53,6 @@ export default function MutaxassisDashboardPage() {
   const [name, setName] = useState("");
   const [applicationStatus, setApplicationStatus] = useState<VerificationStatus | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
-
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-
-  const debouncedSearch = useDebouncedValue(search, 200);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -115,18 +106,8 @@ export default function MutaxassisDashboardPage() {
   );
   const activeServices = services.filter((s) => s.status === "active");
 
-  const query = debouncedSearch.trim();
   const jobsToFilter = matchingJobs.length > 0 ? matchingJobs : openJobs;
-  const filteredJobs = jobsToFilter
-    .filter((j) => category === "all" || j.category === category)
-    .filter(
-      (j) =>
-        !query ||
-        searchMatches(j.title, query) ||
-        searchMatches(j.description, query) ||
-        (j.skillsRequired || []).some((s) => searchMatches(s, query))
-    )
-    .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
+  const filteredJobs = jobsToFilter.sort((a, b) => b.postedAt.localeCompare(a.postedAt));
 
   const displayedJobs = filteredJobs.slice(0, 4);
   const recentContracts = [...(contracts ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
@@ -245,7 +226,7 @@ export default function MutaxassisDashboardPage() {
             </p>
           </div>
           <Link
-            href="/mutaxassis/ish-elonlari"
+            href="/xaridor/bozor?tab=jobs"
             className="text-sm font-semibold text-primary hover:text-primary-deep hover:underline shrink-0"
           >
             {t("dash.browseJobBoard")} ({openJobs.length}) →
@@ -265,7 +246,7 @@ export default function MutaxassisDashboardPage() {
             <p className="font-heading text-sm font-bold text-ink">{t("dash.noJobsFound")}</p>
             <p className="mt-1 text-xs text-muted max-w-md">{t("dash.noMatchingJobs")}</p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Link href="/mutaxassis/ish-elonlari">
+              <Link href="/xaridor/bozor?tab=jobs">
                 <Button size="sm">{t("dash.browseJobBoard")}</Button>
               </Link>
             </div>
@@ -285,7 +266,7 @@ export default function MutaxassisDashboardPage() {
 
             {filteredJobs.length > displayedJobs.length && (
               <div className="text-center pt-2">
-                <Link href="/mutaxassis/ish-elonlari">
+                <Link href="/xaridor/bozor?tab=jobs">
                   <Button variant="secondary" size="sm">
                     {t("dash.browseJobBoard")} ({filteredJobs.length} ta loyiha) →
                   </Button>
@@ -316,7 +297,7 @@ export default function MutaxassisDashboardPage() {
             <Card className="text-center py-8">
               <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyProposalsCta")}</p>
               <p className="mt-1 text-xs text-muted">Mavjud ishlarni ko'rib, birinchi arizangizni yuboring.</p>
-              <Link href="/mutaxassis/ish-elonlari" className="mt-3 inline-block">
+              <Link href="/xaridor/bozor?tab=jobs" className="mt-3 inline-block">
                 <Button size="sm">{t("dash.browseJobBoard")}</Button>
               </Link>
             </Card>
@@ -361,13 +342,13 @@ export default function MutaxassisDashboardPage() {
             <SkeletonCard />
           ) : offers.length === 0 ? (
             <Card className="text-center py-8">
-              <p className="font-heading text-sm font-bold text-ink">Hozircha kelgan takliflar yo'q</p>
-              <p className="mt-1 text-xs text-muted">
-                Profilingizni to'liq qiling va xizmatlar qo'shing — mijozlar sizga to'g'ridan-to'g'ri taklif yuborishadi.
-              </p>
-              <Link href="/mutaxassis/profil" className="mt-3 inline-block">
-                <Button variant="secondary" size="sm">{t("dash.completeProfile")}</Button>
-              </Link>
+              <p className="font-heading text-sm font-bold text-ink">Hozircha sizga to'g'ridan-to'g'ri ish taklifi kelmagan.</p>
+              <div className="mt-4 pt-4 border-t border-line/60">
+                <p className="text-xs text-muted mb-2">Profilni to'ldirish tavsiya etiladi</p>
+                <Link href="/mutaxassis/profil" className="inline-block text-xs font-semibold text-primary hover:underline">
+                  Profilni to'ldirish →
+                </Link>
+              </div>
             </Card>
           ) : (
             <div className="flex flex-col gap-2.5">
@@ -409,7 +390,7 @@ export default function MutaxassisDashboardPage() {
             <Card className="text-center py-8">
               <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyContractsCta")}</p>
               <p className="mt-1 text-xs text-muted">{t("dash.noContractsDesc")}</p>
-              <Link href="/mutaxassis/ish-elonlari" className="mt-3 inline-block">
+              <Link href="/xaridor/bozor?tab=jobs" className="mt-3 inline-block">
                 <Button size="sm">{t("dash.browseJobBoard")}</Button>
               </Link>
             </Card>

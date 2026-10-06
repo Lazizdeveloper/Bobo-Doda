@@ -6,7 +6,6 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import {
@@ -14,8 +13,8 @@ import {
   JobStatusBadge,
   ProposalStatusBadge,
 } from "@/components/shared/StatusBadge";
-import { contractsService, milestonesService, usersService, jobsService, proposalsService, offersService, catalogService } from "@/lib/api";
-import type { Contract, Milestone, Job, Proposal, Offer, Specialist } from "@/lib/types";
+import { contractsService, milestonesService, usersService, jobsService, proposalsService, catalogService } from "@/lib/api";
+import type { Contract, Milestone, Job, Proposal, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -31,7 +30,6 @@ export default function XaridorDashboardPage() {
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [proposals, setProposals] = useState<ExtendedProposal[] | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([]);
   const [name, setName] = useState("");
   const [loadError, setLoadError] = useState<unknown>(null);
 
@@ -42,15 +40,13 @@ export default function XaridorDashboardPage() {
       milestonesService.listMine(),
       usersService.getCurrent(),
       jobsService.listMine(),
-      offersService.listSent().catch(() => []),
       catalogService.listSpecialists().catch(() => []),
     ])
-      .then(async ([contractList, milestoneList, user, jobList, sentOffers, allSpecs]) => {
+      .then(async ([contractList, milestoneList, user, jobList, allSpecs]) => {
         setContracts(contractList);
         setMilestones(milestoneList);
         if (user) setName(user.fullName);
         setJobs(jobList);
-        setOffers(sentOffers);
 
         const specMap = new Map((allSpecs as Specialist[]).map((s) => [s.user.id, s.user.fullName]));
 
@@ -84,14 +80,8 @@ export default function XaridorDashboardPage() {
   const toReview = (milestones ?? []).filter(
     (m) => m.status === "topshirildi" && contractById.get(m.contractId)?.status === "faol",
   );
-  const fundNeeded = (contracts ?? []).filter((c) => c.status === "faol" && !c.fundedAt);
-  const pendingOffers = (offers ?? []).filter((o) => o.status === "yuborilgan");
-  const recentContracts = contracts?.slice(0, 5) ?? [];
   const recentProposals = (proposals ?? []).slice(0, 5);
 
-  const awaitingSelectionProposals = (proposals ?? []).filter(
-    (p) => p.status === "yuborilgan" || p.status === "suhbat" || p.status === "korib_chiqilmoqda"
-  );
   const totalSpent = (milestones ?? []).filter((m) => m.status === "qabul_qilindi").reduce((sum, m) => sum + m.amount, 0);
 
   return (
