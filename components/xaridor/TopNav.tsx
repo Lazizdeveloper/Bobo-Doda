@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/shared/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { LangSwitch } from "@/components/shared/LangSwitch";
@@ -19,8 +19,6 @@ export function TopNav({ base }: TopNavProps) {
   const { t } = useT();
   const [name, setName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   function handleLogout() {
     authService.logout();
@@ -40,45 +38,25 @@ export function TopNav({ base }: TopNavProps) {
 
   useEffect(() => {
     setMenuOpen(false);
-    setActiveDropdown(null);
   }, [pathname]);
 
-  useEffect(() => {
-    if (!menuOpen && !activeDropdown) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setMenuOpen(false);
-        setActiveDropdown(null);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [menuOpen, activeDropdown]);
-
-  function handleDropdownEnter(key: string) {
-    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
-    setActiveDropdown(key);
-  }
-
-  function handleDropdownLeave() {
-    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
-    dropdownTimeoutRef.current = setTimeout(() => {
-      setActiveDropdown(null);
-    }, 150);
-  }
-
-  const bozorSubItems = [
-    { href: "/bozor?tab=services", label: t("nav.bozorServices"), icon: "🛍️" },
-    { href: "/bozor?tab=jobs", label: t("nav.bozorJobs"), icon: "💼" },
-    { href: "/bozor?tab=specialists", label: t("nav.bozorSpecialists"), icon: "👥" },
+  const navItems = [
+    { href: "/xaridor", label: t("nav.dashboard") || "Dashboard" },
+    { href: "/xaridor/my-jobs", label: "E'lonlarim" },
+    { href: "/bozor", label: t("nav.market") || "Bozor" },
+    { href: "/xaridor/contracts", label: t("nav.contracts") || "Shartnomalar" },
+    { href: "/xaridor/messages", label: t("nav.messages") || "Xabarlar" },
+    { href: "/xaridor/billing", label: t("nav.spending") || "Moliya" },
+    { href: "/xaridor/disputes", label: "Nizolar" },
+    { href: "/xaridor/settings", label: t("nav.settings") || "Sozlamalar" },
   ];
 
-
-
-  const isBozorActive = pathname.startsWith("/bozor");
-  const isContractsActive = pathname.startsWith("/xaridor/shartnomalar");
-  const isMessagesActive = pathname.startsWith("/xaridor/xabarlar");
-  const isDashboardActive = pathname === "/xaridor";
+  const getIsActive = (href: string) => {
+    if (href === "/xaridor") {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur">
@@ -88,104 +66,32 @@ export function TopNav({ base }: TopNavProps) {
 
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-1">
-            {/* Boshqaruv */}
-            <Link
-              href="/xaridor"
-              className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
-                isDashboardActive
-                  ? "bg-primary/10 text-primary-deep font-semibold"
-                  : "text-muted hover:bg-card-hover hover:text-ink"
-              }`}
-            >
-              {t("nav.dashboard")}
-            </Link>
-
-            {/* Bozor Dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={() => handleDropdownEnter("bozor")}
-              onMouseLeave={handleDropdownLeave}
-            >
+            {navItems.map((item) => (
               <Link
-                href="/bozor"
-                className={`flex items-center gap-1 px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
-                  isBozorActive
+                key={item.href}
+                href={item.href}
+                className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                  getIsActive(item.href)
                     ? "bg-primary/10 text-primary-deep font-semibold"
                     : "text-muted hover:bg-card-hover hover:text-ink"
                 }`}
-                aria-expanded={activeDropdown === "bozor"}
               >
-                <span>{t("nav.market")}</span>
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  className={`transition-transform duration-200 ${
-                    activeDropdown === "bozor" ? "rotate-180 text-primary" : "text-muted"
-                  }`}
-                >
-                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                {item.label}
               </Link>
-
-              {activeDropdown === "bozor" && (
-                <div className="absolute left-0 top-full pt-1.5 w-56 z-50 animate-in fade-in-0 zoom-in-95">
-                  <div className="rounded-xl border border-line bg-surface p-1.5 shadow-lg">
-                    {bozorSubItems.map((sub) => (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-btn text-xs font-semibold text-ink hover:bg-primary/10 hover:text-primary transition-colors"
-                      >
-                        <span className="text-base">{sub.icon}</span>
-                        <span>{sub.label}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-
-
-            {/* Shartnomalar */}
-            <Link
-              href="/xaridor/shartnomalar"
-              className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
-                isContractsActive
-                  ? "bg-primary/10 text-primary-deep font-semibold"
-                  : "text-muted hover:bg-card-hover hover:text-ink"
-              }`}
-            >
-              {t("nav.contracts")}
-            </Link>
-
-            {/* Xabarlar */}
-            <Link
-              href="/xaridor/xabarlar"
-              className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
-                isMessagesActive
-                  ? "bg-primary/10 text-primary-deep font-semibold"
-                  : "text-muted hover:bg-card-hover hover:text-ink"
-              }`}
-            >
-              {t("nav.messages")}
-            </Link>
+            ))}
           </nav>
         </div>
 
         <div className="flex items-center gap-2.5 sm:gap-3">
           <Link
-            href="/xaridor/elonlarim/yangi"
+            href="/xaridor/my-jobs/yangi"
             className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-btn bg-primary text-white hover:bg-primary-deep transition-colors shadow-sm"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            {t("bjobs.post")}
+            {t("bjobs.post") || "E'lon joylash"}
           </Link>
-
 
           <LangSwitch />
 
@@ -204,15 +110,9 @@ export function TopNav({ base }: TopNavProps) {
           </button>
 
           <div className="hidden lg:flex items-center gap-3">
-            <Link href="/xaridor/xarajatlar" className="text-xs font-medium text-muted hover:text-ink">
-              {t("nav.spending")}
-            </Link>
-            <Link href="/xaridor/yordam" className="text-xs font-medium text-muted hover:text-ink">
-              {t("nav.help")}
-            </Link>
             <Link
-              href="/xaridor/sozlamalar"
-              aria-label={t("nav.settings")}
+              href="/xaridor/settings"
+              aria-label={t("nav.settings") || "Sozlamalar"}
               className="rounded-full"
             >
               <Avatar name={name || "?"} size="sm" />
@@ -222,7 +122,7 @@ export function TopNav({ base }: TopNavProps) {
               onClick={handleLogout}
               className="text-xs font-medium text-muted hover:text-danger"
             >
-              {t("common.logout")}
+              {t("common.logout") || "Chiqish"}
             </button>
           </div>
         </div>
@@ -234,62 +134,40 @@ export function TopNav({ base }: TopNavProps) {
           id="mobile-nav"
           role="dialog"
           aria-modal="true"
-          aria-label={t("a11y.openMenu")}
+          aria-label={t("a11y.openMenu") || "Menyu"}
           className="border-t border-line bg-surface px-4 py-3 lg:hidden"
         >
           <nav className="flex flex-col gap-2">
             <Link
-              href="/xaridor/elonlarim/yangi"
+              href="/xaridor/my-jobs/yangi"
               className="flex items-center justify-center gap-2 px-3 py-2 rounded-btn text-sm font-semibold bg-primary text-white hover:bg-primary-deep shadow-sm mb-1"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              {t("bjobs.post")}
+              {t("bjobs.post") || "E'lon joylash"}
             </Link>
 
-            <Link href="/xaridor" className="block px-3 py-2 rounded-btn text-sm font-semibold text-ink hover:bg-card-hover">
-              {t("nav.dashboard")}
-            </Link>
-
-            {/* Bozor with sub-items */}
-            <div className="flex flex-col gap-1 border-y border-line/60 py-2 my-1">
-              <Link href="/bozor" className="px-3 py-1 text-sm font-bold text-ink">
-                {t("nav.market")}
+            {navItems.map((item) => (
+              <Link 
+                key={item.href} 
+                href={item.href} 
+                className={`block px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                  getIsActive(item.href)
+                    ? "bg-primary/10 text-primary-deep font-semibold"
+                    : "text-ink hover:bg-card-hover"
+                }`}
+              >
+                {item.label}
               </Link>
-              <div className="pl-4 flex flex-col gap-1">
-                {bozorSubItems.map((sub) => (
-                  <Link key={sub.href} href={sub.href} className="px-3 py-1.5 rounded-btn text-xs font-medium text-muted hover:text-ink hover:bg-card-hover flex items-center gap-2">
-                    <span>{sub.icon}</span>
-                    <span>{sub.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
+            ))}
 
-
-
-            <Link href="/xaridor/shartnomalar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-              {t("nav.contracts")}
-            </Link>
-            <Link href="/xaridor/xabarlar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-              {t("nav.messages")}
-            </Link>
-            <Link href="/xaridor/xarajatlar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-              {t("nav.spending")}
-            </Link>
-            <Link href="/xaridor/yordam" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-              {t("nav.help")}
-            </Link>
-            <Link href="/xaridor/sozlamalar" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-              {t("nav.settings")}
-            </Link>
             <button
               type="button"
               onClick={handleLogout}
               className="block w-full text-left px-3 py-2 rounded-btn text-sm font-medium text-danger hover:bg-card-hover"
             >
-              {t("common.logout")}
+              {t("common.logout") || "Chiqish"}
             </button>
           </nav>
         </div>
