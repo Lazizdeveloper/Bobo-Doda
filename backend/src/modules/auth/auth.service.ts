@@ -330,7 +330,7 @@ export class AuthService {
   async chooseRole(current: AccessTokenPayload, role: Role): Promise<AuthResult> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: current.sub } });
     if (user.roleChosen) {
-      throw new DomainError('BAD_STATE', 'Rol allaqachon tanlangan — `/me/roles/switch` dan foydalaning');
+      throw new DomainError('BAD_STATE', "Siz allaqachon rol tanlagansiz. Rolni o'zgartirish mumkin emas");
     }
 
     const updated = await this.prisma.user.update({
@@ -350,25 +350,6 @@ export class AuthService {
   }
 
   /** `POST /me/roles/switch` — foydalanuvchi ALLAQACHON ega bo'lgan rolga. Eski sessiya BEKOR QILINMAYDI (parallel kabinet). */
-  async switchRole(current: AccessTokenPayload, role: Role, meta?: RequestMeta): Promise<AuthResult> {
-    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: current.sub } });
-    if (!user.roles.includes(role)) {
-      throw new ForbiddenError("Bu rolga ega emassiz", 'NOT_ALLOWED');
-    }
-
-    await this.prisma.user.update({
-      where: { id: current.sub },
-      data: { lastActiveRole: role },
-    });
-
-    return this.issueSession(user.id, role, {
-      roleChosen: true,
-      profileDone: user.profileDone,
-      isNewUser: false,
-      meta,
-    });
-  }
-
   private async issueSession(
     userId: string,
     activeRole: Role | null,

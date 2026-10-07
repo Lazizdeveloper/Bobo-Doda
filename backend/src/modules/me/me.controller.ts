@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { AppConfigService } from '@/config/app-config.service';
 import { AuthService, type AuthResult } from '@/modules/auth/auth.service';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
@@ -8,7 +8,6 @@ import type { AccessTokenPayload } from '@/modules/auth/types/token-payload';
 import { setRefreshCookie } from '@/modules/auth/cookie.util';
 import { AuthSessionDto } from '@/modules/auth/dto/auth-session.dto';
 import { ChooseRoleDto } from '@/modules/auth/dto/choose-role.dto';
-import { SwitchRoleDto } from '@/modules/auth/dto/switch-role.dto';
 import { AccountStatusGuard } from '@/common/guards/account-status.guard';
 import { MeService } from './me.service';
 import { MeResponseDto } from './dto/me-response.dto';
@@ -65,25 +64,6 @@ export class MeController {
     return toSessionDto(result);
   }
 
-  @Post('roles/switch')
-  @HttpCode(200)
-  @ApiOkResponse({ type: AuthSessionDto })
-  async switchRole(
-    @CurrentUser() user: AccessTokenPayload,
-    @Body() dto: SwitchRoleDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<AuthSessionDto> {
-    const result = await this.auth.switchRole(user, dto.role, {
-      userAgent: req.headers['user-agent'],
-      ip: req.ip,
-    });
-    this.setCookie(res, result.refreshToken);
-    return toSessionDto(result);
-  }
-
-  @Get('sessions')
-  @ApiOkResponse({ type: SessionDto, isArray: true })
   async listSessions(@CurrentUser() user: AccessTokenPayload): Promise<SessionDto[]> {
     return this.me.listSessions(user.sub, user.familyId);
   }
