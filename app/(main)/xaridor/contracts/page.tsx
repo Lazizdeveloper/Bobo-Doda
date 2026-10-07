@@ -81,7 +81,7 @@ export default function XaridorShartnomalarPage() {
         <Table
           rows={filtered}
           rowKey={(c) => c.id}
-          onRowClick={(c) => router.push(`/xaridor/shartnomalar/${c.id}`)}
+          onRowClick={(c) => router.push(`/xaridor/contracts/${c.id}`)}
           columns={[
             {
               key: "seller",

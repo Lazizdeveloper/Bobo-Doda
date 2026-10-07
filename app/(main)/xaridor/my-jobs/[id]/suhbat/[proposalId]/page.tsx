@@ -60,8 +60,8 @@ export default function TaklifSuhbatiPage() {
     <div className="flex max-w-2xl flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.myJobs"), href: "/xaridor/elonlarim" },
-          { label: job.title, href: `/xaridor/elonlarim/${job.id}` },
+          { label: t("nav.myJobs"), href: "/xaridor/my-jobs" },
+          { label: job.title, href: `/xaridor/my-jobs/${job.id}` },
           { label: t("pchat.title") },
         ]}
       />
@@ -102,11 +102,11 @@ export default function TaklifSuhbatiPage() {
       />
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <Link href={`/xaridor/elonlarim/${job.id}`}>
+        <Link href={`/xaridor/my-jobs/${job.id}`}>
           <Button variant="ghost">{t("common.back")}</Button>
         </Link>
         {job.status === "ochiq" && OPEN_STATUSES.includes(proposal.status) && (
-          <Link href={`/xaridor/elonlarim/${job.id}/yollash/${proposal.id}`}>
+          <Link href={`/xaridor/my-jobs/${job.id}/yollash/${proposal.id}`}>
             <Button>{t("bprop.hire")}</Button>
           </Link>
         )}

@@ -678,7 +678,7 @@ export default function XaridorSozlamalarPage() {
                     </p>
                   </div>
                   <Link
-                    href="/xaridor/xarajatlar"
+                    href="/xaridor/billing"
                     className="inline-flex h-10 shrink-0 items-center gap-2 rounded-btn bg-primary px-5 text-xs font-medium text-on-primary shadow-btn hover:bg-primary-hover transition-colors"
                   >
                     <span>Invoyslarni ko&apos;rish</span>

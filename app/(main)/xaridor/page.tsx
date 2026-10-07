@@ -115,7 +115,7 @@ export default function XaridorDashboardPage() {
               <p className="mt-2 font-heading text-2xl font-black text-ink">{formatMoney(totalSpent, lang)}</p>
             </Card>
 
-            <Link href="/xaridor/shartnomalar" className="block">
+            <Link href="/xaridor/contracts" className="block">
               <Card hoverable className="flex flex-col justify-center border-l-4 border-l-success h-full">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("bdash.activeProjects")}</p>
@@ -125,7 +125,7 @@ export default function XaridorDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/xaridor/elonlarim" className="block">
+            <Link href="/xaridor/my-jobs" className="block">
               <Card hoverable className="flex flex-col justify-center border-l-4 border-l-primary-deep h-full">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">{t("dash.receivedProposals")}</p>
@@ -167,7 +167,7 @@ export default function XaridorDashboardPage() {
                 <p className="mt-1 text-xs text-muted max-w-md">
                   Ish e'lonini joylashtiring va saralangan mutaxassislardan takliflar qabul qiling.
                 </p>
-                <Link href="/xaridor/elonlarim/yangi" className="mt-4">
+                <Link href="/xaridor/my-jobs/yangi" className="mt-4">
                   <Button size="sm">{t("bdash.postJob")}</Button>
                 </Link>
               </Card>
@@ -177,7 +177,7 @@ export default function XaridorDashboardPage() {
                   <Card key={job.id} padding="md" hoverable className="flex flex-col gap-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <Link href={`/xaridor/elonlarim/${job.id}`}>
+                        <Link href={`/xaridor/my-jobs/${job.id}`}>
                           <h3 className="font-bold text-ink text-sm hover:text-primary transition-colors line-clamp-1">
                             {job.title}
                           </h3>
@@ -195,7 +195,7 @@ export default function XaridorDashboardPage() {
                         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary-deep">
                           {job.proposalsCount || 0} ta ariza
                         </span>
-                        <Link href={`/xaridor/elonlarim/${job.id}`}>
+                        <Link href={`/xaridor/my-jobs/${job.id}`}>
                           <Button size="sm" variant="secondary" className="text-xs">
                             Arizalar →
                           </Button>
@@ -227,7 +227,7 @@ export default function XaridorDashboardPage() {
                   E'lonlaringizga mutaxassislar ariza yuborganda bu yerda ko'rinadi.
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <Link href="/xaridor/elonlarim/yangi">
+                  <Link href="/xaridor/my-jobs/yangi">
                     <Button size="sm">{t("bdash.postJob")}</Button>
                   </Link>
                   <Link href="/bozor?tab=specialists">
@@ -252,7 +252,7 @@ export default function XaridorDashboardPage() {
 
                       <div className="flex items-center gap-2 shrink-0">
                         <ProposalStatusBadge status={prop.status} />
-                        <Link href={`/xaridor/elonlarim/${prop.jobId}`}>
+                        <Link href={`/xaridor/my-jobs/${prop.jobId}`}>
                           <Button size="sm" variant="secondary" className="text-xs">
                             Ko'rib chiqish →
                           </Button>
@@ -300,7 +300,7 @@ export default function XaridorDashboardPage() {
             ) : (
               <div className="flex flex-col gap-2.5">
                 {activeContracts.slice(0, 5).map((contract) => (
-                  <Link key={contract.id} href={`/xaridor/shartnomalar/${contract.id}`} className="block">
+                  <Link key={contract.id} href={`/xaridor/contracts/${contract.id}`} className="block">
                     <Card hoverable padding="md" className="flex flex-col gap-2">
                       <div className="flex justify-between items-start gap-2">
                         <h3 className="font-bold text-ink text-sm line-clamp-1">{contract.title}</h3>

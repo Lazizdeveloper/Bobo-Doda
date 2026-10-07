@@ -60,7 +60,7 @@ export default function ElonlarimPage() {
         params.set("tab", newTab);
       }
       const query = params.toString();
-      router.replace(query ? `/xaridor/elonlarim?${query}` : "/xaridor/elonlarim", {
+      router.replace(query ? `/xaridor/my-jobs?${query}` : "/xaridor/my-jobs", {
         scroll: false,
       });
     },
@@ -141,7 +141,7 @@ export default function ElonlarimPage() {
             E&apos;lonlaringizni boshqaring, kelgan takliflarni ko&apos;rib chiqing va tanlangan mutaxassislar bilan bog&apos;laning.
           </p>
         </div>
-        <Link href="/xaridor/elonlarim/yangi">
+        <Link href="/xaridor/my-jobs/yangi">
           <Button>{t("bjobs.post")}</Button>
         </Link>
       </div>
@@ -196,7 +196,7 @@ export default function ElonlarimPage() {
                   title={jobs.length === 0 ? t("bjobs.empty") : t("bjobs.emptyFiltered")}
                   action={
                     jobs.length === 0 ? (
-                      <Link href="/xaridor/elonlarim/yangi">
+                      <Link href="/xaridor/my-jobs/yangi">
                         <Button>{t("bjobs.emptyCta")}</Button>
                       </Link>
                     ) : undefined
@@ -215,7 +215,7 @@ export default function ElonlarimPage() {
                             {formatDate(job.postedAt, lang)}
                           </span>
                         </div>
-                        <Link href={`/xaridor/elonlarim/${job.id}`} className="group block">
+                        <Link href={`/xaridor/my-jobs/${job.id}`} className="group block">
                           <h3 className="font-heading text-base font-bold text-ink transition-colors group-hover:text-primary">
                             {job.title}
                           </h3>
@@ -240,7 +240,7 @@ export default function ElonlarimPage() {
                               </span>
                               {t("jobs.proposalsCount")}
                             </span>
-                            <Link href={`/xaridor/elonlarim/${job.id}`}>
+                            <Link href={`/xaridor/my-jobs/${job.id}`}>
                               <Button variant="secondary" size="sm" className="text-xs">
                                 {t("market.detailsBtn")} →
                               </Button>
@@ -311,7 +311,7 @@ export default function ElonlarimPage() {
                               {t("bjobs.forJob")}:
                             </span>
                             <Link
-                              href={`/xaridor/elonlarim/${job.id}`}
+                              href={`/xaridor/my-jobs/${job.id}`}
                               className="font-bold text-ink hover:text-primary transition-colors truncate"
                             >
                               {job.title}
@@ -377,18 +377,18 @@ export default function ElonlarimPage() {
 
                         {/* Amallar */}
                         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line pt-3">
-                          <Link href={`/xaridor/elonlarim/${job.id}`}>
+                          <Link href={`/xaridor/my-jobs/${job.id}`}>
                             <Button variant="ghost" size="sm" className="text-xs">
                               {t("bjobs.viewJob")}
                             </Button>
                           </Link>
-                          <Link href={`/xaridor/elonlarim/${job.id}/suhbat/${proposal.id}`}>
+                          <Link href={`/xaridor/my-jobs/${job.id}/suhbat/${proposal.id}`}>
                             <Button variant="secondary" size="sm" className="text-xs">
                               💬 {t("pchat.open")}
                             </Button>
                           </Link>
                           {job.status === "ochiq" && proposal.status !== "yollandi" && proposal.status !== "rad_etildi" && (
-                            <Link href={`/xaridor/elonlarim/${job.id}/yollash/${proposal.id}`}>
+                            <Link href={`/xaridor/my-jobs/${job.id}/yollash/${proposal.id}`}>
                               <Button size="sm" className="text-xs">
                                 💼 {t("bprop.hire")}
                               </Button>

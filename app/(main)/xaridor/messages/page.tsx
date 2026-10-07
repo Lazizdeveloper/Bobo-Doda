@@ -61,7 +61,7 @@ export default function XaridorXabarlarPage() {
           if (contract) {
             list.push({
               id: contract.id,
-              href: `/xaridor/shartnomalar/${contract.id}`,
+              href: `/xaridor/contracts/${contract.id}`,
               name: contract.sellerName,
               title: contract.title,
               last,

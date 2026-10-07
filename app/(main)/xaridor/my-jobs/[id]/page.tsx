@@ -121,7 +121,7 @@ export default function ElonTafsilotiPage() {
     <div className="flex flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.myJobs"), href: "/xaridor/elonlarim" },
+          { label: t("nav.myJobs"), href: "/xaridor/my-jobs" },
           { label: job.title },
         ]}
       />
@@ -300,7 +300,7 @@ export default function ElonTafsilotiPage() {
                   {/* Yollangan taklif → shartnoma */}
                   {proposal.status === "yollandi" && contract && (
                     <div className="flex justify-end border-t border-line pt-4">
-                      <Link href={`/xaridor/shartnomalar/${contract.id}`}>
+                      <Link href={`/xaridor/contracts/${contract.id}`}>
                         <Button size="sm">{t("props.openContract")}</Button>
                       </Link>
                     </div>
@@ -332,14 +332,14 @@ export default function ElonTafsilotiPage() {
                         {/* Suhbat kanali — "Suhbatga taklif" endi haqiqiy
                             muloqotga olib boradi (ilgari hech qayerga emas). */}
                         <Link
-                          href={`/xaridor/elonlarim/${job.id}/suhbat/${proposal.id}`}
+                          href={`/xaridor/my-jobs/${job.id}/suhbat/${proposal.id}`}
                         >
                           <Button variant="secondary" size="sm" className="w-full">
                             {t("pchat.open")}
                           </Button>
                         </Link>
                         <Link
-                          href={`/xaridor/elonlarim/${job.id}/yollash/${proposal.id}`}
+                          href={`/xaridor/my-jobs/${job.id}/yollash/${proposal.id}`}
                         >
                           <Button size="sm" disabled={busy} className="w-full">
                             {t("bprop.hire")}

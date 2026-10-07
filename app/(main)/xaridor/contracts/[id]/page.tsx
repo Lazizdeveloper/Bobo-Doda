@@ -257,7 +257,7 @@ export default function XaridorWorkroomPage() {
     <div className="flex flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.contracts"), href: "/xaridor/shartnomalar" },
+          { label: t("nav.contracts"), href: "/xaridor/contracts" },
           { label: contract.title },
         ]}
       />

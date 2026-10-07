@@ -116,7 +116,7 @@ export default function YollashPage() {
         }))
       );
       toast(t("hire.done"));
-      router.push(`/xaridor/shartnomalar/${contract.id}`);
+      router.push(`/xaridor/contracts/${contract.id}`);
     } catch {
       toast(t("common.error"), "error");
       setHiring(false);
@@ -138,8 +138,8 @@ export default function YollashPage() {
     <div className="flex max-w-2xl flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.myJobs"), href: "/xaridor/elonlarim" },
-          { label: job.title, href: `/xaridor/elonlarim/${job.id}` },
+          { label: t("nav.myJobs"), href: "/xaridor/my-jobs" },
+          { label: job.title, href: `/xaridor/my-jobs/${job.id}` },
           { label: t("hire.title") },
         ]}
       />

@@ -176,7 +176,7 @@ export default function YangiElonPage() {
       });
       clearDraft();
       toast(t("jwiz.published"));
-      router.push(`/xaridor/elonlarim/${job.id}`);
+      router.push(`/xaridor/my-jobs/${job.id}`);
     } catch {
       toast(t("common.error"), "error");
       setPublishing(false);
@@ -186,7 +186,7 @@ export default function YangiElonPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <BackButton href="/xaridor/elonlarim" label={t("nav.myJobs")} />
+        <BackButton href="/xaridor/my-jobs" label={t("nav.myJobs")} />
       </div>
 
       <h1 className="font-heading text-2xl font-extrabold text-ink">
