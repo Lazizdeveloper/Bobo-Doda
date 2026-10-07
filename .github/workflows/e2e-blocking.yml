@@ -114,8 +114,8 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DB_NAME: ci_e2e_blocking
-      DATABASE_URL: postgresql://bobododa_app:app@localhost:5432/ci_e2e_blocking?schema=public
-      DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@localhost:5432/ci_e2e_blocking?schema=public
+      DATABASE_URL: postgresql://bobololadono_app:app@localhost:5432/ci_e2e_blocking?schema=public
+      DATABASE_MIGRATION_URL: postgresql://bobololadono_migrator:migrator@localhost:5432/ci_e2e_blocking?schema=public
       REDIS_URL: redis://localhost:6379
       JWT_ACCESS_SECRET: ci-e2e-blocking-access-secret-32-chars
       JWT_STAFF_ACCESS_SECRET: ci-e2e-blocking-staff-secret-32-char
@@ -204,7 +204,7 @@ jobs:
       # ATAYLAB o'rnatilmagan: joriy 5 ta `@blocking` test `runDbCommand`/
       # `flushOtpCooldown`ni (`tests/e2e/helpers.ts`) ishlatmaydi. Kimdir
       # kelajakda shu funksiyalarni ishlatadigan testga `@blocking` qo'shsa,
-      # sukut qiymatlar (`bobododa_app@bobododa`, `redis-cli`) bu runner'da
+      # sukut qiymatlar (`bobololadono_app@bobololadono`, `redis-cli`) bu runner'da
       # YO'Q/noto'g'ri bo'lgani uchun tushunarsiz xato beradi — o'sha payt
       # shu ikkala env'ni ham (yoki `redis-tools` o'rnatishni) qo'shing.
       - name: Playwright — @blocking (registration/login/forgot-password/API prefix)

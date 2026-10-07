@@ -1,5 +1,5 @@
 /**
- * OpenAPI hujjatini faylga chiqaradi — `@bobododa/contracts` generatsiyasi
+ * OpenAPI hujjatini faylga chiqaradi — `@bobololadono/contracts` generatsiyasi
  * uchun (`packages/contracts/scripts/generate.mjs` chaqiradi).
  *
  *   node -r ts-node/register/transpile-only -r tsconfig-paths/register \
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   app.setGlobalPrefix(API_GLOBAL_PREFIX, { exclude: API_GLOBAL_PREFIX_EXCLUDE });
 
   const config = new DocumentBuilder()
-    .setTitle('Bobo&Doda API')
+    .setTitle('Bobololadono API')
     .setDescription(
       'Markaziy Osiyo freelance marketplace — milestone escrow, double-entry ledger. ' +
         'Frontend `lib/api` chegarasini qoplaydi.',

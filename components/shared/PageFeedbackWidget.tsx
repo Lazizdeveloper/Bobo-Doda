@@ -32,8 +32,8 @@ export function PageFeedbackWidget() {
   // Global event orqali boshqa joylardan (masalan footer) ochish imkoniyati
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
-    window.addEventListener("bobododa:open-feedback", handleOpen);
-    return () => window.removeEventListener("bobododa:open-feedback", handleOpen);
+    window.addEventListener("bobololadono:open-feedback", handleOpen);
+    return () => window.removeEventListener("bobololadono:open-feedback", handleOpen);
   }, []);
 
   // Escape bosilganda modal yopilishi
@@ -47,7 +47,7 @@ export function PageFeedbackWidget() {
   }, [isOpen]);
 
   // Admin panel sahifalarida vidjet xalal bermasin. `mounted` allaqachon
-  // client-only edi — admin.bobododa.uz'da (proxy.ts prefiksni striplagani
+  // client-only edi — admin.bobololadono.uz'da (proxy.ts prefiksni striplagani
   // uchun) pathname `/admin` bilan boshlanmaydi, shuning uchun host
   // tekshiruvi ham qo'shildi (`mounted` gate ostida — hydration xavfsiz).
   if (!mounted || pathname.startsWith("/admin") || pathname.startsWith("/rahbariyat") || isAdminSurfaceHost()) {
@@ -172,7 +172,7 @@ export function PageFeedbackWidget() {
                 </button>
               </div>
 
-              {/* Matn kiritish maydoni — Bobo-Doda frilans bozoriga 100% mos misollar */}
+              {/* Matn kiritish maydoni — Bobololadono frilans bozoriga 100% mos misollar */}
               <div className="flex flex-col gap-1.5">
                 <textarea
                   value={message}

@@ -1,7 +1,7 @@
 {
-  "name": "bobo-doda-backend",
+  "name": "bobololadono-backend",
   "version": "0.1.0",
-  "description": "Bobo&Doda marketplace backend — NestJS modular monolith (milestone escrow, double-entry ledger)",
+  "description": "Bobololadono marketplace backend — NestJS modular monolith (milestone escrow, double-entry ledger)",
   "private": true,
   "license": "UNLICENSED",
   "engines": {

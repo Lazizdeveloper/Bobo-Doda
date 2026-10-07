@@ -1,5 +1,5 @@
 /**
- * Bo'lim 3 (admin.bobododa.uz) — `staff/*` yo'llari uchun ALOHIDA CORS
+ * Bo'lim 3 (admin.bobololadono.uz) — `staff/*` yo'llari uchun ALOHIDA CORS
  * ro'yxat (`STAFF_CORS_ORIGINS`), marketplace'dan (`CORS_ORIGINS`) mustaqil
  * — security audit topilmasi 3a: yagona umumiy ro'yxat staff sessiyasiga
  * HECH QANDAY izolyatsiya bermas edi.

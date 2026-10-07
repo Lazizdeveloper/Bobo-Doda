@@ -1,4 +1,4 @@
-# Bobo&Doda backend — lokal infratuzilma + app.
+# Bobololadono backend — lokal infratuzilma + app.
 #
 #   docker compose up            → postgres + redis + minio + migrate + api
 #   docker compose up -d postgres redis minio   → faqat infratuzilma (app'ni
@@ -7,15 +7,15 @@
 # Bosqich 1 "Definition of Done": `docker compose up` → api xizmati
 # healthcheck'i o'tadi (`/health/ready` 200) va `/docs` ochiladi.
 
-name: bobododa-backend
+name: bobololadono-backend
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: bobododa
-      POSTGRES_PASSWORD: bobododa
-      POSTGRES_DB: bobododa
+      POSTGRES_USER: bobololadono
+      POSTGRES_PASSWORD: bobololadono
+      POSTGRES_DB: bobololadono
       # A3 — DB va konteyner UTC. O'zbekiston UTC+5 / yozgi vaqt yo'q bo'lsa
       # ham `timestamp` (tz'siz) ISHLATILMAYDI: server boshqa mintaqaga
       # ko'chsa yoki managed DB boshqa zonada bo'lsa hisobotlar jimgina
@@ -24,15 +24,15 @@ services:
       PGTZ: UTC
       # A4/T1 — 10-roles.sh shu qiymatlar bilan prisma/sql/roles.sql ni
       # chaqiradi (rol nomi/parol boshqa joyda takrorlanmagan).
-      DB_APP_ROLE: bobododa_app
-      DB_MIGRATOR_ROLE: bobododa_migrator
+      DB_APP_ROLE: bobololadono_app
+      DB_MIGRATOR_ROLE: bobololadono_migrator
       DB_APP_PASSWORD: app
       DB_MIGRATOR_PASSWORD: migrator
     ports:
       - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # A4 — `bobododa_migrator` / `bobododa_app` rollarini birinchi init'da
+      # A4 — `bobololadono_migrator` / `bobololadono_app` rollarini birinchi init'da
       # yaratadi (faqat bo'sh data-dir da ishlaydi: `docker compose down -v`).
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
       # T1 — 10-roles.sh shuni chaqiradi; rol bootstrap SQL'i BITTA joyda.
@@ -41,7 +41,7 @@ services:
       # tushirar edi (u faqat ILDIZ darajasidagi *.sh/*.sql'ni skanerlaydi).
       - ./prisma/sql/roles.sql:/docker-entrypoint-initdb.d/sql/roles.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U bobododa -d bobododa']
+      test: ['CMD-SHELL', 'pg_isready -U bobololadono -d bobololadono']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -63,8 +63,8 @@ services:
     image: minio/minio:latest
     command: ['server', '/data', '--console-address', ':9001']
     environment:
-      MINIO_ROOT_USER: bobododa
-      MINIO_ROOT_PASSWORD: bobododa-secret
+      MINIO_ROOT_USER: bobololadono
+      MINIO_ROOT_PASSWORD: bobololadono-secret
     ports:
       - '9000:9000'
       - '9001:9001'
@@ -84,15 +84,15 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 bobododa bobododa-secret &&
-      mc mb --ignore-existing local/bobododa-uploads &&
-      mc mb --ignore-existing local/bobododa-kyc &&
-      mc anonymous set none local/bobododa-kyc &&
+      mc alias set local http://minio:9000 bobololadono bobololadono-secret &&
+      mc mb --ignore-existing local/bobololadono-uploads &&
+      mc mb --ignore-existing local/bobololadono-kyc &&
+      mc anonymous set none local/bobololadono-kyc &&
       echo 'buckets tayyor'
       "
 
   # Migratsiyani qo'llaydi, keyin chiqadi. `prisma migrate deploy` schema'dagi
-  # `directUrl` = DATABASE_MIGRATION_URL ni ishlatadi (`bobododa_migrator` —
+  # `directUrl` = DATABASE_MIGRATION_URL ni ishlatadi (`bobololadono_migrator` —
   # DDL, CREATE EXTENSION, GRANT). `DATABASE_URL` ham kerak (schema `url`),
   # lekin migrate uni ochib ishlatmaydi.
   migrate:
@@ -106,8 +106,8 @@ services:
         condition: service_healthy
     environment:
       TZ: UTC
-      DATABASE_URL: postgresql://bobododa_app:app@postgres:5432/bobododa?schema=public
-      DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@postgres:5432/bobododa?schema=public
+      DATABASE_URL: postgresql://bobololadono_app:app@postgres:5432/bobololadono?schema=public
+      DATABASE_MIGRATION_URL: postgresql://bobololadono_migrator:migrator@postgres:5432/bobololadono?schema=public
     restart: 'no'
 
   api:
@@ -133,21 +133,21 @@ services:
       CORS_ORIGINS: http://localhost:3000
       STAFF_CORS_ORIGINS: http://localhost:3000
       TZ: UTC
-      # Runtime — kam huquqli `bobododa_app` roli.
-      DATABASE_URL: postgresql://bobododa_app:app@postgres:5432/bobododa?schema=public
+      # Runtime — kam huquqli `bobololadono_app` roli.
+      DATABASE_URL: postgresql://bobololadono_app:app@postgres:5432/bobololadono?schema=public
       # Zod majburiy qiladi; runtime PrismaClient ishlatmaydi (faqat CLI).
-      DATABASE_MIGRATION_URL: postgresql://bobododa_migrator:migrator@postgres:5432/bobododa?schema=public
+      DATABASE_MIGRATION_URL: postgresql://bobololadono_migrator:migrator@postgres:5432/bobololadono?schema=public
       # F1 — boot paytida rol/append-only tekshiruvi (docker/initdb rollarni
       # yaratgani uchun bu yerda "on" bemalol o'tadi).
       DB_ROLE_ASSERTION: 'on'
       # T1 — sukut qiymat bilan bir xil, lekin ATAYLAB aniq yozilgan: shu ikki
       # qator (bu yerda va postgres xizmatidagi DB_APP_ROLE) doim MOS bo'lishi
       # kerak — biror kun rol nomi o'zgarsa, ikkalasini ham yangilang.
-      DB_APP_ROLE: bobododa_app
+      DB_APP_ROLE: bobololadono_app
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: bobododa
-      S3_SECRET_KEY: bobododa-secret
+      S3_ACCESS_KEY: bobololadono
+      S3_SECRET_KEY: bobololadono-secret
       JWT_ACCESS_SECRET: docker-compose-access-secret-min-32-characters
       JWT_REFRESH_SECRET: docker-compose-refresh-secret-min-32-characters
     ports:

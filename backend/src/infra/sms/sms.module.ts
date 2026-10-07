@@ -46,7 +46,7 @@ import { TextUpProvider } from './providers/textup/textup.provider';
         }
         if (provider === 'TEXTUP') {
           // Bosqich 23 (v4) — TextUp, PRODUCTION uchun tanlangan provider,
-          // Bobo&Doda o'z hisobi bilan. Ikkinchi qatlam himoya (birinchisi —
+          // Bobololadono o'z hisobi bilan. Ikkinchi qatlam himoya (birinchisi —
           // env.schema.ts Zod superRefine). `expectedUserId`/`nicknameId`/
           // shablon ID'lar ATAYLAB bu tekshiruvda YO'Q — ixtiyoriy (bo'lim 24).
           const { authUrl, smsUrl, email, password, expectedUserId, nicknameId, registrationTemplateId, passwordResetTemplateId } =

@@ -9,7 +9,7 @@ import { APPEND_ONLY_TABLES } from '@/common/db/append-only.constants';
  *   • Managed Postgres'da (`docker/initdb/10-roles.sh` ishlamaydi — u faqat
  *     yangi konteynerning birinchi ko'tarilishida ishlaydi) rollar hech
  *     qachon qo'lda yaratilmasa,
- *   • yoki kimdir shoshilinch holatda `DATABASE_URL`ga `bobododa_migrator`
+ *   • yoki kimdir shoshilinch holatda `DATABASE_URL`ga `bobololadono_migrator`
  *     ulanish satrini qo'ysa (hammasi "ishlaydi", testlar committa yashil,
  *     lekin `audit_logs` yana o'zgartirilishi mumkin) —
  * hech qanday signal bo'lmaydi. Shu yerda signal beramiz: agar runtime rol
@@ -17,12 +17,12 @@ import { APPEND_ONLY_TABLES } from '@/common/db/append-only.constants';
  * ko'tarilmaydi.
  *
  * T1 — kutilgan rol nomi QATTIQ YOZILMAGAN: chaqiruvchi beradi
- * (`AppConfigService.dbAppRole` ← `DB_APP_ROLE` env, sukut `bobododa_app`).
+ * (`AppConfigService.dbAppRole` ← `DB_APP_ROLE` env, sukut `bobololadono_app`).
  * T2 — tekshiriladigan jadval/huquq ro'yxati `common/db/append-only.constants.ts`
  * dan olinadi — yagona manba, ikki joyda mustaqil yozilmagan.
  */
 
-export const DEFAULT_APP_DB_ROLE = 'bobododa_app';
+export const DEFAULT_APP_DB_ROLE = 'bobololadono_app';
 
 /** Faqat shu funksiya chaqiradigan minimal Prisma interfeysi — testda mock/real bir xil ishlaydi. */
 export interface DbRoleAssertionQueryer {
@@ -59,7 +59,7 @@ export async function checkDbRoleHardening(
     failures.push(
       `current_user = "${currentUser}", kutilgan "${expectedRole}" (DB_APP_ROLE). ` +
         `DATABASE_URL runtime uchun shu rolni ishlatishi shart ` +
-        `("bobododa_migrator" FAQAT "prisma migrate" uchun).`,
+        `("bobololadono_migrator" FAQAT "prisma migrate" uchun).`,
     );
   }
 
@@ -105,7 +105,7 @@ export async function checkDbRoleHardening(
   if (missing.length > 0) {
     failures.push(
       `Kengaytmalar yetishmayapti: ${missing.join(', ')} — migratsiya to'liq qo'llanmagan yoki ` +
-        `"bobododa_migrator" DB ustidan CREATE huquqiga ega emas edi.`,
+        `"bobololadono_migrator" DB ustidan CREATE huquqiga ega emas edi.`,
     );
   }
 
@@ -141,7 +141,7 @@ export async function assertDbRoleHardening(
       "Tuzatish (managed Postgres yoki qo'lda sozlangan klaster):",
       '  1. Superuser bilan bir marta: backend/prisma/sql/roles.sql ni qo\'llang',
       '     (psql "$SUPERUSER_URL" -v app_pw=… -v migrator_pw=… -v db_name=… -f backend/prisma/sql/roles.sql)',
-      '  2. DATABASE_MIGRATION_URL=<bobododa_migrator ulanish satri> npx prisma migrate deploy',
+      '  2. DATABASE_MIGRATION_URL=<bobololadono_migrator ulanish satri> npx prisma migrate deploy',
       `  3. DATABASE_URL runtime uchun "${expectedRole}" rolini ishlatsin (migrator EMAS; DB_APP_ROLE bilan mos).`,
       '  Batafsil qadamlar: docs/RUNBOOK.md §3.',
     ].join('\n'),

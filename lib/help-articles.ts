@@ -337,19 +337,19 @@ export const HELP_ARTICLES: HelpArticle[] = [
     },
     content: {
       uz: [
-        "Bobo&Doda'da parol yo'q — telefon raqamingizni kiritganingizdan so'ng, darhol shu raqamga SMS orqali 6 xonali bir martalik kod yuboriladi.",
+        "Bobololadono'da parol yo'q — telefon raqamingizni kiritganingizdan so'ng, darhol shu raqamga SMS orqali 6 xonali bir martalik kod yuboriladi.",
         "Kodni kiritib tasdiqlagach, akkountingiz faollashadi va rolni (mutaxassis yoki xaridor) tanlash bosqichiga o'tasiz — hech qanday qo'shimcha email yoki Telegram tasdiqlash shart emas.",
         "Xavfsizlik uchun kod bir martalik, muddati cheklangan va qayta so'rashdan oldin qisqa kutish vaqti bor.",
         "Sessiya to'xtab qolsa ham tashvishlanmang: keyingi safar kirganingizda tizim onboarding qayerda to'xtaganini eslab, o'sha bosqichdan davom ettiradi.",
       ],
       ru: [
-        "В Bobo&Doda нет пароля — как только вы вводите номер телефона, на него сразу отправляется одноразовый 6-значный код по SMS.",
+        "В Bobololadono нет пароля — как только вы вводите номер телефона, на него сразу отправляется одноразовый 6-значный код по SMS.",
         "После ввода и подтверждения кода аккаунт активируется, и вы переходите к выбору роли (специалист или клиент) — никакого дополнительного подтверждения по email или Telegram не требуется.",
         "Для безопасности код одноразовый, имеет ограниченный срок действия, и перед повторным запросом действует короткое время ожидания.",
         "Не переживайте, если сессия прервётся: при следующем входе система вспомнит, на каком шаге вы остановились, и продолжит именно с него.",
       ],
       en: [
-        "Bobo&Doda has no password — as soon as you enter your phone number, a one-time 6-digit code is sent to it immediately by SMS.",
+        "Bobololadono has no password — as soon as you enter your phone number, a one-time 6-digit code is sent to it immediately by SMS.",
         "Once you enter and confirm the code, your account is activated and you move on to choosing a role (specialist or client) — no additional email or Telegram verification is needed.",
         "For security, the code is single-use, time-limited, and there's a short cooldown before you can request another one.",
         "Don't worry if your session is interrupted: next time you log in, the system remembers where onboarding stopped and continues from there.",
@@ -375,19 +375,19 @@ export const HELP_ARTICLES: HelpArticle[] = [
       uz: [
         "Bosqich bo'yicha kelishmovchilik chiqsa, avval o'zgartirish so'rash tavsiya etiladi — bu ko'pincha muammoni tezroq hal qiladi.",
         "Kelishuvga erishilmasa, ikkala tomon ham nizo ochishi mumkin. Nizo ochilgach, tegishli bosqich summasi muzlatiladi — hech kimga o'tmaydi.",
-        "Har ikki tomon o'z dalillarini (yozishmalar, fayllar, izohlar) taqdim etadi. Bobo&Doda jamoasi ularni ko'rib chiqib, adolatli qaror qabul qiladi.",
+        "Har ikki tomon o'z dalillarini (yozishmalar, fayllar, izohlar) taqdim etadi. Bobololadono jamoasi ularni ko'rib chiqib, adolatli qaror qabul qiladi.",
         "Qaror chiqqach, muzlatilgan summa qarorga muvofiq mutaxassisga o'tkaziladi yoki xaridor balansiga qaytariladi.",
       ],
       ru: [
         "При разногласии по этапу сначала рекомендуется запросить доработку — это часто решает проблему быстрее.",
         "Если договориться не удаётся, любая из сторон может открыть спор. После открытия спора сумма соответствующего этапа замораживается — она никому не переводится.",
-        "Обе стороны предоставляют свои доказательства (переписку, файлы, комментарии). Команда Bobo&Doda рассматривает их и принимает справедливое решение.",
+        "Обе стороны предоставляют свои доказательства (переписку, файлы, комментарии). Команда Bobololadono рассматривает их и принимает справедливое решение.",
         "После вынесения решения замороженная сумма либо переводится специалисту, либо возвращается на баланс клиента — в соответствии с решением.",
       ],
       en: [
         "If there's disagreement over a milestone, requesting a revision first is recommended — it often resolves things faster.",
         "If no agreement is reached, either side can open a dispute. Once opened, the milestone's funds are frozen — they go to no one.",
-        "Both sides submit their evidence (messages, files, comments). The Bobo&Doda team reviews it and makes a fair decision.",
+        "Both sides submit their evidence (messages, files, comments). The Bobololadono team reviews it and makes a fair decision.",
         "Once a decision is made, the frozen amount is either released to the specialist or returned to the client's balance, according to the ruling.",
       ],
     },
@@ -410,19 +410,19 @@ export const HELP_ARTICLES: HelpArticle[] = [
     content: {
       uz: [
         "Shartnoma \"imzolangan\" yoki \"faol\" holatida bo'lsa, uni bekor qilish mumkin. Agar topshirilgan (hali ko'rib chiqilmagan) bosqich bo'lsa, bekor qilish bloklanadi — avval shu bosqich hal qilinishi kerak.",
-        "Escrou'da turgan, hali qabul qilinmagan mablag' xaridorning Bobo&Doda balansiga qaytariladi.",
+        "Escrou'da turgan, hali qabul qilinmagan mablag' xaridorning Bobololadono balansiga qaytariladi.",
         "Qabul qilingan bosqichlar uchun to'lov mutaxassisda qoladi — bekor qilish faqat hali ishlanmagan/qabul qilinmagan qismga tegishli.",
         "Balansdagi mablag'ni Xarajatlar sahifasidan istalgan payt bog'langan kartaga yechib olishingiz mumkin.",
       ],
       ru: [
         "Контракт можно отменить, если он находится в статусе «подписан» или «активен». Если есть сданный (ещё не проверенный) этап, отмена блокируется — сначала нужно решить вопрос по нему.",
-        "Средства в эскроу, ещё не принятые, возвращаются на баланс Bobo&Doda клиента.",
+        "Средства в эскроу, ещё не принятые, возвращаются на баланс Bobololadono клиента.",
         "Оплата за принятые этапы остаётся у специалиста — отмена касается только ещё не выполненной/не принятой части.",
         "Средства с баланса можно в любой момент вывести на привязанную карту со страницы «Расходы».",
       ],
       en: [
         "A contract can be cancelled while it's \"signed\" or \"active\". If a milestone has been submitted and not yet reviewed, cancellation is blocked until that milestone is resolved.",
-        "Funds sitting in escrow that haven't been accepted yet are returned to the client's Bobo&Doda balance.",
+        "Funds sitting in escrow that haven't been accepted yet are returned to the client's Bobololadono balance.",
         "Payment for already-accepted milestones stays with the specialist — cancellation only affects the not-yet-completed/accepted portion.",
         "Balance funds can be withdrawn to a linked card at any time from the Expenses page.",
       ],

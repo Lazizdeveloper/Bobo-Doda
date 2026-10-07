@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @bobododa/contracts — generatsiya.
+ * @bobololadono/contracts — generatsiya.
  *
  *   npm run generate:contracts   (root'dan)
  *

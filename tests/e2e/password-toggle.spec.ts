@@ -105,7 +105,7 @@ test.describe("Password Visibility Toggle Suite", () => {
     const emailInput = page.locator('input[type="email"]');
     const passwordInput = page.locator('input[autocomplete="current-password"]');
 
-    await emailInput.fill("admin@bobododa.uz");
+    await emailInput.fill("admin@bobololadono.uz");
     await passwordInput.fill("WrongPassword123!");
 
     // Focus password input and press Enter
@@ -196,7 +196,7 @@ test.describe("Password Visibility Toggle Suite", () => {
         JSON.stringify({
           id: "admin-1",
           fullName: "Test Admin",
-          email: "admin@bobododa.uz",
+          email: "admin@bobololadono.uz",
           role: "operator",
           title: "Operator",
           permissions: ["moderation"],

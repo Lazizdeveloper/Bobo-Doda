@@ -163,7 +163,7 @@ export default function KelganTaklifPage() {
       {offer.status === "rad_etildi" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-card p-4">
           <p className="text-xs text-muted">{t("soffer.declinedNote")}</p>
-          <Link href="/xaridor/bozor?tab=jobs">
+          <Link href="/bozor?tab=jobs">
             <Button variant="secondary" size="sm">
               {t("props.emptyCta")}
             </Button>
@@ -173,7 +173,7 @@ export default function KelganTaklifPage() {
       {offer.status === "bekor_qilingan" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-card p-4">
           <p className="text-xs text-muted">{t("soffer.withdrawnNote")}</p>
-          <Link href="/xaridor/bozor?tab=jobs">
+          <Link href="/bozor?tab=jobs">
             <Button variant="secondary" size="sm">
               {t("props.emptyCta")}
             </Button>

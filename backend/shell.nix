@@ -30,6 +30,6 @@ pkgs.mkShell {
     export PRISMA_SCHEMA_ENGINE_BINARY="${prismaEngines}/bin/schema-engine"
     export PRISMA_FMT_BINARY="${prismaEngines}/bin/prisma-fmt"
     export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-    echo "Bobo&Doda backend nix-shell — Prisma engine: ${prismaEngines}"
+    echo "Bobololadono backend nix-shell — Prisma engine: ${prismaEngines}"
   '';
 }

@@ -28,7 +28,7 @@
  * ulanishi SHART) uchun: qiymat BUTUNLAY BERILMAGAN bo'lsa ham xato
  * tashlaydi. Bo'sh qoldirish — xuddi noto'g'ri qiymat kabi — 2026-09-20
  * insidentining boshqa varianti: `API_BASE=""` bo'lsa so'rov
- * `app.bobododa.uz`ning O'ZIGA, prefiksSIZ ketadi va xuddi shunday 404
+ * `app.bobololadono.uz`ning O'ZIGA, prefiksSIZ ketadi va xuddi shunday 404
  * beradi. Vercel landing/CI/lokal dev uchun esa qiymat ATAYLAB bo'sh
  * qoldirilishi kerak — ular uchun `requireForApp=false`.
  */
@@ -40,8 +40,8 @@ export function assertApiUrlSane(url, options = {}) {
       throw new Error(
         'NEXT_PUBLIC_API_URL berilishi SHART (Railway "frontend" xizmati uchun) — bo\'sh qoldirish ' +
           '2026-09-20 insidentining "sozlanmagan" varianti: API_BASE="" bo\'lganda so\'rovlar ' +
-          'app.bobododa.uz\'ning o\'ziga, "/api/v1" prefiksisiz ketadi va 404 bilan yiqiladi. ' +
-          'Masalan: "https://api.bobododa.uz/api/v1".',
+          'app.bobololadono.uz\'ning o\'ziga, "/api/v1" prefiksisiz ketadi va 404 bilan yiqiladi. ' +
+          'Masalan: "https://api.bobololadono.uz/api/v1".',
       );
     }
     return; // Landing (Vercel) / CI / lokal dev — ataylab bo'sh.
@@ -78,7 +78,7 @@ export function assertApiUrlSane(url, options = {}) {
   if (!/\/api\/v1\/?$/.test(parsed.pathname)) {
     throw new Error(
       `NEXT_PUBLIC_API_URL global API prefiksi ("/api/v1") bilan tugashi SHART (backend/src/main.ts: setGlobalPrefix). ` +
-        `Qiymat: "${url}". Masalan: "https://api.bobododa.uz/api/v1". ` +
+        `Qiymat: "${url}". Masalan: "https://api.bobololadono.uz/api/v1". ` +
         `Buni tekshirmasdan qoldirish 2026-09-20'dagi haqiqiy production insidentga sabab bo'lgan — ` +
         `HAR bir haqiqiy API so'rov (ro'yxatdan o'tish, login, staff kirish) 404 bilan yiqilgan edi.`,
     );

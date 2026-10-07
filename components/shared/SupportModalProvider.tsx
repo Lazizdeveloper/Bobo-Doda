@@ -28,7 +28,7 @@ export function SupportModalProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState("unknown");
   const [route, setRoute] = useState<string | undefined>(undefined);
-  /* admin.bobododa.uz'da (2026-09 ko'chirish) admin sahifalari pathname'i
+  /* admin.bobololadono.uz'da (2026-09 ko'chirish) admin sahifalari pathname'i
      `/admin` bilan boshlanmaydi (`proxy.ts` prefiksni striplaydi) —
      shuning uchun host tekshiruvi HAM kerak. Faqat mount'dan keyin
      ishlatiladi (`mounted`) — render paytida to'g'ridan-to'g'ri chaqirilsa

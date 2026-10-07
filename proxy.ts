@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-/* Admin domen ko'chirishi (2026-09) — admin.bobododa.uz o'z domeni bo'ladi,
+/* Admin domen ko'chirishi (2026-09) — admin.bobololadono.uz o'z domeni bo'ladi,
    lekin bitta Railway "frontend" xizmati ikkalasini ham xizmat qiladi
    (host-asoslangan routing — .claude devops audit topilmasi: alohida
    xizmat bir xil kodni qayta build qiladi va bir xil routing ishini talab
@@ -12,8 +12,8 @@ import type { NextRequest } from "next/server";
    open-redirect oldini olish uchun redirect manzili doim ishonchli
    manbadan, hech qachon foydalanuvchi boshqaradigan header'dan kelishi
    kerak). */
-const ADMIN_HOST = "admin.bobododa.uz";
-const APP_HOST = "app.bobododa.uz";
+const ADMIN_HOST = "admin.bobololadono.uz";
+const APP_HOST = "app.bobololadono.uz";
 const RAW_FRONTEND_HOST = "frontend-production-25bc.up.railway.app";
 const ADMIN_ORIGIN = `https://${ADMIN_HOST}`;
 const APP_ORIGIN = `https://${APP_HOST}`;
@@ -23,7 +23,7 @@ const ADMIN_PREFIX = "/admin";
 /* Ichki `app/admin/**` fayl daraxtiga to'g'ri keladigan mantiqiy yo'llar
    (bosh segment). Frontend-engineer audit — to'liq ro'yxat (17 bo'lim +
    ildiz). Yangi admin bo'limi qo'shilsa shu ro'yxat ham yangilanishi
-   kerak — aks holda admin.bobododa.uz'da 404 (yoki xatarliroq — app
+   kerak — aks holda admin.bobololadono.uz'da 404 (yoki xatarliroq — app
    host'ga qaytarib yuborish) beradi. */
 const ADMIN_LOGICAL_ROUTES = [
   "/kirish",

@@ -1,6 +1,6 @@
 # Release Gate Workflow
 
-The last step before production GO. Owned by `release-engineer`, but `release-engineer` is a gate on evidence quality — not a substitute for the domain reviews in `.claude/workflows/code-change-review.md` and `production-readiness.md`, and not authorized to override a specialist's FAIL on its own judgment. `bobododa-engineering-lead`, if it routed the work, hands off to `release-engineer` here and stops — the lead is never itself a release authority (see `.claude/review-matrix.md`'s "Orchestration role" note), and it cannot skip this gate for anything production-affecting.
+The last step before production GO. Owned by `release-engineer`, but `release-engineer` is a gate on evidence quality — not a substitute for the domain reviews in `.claude/workflows/code-change-review.md` and `production-readiness.md`, and not authorized to override a specialist's FAIL on its own judgment. `bobololadono-engineering-lead`, if it routed the work, hands off to `release-engineer` here and stops — the lead is never itself a release authority (see `.claude/review-matrix.md`'s "Orchestration role" note), and it cannot skip this gate for anything production-affecting.
 
 ## What release-engineer checks
 

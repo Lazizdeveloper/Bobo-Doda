@@ -1,4 +1,4 @@
-# Production Readiness — Bobo&Doda backend
+# Production Readiness — Bobololadono backend
 
 Bosqich 12/13 natijasi. Bu hujjat production launch oldidan tekshiriladigan
 YAGONA checklist — har band `docs/RUNBOOK.md`ning tegishli bo'limiga
@@ -31,8 +31,8 @@ Convenience.**
 ## 3. Muhit o'zgaruvchilari (env)
 
 - [ ] `NODE_ENV=production`
-- [ ] `DATABASE_URL` — `bobododa_app` roli (MIGRATOR EMAS)
-- [ ] `DATABASE_MIGRATION_URL` — `bobododa_migrator` roli (faqat migratsiya CLI)
+- [ ] `DATABASE_URL` — `bobololadono_app` roli (MIGRATOR EMAS)
+- [ ] `DATABASE_MIGRATION_URL` — `bobololadono_migrator` roli (faqat migratsiya CLI)
 - [ ] `REDIS_URL` — production Redis (auth/TLS provayder talabiga qarab)
 - [ ] `JWT_ACCESS_SECRET` / `JWT_STAFF_ACCESS_SECRET` — ≥32 belgi, tasodifiy, `.env.example` placeholder EMAS
 - [ ] `STAFF_TOTP_ENCRYPTION_KEY` — 64 hex belgi, tasodifiy
@@ -47,9 +47,9 @@ Convenience.**
 
 ## 4. DB
 
-- [ ] `bobododa_migrator` != `bobododa_app` (alohida rollar, RUNBOOK §3)
+- [ ] `bobololadono_migrator` != `bobololadono_app` (alohida rollar, RUNBOOK §3)
 - [ ] Boot vaqtida F1 assertion (`DB_ROLE_ASSERTION=on`) ishlaydi — noto'g'ri rol bilan app ko'tarilmaydi
-- [ ] Append-only jadvallar (`APPEND_ONLY_TABLES`) uchun `bobododa_app`da UPDATE/DELETE huquqi YO'Q (migratsiya + F1 ikkalasi ham tasdiqlangan)
+- [ ] Append-only jadvallar (`APPEND_ONLY_TABLES`) uchun `bobololadono_app`da UPDATE/DELETE huquqi YO'Q (migratsiya + F1 ikkalasi ham tasdiqlangan)
 - [ ] Connection pool — oqilona chegara (managed Postgres provayder tavsiyasiga qarab, "unlimited" emas)
 - [ ] TLS — provayder talab qilsa `sslmode=require` (yoki teng) `DATABASE_URL`da
 
@@ -249,7 +249,7 @@ izolyatsiyasi masalasi.
 
 Loyihada frontend uchun alohida unit/integration test framework (Jest/
 Vitest) YO'Q — test qatlami butunlay Playwright E2E orqali (pastga qarang).
-Bitta ilova (`bobo-doda`, App Router) — "user app"/"partner app"/"admin
+Bitta ilova (`bobololadono`, App Router) — "user app"/"partner app"/"admin
 app" fizik jihatdan bitta Next.js binarida, rol asosida marshrutlangan
 (`/xaridor`, `/mutaxassis`, `/admin`+`/rahbariyat`).
 
@@ -289,7 +289,7 @@ hisoblari **real argon2id hashing kodi** orqali (`backend/scripts/
 e2e-staff-fixture.cjs` — `dist/common/security/hash.service.js`ni
 to'g'ridan-to'g'ri ishlatadi) shu ALOHIDA bazaga yaratildi. Dev/prod
 staff jadvaliga BITTA ham yozuv tegilmadi (skript `DATABASE_URL`da
-"bobododa_e2e" yo'q bo'lsa ATAYLAB rad etadi).
+"bobololadono_e2e" yo'q bo'lsa ATAYLAB rad etadi).
 
 Fake JWT, localStorage rol in'ektsiyasi, permission bypass, TOTP
 bypass — HECH BIRI ishlatilmadi. Barcha login `/staff/auth/login` real
@@ -626,9 +626,9 @@ MARTA invalidate+qayta login+qayta urinish, ikkinchi 401 — muvaffaqiyatsiz
 **Hisob holati (2026-09-17 YANGILANDI, `GET /v1/templates` real javobi
 bilan tasdiqlangan)**: ikkala OTP shablon ("Registration"/"Password
 Reset") endi **`active`** (moderatsiya TASDIQLANGAN). Bu jarayonda
-**kritik topilma**: dastlab kodga yozilgan qisqa matn ("BOBODODA
+**kritik topilma**: dastlab kodga yozilgan qisqa matn ("bobololadono
 tasdiqlash kodi: ...") moderatsiya tomonidan HAQIQATDA RAD ETILGAN
-ekan — tasdiqlangan (`active`) matn UZUNROQ: "BOBODODA saytida
+ekan — tasdiqlangan (`active`) matn UZUNROQ: "bobololadono saytida
 ro'yxatdan o'tish/parolni tiklash uchun tasdiqlash kodi: ...".
 `renderTextUpText()` shu ANIQ tasdiqlangan matnga tuzatildi (taxmin
 emas — real API javobidan). `TEXTUP_REGISTRATION_TEMPLATE_ID`/
@@ -684,7 +684,7 @@ backend vaqtincha `SMS_PROVIDER=TEXTUP`+`DEV_EXPOSE_OTP=false` bilan
 qayta ishga tushirilib, keyin xavfsiz `CONSOLE` holatiga qaytarildi —
 Jest/Playwright konfiguratsiyasi TEGILMADI):
 
-1. **Nickname**: `GET /v1/nick-names` — `BOBODODA` topildi, lekin
+1. **Nickname**: `GET /v1/nick-names` — `bobololadono` topildi, lekin
    `status:"in_verify"` (hali tasdiqlanmagan) — `TEXTUP_NICKNAME_ID`
    ATAYLAB sozlanmadi (foydalanuvchi ko'rsatmasi: "hali pending bo'lsa
    bo'sh qoldiring"). SMS qisqa raqamdan yuborildi — bu ham TO'G'RI.
@@ -694,7 +694,7 @@ Jest/Playwright konfiguratsiyasi TEGILMADI):
    asinxron): `success=true`, real `providerMessageId` (TextUp `smsId`)
    qaytdi, `errorMessage` bo'sh.
 3. **Haqiqiy SMS qabul qilindi** — foydalanuvchi matnni o'qib berdi:
-   `"BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: XXXXXX"`
+   `"bobololadono saytida ro'yxatdan o'tish uchun tasdiqlash kodi: XXXXXX"`
    — `renderTextUpText()`dagi tasdiqlangan matn bilan SO'ZMA-SO'Z mos.
 4. **Real `POST /auth/register/verify-otp`** — foydalanuvchi SMS'dan
    o'qigan HAQIQIY kod bilan chaqirildi → HTTP 200, `registrationToken`
@@ -709,7 +709,7 @@ matn/kod ishlatildi.
 
 ## 22. Bosqich 23 — Railway production deploy + PAYMENTS_ENABLED=false
 
-**Railway**: loyiha "Bobo-Doda" (workspace "Laziz Shakarov's Projects",
+**Railway**: loyiha "Bobololadono" (workspace "Laziz Shakarov's Projects",
 `production` environment). Xizmatlar: `backend` (Dockerfile, `backend/`
 o'z build kontekstida — quyida), `frontend` (Nixpacks, root `next build`/
 `next start`), `Postgres`, `Redis` — ikkalasi ham PRIVATE tarmoq orqali
@@ -728,9 +728,9 @@ ochilmagan. Ikkala domen HAM haqiqiy ishlaydi va real HTTP tekshirilgan:
   toza `DomainError` (xom stack trace emas), `requestId` bor.
 
 **DB rollari — REAL Railway Postgres'da tasdiqlangan** (taxmin emas):
-`prisma/sql/roles.sql` orqali `bobododa_app`/`bobododa_migrator`
+`prisma/sql/roles.sql` orqali `bobololadono_app`/`bobololadono_migrator`
 bootstrap qilindi, 21 ta migratsiya toza DB'ga qo'llandi. Uch aniq
-tekshiruv: `bobododa_app` SELECT qila oladi ✓, `CREATE TABLE` rad etiladi
+tekshiruv: `bobololadono_app` SELECT qila oladi ✓, `CREATE TABLE` rad etiladi
 ("permission denied for schema public") ✓, `ledger_entries`ga UPDATE rad
 etiladi ("permission denied for table ledger_entries") ✓ — moliyaviy
 append-only himoya REAL production DB'da ishlaydi, faqat kod darajasida
@@ -776,9 +776,9 @@ keyin haqiqiy GitHub Actions run bilan qayta tekshirildi.
 "quality" job doim yiqilgani uchun "integration" job (`needs: quality`)
 HECH QACHON haqiqatan ishlab ko'rmagan edi — yuqoridagi tuzatishdan keyin
 birinchi marta ishga tushganda "e2e" bosqichi HAR BIR spec'da
-`P1000: Authentication failed ... 'bobododa_migrator'` bilan yiqildi.
-Sabab: "Migration test" bosqichi `roles.sql` orqali `bobododa_app`/
-`bobododa_migrator` rollarini `ci_app_pw`/`ci_migrator_pw` parollari bilan
+`P1000: Authentication failed ... 'bobololadono_migrator'` bilan yiqildi.
+Sabab: "Migration test" bosqichi `roles.sql` orqali `bobololadono_app`/
+`bobololadono_migrator` rollarini `ci_app_pw`/`ci_migrator_pw` parollari bilan
 yaratadi; Postgres rollari KLASTER-GLOBAL va bir xil shared service
 konteyner keyingi "e2e" bosqichida ham ishlatiladi, u yerda har bir
 spec'ning `beforeAll`i `provisionDb()` (`test/support/e2e-infra.ts`)
@@ -870,13 +870,13 @@ qayd etiladi (P0/P1 emas — production xavfsizligiga ta'siri yo'q).
 **Backend Dockerfile — jiddiy topilma tuzatildi**: `backend/`ning o'ziga
 xos `package-lock.json`i YO'Q edi (npm workspaces monorepo, yagona lockfile
 ildizda) — image HAR DOIM `deps` bosqichida yiqilardi. Backend HECH QANDAY
-workspace paketiga (`@bobododa/contracts`) bog'liq emasligi tekshirilgach,
+workspace paketiga (`@bobololadono/contracts`) bog'liq emasligi tekshirilgach,
 ALOHIDA, standalone lockfile generatsiya qilindi (`npm install --package-
 lock-only`, izolyatsiyalangan papkada) va `backend/`ga qo'shildi — Dockerfile
 o'zining asl, sodda dizayniga (build konteksti `backend/`ning o'zi) qaytdi.
 Haqiqiy Railway build bilan tasdiqlandi.
 
-**Branch protection**: `main` (GitHub `Lazizdeveloper/Bobo-Doda`, `origin`
+**Branch protection**: `main` (GitHub `Lazizdeveloper/Bobololadono`, `origin`
 — DIQQAT, `upstream` boshqa hisobga tegishli, TEGILMADI) endi himoyalangan:
 PR majburiy, force-push va o'chirish bloklangan. `required_status_checks`
 ATAYLAB hali sozlanmagan — CI "quality" job'i uzoq vaqt yiqilib kelgani
@@ -920,36 +920,36 @@ dashboard'dagi avtomatik backup sozlamasi kutilmoqda; CI "integration"
 job'idagi qoldiq P2 topilma launch'ni BLOKLAMAYDI (production xavfsizligiga
 ta'siri yo'q), lekin CI ishonchliligi uchun ANIQ ochiq qolmoqda
 
-## 23. Bosqich 23 — Domen bo'linishi: bobododa.uz (landing) / app+api (Railway)
+## 23. Bosqich 23 — Domen bo'linishi: bobololadono.uz (landing) / app+api (Railway)
 
-**Muammo (P0, endi YOPILGAN)**: `bobododa.uz` (Vercel) 39 kunlik, real backend'ga
+**Muammo (P0, endi YOPILGAN)**: `bobololadono.uz` (Vercel) 39 kunlik, real backend'ga
 ULANMAGAN, to'liq ilovaning (kabinet sahifalari bilan birga) eski nusxasini
 ko'rsatib turardi — `NEXT_PUBLIC_API_URL` sozlanmagan, `connect-src 'self'`
 faqat, haqiqiy foydalanuvchi login/ro'yxatdan o'tishga urinsa So'rovlar
 jimgina muvaffaqiyatsiz bo'lardi (backend yo'q, faqat statik HTML).
 
 **Yakuniy arxitektura (real, ishga tushirilgan va tekshirilgan)**:
-- `https://bobododa.uz` — Vercel, FAQAT landing + huquqiy/FAQ/yordam sahifalari
+- `https://bobololadono.uz` — Vercel, FAQAT landing + huquqiy/FAQ/yordam sahifalari
   (`/`, `/oferta`, `/maxfiylik`, `/shartlar`, `/savol-javob`, `/yordam-markazi`).
   Backend'ga BOG'LIQ EMAS (`NEXT_PUBLIC_API_URL` Vercel'da sozlanmagan,
   `connect-src 'self'` — ataylab).
-- `https://www.bobododa.uz` — `bobododa.uz`ga 308 permanent redirect
+- `https://www.bobololadono.uz` — `bobololadono.uz`ga 308 permanent redirect
   (host-based, `next.config.mjs`).
-- `https://app.bobododa.uz` — Railway `frontend` xizmati (custom domain),
-  haqiqiy backend'ga ulangan (`NEXT_PUBLIC_API_URL=https://api.bobododa.uz`,
+- `https://app.bobololadono.uz` — Railway `frontend` xizmati (custom domain),
+  haqiqiy backend'ga ulangan (`NEXT_PUBLIC_API_URL=https://api.bobololadono.uz`,
   build vaqtida sozlangan). Barcha kabinet/auth marshrutlari (`/kirish`,
   `/royxatdan-otish`, `/parolni-unutdim`, `/rol-tanlash`, `/mutaxassis/*`,
   `/xaridor/*`, `/admin/*`, `/rahbariyat/*`, `/tolov/*`) shu yerda.
-- `https://api.bobododa.uz` — Railway `backend` xizmati (custom domain).
-- Bitta kod, ikki deploy: `bobododa.uz` (Vercel)dagi marshrut redirect'lari
+- `https://api.bobololadono.uz` — Railway `backend` xizmati (custom domain).
+- Bitta kod, ikki deploy: `bobololadono.uz` (Vercel)dagi marshrut redirect'lari
   `next.config.mjs`'da `process.env.VERCEL === "1"` (Vercel platformasi
   AVTOMATIK beradigan flag, qo'lda sozlash shart emas) bilan shartlangan —
-  Railway'dagi (`app.bobododa.uz`) xuddi shu kod bazasi bu shartga tushmaydi
+  Railway'dagi (`app.bobololadono.uz`) xuddi shu kod bazasi bu shartga tushmaydi
   va barcha marshrutlarni to'g'ridan-to'g'ri ko'rsatadi. `app/robots.ts` ham
   xuddi shu flag bilan: Vercel'da ochiq sahifalarni indekslashga ruxsat
   beradi, Railway'da (autentifikatsiyalangan ilova) butunlay yopadi.
 
-**DNS (AHOST, `bobododa.uz` zonasi)**:
+**DNS (AHOST, `bobololadono.uz` zonasi)**:
 ```
 app  CNAME  q8qeuwkx.up.railway.app
 api  CNAME  cc3zmfhi.up.railway.app
@@ -962,10 +962,10 @@ TEGILMADI.
 
 **TLS**: ikkalasi ham Railway orqali Let's Encrypt'dan avtomatik, haqiqiy
 (wildcard emas) sertifikat oldi — `curl` bilan (bypass'siz) tasdiqlangan:
-`app.bobododa.uz` → `CN=app.bobododa.uz`, `api.bobododa.uz` →
-`CN=api.bobododa.uz`, ikkalasi ham `subjectAltName` mos keladi.
+`app.bobololadono.uz` → `CN=app.bobololadono.uz`, `api.bobololadono.uz` →
+`CN=api.bobololadono.uz`, ikkalasi ham `subjectAltName` mos keladi.
 
-**CORS**: backend `CORS_ORIGINS` endi `https://app.bobododa.uz` VA eski xom
+**CORS**: backend `CORS_ORIGINS` endi `https://app.bobololadono.uz` VA eski xom
 Railway domenini (`https://frontend-production-25bc.up.railway.app`) ikkalasini
 ham o'z ichiga oladi (fallback — bo'lim 17: xom domenlar operatsion zaxira
 sifatida qoldiriladi). Ikkalasi ham HAQIQIY CORS preflight bilan tekshirildi
@@ -983,12 +983,12 @@ tushiradi). `railway redeploy --from-source` kerak — bu haqiqiy qayta
 build qiladi. Backend uchun (`CORS_ORIGINS` — runtime o'zgaruvchi) oddiy
 redeploy yetarli edi.
 
-**Tasdiqlash**: `bobododa.uz/kirish` va barcha boshqa ilova marshrutlari
-→ `app.bobododa.uz`ga 308 (query string saqlanadi), `www.bobododa.uz` →
-`bobododa.uz`, huquqiy sahifalar joyida qoladi, canonical/OG/Twitter/
+**Tasdiqlash**: `bobololadono.uz/kirish` va barcha boshqa ilova marshrutlari
+→ `app.bobololadono.uz`ga 308 (query string saqlanadi), `www.bobololadono.uz` →
+`bobololadono.uz`, huquqiy sahifalar joyida qoladi, canonical/OG/Twitter/
 robots.txt/sitemap.xml barchasi haqiqiy production domenida tekshirildi,
-`app.bobododa.uz`ning JS bundle'ida FAQAT `https://api.bobododa.uz`
-uchraydi (eski xom Railway URL yoki localhost — YO'Q), `api.bobododa.uz/
+`app.bobololadono.uz`ning JS bundle'ida FAQAT `https://api.bobololadono.uz`
+uchraydi (eski xom Railway URL yoki localhost — YO'Q), `api.bobololadono.uz/
 health/ready` → `db:true, redis:true`.
 
 ### DOMAIN_CUTOVER_COMPLETE: **YES**

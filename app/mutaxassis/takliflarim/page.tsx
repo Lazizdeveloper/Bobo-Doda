@@ -138,7 +138,7 @@ export default function TakliflarimPage() {
           title={proposals.length === 0 ? t("props.empty") : t("props.emptyFiltered")}
           action={
             proposals.length === 0 ? (
-              <Link href="/xaridor/bozor?tab=jobs">
+              <Link href="/bozor?tab=jobs">
                 <Button>{t("props.emptyCta")}</Button>
               </Link>
             ) : undefined

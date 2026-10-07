@@ -43,10 +43,10 @@ export const envSchema = z
       .transform(csv),
     // Admin domen ko'chirishi (2026-09, bo'lim 3) — security audit topilmasi
     // 3a: yagona umumiy CORS ro'yxat staff sessiyasiga HECH QANDAY izolyatsiya
-    // bermaydi (`app.bobododa.uz`dagi har qanday skript `/staff/auth/refresh`ni
+    // bermaydi (`app.bobololadono.uz`dagi har qanday skript `/staff/auth/refresh`ni
     // credentialed so'rov bilan chaqira olardi). `staff/*` yo'llari endi
     // ALOHIDA, TORROQ ro'yxatdan o'tadi (`main.ts`dagi CORS delegate) — faqat
-    // admin.bobododa.uz, hech qachon app.bobododa.uz. Marketplace `CORS_ORIGINS`
+    // admin.bobololadono.uz, hech qachon app.bobololadono.uz. Marketplace `CORS_ORIGINS`
     // esa o'zgarishsiz qoladi (admin frontend staff/* dan tashqari umumiy
     // endpoint chaqirmaydi).
     STAFF_CORS_ORIGINS: z
@@ -63,9 +63,9 @@ export const envSchema = z
 
     // ── Datastores (MAJBURIY — Bosqich 1) ────────────────────────────────
     // A4 — ikki alohida rol, ikki alohida URL:
-    //   DATABASE_URL           → `bobododa_app`      (runtime, kam huquq;
+    //   DATABASE_URL           → `bobololadono_app`      (runtime, kam huquq;
     //                            append-only jadvallarga UPDATE/DELETE yo'q)
-    //   DATABASE_MIGRATION_URL → `bobododa_migrator` (DDL / CREATE EXTENSION /
+    //   DATABASE_MIGRATION_URL → `bobololadono_migrator` (DDL / CREATE EXTENSION /
     //                            GRANT — faqat `prisma migrate deploy`)
     // Ikkalasi ham majburiy: schema `directUrl` uni talab qiladi va
     // "append-only kodda emas, DB darajasida" faqat rol ajratilganda ishlaydi.
@@ -83,22 +83,22 @@ export const envSchema = z
     // provayderlari rol nomiga cheklov qo'yadi (prefiks, uzunlik, rezervlangan
     // so'z). Postgres kvotalanmagan identifikator qoidasi: kichik harf/pastki
     // chiziq bilan boshlanadi, ≤63 belgi. `roles.sql`/migratsiya shu qiymatni
-    // DB darajasidagi GUC (`bobododa.app_role`) orqali oladi.
+    // DB darajasidagi GUC (`bobololadono.app_role`) orqali oladi.
     DB_APP_ROLE: z
       .string()
       .regex(
         /^[a-z_][a-z0-9_]{0,62}$/,
         'DB_APP_ROLE — kvotalanmagan Postgres identifikatori bo\'lishi shart (kichik harf/pastki chiziq bilan boshlanadi, ≤63 belgi)',
       )
-      .default('bobododa_app'),
+      .default('bobololadono_app'),
 
     // ── S3 / MinIO (Bosqich 2+ da majburiy) ─────────────────────────────
     S3_ENDPOINT: z.string().url().optional(),
     S3_REGION: z.string().default('us-east-1'),
     S3_ACCESS_KEY: z.string().optional(),
     S3_SECRET_KEY: z.string().optional(),
-    S3_BUCKET_UPLOADS: z.string().default('bobododa-uploads'),
-    S3_BUCKET_KYC: z.string().default('bobododa-kyc'),
+    S3_BUCKET_UPLOADS: z.string().default('bobololadono-uploads'),
+    S3_BUCKET_KYC: z.string().default('bobololadono-kyc'),
 
     // ── Auth (Bosqich 2 — MAJBURIY) ─────────────────────────────────────
     // Marketplace (User) va Staff — ATAYLAB ALOHIDA ACCESS sirlar (talab:
@@ -204,7 +204,7 @@ export const envSchema = z
     // `CONSOLE` — real SMS yubormaydi (konsolga chiqaradi), FAQAT dev/test.
     // `PLAYMOBILE` — Bosqich 13'da rasmiy PLAY MOBILE SMS-Broker HTTP API
     // (playmobile.uz/instruction/, PDF spec) asosida implement qilindi.
-    // `TEXTUP` — Bosqich 23, PRODUCTION uchun TANLANGAN provider, Bobo&Doda
+    // `TEXTUP` — Bosqich 23, PRODUCTION uchun TANLANGAN provider, Bobololadono
     // o'z hisobi bilan. Basic auth EMAS — ikkita ALOHIDA host bilan
     // email/parol login + Bearer accessToken oqimi (`textup.provider.ts`
     // va `textup-token-manager.ts` izohiga qarang). Eskiz — rasmiy texnik
@@ -232,12 +232,12 @@ export const envSchema = z
     // tekshiriladi (fail-closed) — so'rovga qo'yiladigan `userId` esa HAR
     // DOIM runtime login javobidan olinadi, bu maydondan EMAS.
     TEXTUP_EXPECTED_USER_ID: z.string().optional(),
-    // Bo'lim 9/12 — ixtiyoriy, tasdiqlangan alpha-nom ("BOBODODA" hozir
+    // Bo'lim 9/12 — ixtiyoriy, tasdiqlangan alpha-nom ("bobololadono" hozir
     // "Tekshirilmoqda"). Berilmasa qisqa raqamdan yuboriladi — bu ham
     // TO'G'RI ishlaydi, majburiy EMAS.
     TEXTUP_NICKNAME_ID: z.string().optional(),
     // Bo'lim 10/11 — IKKITA ALOHIDA shablon ID (bitta umumiy EMAS): har
-    // bir moderatsiya matni ("BOBODODA Registration/Password Reset OTP")
+    // bir moderatsiya matni ("bobololadono Registration/Password Reset OTP")
     // alohida tasdiqlanadi. Ikkalasi ham "Tekshirilmoqda" — hozircha
     // ikkalasi ham bo'sh qolishi mumkin (`textup.provider.ts` shunda
     // `templateId`ni so'rovdan butunlay chiqarib tashlaydi).
@@ -334,7 +334,7 @@ export const envSchema = z
           message: "production'da DEV_EXPOSE_OTP=true IMKONSIZ (fail closed) — OTP javobda hech qachon ko'rsatilmasligi shart",
         });
       }
-      // Bo'lim 3 (admin.bobododa.uz) — ikkinchi mustaqil security ko'rib
+      // Bo'lim 3 (admin.bobololadono.uz) — ikkinchi mustaqil security ko'rib
       // chiqishi topilmasi: `STAFF_CORS_ORIGINS` sukuti (`http://localhost:3000`)
       // production `superRefine`da HECH QACHON tekshirilmagan edi — operator
       // uni Railway'da o'rnatishni unutsa (yoki "yordam" deb `CORS_ORIGINS`
@@ -357,7 +357,7 @@ export const envSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['STAFF_CORS_ORIGINS'],
-          message: `STAFF_CORS_ORIGINS va CORS_ORIGINS bir xil manzil(lar)ni o'z ichiga oladi (${staffCorsOverlap.join(', ')}) — bu admin.bobododa.uz izolyatsiyasini yo'qqa chiqaradi, ikkalasi mustaqil bo'lishi shart`,
+          message: `STAFF_CORS_ORIGINS va CORS_ORIGINS bir xil manzil(lar)ni o'z ichiga oladi (${staffCorsOverlap.join(', ')}) — bu admin.bobololadono.uz izolyatsiyasini yo'qqa chiqaradi, ikkalasi mustaqil bo'lishi shart`,
         });
       }
       // Bosqich 7 — Payout uchun hozircha Zod darajasida DUBLIKAT qilinmadi

@@ -11,7 +11,7 @@
 #
 # Keyin (bitta martalik, staff test hisoblari):
 #   nix-shell backend/shell.nix --run '
-#     DATABASE_URL="postgresql://bobododa_app:app@127.0.0.1:55433/bobododa_e2e?schema=public" \
+#     DATABASE_URL="postgresql://bobololadono_app:app@127.0.0.1:55433/bobololadono_e2e?schema=public" \
 #     node backend/scripts/e2e-staff-fixture.cjs
 #   '
 #
@@ -36,31 +36,31 @@ if pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
   echo "  allaqachon ishlamoqda — o'tkazib yuborildi"
 else
   if [ ! -d "$PGDATA" ]; then
-    initdb -U bobododa --auth=trust --encoding=UTF8 -D "$PGDATA" >/dev/null
+    initdb -U bobololadono --auth=trust --encoding=UTF8 -D "$PGDATA" >/dev/null
   fi
   pg_ctl -D "$PGDATA" -w -o "-p $PGPORT -k '' -c listen_addresses=127.0.0.1 -c timezone=UTC" \
     -l "$INFRA_DIR/postgres.log" start >/dev/null
 fi
 
-echo "▶ [2/6] bobododa_e2e baza + rollar (mavjud bo'lmasagina)"
-psql -h 127.0.0.1 -p "$PGPORT" -U bobododa -d postgres -tc \
-  "SELECT 1 FROM pg_database WHERE datname='bobododa_e2e'" | grep -q 1 || \
-  psql -h 127.0.0.1 -p "$PGPORT" -U bobododa -d postgres -c "CREATE DATABASE bobododa_e2e;" >/dev/null
-psql -h 127.0.0.1 -p "$PGPORT" -U bobododa -d bobododa_e2e \
-  -v app_pw=app -v migrator_pw=migrator -v db_name=bobododa_e2e \
-  -v app_role=bobododa_app -v migrator_role=bobododa_migrator \
+echo "▶ [2/6] bobololadono_e2e baza + rollar (mavjud bo'lmasagina)"
+psql -h 127.0.0.1 -p "$PGPORT" -U bobololadono -d postgres -tc \
+  "SELECT 1 FROM pg_database WHERE datname='bobololadono_e2e'" | grep -q 1 || \
+  psql -h 127.0.0.1 -p "$PGPORT" -U bobololadono -d postgres -c "CREATE DATABASE bobololadono_e2e;" >/dev/null
+psql -h 127.0.0.1 -p "$PGPORT" -U bobololadono -d bobololadono_e2e \
+  -v app_pw=app -v migrator_pw=migrator -v db_name=bobololadono_e2e \
+  -v app_role=bobololadono_app -v migrator_role=bobololadono_migrator \
   -f "$REPO_ROOT/backend/prisma/sql/roles.sql" >/dev/null
 
 echo "▶ [3/6] prisma migrate deploy"
 ( cd "$REPO_ROOT/backend" && \
-  DATABASE_URL="postgresql://bobododa_app:app@127.0.0.1:$PGPORT/bobododa_e2e?schema=public" \
-  DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:migrator@127.0.0.1:$PGPORT/bobododa_e2e?schema=public" \
+  DATABASE_URL="postgresql://bobololadono_app:app@127.0.0.1:$PGPORT/bobololadono_e2e?schema=public" \
+  DATABASE_MIGRATION_URL="postgresql://bobololadono_migrator:migrator@127.0.0.1:$PGPORT/bobololadono_e2e?schema=public" \
   npx --no-install prisma migrate deploy )
 
 echo "▶ [4/6] kamida bitta kategoriya (dizayn)"
-psql -h 127.0.0.1 -p "$PGPORT" -U bobododa_app -d bobododa_e2e -tc \
+psql -h 127.0.0.1 -p "$PGPORT" -U bobololadono_app -d bobololadono_e2e -tc \
   "SELECT 1 FROM categories LIMIT 1" | grep -q 1 || \
-  psql -h 127.0.0.1 -p "$PGPORT" -U bobododa_app -d bobododa_e2e -c "
+  psql -h 127.0.0.1 -p "$PGPORT" -U bobololadono_app -d bobololadono_e2e -c "
     INSERT INTO categories (id, slug, \"nameUz\", \"nameRu\", \"nameEn\", status, \"sortOrder\", \"createdAt\", \"updatedAt\")
     VALUES ('01a092fb-037e-740b-9b72-83002432b73c', 'dizayn', 'Dizayn', 'Дизайн', 'Design', 'ACTIVE', 1, now(), now());
   " >/dev/null

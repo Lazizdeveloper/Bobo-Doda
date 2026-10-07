@@ -19,7 +19,7 @@ test.describe.serial("xaridor: bozor va sozlamalar", () => {
   });
 
   test("bozor: xizmatlar ro'yxati va filtr ishlaydi", async () => {
-    await page.goto("/xaridor/bozor");
+    await page.goto("/bozor");
     await expect(page.getByRole("heading", { name: "Bozor" })).toBeVisible();
     // Kategoriya bo'yicha filtr, agar mavjud bo'lsa, xatosiz qo'llanadi
     const categoryChip = page.locator("button", { hasText: /Dizayn/i }).first();

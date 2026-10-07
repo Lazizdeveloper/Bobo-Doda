@@ -11,7 +11,7 @@ const AxeBuilder = require("@axe-core/playwright").default;
 const BASE = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
 const routes = [
   ["/xaridor", { userId: "u-b2", role: "xaridor", profileDone: false, verified: true }],
-  ["/xaridor/bozor", { userId: "u-b2", role: "xaridor", profileDone: false, verified: true }],
+  ["/bozor", { userId: "u-b2", role: "xaridor", profileDone: false, verified: true }],
   ["/xaridor/elonlarim", { userId: "u-b2", role: "xaridor", profileDone: false, verified: true }],
   ["/xaridor/shartnomalar", { userId: "u-b2", role: "xaridor", profileDone: false, verified: true }],
   ["/mutaxassis", { userId: "u-1", role: "mutaxassis", profileDone: true, verified: true }],

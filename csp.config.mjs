@@ -13,7 +13,7 @@
  * ─── BACKEND ULANGANDA ───────────────────────────────────────────────
  * `connect-src` — brauzer QAYSI manzillarga `fetch`/XHR/WebSocket qila
  * olishini belgilaydi. Hozir u faqat `'self'`, ya'ni API boshqa domenda
- * bo'lsa (`https://api.bobododa.uz`) BARCHA so'rov bloklanadi. Bu eng
+ * bo'lsa (`https://api.bobololadono.uz`) BARCHA so'rov bloklanadi. Bu eng
  * ko'p vaqt yo'qotadigan tuzoq: kod to'g'ri, tarmoq to'g'ri, lekin
  * brauzer jimgina rad etadi.
  *

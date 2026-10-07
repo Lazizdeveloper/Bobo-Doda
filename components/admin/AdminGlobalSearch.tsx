@@ -241,7 +241,7 @@ export function AdminGlobalSearch() {
                 <span><kbd className="rounded bg-card px-1 py-0.5 border border-line">↵</kbd> O‘tish</span>
                 <span><kbd className="rounded bg-card px-1 py-0.5 border border-line">Esc</kbd> Yopish</span>
               </div>
-              <span className="font-semibold text-primary">Bobo&amp;Doda Operations Console</span>
+              <span className="font-semibold text-primary">Bobololadono Operations Console</span>
             </div>
           </div>
         </div>

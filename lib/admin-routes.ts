@@ -1,10 +1,10 @@
-const ADMIN_HOST = "admin.bobododa.uz";
+const ADMIN_HOST = "admin.bobololadono.uz";
 const ADMIN_PREFIX = "/admin";
 
 /**
  * Admin panel ichki fayllari `app/admin/*` da qoladi. Lokal dev/xom Railway
  * domenida bu prefiks browser URL'ida ko'rinadi (`/admin/kirish`) — bevosita
- * fayl yo'liga to'g'ri keladi. Kanonik `admin.bobododa.uz`da repo ildizidagi
+ * fayl yo'liga to'g'ri keladi. Kanonik `admin.bobololadono.uz`da repo ildizidagi
  * `proxy.ts` uni striplaydi: browser `/kirish` ko'radi va `usePathname()`
  * ham SHUNI qaytaradi (Next.js client hook har doim ko'rinadigan URL'ni
  * o'qiydi, ichki rewrite manbasini emas). Quyidagi ikkita funksiya joriy
@@ -45,7 +45,7 @@ export function adminDashboardHref(): string {
 }
 
 /**
- * `admin.bobododa.uz` kanonik hostidami — degani. Ildiz layout'da (har
+ * `admin.bobololadono.uz` kanonik hostidami — degani. Ildiz layout'da (har
  * qanday sahifada, faqat `/admin/**` ichida emas) ishlaydigan
  * komponentlar uchun (`SupportModalProvider`, `PageFeedbackWidget`):
  * ular uchun pathname prefiks tekshiruvi (`/admin`, `/rahbariyat`) yetarli

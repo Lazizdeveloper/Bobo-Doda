@@ -818,7 +818,7 @@ export default function XaridorSozlamalarPage() {
                     }
                   />
                   <p className="ml-6 mt-1 text-2xs text-muted">
-                    Bobo-Doda platformasidagi yangiliklar, chegirmalar va tavsiyalar.
+                    Bobololadono platformasidagi yangiliklar, chegirmalar va tavsiyalar.
                   </p>
                 </div>
               </div>

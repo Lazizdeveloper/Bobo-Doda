@@ -208,7 +208,7 @@ describe('Staff operations — audit log / user & seller admin / moderation hard
   });
 
   // ── GET /staff/services va /staff/seller-applications query validatsiyasi
-  // (admin.bobododa.uz cutover'dan keyingi ikkinchi ko'rib chiqish topilmasi)
+  // (admin.bobololadono.uz cutover'dan keyingi ikkinchi ko'rib chiqish topilmasi)
   // — `@Query() query: PageQueryDto & { status?: X }` (TS intersection)
   // `emitDecoratorMetadata`da `Object` bo'lib yoziladi, Nest ValidationPipe
   // esa `Object` metatype'ni "tekshirish shart emas" deb hisoblab, BUTUN

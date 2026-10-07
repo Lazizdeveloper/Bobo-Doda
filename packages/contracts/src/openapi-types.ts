@@ -2139,7 +2139,7 @@ export interface components {
             newPassword: string;
         };
         StaffLoginDto: {
-            /** @example admin@bobododa.uz */
+            /** @example admin@bobololadono.uz */
             email: string;
             password: string;
             /** @description 2FA yoqilgan hisoblar uchun majburiy (TOTP, 6 xona) */
@@ -2762,7 +2762,7 @@ export interface components {
             createdAt: string;
         };
         CreateStaffMemberDto: {
-            /** @example ops@bobododa.uz */
+            /** @example ops@bobololadono.uz */
             email: string;
             fullName: string;
             title: string;

@@ -23,7 +23,7 @@
  * test buni eslatadi — unutsangiz qizil bo'ladi).
  */
 export interface AppendOnlyTableRule {
-  /** `bobododa_app` dan olib qo'yiladigan huquqlar (butun jadval darajasida). */
+  /** `bobololadono_app` dan olib qo'yiladigan huquqlar (butun jadval darajasida). */
   revoke: readonly string[];
   /**
    * Ushbu ustunlarga UPDATE qoldiriladi (masalan worker holat ustunlari).

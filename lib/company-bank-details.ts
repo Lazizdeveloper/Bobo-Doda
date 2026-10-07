@@ -26,7 +26,7 @@ export const COMPANY_BANK_DETAILS: CompanyBankDetails = {
   inn: "309876543",
   swift: "KAPBUZ22",
   bankAddress: "Toshkent shahri, Sayilgoh ko'chasi 7-uy",
-  paymentPurposeTemplate: "Bobo&Doda platformasi orqali #{reference} buyurtmasi uchun xizmat haqi",
+  paymentPurposeTemplate: "Bobololadono platformasi orqali #{reference} buyurtmasi uchun xizmat haqi",
   supportPhone: "+998 71 200 45 45",
 };
 
@@ -38,5 +38,5 @@ export function generatePaymentReference(contractId: string): string {
 
 /** To'lov maqsadi matnini generatsiya qilish */
 export function getPaymentPurpose(reference: string): string {
-  return `Bobo&Doda: ${reference} shartnomasi bo'yicha to'lov`;
+  return `Bobololadono: ${reference} shartnomasi bo'yicha to'lov`;
 }

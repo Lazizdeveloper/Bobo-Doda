@@ -1,4 +1,4 @@
-# Bobo&Doda — ikki tomonlama marketplace (frontend, mock)
+# Bobololadono — ikki tomonlama marketplace (frontend, mock)
 
 **Markaziy Osiyo** freelance marketplace'i (O'zbekiston, Qozog'iston, Qirg'iziston,
 Tojikiston, Turkmaniston). Asosiy ustunlik: **bosqichli to'lov kafolati
@@ -296,7 +296,7 @@ verified tekshiradi). Header `base` prop bilan ikkala kabinetga moslashadi.
 - **Yollash** (`/elonlarim/[id]/yollash/[proposalId]`): bosqich qatorlari
   (nom/summa/muddat, qo'shish-o'chirish), jami hisob — to'lovsiz, eslatma:
   mablag'lash keyin workroom'da.
-- **Xarajatlar**: jami to'langan + escrow'dagi + **Bobo&Doda hisobi (balans)** —
+- **Xarajatlar**: jami to'langan + escrow'dagi + **Bobololadono hisobi (balans)** —
   bekor qilingan shartnomalardan qaytgan mablag', kartaga yechish tugmasi bilan.
 - Sharh: yakunlangan shartnoma workroom'ida bir marta (`createReview`,
   `Review.buyerName` ochiq profillar uchun).
@@ -593,7 +593,7 @@ header o'ng bloki shu sababli ixchamlashtirilgan).
 Jiddiy ish uchun mustaqil ko'rib chiqishni `.claude/agents/`dagi mutaxassis
 subagentlarga topshiring — o'n ikkitasi: backend/frontend/security/database/
 devops/sre/qa/performance/fintech/release-engineer (o'nta ish subagenti) +
-`bobododa-engineering-lead` (orkestrator) + `api-contract-auditor` (frontend/
+`bobololadono-engineering-lead` (orkestrator) + `api-contract-auditor` (frontend/
 backend/kontrakt chegarasi bo'yicha mustaqil auditor). Kim nimani ko'rib
 chiqishi va qaysi tartibda — `.claude/review-matrix.md` va
 `.claude/workflows/`. Xavfli o'zgarish uchun KAMIDA: asosiy mutaxassis ko'rib
@@ -604,7 +604,7 @@ o'z ishini yagona tasdiqlovchi bo'la olmaydi.
 
 Jiddiy muhandislik vazifalari uchun:
 
-1. `bobododa-engineering-lead` orqali marshrutlang.
+1. `bobololadono-engineering-lead` orqali marshrutlang.
 2. `.claude/workflows/task-routing.md`dan foydalaning.
 3. Faqat vazifaga tegishli mutaxassislarni tanlang — "hammasini ishga
    tushirish" emas, "xavfga yetarli minimal jamoa".
@@ -616,6 +616,6 @@ Jiddiy muhandislik vazifalari uchun:
    agentning xulosasi emas, savolning o'zi beriladi.
 7. FAIL/UNKNOWN jimgina PASS'ga aylantirilmaydi.
 8. Production'ga ta'sir qiluvchi o'zgarish `release-engineer` darvozasidan
-   o'tishi SHART — `bobododa-engineering-lead` buni chetlab o'ta olmaydi va
+   o'tishi SHART — `bobololadono-engineering-lead` buni chetlab o'ta olmaydi va
    o'zi yakuniy tasdiqlovchi emas (`.claude/review-matrix.md`dagi
    "Orchestration role" izohiga qarang).

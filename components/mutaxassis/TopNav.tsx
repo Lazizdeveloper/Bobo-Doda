@@ -68,14 +68,14 @@ export function TopNav({ base }: TopNavProps) {
   }
 
   const bozorSubItems = [
-    { href: "/xaridor/bozor?tab=services", label: t("nav.bozorServices"), icon: "🛍️" },
-    { href: "/xaridor/bozor?tab=jobs", label: t("nav.bozorJobs"), icon: "💼" },
-    { href: "/xaridor/bozor?tab=specialists", label: t("nav.bozorSpecialists"), icon: "👥" },
+    { href: "/bozor?tab=services", label: t("nav.bozorServices"), icon: "🛍️" },
+    { href: "/bozor?tab=jobs", label: t("nav.bozorJobs"), icon: "💼" },
+    { href: "/bozor?tab=specialists", label: t("nav.bozorSpecialists"), icon: "👥" },
   ];
 
 
 
-  const isBozorActive = pathname.startsWith("/xaridor/bozor");
+  const isBozorActive = pathname.startsWith("/bozor");
   const isContractsActive = pathname.startsWith("/mutaxassis/shartnomalar");
   const isMessagesActive = pathname.startsWith("/mutaxassis/xabarlar");
   const isDashboardActive = pathname === "/mutaxassis";
@@ -107,7 +107,7 @@ export function TopNav({ base }: TopNavProps) {
               onMouseLeave={handleDropdownLeave}
             >
               <Link
-                href="/xaridor/bozor"
+                href="/bozor"
                 className={`flex items-center gap-1 px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
                   isBozorActive
                     ? "bg-primary/10 text-primary-deep font-semibold"
@@ -253,7 +253,7 @@ export function TopNav({ base }: TopNavProps) {
 
             {/* Bozor with sub-items */}
             <div className="flex flex-col gap-1 border-y border-line/60 py-2 my-1">
-              <Link href="/xaridor/bozor" className="px-3 py-1 text-sm font-bold text-ink">
+              <Link href="/bozor" className="px-3 py-1 text-sm font-bold text-ink">
                 {t("nav.market")}
               </Link>
               <div className="pl-4 flex flex-col gap-1">

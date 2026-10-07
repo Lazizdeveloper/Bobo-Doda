@@ -11,7 +11,6 @@ import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import {
   ContractStatusBadge,
   OfferStatusBadge,
-  ProposalStatusBadge,
   ServiceStatusBadge,
 } from "@/components/shared/StatusBadge";
 import { JobCard } from "@/components/shared/JobCard";
@@ -111,9 +110,6 @@ export default function MutaxassisDashboardPage() {
 
   const displayedJobs = filteredJobs.slice(0, 4);
   const recentContracts = [...(contracts ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
-  const recentProposals = [...(proposals ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
-
-  const jobById = new Map((jobs ?? []).map((j) => [j.id, j]));
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
 
@@ -226,7 +222,7 @@ export default function MutaxassisDashboardPage() {
             </p>
           </div>
           <Link
-            href="/xaridor/bozor?tab=jobs"
+            href="/bozor?tab=jobs"
             className="text-sm font-semibold text-primary hover:text-primary-deep hover:underline shrink-0"
           >
             {t("dash.browseJobBoard")} ({openJobs.length}) →
@@ -246,7 +242,7 @@ export default function MutaxassisDashboardPage() {
             <p className="font-heading text-sm font-bold text-ink">{t("dash.noJobsFound")}</p>
             <p className="mt-1 text-xs text-muted max-w-md">{t("dash.noMatchingJobs")}</p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Link href="/xaridor/bozor?tab=jobs">
+              <Link href="/bozor?tab=jobs">
                 <Button size="sm">{t("dash.browseJobBoard")}</Button>
               </Link>
             </div>
@@ -266,7 +262,7 @@ export default function MutaxassisDashboardPage() {
 
             {filteredJobs.length > displayedJobs.length && (
               <div className="text-center pt-2">
-                <Link href="/xaridor/bozor?tab=jobs">
+                <Link href="/bozor?tab=jobs">
                   <Button variant="secondary" size="sm">
                     {t("dash.browseJobBoard")} ({filteredJobs.length} ta loyiha) →
                   </Button>
@@ -277,53 +273,8 @@ export default function MutaxassisDashboardPage() {
         )}
       </section>
 
-      {/* 2 USTUNLI QISM: Arizalarim va Kelgan takliflar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Arizalarim */}
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="font-heading text-lg font-bold text-ink">{t("dash.myProposals")}</h2>
-              <span className="text-xs text-muted">({proposals?.length || 0})</span>
-            </div>
-            <Link href="/mutaxassis/takliflarim" className="text-xs font-semibold text-primary hover:underline">
-              {t("dash.viewAll")} →
-            </Link>
-          </div>
-
-          {loading ? (
-            <SkeletonCard />
-          ) : recentProposals.length === 0 ? (
-            <Card className="text-center py-8">
-              <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyProposalsCta")}</p>
-              <p className="mt-1 text-xs text-muted">Mavjud ishlarni ko'rib, birinchi arizangizni yuboring.</p>
-              <Link href="/xaridor/bozor?tab=jobs" className="mt-3 inline-block">
-                <Button size="sm">{t("dash.browseJobBoard")}</Button>
-              </Link>
-            </Card>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {recentProposals.map((prop) => {
-                const job = jobById.get(prop.jobId);
-                return (
-                  <Link key={prop.id} href={`/mutaxassis/takliflarim/${prop.id}`} className="block">
-                    <Card hoverable padding="md" className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-ink text-sm truncate">{job?.title || "Loyiha"}</p>
-                        <div className="flex items-center gap-3 text-2xs text-muted mt-1">
-                          <span className="font-semibold text-ink">{formatMoney(prop.bidAmount, lang)}</span>
-                          <span>{formatDate(prop.createdAt, lang)}</span>
-                        </div>
-                      </div>
-                      <ProposalStatusBadge status={prop.status} />
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
+      {/* UCH USTUNLI QISM: Kelgan takliflar, Faol shartnomalar, Xizmatlarim */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Kelgan takliflar (Direct offers) */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -371,10 +322,6 @@ export default function MutaxassisDashboardPage() {
             </div>
           )}
         </section>
-      </div>
-
-      {/* 2 USTUNLI QISM: Faol shartnomalar va Xizmatlarim */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Faol shartnomalar */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -390,7 +337,7 @@ export default function MutaxassisDashboardPage() {
             <Card className="text-center py-8">
               <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyContractsCta")}</p>
               <p className="mt-1 text-xs text-muted">{t("dash.noContractsDesc")}</p>
-              <Link href="/xaridor/bozor?tab=jobs" className="mt-3 inline-block">
+              <Link href="/bozor?tab=jobs" className="mt-3 inline-block">
                 <Button size="sm">{t("dash.browseJobBoard")}</Button>
               </Link>
             </Card>

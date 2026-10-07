@@ -56,7 +56,7 @@ let browser;
         portalidan kira olmasligi kerak.
      ------------------------------------------------------------------ */
   await page.goto(`${BASE}/admin/kirish`, { waitUntil: "networkidle" });
-  await page.getByLabel("Korporativ email").fill("ceo@bobododa.uz");
+  await page.getByLabel("Korporativ email").fill("ceo@bobololadono.uz");
   await page.getByLabel("Parol").fill("CEOsecure2026");
   await page.getByRole("button", { name: "Xavfsiz kirish" }).click();
   assert(
@@ -64,7 +64,7 @@ let browser;
     "CEO entered through the ordinary admin portal"
   );
 
-  await login(page, "ceo@bobododa.uz", "CEOsecure2026", "super_admin");
+  await login(page, "ceo@bobololadono.uz", "CEOsecure2026", "super_admin");
 
   /* ------------------------------------------------------------------
      2. CEO yaratgan yangi admin haqiqatan login qila olishi kerak.
@@ -73,12 +73,12 @@ let browser;
   await page.getByRole("button", { name: "Admin qo‘shish" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("To‘liq ism").fill("Logic Test Admin");
-  await dialog.getByLabel("Korporativ email").fill("logic.admin@bobododa.uz");
+  await dialog.getByLabel("Korporativ email").fill("logic.admin@bobololadono.uz");
   await dialog.getByLabel("Lavozim").fill("Risk operator");
   await dialog.getByLabel("Vaqtinchalik parol").fill("LogicAdmin2026");
   await dialog.getByRole("button", { name: "Yaratish" }).click();
   assert(
-    await page.getByText("logic.admin@bobododa.uz").first().isVisible(),
+    await page.getByText("logic.admin@bobololadono.uz").first().isVisible(),
     "created admin missing from the list"
   );
 
@@ -230,7 +230,7 @@ let browser;
         yopilishi kerak.
      ------------------------------------------------------------------ */
   await page.evaluate(() => localStorage.removeItem("sb2_admin_session"));
-  await login(page, "logic.admin@bobododa.uz", "LogicAdmin2026");
+  await login(page, "logic.admin@bobololadono.uz", "LogicAdmin2026");
   await page.evaluate(() => {
     const session = JSON.parse(localStorage.getItem("sb2_admin_session"));
     const admins = JSON.parse(localStorage.getItem("sb2_admin_accounts"));

@@ -112,7 +112,7 @@ export interface ProvisionedDb {
 }
 
 export interface ProvisionDbOptions {
-  /** T1 isboti uchun: sukut `bobododa_app`/`bobododa_migrator` dan boshqa nom. */
+  /** T1 isboti uchun: sukut `bobololadono_app`/`bobololadono_migrator` dan boshqa nom. */
   appRole?: string;
   migratorRole?: string;
 }
@@ -128,7 +128,7 @@ function assertSafeIdentifier(value: string, label: string): void {
 
 /**
  * `prisma/sql/roles.sql` ekvivalenti (test uchun) + migratsiya. Toza `name`
- * DB'sini yaratadi, rollarni (global, mavjud bo'lmasa) sozlaydi, `bobododa.
+ * DB'sini yaratadi, rollarni (global, mavjud bo'lmasa) sozlaydi, `bobololadono.
  * app_role` GUC'ini o'rnatadi (T1 — migratsiya buni o'qiydi, sukut yo'liga
  * emas, HAQIQIY GUC yo'liga tayanish uchun) va migrator roli bilan
  * `prisma migrate deploy` qiladi — natijada `appUrl` A4 (append-only) va F1
@@ -140,8 +140,8 @@ function assertSafeIdentifier(value: string, label: string): void {
  * migratsiya) `format('%I', …)` qoidasi bilan bir xil intizom.
  */
 export async function provisionDb(name: string, opts: ProvisionDbOptions = {}): Promise<ProvisionedDb> {
-  const appRole = opts.appRole ?? 'bobododa_app';
-  const migratorRole = opts.migratorRole ?? 'bobododa_migrator';
+  const appRole = opts.appRole ?? 'bobololadono_app';
+  const migratorRole = opts.migratorRole ?? 'bobololadono_migrator';
   assertSafeIdentifier(name, 'name');
   assertSafeIdentifier(appRole, 'appRole');
   assertSafeIdentifier(migratorRole, 'migratorRole');
@@ -168,9 +168,9 @@ export async function provisionDb(name: string, opts: ProvisionDbOptions = {}): 
       `GRANT USAGE ON SCHEMA public TO ${appRole}`,
       `ALTER DEFAULT PRIVILEGES FOR ROLE ${migratorRole} IN SCHEMA public
          GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${appRole}`,
-      // T1 — migratsiya shu GUC'ni o'qiydi (`current_setting('bobododa.app_role', true)`).
+      // T1 — migratsiya shu GUC'ni o'qiydi (`current_setting('bobololadono.app_role', true)`).
       // Sukut yo'lga (COALESCE fallback) emas, HAQIQIY GUC yo'liga tayanamiz.
-      `ALTER DATABASE "${name}" SET bobododa.app_role = '${appRole}'`,
+      `ALTER DATABASE "${name}" SET bobololadono.app_role = '${appRole}'`,
     ]) {
       await su.$executeRawUnsafe(stmt);
     }

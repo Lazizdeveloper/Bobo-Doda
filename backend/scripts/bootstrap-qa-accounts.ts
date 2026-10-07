@@ -1,5 +1,5 @@
 /**
- * Bobo&Doda — Controlled One-Time Multi-Panel QA Accounts Bootstrap & Verification.
+ * Bobololadono — Controlled One-Time Multi-Panel QA Accounts Bootstrap & Verification.
  *
  * Yaratadi:
  *   - 5 BUYER accounts (QA-BUYER-01 .. QA-BUYER-05)
@@ -12,7 +12,7 @@
  *   - TextUp chaqirilmaydi (SMS_COUNT = 0).
  *   - SUPER_ADMIN yaratilmaydi (barcha adminlar: StaffRole.ADMIN).
  *   - Parollar konsolga/chatga/logga chiqarilmaydi.
- *   - Parollar faqat ~/.bobododa-secrets/qa-accounts-2026-09-29.txt ga (chmod 600) yoziladi.
+ *   - Parollar faqat ~/.bobololadono-secrets/qa-accounts-2026-09-29.txt ga (chmod 600) yoziladi.
  *   - Idempotent: qayta ishga tushirish xavfsiz.
  *   - Haqiqiy foydalanuvchilar bilan to'qnashuv bo'lsa darhol to'xtaydi (STOP).
  *
@@ -40,7 +40,7 @@ import {
 
 export const SECRETS_FILE_PATH = path.join(
   os.homedir(),
-  '.bobododa-secrets',
+  '.bobololadono-secrets',
   'qa-accounts-2026-09-29.txt',
 );
 
@@ -73,7 +73,7 @@ export const QA_ACCOUNTS: AccountSpec[] = [
   {
     code: 'QA-ADMIN-01',
     category: 'ADMIN',
-    login: 'qa-admin-01@qa.bobododa.uz',
+    login: 'qa-admin-01@qa.bobololadono.uz',
     fullName: 'QA Admin 01',
     title: 'QA Operations Specialist',
     role: StaffRole.ADMIN,
@@ -87,7 +87,7 @@ export const QA_ACCOUNTS: AccountSpec[] = [
   {
     code: 'QA-ADMIN-02',
     category: 'ADMIN',
-    login: 'qa-admin-02@qa.bobododa.uz',
+    login: 'qa-admin-02@qa.bobololadono.uz',
     fullName: 'QA Admin 02',
     title: 'QA User & Seller Specialist',
     role: StaffRole.ADMIN,
@@ -100,7 +100,7 @@ export const QA_ACCOUNTS: AccountSpec[] = [
   {
     code: 'QA-ADMIN-03',
     category: 'ADMIN',
-    login: 'qa-admin-03@qa.bobododa.uz',
+    login: 'qa-admin-03@qa.bobololadono.uz',
     fullName: 'QA Admin 03',
     title: 'QA Contracts & Disputes Specialist',
     role: StaffRole.ADMIN,
@@ -114,7 +114,7 @@ export const QA_ACCOUNTS: AccountSpec[] = [
   {
     code: 'QA-ADMIN-04',
     category: 'ADMIN',
-    login: 'qa-admin-04@qa.bobododa.uz',
+    login: 'qa-admin-04@qa.bobololadono.uz',
     fullName: 'QA Admin 04',
     title: 'QA Services & Categories Specialist',
     role: StaffRole.ADMIN,
@@ -127,7 +127,7 @@ export const QA_ACCOUNTS: AccountSpec[] = [
   {
     code: 'QA-ADMIN-05',
     category: 'ADMIN',
-    login: 'qa-admin-05@qa.bobododa.uz',
+    login: 'qa-admin-05@qa.bobololadono.uz',
     fullName: 'QA Admin 05',
     title: 'QA Audit & Support Specialist',
     role: StaffRole.ADMIN,
@@ -201,7 +201,7 @@ export function saveSecretsFile(
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
 
-  let text = '# BOBO&DODA QA ACCOUNTS — GENERATED CREDENTIALS\n';
+  let text = '# BOBOLOLADONO QA ACCOUNTS — GENERATED CREDENTIALS\n';
   text += `# Date: ${new Date().toISOString()}\n`;
   text += '# CONFIDENTIAL — QA USE ONLY — DO NOT COMMIT OR SHARE\n\n';
 
@@ -709,7 +709,7 @@ async function main(): Promise<void> {
   });
 
   const shouldVerify = process.argv.includes('--verify');
-  const apiBase = process.env.API_BASE_URL || 'https://api.bobododa.uz/api/v1';
+  const apiBase = process.env.API_BASE_URL || 'https://api.bobololadono.uz/api/v1';
 
   try {
     const { created, existing, secretsPath } = await bootstrapAccounts(prisma);

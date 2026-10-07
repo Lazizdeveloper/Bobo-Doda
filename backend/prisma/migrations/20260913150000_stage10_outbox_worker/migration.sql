@@ -64,7 +64,7 @@ ALTER TABLE "outbox_delivery_attempts" ADD CONSTRAINT "outbox_delivery_attempts_
 -- ─────────────────────────────────────────────────────────────────────────
 DO $$
 DECLARE
-  app_role text := COALESCE(NULLIF(current_setting('bobododa.app_role', true), ''), 'bobododa_app');
+  app_role text := COALESCE(NULLIF(current_setting('bobololadono.app_role', true), ''), 'bobololadono_app');
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app_role) THEN
     EXECUTE format(

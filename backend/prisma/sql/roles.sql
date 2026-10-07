@@ -6,9 +6,9 @@
 --   psql "$SUPERUSER_URL" \
 --     -v app_pw="$DB_APP_PASSWORD" \
 --     -v migrator_pw="$DB_MIGRATOR_PASSWORD" \
---     -v db_name=bobododa \
---     -v app_role=bobododa_app \
---     -v migrator_role=bobododa_migrator \
+--     -v db_name=bobololadono \
+--     -v app_role=bobololadono_app \
+--     -v migrator_role=bobololadono_migrator \
 --     -f prisma/sql/roles.sql
 --
 -- `app_role`/`migrator_role` ixtiyoriy — berilmasa sukut nomlar ishlatiladi
@@ -35,11 +35,11 @@
 
 \if :{?app_role}
 \else
-  \set app_role bobododa_app
+  \set app_role bobololadono_app
 \endif
 \if :{?migrator_role}
 \else
-  \set migrator_role bobododa_migrator
+  \set migrator_role bobololadono_migrator
 \endif
 
 -- ── Rollar (mavjud bo'lmasagina) ────────────────────────────────────────────
@@ -75,8 +75,8 @@ SELECT format(
 ) \gexec
 
 -- ── T1: rol nomini migratsiyaga "uzatish" — DB darajasidagi GUC ────────────
--- Init migratsiya `current_setting('bobododa.app_role', true)` o'qiydi
--- (sukut 'bobododa_app'). Shu bilan migratsiya faylini o'zgartirmasdan
+-- Init migratsiya `current_setting('bobololadono.app_role', true)` o'qiydi
+-- (sukut 'bobololadono_app'). Shu bilan migratsiya faylini o'zgartirmasdan
 -- boshqa rol nomiga o'tish mumkin — bu bootstrap'ni boshqa nom bilan
 -- qayta ishga tushiring, migratsiyaga tegmang.
-SELECT format('ALTER DATABASE %I SET bobododa.app_role = %L', :'db_name', :'app_role') \gexec
+SELECT format('ALTER DATABASE %I SET bobololadono.app_role = %L', :'db_name', :'app_role') \gexec

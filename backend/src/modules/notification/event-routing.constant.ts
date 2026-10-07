@@ -67,7 +67,7 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
   SELLER_APPLICATION_APPROVED: {
     channel: 'SMS',
     recipient: 'USER',
-    render: () => 'Tabriklaymiz! Sotuvchi arizangiz tasdiqlandi. Endi xizmat qo’sha olasiz. — Bobo&Doda',
+    render: () => 'Tabriklaymiz! Sotuvchi arizangiz tasdiqlandi. Endi xizmat qo’sha olasiz. — Bobololadono',
   },
   SELLER_APPLICATION_REJECTED: {
     channel: 'SMS',
@@ -75,7 +75,7 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     render: (ctx) => {
       const reason = ctx.extra.reason;
       if (!reason) return null;
-      return `Sotuvchi arizangiz rad etildi. Sabab: ${reason} — Bobo&Doda`;
+      return `Sotuvchi arizangiz rad etildi. Sabab: ${reason} — Bobololadono`;
     },
   },
 
@@ -83,14 +83,14 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
   SERVICE_APPROVED: {
     channel: 'SMS',
     recipient: 'USER',
-    render: (ctx) => (ctx.title ? `Xizmatingiz "${ctx.title}" tasdiqlandi va bozorda ko’rinadi — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Xizmatingiz "${ctx.title}" tasdiqlandi va bozorda ko’rinadi — Bobololadono` : null),
   },
   SERVICE_REJECTED: {
     channel: 'SMS',
     recipient: 'USER',
     render: (ctx) => {
       if (!ctx.title || !ctx.extra.reason) return null;
-      return `Xizmatingiz "${ctx.title}" rad etildi. Sabab: ${ctx.extra.reason} — Bobo&Doda`;
+      return `Xizmatingiz "${ctx.title}" rad etildi. Sabab: ${ctx.extra.reason} — Bobololadono`;
     },
   },
 
@@ -101,18 +101,18 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     render: (ctx) => {
       const amount = som(ctx.amountTiyin);
       if (!ctx.title || !amount) return null;
-      return `Yangi shartnoma taklifi: "${ctx.title}", ${amount} so’m. Ko’rib chiqing — Bobo&Doda`;
+      return `Yangi shartnoma taklifi: "${ctx.title}", ${amount} so’m. Ko’rib chiqing — Bobololadono`;
     },
   },
   CONTRACT_ACCEPTED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `Sotuvchi shartnomangizni qabul qildi: "${ctx.title}". To’lovni amalga oshiring — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Sotuvchi shartnomangizni qabul qildi: "${ctx.title}". To’lovni amalga oshiring — Bobololadono` : null),
   },
   CONTRACT_REJECTED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `Sotuvchi shartnomangizni rad etdi: "${ctx.title}" — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Sotuvchi shartnomangizni rad etdi: "${ctx.title}" — Bobololadono` : null),
   },
   CONTRACT_CANCELLED: {
     channel: 'SMS',
@@ -120,19 +120,19 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     // orqali); payload'da `sellerId` bo'lsa — buyer bekor qilgan (seller xabar
     // oladi), aks holda buyer xabar oladi (arbitraj/refund-driven bekor qilish).
     recipient: (ctx) => (ctx.extra.sellerId ? 'SELLER' : 'BUYER'),
-    render: (ctx) => (ctx.title ? `Shartnoma bekor qilindi: "${ctx.title}" — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Shartnoma bekor qilindi: "${ctx.title}" — Bobololadono` : null),
   },
   CONTRACT_COMPLETED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `Ish yakunlandi: "${ctx.title}". Rahmat! Sharh qoldirishni unutmang — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Ish yakunlandi: "${ctx.title}". Rahmat! Sharh qoldirishni unutmang — Bobololadono` : null),
   },
   CONTRACT_SETTLED: {
     channel: 'SMS',
     recipient: 'SELLER',
     render: (ctx) => {
       const amount = som(ctx.sellerNetTiyin);
-      return amount ? `To’lovingiz hisobingizga tushdi: ${amount} so’m — Bobo&Doda` : null;
+      return amount ? `To’lovingiz hisobingizga tushdi: ${amount} so’m — Bobololadono` : null;
     },
   },
 
@@ -140,14 +140,14 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
   MILESTONE_SUBMITTED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `"${ctx.title}" bosqichi topshirildi. Ko’rib chiqing — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `"${ctx.title}" bosqichi topshirildi. Ko’rib chiqing — Bobololadono` : null),
   },
   MILESTONE_REVISION_REQUESTED: {
     channel: 'SMS',
     recipient: 'SELLER',
     render: (ctx) => {
       if (!ctx.title || !ctx.extra.reason) return null;
-      return `"${ctx.title}" bosqichiga o’zgartirish so’raldi: ${ctx.extra.reason} — Bobo&Doda`;
+      return `"${ctx.title}" bosqichiga o’zgartirish so’raldi: ${ctx.extra.reason} — Bobololadono`;
     },
   },
   // Bo'lim 56 — DIQQAT: bosqich tasdiqlanishi HALI pul o'tkazmaydi (backend
@@ -158,7 +158,7 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
   MILESTONE_APPROVED: {
     channel: 'SMS',
     recipient: 'SELLER',
-    render: (ctx) => (ctx.title ? `"${ctx.title}" bosqichi tasdiqlandi — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `"${ctx.title}" bosqichi tasdiqlandi — Bobololadono` : null),
   },
 
   // ── Payment ───────────────────────────────────────────────────────────
@@ -168,13 +168,13 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     render: (ctx) => {
       const amount = som(ctx.amountTiyin);
       if (!amount || !ctx.title) return null;
-      return `To’lovingiz muvaffaqiyatli: ${amount} so’m ("${ctx.title}") — Bobo&Doda`;
+      return `To’lovingiz muvaffaqiyatli: ${amount} so’m ("${ctx.title}") — Bobololadono`;
     },
   },
   PAYMENT_FAILED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `To’lovingiz amalga oshmadi ("${ctx.title}"). Qayta urinib ko’ring — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `To’lovingiz amalga oshmadi ("${ctx.title}"). Qayta urinib ko’ring — Bobololadono` : null),
   },
   ESCROW_FUNDED: {
     channel: 'SMS',
@@ -182,7 +182,7 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     render: (ctx) => {
       const amount = som(ctx.amountTiyin);
       if (!amount || !ctx.title) return null;
-      return `Shartnoma mablag’landi: "${ctx.title}", ${amount} so’m. Ishni boshlashingiz mumkin — Bobo&Doda`;
+      return `Shartnoma mablag’landi: "${ctx.title}", ${amount} so’m. Ishni boshlashingiz mumkin — Bobololadono`;
     },
   },
 
@@ -193,13 +193,13 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     render: (ctx) => {
       const amount = som(ctx.amountTiyin);
       if (!amount || !ctx.title) return null;
-      return `Qaytarilgan mablag’ hisobingizga tushdi: ${amount} so’m ("${ctx.title}") — Bobo&Doda`;
+      return `Qaytarilgan mablag’ hisobingizga tushdi: ${amount} so’m ("${ctx.title}") — Bobololadono`;
     },
   },
   REFUND_FAILED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `Mablag’ni qaytarishda xatolik yuz berdi ("${ctx.title}"). Tez orada hal qilinadi — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Mablag’ni qaytarishda xatolik yuz berdi ("${ctx.title}"). Tez orada hal qilinadi — Bobololadono` : null),
   },
 
   // ── Payout ────────────────────────────────────────────────────────────
@@ -211,13 +211,13 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     recipient: 'SELLER',
     render: (ctx) => {
       const amount = som(ctx.amountTiyin);
-      return amount ? `Pul yechish so’rovingiz bajarildi: ${amount} so’m kartangizga o’tkazildi — Bobo&Doda` : null;
+      return amount ? `Pul yechish so’rovingiz bajarildi: ${amount} so’m kartangizga o’tkazildi — Bobololadono` : null;
     },
   },
   PAYOUT_FAILED: {
     channel: 'SMS',
     recipient: 'SELLER',
-    render: () => 'Pul yechish so’rovingiz bajarilmadi. Mablag’ balansingizga qaytarildi — Bobo&Doda',
+    render: () => 'Pul yechish so’rovingiz bajarilmadi. Mablag’ balansingizga qaytarildi — Bobololadono',
   },
   // Bo'lim: PAYOUT_FAILED bilan BIR XIL daqiqada, BIR XIL ma'noda hodisa —
   // ikkinchi SMS yuborilsa foydalanuvchi ikki marta bir xil xabar oladi.
@@ -227,7 +227,7 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
   DISPUTE_OPENED: {
     channel: 'SMS',
     recipient: counterpartyOf('buyerId', 'openedByUserId'),
-    render: (ctx) => (ctx.title ? `Nizo ochildi ("${ctx.title}"). Holatni tekshiring — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Nizo ochildi ("${ctx.title}"). Holatni tekshiring — Bobololadono` : null),
   },
   // Bo'lim: dalil qo'shish — administrativ, shoshilinch SMS talab qilmaydi
   // (staff dashboard orqali kuzatiladi); kim qo'shganini ANIQ bilmasdan
@@ -236,19 +236,19 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
   DISPUTE_CANCELLED: {
     channel: 'SMS',
     recipient: 'SELLER',
-    render: (ctx) => (ctx.title ? `Nizo bekor qilindi ("${ctx.title}") — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Nizo bekor qilindi ("${ctx.title}") — Bobololadono` : null),
   },
   DISPUTE_REVIEW_STARTED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `Nizoyingiz ko’rib chiqilmoqda ("${ctx.title}") — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Nizoyingiz ko’rib chiqilmoqda ("${ctx.title}") — Bobololadono` : null),
   },
   DISPUTE_REJECTED: {
     channel: 'SMS',
     recipient: 'BUYER',
     render: (ctx) => {
       if (!ctx.title || !ctx.extra.resolutionReason) return null;
-      return `Nizoyingiz rad etildi ("${ctx.title}"). Sabab: ${ctx.extra.resolutionReason} — Bobo&Doda`;
+      return `Nizoyingiz rad etildi ("${ctx.title}"). Sabab: ${ctx.extra.resolutionReason} — Bobololadono`;
     },
   },
   DISPUTE_SELLER_FUNDS_RELEASED: {
@@ -256,7 +256,7 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     recipient: 'SELLER',
     render: (ctx) => {
       const amount = somFromExtra(ctx, 'sellerAward');
-      return amount ? `Nizo natijasida ${amount} so’m hisobingizga tushdi — Bobo&Doda` : null;
+      return amount ? `Nizo natijasida ${amount} so’m hisobingizga tushdi — Bobololadono` : null;
     },
   },
   DISPUTE_BUYER_REFUND_ALLOCATED: {
@@ -264,24 +264,24 @@ export const EVENT_ROUTES: Record<string, NotificationRoute | null> = {
     recipient: 'BUYER',
     render: (ctx) => {
       const amount = somFromExtra(ctx, 'amount');
-      return amount ? `Nizo natijasida qaytarish rasmiylashtirildi: ${amount} so’m. Tez orada hisobingizga tushadi — Bobo&Doda` : null;
+      return amount ? `Nizo natijasida qaytarish rasmiylashtirildi: ${amount} so’m. Tez orada hisobingizga tushadi — Bobololadono` : null;
     },
   },
   DISPUTE_RESOLVED: {
     channel: 'SMS',
     recipient: 'BUYER',
-    render: (ctx) => (ctx.title ? `Nizoyingiz hal qilindi ("${ctx.title}") — Bobo&Doda` : null),
+    render: (ctx) => (ctx.title ? `Nizoyingiz hal qilindi ("${ctx.title}") — Bobololadono` : null),
   },
 
   // ── Staff admin operatsiyalari (Bosqich 11) ─────────────────────────────
   USER_BLOCKED: {
     channel: 'SMS',
     recipient: 'USER',
-    render: () => 'Hisobingiz bloklandi. Batafsil ma’lumot uchun qo’llab-quvvatlash bilan bog’laning — Bobo&Doda',
+    render: () => 'Hisobingiz bloklandi. Batafsil ma’lumot uchun qo’llab-quvvatlash bilan bog’laning — Bobololadono',
   },
   SELLER_SUSPENDED: {
     channel: 'SMS',
     recipient: 'USER',
-    render: () => 'Sotuvchi faoliyatingiz vaqtincha to’xtatildi. Batafsil: qo’llab-quvvatlash — Bobo&Doda',
+    render: () => 'Sotuvchi faoliyatingiz vaqtincha to’xtatildi. Batafsil: qo’llab-quvvatlash — Bobololadono',
   },
 };

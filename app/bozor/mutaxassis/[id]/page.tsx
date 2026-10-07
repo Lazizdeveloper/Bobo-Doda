@@ -78,8 +78,8 @@ export default function MutaxassisProfiliPage() {
       {/* Top Breadcrumb Navigation with Back Button */}
       <Breadcrumb
         items={[
-          { label: t("nav.market"), href: "/xaridor/bozor" },
-          { label: t("market.tabSpecialists"), href: "/xaridor/bozor?tab=specialists" },
+          { label: t("nav.market"), href: "/bozor" },
+          { label: t("market.tabSpecialists"), href: "/bozor?tab=specialists" },
           { label: user.fullName },
         ]}
       />
@@ -253,7 +253,7 @@ export default function MutaxassisProfiliPage() {
                 {services.map((service) => (
                   <Link
                     key={service.id}
-                    href={`/xaridor/bozor/xizmat/${service.id}`}
+                    href={`/bozor/xizmat/${service.id}`}
                     className="group block"
                   >
                     <Card hoverable className="flex h-full flex-col justify-between gap-3 p-4">

@@ -8,7 +8,7 @@
  *
  * Manzillar deterministik: CI'da service konteynerlar (`localhost:5432/6379`),
  * lokal'da `E2E_SUPERUSER_URL` / `E2E_REDIS_URL`. `health.e2e-spec` va
- * `db-role-assertion.e2e-spec` `health_e2e` DB'sini **`bobododa_app`** roli
+ * `db-role-assertion.e2e-spec` `health_e2e` DB'sini **`bobololadono_app`** roli
  * bilan ishlatadi (F1 tekshiruvi shuni talab qiladi) — uni `beforeAll`
  * `provisionDb('health_e2e')` bilan yaratadi/rollarni sozlaydi.
  *
@@ -45,8 +45,8 @@ process.env.DB_ROLE_ASSERTION = 'on';
 // pool bilan ba'zan ECONNRESET beradi — so'rovlar bo'sh ulanish kutib,
 // HTTP darajasida vaqt tugaydi. Postgres `max_connections` (100+) buni
 // osongina ko'taradi.
-process.env.DATABASE_URL = `postgresql://bobododa_app:app@${host}/health_e2e?schema=public&connection_limit=20`;
-process.env.DATABASE_MIGRATION_URL = `postgresql://bobododa_migrator:migrator@${host}/health_e2e?schema=public`;
+process.env.DATABASE_URL = `postgresql://bobololadono_app:app@${host}/health_e2e?schema=public&connection_limit=20`;
+process.env.DATABASE_MIGRATION_URL = `postgresql://bobololadono_migrator:migrator@${host}/health_e2e?schema=public`;
 process.env.REDIS_URL = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:6379';
 process.env.DEV_EXPOSE_OTP = 'false';
 process.env.SMS_PROVIDER = 'CONSOLE';

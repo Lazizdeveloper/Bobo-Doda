@@ -44,7 +44,7 @@ describe('totp.util (RFC 6238)', () => {
 
   it('buildOtpauthUri — otpauth://totp/ bilan boshlanadi, sir/issuer query’da', () => {
     const secret = generateTotpSecret();
-    const uri = buildOtpauthUri({ secret, accountLabel: 'admin@bobododa.uz', issuer: 'Bobo&Doda' });
+    const uri = buildOtpauthUri({ secret, accountLabel: 'admin@bobololadono.uz', issuer: 'Bobololadono' });
     expect(uri.startsWith('otpauth://totp/')).toBe(true);
     expect(uri).toContain(`secret=${secret}`);
   });

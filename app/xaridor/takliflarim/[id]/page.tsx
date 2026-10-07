@@ -149,7 +149,7 @@ export default function TaklifTafsilotiXaridorPage() {
       {offer.status === "bekor_qilingan" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-card p-4">
           <p className="text-xs text-muted">{t("offer.withdrawnNote")}</p>
-          <Link href="/xaridor/bozor">
+          <Link href="/bozor">
             <Button variant="secondary" size="sm">
               {t("offers.emptyCta")}
             </Button>
@@ -167,7 +167,7 @@ export default function TaklifTafsilotiXaridorPage() {
       {offer.status === "rad_etildi" && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-card p-4">
           <p className="text-xs text-muted">{t("offer.declinedNote")}</p>
-          <Link href="/xaridor/bozor">
+          <Link href="/bozor">
             <Button variant="secondary" size="sm">
               {t("offers.emptyCta")}
             </Button>
@@ -178,7 +178,7 @@ export default function TaklifTafsilotiXaridorPage() {
       {/* Taklif ma'lumotlari */}
       <Card padding="lg" className="flex flex-col gap-4">
         <Link
-          href={`/xaridor/bozor/mutaxassis/${offer.sellerId}`}
+          href={`/bozor/mutaxassis/${offer.sellerId}`}
           className="group flex items-center gap-3"
         >
           <Avatar name={offer.sellerName} />

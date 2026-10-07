@@ -1,7 +1,7 @@
 import { PlayMobileProvider } from './playmobile.provider';
 import { OTP_SMS_TEMPLATE } from '@/modules/auth/constants/otp.constants';
 
-const CONFIG = { apiUrl: 'https://send.example.uz/broker-api', login: 'test-login', password: 'test-pass', sender: 'BoboDoda' };
+const CONFIG = { apiUrl: 'https://send.example.uz/broker-api', login: 'test-login', password: 'test-pass', sender: 'bobololadono' };
 
 function jsonResponse(status: number, body: unknown, headers?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), { status, headers });
@@ -31,7 +31,7 @@ describe('PlayMobileProvider', () => {
     const body = JSON.parse(init.body as string);
     expect(body.messages[0].recipient).toBe('998901234567');
     expect(body.sms.content.text).toContain('111222');
-    expect(body.sms.originator).toBe('BoboDoda');
+    expect(body.sms.originator).toBe('bobololadono');
   });
 
   it('avtorizatsiya xato (401) — permanent:true, xato matni xavfsiz', async () => {

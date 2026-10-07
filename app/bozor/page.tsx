@@ -478,7 +478,7 @@ export default function BozorPage() {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {pagedServices.map((service) => (
                   <Card key={service.id} padding="none" hoverable className="group relative flex h-full flex-col overflow-hidden">
-                    <Link href={`/xaridor/bozor/xizmat/${service.id}`} className="absolute inset-0 z-0 rounded-card" aria-label={service.title} />
+                    <Link href={`/bozor/xizmat/${service.id}`} className="absolute inset-0 z-0 rounded-card" aria-label={service.title} />
                     <div className="relative z-10 flex flex-1 flex-col gap-2.5 p-5">
                       <div className="flex items-center justify-between gap-2">
                         <Badge tone="primary">{t(`cat.${service.category}`)}</Badge>
@@ -695,7 +695,7 @@ export default function BozorPage() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <Link href={`/xaridor/bozor/mutaxassis/${spec.user.id}`} className="w-full">
+                        <Link href={`/bozor/mutaxassis/${spec.user.id}`} className="w-full">
                           <Button variant="secondary" size="sm" className="w-full text-xs">
                             {t("market.viewProfile")}
                           </Button>

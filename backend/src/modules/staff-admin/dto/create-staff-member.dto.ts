@@ -3,7 +3,7 @@ import { StaffPermission, StaffRole } from '@prisma/client';
 import { ArrayUnique, IsArray, IsEmail, IsEnum, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreateStaffMemberDto {
-  @ApiProperty({ example: 'ops@bobododa.uz' })
+  @ApiProperty({ example: 'ops@bobololadono.uz' })
   @IsEmail()
   email!: string;
 

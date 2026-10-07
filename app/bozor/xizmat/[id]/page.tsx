@@ -130,8 +130,8 @@ export default function XizmatTafsilotiPage() {
     <div className="flex flex-col gap-6 pb-12">
       <Breadcrumb
         items={[
-          { label: t("nav.market"), href: "/xaridor/bozor" },
-          { label: t(`cat.${service.category}`), href: `/xaridor/bozor` },
+          { label: t("nav.market"), href: "/bozor" },
+          { label: t(`cat.${service.category}`), href: `/bozor` },
           { label: service.title },
         ]}
       />
@@ -172,7 +172,7 @@ export default function XizmatTafsilotiPage() {
               <h2 className="font-heading text-lg font-bold text-ink">{t("svc.otherServices")}</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 {otherServices.map((other) => (
-                  <Link key={other.id} href={`/xaridor/bozor/xizmat/${other.id}`} className="group block">
+                  <Link key={other.id} href={`/bozor/xizmat/${other.id}`} className="group block">
                     <Card hoverable className="flex h-full flex-col justify-between gap-3 p-4">
                       <div className="flex flex-col gap-1.5">
                         <Badge tone="primary" className="self-start">

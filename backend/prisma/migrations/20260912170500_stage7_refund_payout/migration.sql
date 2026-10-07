@@ -169,7 +169,7 @@ INSERT INTO "ledger_accounts" ("id", "type", "ownerType", "ownerId", "currency",
 -- ─────────────────────────────────────────────────────────────────────────
 DO $$
 DECLARE
-  app_role text := COALESCE(NULLIF(current_setting('bobododa.app_role', true), ''), 'bobododa_app');
+  app_role text := COALESCE(NULLIF(current_setting('bobololadono.app_role', true), ''), 'bobololadono_app');
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app_role) THEN
     EXECUTE format('REVOKE UPDATE, DELETE ON %I FROM %I', 'refund_provider_events', app_role);

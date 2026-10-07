@@ -156,9 +156,6 @@ export default function XaridorDashboardPage() {
                 <span className="text-xs text-muted">({openJobs.length})</span>
               </div>
               <div className="flex items-center gap-3">
-                <Link href="/xaridor/elonlarim" className="text-xs font-semibold text-primary hover:underline">
-                  {t("dash.viewAll")} ({jobs?.length || 0}) →
-                </Link>
               </div>
             </div>
 
@@ -218,11 +215,7 @@ export default function XaridorDashboardPage() {
                 <h2 className="font-heading text-xl font-bold text-ink">{t("dash.recentProposals")}</h2>
                 <span className="text-xs text-muted">({proposals?.length || 0})</span>
               </div>
-              {proposals && proposals.length > 0 && (
-                <Link href="/xaridor/elonlarim" className="text-xs font-semibold text-primary hover:underline">
-                  {t("dash.viewAll")} →
-                </Link>
-              )}
+
             </div>
 
             {loading ? (
@@ -237,7 +230,7 @@ export default function XaridorDashboardPage() {
                   <Link href="/xaridor/elonlarim/yangi">
                     <Button size="sm">{t("bdash.postJob")}</Button>
                   </Link>
-                  <Link href="/xaridor/bozor?tab=specialists">
+                  <Link href="/bozor?tab=specialists">
                     <Button variant="secondary" size="sm">{t("bdash.findSpecialist")}</Button>
                   </Link>
                 </div>
@@ -291,9 +284,7 @@ export default function XaridorDashboardPage() {
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-xl font-bold text-ink">{t("dash.activeContracts")}</h2>
-              <Link href="/xaridor/shartnomalar" className="text-xs font-semibold text-primary hover:underline">
-                {t("dash.viewAll")} ({activeContracts.length}) →
-              </Link>
+
             </div>
 
             {loading ? (
@@ -302,7 +293,7 @@ export default function XaridorDashboardPage() {
               <Card className="text-center py-8">
                 <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyContractsCta")}</p>
                 <p className="text-xs text-muted mt-1">Tayyor xizmat buyurtma qiling yoki ish e'loni bering.</p>
-                <Link href="/xaridor/bozor" className="mt-3 inline-block">
+                <Link href="/bozor" className="mt-3 inline-block">
                   <Button size="sm" variant="secondary">{t("dash.exploreMarket")}</Button>
                 </Link>
               </Card>
@@ -331,7 +322,7 @@ export default function XaridorDashboardPage() {
             <h3 className="font-bold text-primary text-sm mb-1.5">{t("bdash.helpTeaserTitle")}</h3>
             <p className="text-xs text-muted mb-4 leading-relaxed">{t("bdash.helpTeaserBody")}</p>
             <div className="flex flex-col gap-2">
-              <Link href="/xaridor/bozor?tab=specialists">
+              <Link href="/bozor?tab=specialists">
                 <Button size="sm" className="w-full">
                   {t("bdash.findSpecialist")}
                 </Button>

@@ -19,7 +19,7 @@ import {
  *      real boot'ga tayanadi.
  *
  * T1 "Definition of Done" — rol nomi ENV ORQALI (`DB_APP_ROLE`) sozlanishini
- * ISBOTLAYDI: sukut `bobododa_app`dan BUTUNLAY BOSHQA nom bilan (masalan
+ * ISBOTLAYDI: sukut `bobololadono_app`dan BUTUNLAY BOSHQA nom bilan (masalan
  * managed Postgres prefiks talab qilsa) migratsiya/F1 hech qanday kod
  * o'zgarishisiz ishlaydi (pastdagi alohida `describe` bloki).
  */
@@ -54,7 +54,7 @@ describe('F1 — DB rol/append-only boot tekshiruvi', () => {
 
   // ── 1. To'g'ridan-to'g'ri funksiya ────────────────────────────────────────
 
-  t('bobododa_app bilan tekshiruv O‘TADI (failures = [])', async () => {
+  t('bobololadono_app bilan tekshiruv O‘TADI (failures = [])', async () => {
     const r = await checkDbRoleHardening(appDb!, prov!.appRole);
     expect(r.currentUser).toBe(prov!.appRole);
     expect(r.failures).toEqual([]);
@@ -79,7 +79,7 @@ describe('F1 — DB rol/append-only boot tekshiruvi', () => {
 
   // ── 2. Haqiqiy boot, alohida process ──────────────────────────────────────
 
-  t('bobododa_app bilan REAL boot MUVAFFAQIYATLI (F1 happy path, alohida process)', async () => {
+  t('bobololadono_app bilan REAL boot MUVAFFAQIYATLI (F1 happy path, alohida process)', async () => {
     const res = bootCheck({
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
@@ -140,7 +140,7 @@ describe('F1 — DB rol/append-only boot tekshiruvi', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// T1 — rol nomi env orqali sozlanadi: sukut "bobododa_app"/"bobododa_migrator"
+// T1 — rol nomi env orqali sozlanadi: sukut "bobololadono_app"/"bobololadono_migrator"
 // dan BUTUNLAY BOSHQA nomlar bilan (managed Postgres cheklovini taqlid qiladi)
 // migratsiya/F1 hech qanday tahrirlanmasdan ishlaydi.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ describe('T1 — DB_APP_ROLE (sukutdan boshqa rol nomi)', () => {
     reachable = await requireInfraOrSkip('T1.db-role-assertion.e2e');
     if (!reachable) return;
 
-    // Sukutdan BUTUNLAY BOSHQA nomlar — "bobododa" prefiksi ham yo'q, faqat
+    // Sukutdan BUTUNLAY BOSHQA nomlar — "bobololadono" prefiksi ham yo'q, faqat
     // Postgres kvotalanmagan identifikator qoidasiga mos bo'lsa yetarli.
     prov = await provisionDb(DB_CUSTOM, {
       appRole: CUSTOM_APP_ROLE,
@@ -204,7 +204,7 @@ describe('T1 — DB_APP_ROLE (sukutdan boshqa rol nomi)', () => {
     expect(res.code).toBe(0);
   });
 
-  t('DB_APP_ROLE sukut ("bobododa_app") bilan — mos kelmagani uchun REAL boot KO‘TARILMAYDI', async () => {
+  t('DB_APP_ROLE sukut ("bobololadono_app") bilan — mos kelmagani uchun REAL boot KO‘TARILMAYDI', async () => {
     // `DATABASE_URL` haqiqatan CUSTOM_APP_ROLE bilan ulanadi (URL o'zgarmadi),
     // lekin DB_APP_ROLE beri sukutga qoldirildi — F1 mos kelmaslikni topishi
     // kerak: bu "DATABASE_URL to'g'ri, lekin DB_APP_ROLE noto'g'ri
@@ -214,12 +214,12 @@ describe('T1 — DB_APP_ROLE (sukutdan boshqa rol nomi)', () => {
       LOG_LEVEL: 'silent',
       SWAGGER_ENABLED: 'false',
       DB_ROLE_ASSERTION: 'on',
-      // DB_APP_ROLE berilmagan → sukut "bobododa_app" ≠ CUSTOM_APP_ROLE.
+      // DB_APP_ROLE berilmagan → sukut "bobololadono_app" ≠ CUSTOM_APP_ROLE.
       DATABASE_URL: prov!.appUrl,
       DATABASE_MIGRATION_URL: prov!.migratorUrl,
       REDIS_URL: E2E_REDIS_URL,
     });
     expect(res.code).not.toBe(0);
-    expect(res.stderr).toMatch(/current_user.*bobododa_app/s);
+    expect(res.stderr).toMatch(/current_user.*bobololadono_app/s);
   });
 });

@@ -13,7 +13,7 @@
 
 ```prisma
 // ─────────────────────────────────────────────────────────────────────────────
-// Bobo&Doda backend — Prisma schema
+// Bobololadono backend — Prisma schema
 //
 // Bosqich 1: POYDEVOR. Bu migratsiya faqat identity + auth token infra +
 // cross-cutting (audit / outbox / idempotency) modellarini kiritadi.
@@ -30,8 +30,8 @@
 //    service qatlami `data: { id: ids.next(), ... }` beradi. PG16 da native
 //    `uuidv7()` yo'q — generatsiya ilova darajasida.
 //  • Vaqt — hamma joyda `DateTime @db.Timestamptz(6)` (A3). `timestamp` YO'Q.
-//  • DB rollari (A4): `url` = `bobododa_app` (runtime, kam huquq),
-//    `directUrl` = `bobododa_migrator` (DDL/kengaytma/GRANT — `prisma migrate`).
+//  • DB rollari (A4): `url` = `bobololadono_app` (runtime, kam huquq),
+//    `directUrl` = `bobololadono_migrator` (DDL/kengaytma/GRANT — `prisma migrate`).
 // ─────────────────────────────────────────────────────────────────────────────
 
 generator client {
@@ -40,10 +40,10 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  // Runtime — kam huquqli `bobododa_app` roli (append-only jadvallarga
+  // Runtime — kam huquqli `bobololadono_app` roli (append-only jadvallarga
   // UPDATE/DELETE yo'q, DB darajasida majburlangan).
   url       = env("DATABASE_URL")
-  // `prisma migrate` / `db pull` — `bobododa_migrator` roli (DDL, CREATE
+  // `prisma migrate` / `db pull` — `bobololadono_migrator` roli (DDL, CREATE
   // EXTENSION, GRANT). PrismaClient buni ISHLATMAYDI.
   directUrl = env("DATABASE_MIGRATION_URL")
 }

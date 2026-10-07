@@ -47,7 +47,7 @@ export default function XaridorTakliflarimPage() {
         <EmptyState
           title={t("offers.empty")}
           action={
-            <Link href="/xaridor/bozor">
+            <Link href="/bozor">
               <Button>{t("offers.emptyCta")}</Button>
             </Link>
           }

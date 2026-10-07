@@ -6,7 +6,7 @@ import type { TextUpConfig } from './textup.types';
  * Bo'lim 11 — matn TextUp moderatsiyasida HAQIQATDA tasdiqlangan matn
  * bilan ANIQ mos kelishi SHART. **2026-09-17: `GET /v1/templates` orqali
  * tasdiqlangan (bo'lim: real API javobi) — bizning DASTLABKI taxmin
- * ("BOBODODA tasdiqlash kodi: ...") moderatsiya tomonidan RAD ETILGAN
+ * ("bobololadono tasdiqlash kodi: ...") moderatsiya tomonidan RAD ETILGAN
  * ("Rad etildi: Yo'riqnomadagi Punkt 2 dan foydalanib yozib bering."),
  * o'rniga UZUNROQ, boshqacha ibora tasdiqlangan** — shu YERDA taxmin
  * emas, `status:"active"` shablonning haqiqiy `content`/`verifiedContent`
@@ -20,8 +20,8 @@ export function renderTextUpText(template: string, params: Record<string, string
       throw new DomainError('INVALID_INPUT', 'OTP SMS uchun "code" parametri yo‘q');
     }
     return params.purpose === 'PASSWORD_RESET'
-      ? `BOBODODA saytida parolni tiklash uchun tasdiqlash kodi: ${code}`
-      : `BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: ${code}`;
+      ? `bobololadono saytida parolni tiklash uchun tasdiqlash kodi: ${code}`
+      : `bobololadono saytida ro'yxatdan o'tish uchun tasdiqlash kodi: ${code}`;
   }
   const message = params.message;
   if (!message) {
@@ -33,12 +33,12 @@ export function renderTextUpText(template: string, params: Record<string, string
 /**
  * Bo'lim 16 — TextUp `send` so'rovidagi `name` maydoni: ICHKI operatsion
  * yorliq (kampaniya/partiya nomi), SMS matnining O'ZI EMAS — shuning
- * uchun moderatsiya matnidan mustaqil ravishda o'qiladigan "BoboDoda ..."
+ * uchun moderatsiya matnidan mustaqil ravishda o'qiladigan "bobololadono ..."
  * shaklida qoladi.
  */
 export function deriveTextUpSmsName(template: string, params: Record<string, string>): string {
   if (template === OTP_SMS_TEMPLATE) {
-    return params.purpose === 'PASSWORD_RESET' ? 'BoboDoda Password Reset OTP' : 'BoboDoda Registration OTP';
+    return params.purpose === 'PASSWORD_RESET' ? 'bobololadono Password Reset OTP' : 'bobololadono Registration OTP';
   }
   return template;
 }

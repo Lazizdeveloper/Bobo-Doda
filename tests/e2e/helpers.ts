@@ -9,7 +9,7 @@ export const OTP_LOG_PATH =
   process.env.E2E_OTP_LOG_PATH || "/home/laziz/Bobo-Doda/scratch/backend-mirror.log";
 export const DB_CMD =
   process.env.E2E_DB_CMD ||
-  "PGPASSWORD=app psql -h 127.0.0.1 -p 5432 -U bobododa_app -d bobododa";
+  "PGPASSWORD=app psql -h 127.0.0.1 -p 5432 -U bobololadono_app -d bobololadono";
 export const PAYMENT_TEST_WEBHOOK_SECRET =
   process.env.PAYMENT_TEST_WEBHOOK_SECRET || "test-only-insecure-secret-change-me";
 export const API_BASE = process.env.E2E_API_URL || "http://localhost:4000/api/v1";

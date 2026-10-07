@@ -5,12 +5,12 @@
  * (`dist/common/security/hash.service.js` — argon2id, xuddi haqiqiy staff
  * onboarding'da ishlatiladigan BITTA manba), shorcut/soxta hash EMAS.
  *
- * XAVFSIZLIK: bu skript FAQAT `DATABASE_URL`da "bobododa_e2e" bo'lsa
+ * XAVFSIZLIK: bu skript FAQAT `DATABASE_URL`da "bobololadono_e2e" bo'lsa
  * ishlaydi — real dev/prod bazasiga yozib yuborish ehtimoli oldini olish
  * uchun ataylab qattiq tekshiruv (pastga qarang). Docs: RUNBOOK §18.
  *
  * Ishlatish (`backend/` papkasidan, nix-shell ichida — Prisma engine kerak):
- *   DATABASE_URL=postgresql://bobododa_app:app@127.0.0.1:55433/bobododa_e2e?schema=public \
+ *   DATABASE_URL=postgresql://bobololadono_app:app@127.0.0.1:55433/bobololadono_e2e?schema=public \
  *     node scripts/e2e-staff-fixture.cjs
  *
  * Uchta hisob yaratadi (mavjud bo'lsa email bo'yicha yangilanadi — idempotent):
@@ -37,9 +37,9 @@ const { PrismaClient, StaffRole, StaffPermission, StaffStatus } = require("@pris
 const { HashService } = require(path.join(__dirname, "..", "dist", "common", "security", "hash.service.js"));
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
-if (!DATABASE_URL.includes("bobododa_e2e")) {
+if (!DATABASE_URL.includes("bobololadono_e2e")) {
   console.error(
-    "REFUSING: DATABASE_URL bobododa_e2e'ni o'z ichiga olmaydi — bu skript FAQAT isolated E2E bazasiga yozadi.\n" +
+    "REFUSING: DATABASE_URL bobololadono_e2e'ni o'z ichiga olmaydi — bu skript FAQAT isolated E2E bazasiga yozadi.\n" +
       "Joriy DATABASE_URL: " + (DATABASE_URL || "(bo'sh)"),
   );
   process.exit(1);

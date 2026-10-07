@@ -355,8 +355,8 @@ export const dictionary: Record<string, Entry> = {
   "dispute.caseTitle": { uz: "Nizo tafsilotlari", ru: "Детали спора" },
   /* Nizo — keyingi qadam va qaytarib olish */
   "dispute.nextSteps": {
-    uz: "Bobo&Doda jamoasi dalillarni ko'rib chiqadi va odatda 3–5 ish kunida qaror qabul qiladi. Shu vaqt ichida shartnoma va escrow'dagi mablag' muzlatiladi.",
-    ru: "Команда Bobo&Doda изучит доказательства и обычно выносит решение за 3–5 рабочих дней. На это время контракт и средства в эскроу заморожены.",
+    uz: "Bobololadono jamoasi dalillarni ko'rib chiqadi va odatda 3–5 ish kunida qaror qabul qiladi. Shu vaqt ichida shartnoma va escrow'dagi mablag' muzlatiladi.",
+    ru: "Команда Bobololadono изучит доказательства и обычно выносит решение за 3–5 рабочих дней. На это время контракт и средства в эскроу заморожены.",
   },
   "dispute.withdraw": { uz: "Nizoni qaytarib olish", ru: "Отозвать спор" },
   "sm.chatFailed": {
@@ -500,7 +500,7 @@ export const dictionary: Record<string, Entry> = {
   "security.passwordChanged": { uz: "Parol yangilandi", ru: "Пароль обновлён" },
 
   /* Autentifikatsiya */
-  "auth.title": { uz: "Bobo&Doda'ga xush kelibsiz", ru: "Добро пожаловать в Bobo&Doda" },
+  "auth.title": { uz: "Bobololadono'ga xush kelibsiz", ru: "Добро пожаловать в Bobololadono" },
   "auth.subtitle": {
     uz: "Mutaxassislar bozori — bosqichli to'lov kafolati bilan. Pul har bir bosqich qabul qilingandan keyingina o'tkaziladi.",
     ru: "Биржа специалистов с поэтапной гарантией оплаты. Деньги переводятся только после приёмки каждого этапа.",
@@ -1116,8 +1116,8 @@ export const dictionary: Record<string, Entry> = {
     ru: "Контракт отправлен специалисту — ожидается его ответ. Пока ответа нет, вы можете отменить контракт.",
   },
   "contract.escrowFundedTitle": {
-    uz: "TO'LOV KAFOLATLANGAN (BOBO&DODA ESCROW)",
-    ru: "ОПЛАТА ГАРАНТИРОВАНА (BOBO&DODA ESCROW)",
+    uz: "TO'LOV KAFOLATLANGAN (BOBOLOLADONO ESCROW)",
+    ru: "ОПЛАТА ГАРАНТИРОВАНА (BOBOLOLADONO ESCROW)",
   },
   "contract.escrowFundedBuyerDesc": {
     uz: "Pulingiz xavfsiz kafolat hisobida muzlatilgan. Mutaxassis ishni to'liq bajarib, siz tekshirib tasdiqlamaguningizcha mablag' unga o'tkazilmaydi.",
@@ -1285,8 +1285,8 @@ export const dictionary: Record<string, Entry> = {
   },
   "badge.identityVerified": { uz: "Shaxsi tasdiqlangan", ru: "Личность подтверждена" },
   "badge.identityVerifiedHint": {
-    uz: "Hujjat Bobo&Doda tomonidan ko'rib chiqilgan va tasdiqlangan",
-    ru: "Документ проверен и подтверждён Bobo&Doda",
+    uz: "Hujjat Bobololadono tomonidan ko'rib chiqilgan va tasdiqlangan",
+    ru: "Документ проверен и подтверждён Bobololadono",
   },
 
   /* Profil */
@@ -2070,13 +2070,13 @@ export const dictionary: Record<string, Entry> = {
     ru: "Ожидается оплата — контракт ещё не начат",
   },
   "cfund.awaitingDesc": {
-    uz: "Shartnoma tuzildi. Ishni boshlash uchun butun summani Bobo&Doda escrow hisobiga to'lang — pul xavfsiz saqlanadi va faqat siz ishni qabul qilgandagina mutaxassisga o'tadi.",
-    ru: "Контракт создан. Чтобы работа началась, оплатите всю сумму на эскроу-счёт Bobo&Doda — деньги защищены и уходят специалисту только после вашей приёмки.",
+    uz: "Shartnoma tuzildi. Ishni boshlash uchun butun summani Bobololadono escrow hisobiga to'lang — pul xavfsiz saqlanadi va faqat siz ishni qabul qilgandagina mutaxassisga o'tadi.",
+    ru: "Контракт создан. Чтобы работа началась, оплатите всю сумму на эскроу-счёт Bobololadono — деньги защищены и уходят специалисту только после вашей приёмки.",
   },
   "cfund.pay": { uz: "To'lash va faollashtirish", ru: "Оплатить и активировать" },
   "cfund.modalDesc": {
-    uz: "Butun summa Bobo&Doda escrow hisobiga o'tkaziladi. Mutaxassisga emas — pul har bosqich qabul qilinganda bosqichma-bosqich beriladi. Qabul qilmasangiz, pul hisobingizga qaytadi.",
-    ru: "Вся сумма переводится на эскроу-счёт Bobo&Doda. Не специалисту — деньги передаются поэтапно после приёмки каждого этапа. При отказе средства возвращаются вам.",
+    uz: "Butun summa Bobololadono escrow hisobiga o'tkaziladi. Mutaxassisga emas — pul har bosqich qabul qilinganda bosqichma-bosqich beriladi. Qabul qilmasangiz, pul hisobingizga qaytadi.",
+    ru: "Вся сумма переводится на эскроу-счёт Bobololadono. Не специалисту — деньги передаются поэтапно после приёмки каждого этапа. При отказе средства возвращаются вам.",
   },
   "cfund.done": {
     uz: "Shartnoma faollashdi — mutaxassis ishni boshlaydi",
@@ -2194,7 +2194,7 @@ export const dictionary: Record<string, Entry> = {
     uz: "Mablag'langan va tekshiruvdagi bosqichlar",
     ru: "Профинансированные и проверяемые этапы",
   },
-  "spend.balance": { uz: "Bobo&Doda hisobim", ru: "Мой счёт Bobo&Doda" },
+  "spend.balance": { uz: "Bobololadono hisobim", ru: "Мой счёт Bobololadono" },
   "spend.balanceHint": {
     uz: "Bekor qilingan shartnomalardan qaytgan mablag' — kartaga yechishingiz mumkin",
     ru: "Средства, возвращённые с отменённых контрактов — можно вывести на карту",
@@ -2345,8 +2345,8 @@ export const dictionary: Record<string, Entry> = {
     ru: "Банковский перевод по контракту \"{title}\" отклонён. Причина: {reason}",
   },
   "ntf.refundIssued": {
-    uz: "{amount} so'm Bobo&Doda hisobingizga qaytarildi: {title}",
-    ru: "{amount} сум возвращено на ваш баланс Bobo&Doda: {title}",
+    uz: "{amount} so'm Bobololadono hisobingizga qaytarildi: {title}",
+    ru: "{amount} сум возвращено на ваш баланс Bobololadono: {title}",
   },
   "ntf.newReview": {
     uz: "Sizga yangi sharh qoldirildi: {rating}★",
@@ -2480,7 +2480,7 @@ export const dictionary: Record<string, Entry> = {
   "ps_h2": { uz: "Freelance bozori nega ishonchsiz?", ru: "Почему фриланс-биржам не доверяют?" },
   "ps_sub": { uz: "Biz Markaziy Osiyoda eng ko'p uchraydigan muammolarni yechish uchun qurdik.", ru: "Мы построили платформу, чтобы решить самые частые проблемы в Центральной Азии." },
   "ps_problem_title": { uz: "Muammo", ru: "Проблема" },
-  "ps_solution_title": { uz: "Bobo&Doda yechimi", ru: "Решение Bobo&Doda" },
+  "ps_solution_title": { uz: "Bobololadono yechimi", ru: "Решение Bobololadono" },
   "ps_p1": { uz: "Oldindan to'lab, ishni ololmaslik xavfi", ru: "Риск оплатить вперёд и не получить работу" },
   "ps_s1": { uz: "Pul eskrouda turadi, faqat bosqich qabul qilingach o'tadi", ru: "Деньги хранятся в эскроу и переходят только после приёмки этапа" },
   "ps_p2": { uz: "Kim bilan gaplashayotganingiz noaniq — soxta profil xavfi", ru: "Непонятно, с кем вы говорите — риск фейковых профилей" },
@@ -2499,14 +2499,14 @@ export const dictionary: Record<string, Entry> = {
   "stmt_a2": { uz: "QIYIN.", ru: "СЛОЖНО." },
   "stmt_b1": { uz: "SHUNING UCHUN PULNI", ru: "ПОЭТОМУ МЫ ЗАЩИЩАЕМ ДЕНЬГИ" },
   "stmt_b2": { uz: "QABUL QILINMAGUNCHA HIMOYA QILAMIZ.", ru: "ДО ПРИЁМКИ РАБОТЫ." },
-  "stmt_caption": { uz: "Eskrou — Bobo&Doda'ning markaziy printsipi.", ru: "Эскроу — центральный принцип Bobo&Doda." },
+  "stmt_caption": { uz: "Eskrou — Bobololadono'ning markaziy printsipi.", ru: "Эскроу — центральный принцип Bobololadono." },
   "escrow_tag": { uz: "Qanday ishlaydi", ru: "Как это работает" },
   "escrow_h2": { uz: "Pul ish qabul qilinmaguncha himoyalangan.", ru: "Деньги защищены, пока работа не принята." },
   "escrow_sub": { uz: "Pulingiz siz qabul qilmaguningizcha xavfsiz saqlanadi.", ru: "Ваши деньги под защитой, пока вы не подтвердите приёмку." },
   "step1_h": { uz: "Xaridor loyiha yaratadi", ru: "Клиент создаёт проект" },
   "step1_p": { uz: "Ish tavsifi, bosqichlar va byudjet belgilanadi.", ru: "Указываются описание, этапы и бюджет." },
   "step2_h": { uz: "Pul eskrouga o'tadi", ru: "Деньги переходят в эскроу" },
-  "step2_p": { uz: "To'lov Bobo&Doda tomonidan xavfsiz saqlanadi, mutaxassisga hali tegmaydi.", ru: "Оплата надёжно хранится у Bobo&Doda, ещё не поступая специалисту." },
+  "step2_p": { uz: "To'lov Bobololadono tomonidan xavfsiz saqlanadi, mutaxassisga hali tegmaydi.", ru: "Оплата надёжно хранится у Bobololadono, ещё не поступая специалисту." },
   "step3_h": { uz: "Mutaxassis ishni bajaradi", ru: "Специалист выполняет работу" },
   "step3_p": { uz: "Bosqich topshiriladi, xaridor 3 kun ichida ko'rib chiqadi.", ru: "Этап сдаётся, у клиента есть 3 дня на проверку." },
   "step4_h": { uz: "Xaridor tasdiqlaydi", ru: "Клиент подтверждает" },
@@ -2603,7 +2603,7 @@ export const dictionary: Record<string, Entry> = {
   "proj3_title": { uz: "SaaS mahsulot uchun target reklama", ru: "Таргетированная реклама для SaaS-продукта" },
   "proj3_budget": { uz: "8 000 000 so'm", ru: "8 000 000 сум" },
   "proj3_timeline": { uz: "1 oy", ru: "1 месяц" },
-  "diff_tag": { uz: "Nega Bobo&Doda", ru: "Почему Bobo&Doda" },
+  "diff_tag": { uz: "Nega Bobololadono", ru: "Почему Bobololadono" },
   "diff_h2": { uz: "An'anaviy platformalardan farqimiz", ru: "Наше отличие от классических платформ" },
   "diff_sub": { uz: "Global platformalar Markaziy Osiyo uchun mo'ljallanmagan. Biz — mo'ljallanganmiz.", ru: "Глобальные платформы не созданы для Центральной Азии. Мы — созданы." },
   "diff_col_them": { uz: "An'anaviy platformalar", ru: "Классические платформы" },
@@ -2627,7 +2627,7 @@ export const dictionary: Record<string, Entry> = {
   "row_fees_us": { uz: "Pastroq", ru: "Ниже" },
   "test_tag": { uz: "Fikrlar", ru: "Отзывы" },
   "test_h2": { uz: "Xaridorlar va mutaxassislar nima deyishadi", ru: "Что говорят клиенты и специалисты" },
-  "test_sub": { uz: "Bobo&Doda orqali xavfsiz ishlagan foydalanuvchilar tajribasi.", ru: "Опыт пользователей, работающих через Bobo&Doda безопасно." },
+  "test_sub": { uz: "Bobololadono orqali xavfsiz ishlagan foydalanuvchilar tajribasi.", ru: "Опыт пользователей, работающих через Bobololadono безопасно." },
   "t1_role": { uz: "Marketing direktori, RetailUZ", ru: "Директор по маркетингу, RetailUZ" },
   "t1_quote": { uz: "Eskrou tizimi tufayli birinchi loyihadanoq xotirjam bo'ldik — pul mutaxassisga faqat ish tasdiqlangach o'tadi.", ru: "Благодаря эскроу мы были спокойны уже с первого проекта — деньги переходят специалисту только после подтверждения работы." },
   "t2_role": { uz: "Frontend dasturchi", ru: "Frontend-разработчик" },
@@ -2651,7 +2651,7 @@ export const dictionary: Record<string, Entry> = {
   "faq_still_need_help": { uz: "Hali ham yordam kerakmi?", ru: "Всё ещё нужна помощь?" },
   "faq_ask_support": { uz: "Yordam so'rash", ru: "Обратиться в поддержку" },
   "faqpage.title": { uz: "Savol-javob", ru: "Вопросы и ответы" },
-  "faqpage.subtitle": { uz: "Bobo&Doda haqida eng ko'p beriladigan savollarga javoblar.", ru: "Ответы на самые частые вопросы о Bobo&Doda." },
+  "faqpage.subtitle": { uz: "Bobololadono haqida eng ko'p beriladigan savollarga javoblar.", ru: "Ответы на самые частые вопросы о Bobololadono." },
   "faqpage.search_placeholder": { uz: "Savolingizni qidiring...", ru: "Найдите свой вопрос..." },
   "faqpage.all_categories": { uz: "Barchasi", ru: "Все" },
   "faqpage.no_results": { uz: "Hech narsa topilmadi. Boshqa so'z bilan qidirib ko'ring.", ru: "Ничего не найдено. Попробуйте другой запрос." },
@@ -2668,7 +2668,7 @@ export const dictionary: Record<string, Entry> = {
   "q1": { uz: "Eskrou aniq qanday ishlaydi?", ru: "Как именно работает эскроу?" },
   "a1": { uz: "Xaridor bosqich summasini oldindan eskrou hisobiga o'tkazadi. Mutaxassis ishni topshiradi, xaridor 3 kun ichida ko'rib chiqadi va qabul qilsa, pul darhol mutaxassisga o'tadi.", ru: "Клиент заранее переводит сумму этапа на эскроу-счёт. Специалист сдаёт работу, у клиента есть 3 дня на проверку, и после приёмки деньги сразу поступают специалисту." },
   "q2": { uz: "Agar ish sifatsiz bo'lsa nima bo'ladi?", ru: "Что если работа окажется некачественной?" },
-  "a2": { uz: "Xaridor o'zgartirish so'rashi mumkin. Kelishuvga erishilmasa, Bobo&Doda jamoasi nizoni ko'rib chiqadi va adolatli qaror qabul qiladi.", ru: "Клиент может запросить доработку. Если не удаётся договориться, команда Bobo&Doda рассматривает спор и принимает справедливое решение." },
+  "a2": { uz: "Xaridor o'zgartirish so'rashi mumkin. Kelishuvga erishilmasa, Bobololadono jamoasi nizoni ko'rib chiqadi va adolatli qaror qabul qiladi.", ru: "Клиент может запросить доработку. Если не удаётся договориться, команда Bobololadono рассматривает спор и принимает справедливое решение." },
   "q3": { uz: "Qanday to'lov usullari qo'llab-quvvatlanadi?", ru: "Какие способы оплаты поддерживаются?" },
   "a3": { uz: "Uzcard, Humo, Visa, Mastercard va mahalliy hamyonlar (Payme, Click, Kaspi).", ru: "Uzcard, Humo, Visa, Mastercard и локальные кошельки (Payme, Click, Kaspi)." },
   "q4": { uz: "Ro'yxatdan o'tish uchun qancha vaqt kerak?", ru: "Сколько времени занимает регистрация?" },
@@ -2827,7 +2827,7 @@ export const dictionary: Record<string, Entry> = {
   "svc.faq1_a": { uz: "Siz bepul o'zgartirish so'rashingiz mumkin. Pul mablag'i ish to'liq qabul qilinmaguncha xavfsiz escrow hisobida saqlanadi.", ru: "Вы можете запросить бесплатные правки. Средства хранятся в безопасности на эскроу до полного утверждения." },
   "svc.faq2_q": { uz: "Muddati o'tib ketsa nima bo'ladi?", ru: "Что если срок будет превышен?" },
   "svc.faq2_a": { uz: "Mutaxassis muddatga amal qilishi shart. Aks holda buyurtmani bekor qilib, to'liq mablag'ni qaytarib olishingiz mumkin.", ru: "Специалист обязан соблюдать сроки. В противном случае заказ можно отменить с полным возвратом." },
-  "svc.escrowBadgeTitle": { uz: "Bobo&Doda 100% Escrow Kafolati", ru: "100% Эскроу Гарантия Bobo&Doda" },
+  "svc.escrowBadgeTitle": { uz: "Bobololadono 100% Escrow Kafolati", ru: "100% Эскроу Гарантия Bobololadono" },
   "svc.escrowBadgeDesc": { uz: "Pul to'g'ridan-to'g'ri mutaxassisga o'tmaydi — u platforma escrow hisobida muzlatiladi va faqat siz ishni tekshirib tasdiqlaganingizdan keyin beriladi.", ru: "Деньги не уходят специалисту напрямую — они заморожены на эскроу и выплачиваются только после вашей приёмки." },
   "svc.otherServices": { uz: "Mutaxassisning boshqa xizmatlari", ru: "Другие услуги специалиста" },
   "svc.reviewsSection": { uz: "Xaridorlar sharhlari", ru: "Отзывы клиентов" },

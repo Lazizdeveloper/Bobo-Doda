@@ -1,4 +1,4 @@
-# Bobo&Doda production readiness
+# Bobololadono production readiness
 
 Holat: frontend mahsulot oqimlari tayyor va **backend ulanishiga tayyor**;
 real launch server va operatsion infratuzilmasiz mumkin emas.

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Bo'lim 3 (admin.bobododa.uz ko'chirish) — repo ildizidagi `proxy.ts`ning
+ * Bo'lim 3 (admin.bobololadono.uz ko'chirish) — repo ildizidagi `proxy.ts`ning
  * host-asoslangan qayta yozish/yo'naltirish mantig'i uchun regressiya
  * qamrovi. QA ko'rib chiqishi topilmasi (F4): bu mantiq ilgari faqat
  * qo'lda `curl -H "Host: ..."` bilan bir martalik tekshirilgan edi,
@@ -20,10 +20,10 @@ import { test, expect } from "@playwright/test";
  * ekanini yashirib qo'yardi.
  */
 
-const ADMIN_HOST = "admin.bobododa.uz";
-const APP_HOST = "app.bobododa.uz";
+const ADMIN_HOST = "admin.bobololadono.uz";
+const APP_HOST = "app.bobololadono.uz";
 
-test.describe("proxy.ts — admin.bobododa.uz host-asoslangan routing", () => {
+test.describe("proxy.ts — admin.bobololadono.uz host-asoslangan routing", () => {
   test("admin host: /kirish ichki /admin/kirish ga qayta yoziladi (200, noindex)", async ({ request }) => {
     const res = await request.get("/kirish", {
       headers: { host: ADMIN_HOST },
@@ -43,7 +43,7 @@ test.describe("proxy.ts — admin.bobododa.uz host-asoslangan routing", () => {
     const res = await request.get("/admin/kirish?next=x", { headers: { host: ADMIN_HOST }, maxRedirects: 0 });
     expect(res.status()).toBe(307);
     const location = res.headers()["location"];
-    expect(location).toContain("://admin.bobododa.uz/kirish?next=x");
+    expect(location).toContain("://admin.bobololadono.uz/kirish?next=x");
     // Qayta yo'naltirilgan manzil o'zi yana qayta yo'naltirilmasin (sikl yo'q):
     const target = new URL(location);
     const second = await request.get(target.pathname + target.search, {

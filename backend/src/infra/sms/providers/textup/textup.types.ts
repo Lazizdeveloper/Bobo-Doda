@@ -1,5 +1,5 @@
 /**
- * Bosqich 23 (v4) — TextUp SMS API, Bobo&Doda'ning O'Z hisobi uchun
+ * Bosqich 23 (v4) — TextUp SMS API, Bobololadono'ning O'Z hisobi uchun
  * (boshqa loyihadagi ishlayotgan integratsiya FAQAT protokol/referens —
  * uning credential/token/userId/templateId/nicknameId qiymatlari
  * KO'CHIRILMAYDI, faqat so'rov/javob SHAKLI olindi). Ikkita ALOHIDA host:
@@ -20,9 +20,9 @@ export interface TextUpConfig {
   expectedUserId?: string;
   /** Ixtiyoriy, tasdiqlangan alpha-nom (hozir "Tekshirilmoqda"). Berilmasa qisqa raqamdan yuboriladi. */
   nicknameId?: string;
-  /** Ixtiyoriy, "BOBODODA Registration OTP" shabloni tasdiqlangach. */
+  /** Ixtiyoriy, "bobololadono Registration OTP" shabloni tasdiqlangach. */
   registrationTemplateId?: string;
-  /** Ixtiyoriy, "BOBODODA Password Reset OTP" shabloni tasdiqlangach. */
+  /** Ixtiyoriy, "bobololadono Password Reset OTP" shabloni tasdiqlangach. */
   passwordResetTemplateId?: string;
 }
 

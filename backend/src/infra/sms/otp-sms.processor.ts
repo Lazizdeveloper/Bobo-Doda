@@ -27,7 +27,7 @@ export interface OtpSmsJobData {
 /**
  * OTP SMS yetkazish — ASOSIY OutboxEvent+worker naqshidan ATAYLAB chetga
  * chiqadi: OTP kodi — bir martalik, qisqa umrли SIR. Uni `outbox_events`
- * (Postgres, `SELECT` `bobododa_app`ga OCHIQ, doim saqlanadi) ichiga yozish
+ * (Postgres, `SELECT` `bobololadono_app`ga OCHIQ, doim saqlanadi) ichiga yozish
  * DB sizib chiqsa tarixiy kodlarni fosh qilardi. BullMQ/Redis job data esa
  * `removeOnComplete`/`removeOnFail` bilan tez tozalanadi (`QueueModule`).
  *

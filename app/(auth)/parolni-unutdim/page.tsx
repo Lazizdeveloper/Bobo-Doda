@@ -78,8 +78,8 @@ export default function ParolniUnutdimPage() {
       <div className="rounded-3xl sm:rounded-[32px] border border-line/80 bg-card p-7 sm:p-12 lg:p-14 shadow-2xl shadow-black/5 flex flex-col items-center justify-center min-h-[380px]">
         <div className="mb-6 inline-flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.png" alt="Bobo&Doda" className="h-9 w-9 object-contain" />
-          <span className="font-heading font-black text-lg tracking-tight text-ink">BOBO&amp;DODA</span>
+          <img src="/logo.jpg" alt="Bobololadono" className="h-9 w-auto rounded-sm object-contain" />
+          <span className="font-heading font-black text-lg tracking-tight text-ink">Bobololadono</span>
         </div>
         <div className="my-auto flex flex-col items-center justify-center gap-3 py-8" role="status" aria-live="polite">
           <svg className="h-8 w-8 animate-spin text-primary" viewBox="0 0 24 24" fill="none" aria-hidden="true">

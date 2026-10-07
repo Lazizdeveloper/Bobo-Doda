@@ -1,5 +1,5 @@
 /**
- * Bobo-Doda Anti-Circumvention Chat Filter
+ * Bobololadono Anti-Circumvention Chat Filter
  * 
  * Ushbu modul platformadan tashqarida (Telegram, telefon, email, karta)
  * kelishish va firibgarlik xavfini oldini olish uchun xabarlarni tekshiradi.
@@ -43,7 +43,7 @@ export function checkCircumvention(text: string): CircumventionCheckResult {
       titleUz: "Elektron pochta almashish cheklangan",
       titleRu: "Обмен электронной почтой ограничен",
       descriptionUz:
-        "Shartnoma to'lovi Escrow kafolat hisobiga muzlatilguniga qadar elektron pochta orqali tashqi aloqa o'rnatish taqiqlanadi. Mablag'ingiz xavfsizligi uchun barcha suhbat Bobo-Doda ichida olib borilishi kerak.",
+        "Shartnoma to'lovi Escrow kafolat hisobiga muzlatilguniga qadar elektron pochta orqali tashqi aloqa o'rnatish taqiqlanadi. Mablag'ingiz xavfsizligi uchun barcha suhbat Bobololadono ichida olib borilishi kerak.",
       descriptionRu:
         "До момента заморозки средств на безопасном Escrow-счете обмен email-адресами запрещен для вашей безопасности.",
     };
@@ -96,7 +96,7 @@ export function checkCircumvention(text: string): CircumventionCheckResult {
       titleUz: "Telefon raqami almashish cheklangan",
       titleRu: "Обмен номерами телефонов ограничен",
       descriptionUz:
-        "Shartnoma to'lovi amalga oshirilmasdan oldin telefon raqam berish taqiqlanadi. Platformadan tashqaridagi kelishuvlar uchun Bobo-Doda kafolat bermaydi.",
+        "Shartnoma to'lovi amalga oshirilmasdan oldin telefon raqam berish taqiqlanadi. Platformadan tashqaridagi kelishuvlar uchun Bobololadono kafolat bermaydi.",
       descriptionRu:
         "Передача номеров телефонов до оплаты контракта запрещена. Платформа не гарантирует оплату при сделках вне сайта.",
     };
@@ -121,7 +121,7 @@ export function checkCircumvention(text: string): CircumventionCheckResult {
             ? "Отправка номеров карт запрещена"
             : "Обнаружен номер телефона или контакт",
         descriptionUz:
-          "To'g'ridan-to'g'ri to'lov yoki kontakt almashish firibgarlikka olib kelishi mumkin. To'lovlar faqat Bobo-Doda Escrow tizimi orqali amalga oshiriladi.",
+          "To'g'ridan-to'g'ri to'lov yoki kontakt almashish firibgarlikka olib kelishi mumkin. To'lovlar faqat Bobololadono Escrow tizimi orqali amalga oshiriladi.",
         descriptionRu:
           "Прямые расчеты и обмен контактами вне платформы запрещены для предотвращения финансовых рисков.",
       };
@@ -158,9 +158,9 @@ export function checkCircumvention(text: string): CircumventionCheckResult {
         titleUz: "Platformadan tashqariga chaqirish taqiqlanadi",
         titleRu: "Призыв к общению вне платформы запрещен",
         descriptionUz:
-          "Bobo-Doda xavfsizlik tizimi sizni firibgarlikdan asraydi. Barcha muloqot va to'lovlar platforma ichida olib borilishi shart.",
+          "Bobololadono xavfsizlik tizimi sizni firibgarlikdan asraydi. Barcha muloqot va to'lovlar platforma ichida olib borilishi shart.",
         descriptionRu:
-          "Все коммуникации и расчеты должны осуществляться строго внутри Bobo-Doda во избежание блокировки и рисков.",
+          "Все коммуникации и расчеты должны осуществляться строго внутри Bobololadono во избежание блокировки и рисков.",
       };
     }
   }
@@ -225,7 +225,7 @@ export function reportCircumventionViolation(params: {
     localStorage.setItem("sb2_trust_reports", JSON.stringify(reports));
 
     // Admin layout badge counters refresh
-    window.dispatchEvent(new CustomEvent("bobododa:data-changed", { detail: { key: "sb2_trust_reports" } }));
+    window.dispatchEvent(new CustomEvent("bobololadono:data-changed", { detail: { key: "sb2_trust_reports" } }));
   } catch (err) {
     console.error("Failed to auto-report circumvention:", err);
   }

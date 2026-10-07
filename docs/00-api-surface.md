@@ -207,7 +207,7 @@ tiplari `@/lib/types` dan (`Model.*`).
 | `upload(file)` | `File` | `DeliverableFile` = `{ id, name, size, type, url }` |
 
 Yagona yuklash chegarasi (chat biriktirmasi + bosqich topshirig'i). Mock:
-`data:` URL (kichik) yoki soxta `https://storage.bobododa.uz/…` (katta).
+`data:` URL (kichik) yoki soxta `https://storage.bobololadono.uz/…` (katta).
 Chegaralar `lib/attachments.ts`: `MAX_ATTACHMENT_BYTES` 15 MB, `MAX_ATTACHMENTS`
 5, ruxsat etilgan MIME/kengaytmalar. `FILE_TOO_LARGE`, `FILE_TYPE_NOT_ALLOWED`,
 `FILE_READ_FAILED`. **`URL.createObjectURL` / `blob:` TAQIQLANGAN.**

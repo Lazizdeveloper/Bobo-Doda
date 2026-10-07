@@ -1457,17 +1457,15 @@ export default function LandingPage() {
         <header className="header-floating">
           <div className="nav-container">
             <nav className="nav-capsule" aria-label="Asosiy navigatsiya">
-              <Link href="/" className="nav-brand" aria-label="Bobo&Doda">
+              <Link href="/" className="nav-brand" aria-label="Bobololadono">
                 {/* next/image emas — landing o'z JSX/ranglarini alohida chizadi (CLAUDE.md), statik logotip, sobit o'lcham */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/logo-icon.png"
-                  alt="Bobo&Doda"
-                  width={44}
-                  height={44}
-                  className="nav-brand-icon"
+                  src="/logo.jpg"
+                  alt="Bobololadono"
+                  className="nav-brand-icon rounded-sm"
                 />
-                <span className="nav-brand-title">BOBO&amp;DODA</span>
+                <span className="nav-brand-title">Bobololadono</span>
               </Link>
 
               <div className="nav-menu-links">
@@ -1842,7 +1840,7 @@ export default function LandingPage() {
 
               <div>
                 <h2 className="section-title" style={{ fontSize: "clamp(28px, 4vw, 46px)" }}>
-                  {tr("Bularning bari ortda qoldi", "Никаких рисков с Bobo&Doda", "Zero risks with Bobo&Doda")}
+                  {tr("Bularning bari ortda qoldi", "Никаких рисков с Bobololadono", "Zero risks with Bobololadono")}
                 </h2>
                 <p style={{ margin: "18px 0 28px", fontSize: 17, lineHeight: 1.65, color: "var(--n700)" }}>
                   {tr(
@@ -2084,7 +2082,7 @@ export default function LandingPage() {
             <div className="container-yv">
               <span className="eyebrow-pill">
                 <span className="eyebrow-pill-dot" aria-hidden="true" />
-                Bobo&amp;Doda
+                Bobololadono
               </span>
               <h2 className="cta-final-title">
                 {tr(
@@ -2121,13 +2119,12 @@ export default function LandingPage() {
                 <div className="footer-logo-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- landing o'z JSX'ini alohida chizadi, statik logotip */}
                   <img
-                    src="/logo-icon.png"
-                    alt="Bobo&Doda"
-                    width={32}
+                    src="/logo.jpg"
+                    alt="Bobololadono"
                     height={32}
-                    style={{ height: 32, width: 32, objectFit: "contain", display: "block" }}
+                    style={{ height: 32, width: "auto", objectFit: "contain", display: "block", borderRadius: 4 }}
                   />
-                  <span>BOBO&amp;DODA</span>
+                  <span>Bobololadono</span>
                 </div>
                 <p className="footer-desc-p">{t("foot_desc")}</p>
               </div>
@@ -2165,7 +2162,7 @@ export default function LandingPage() {
                       type="button"
                       onClick={() => {
                         if (typeof window !== "undefined") {
-                          window.dispatchEvent(new CustomEvent("bobododa:open-feedback"));
+                          window.dispatchEvent(new CustomEvent("bobololadono:open-feedback"));
                         }
                       }}
                       className="cursor-pointer hover:underline"
@@ -2178,7 +2175,7 @@ export default function LandingPage() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--hair)", paddingTop: 24, fontSize: 13, color: "var(--n500)", flexWrap: "wrap", gap: 14 }}>
-              <div>&copy; 2026 Bobo&amp;Doda. {t("foot_rights")}</div>
+              <div>&copy; 2026 Bobololadono. {t("foot_rights")}</div>
               <div className="lang-capsule" role="group" aria-label={t("a11y.language")}>
                 {langOptions.map((opt) => (
                   <button

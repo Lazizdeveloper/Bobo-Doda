@@ -1,8 +1,8 @@
 import { validateEnv } from './env.schema';
 
 const base = {
-  DATABASE_URL: 'postgresql://bobododa_app:app@localhost:5432/db?schema=public',
-  DATABASE_MIGRATION_URL: 'postgresql://bobododa_migrator:migrator@localhost:5432/db?schema=public',
+  DATABASE_URL: 'postgresql://bobololadono_app:app@localhost:5432/db?schema=public',
+  DATABASE_MIGRATION_URL: 'postgresql://bobololadono_migrator:migrator@localhost:5432/db?schema=public',
   REDIS_URL: 'redis://localhost:6379',
   // Bosqich 2 — MAJBURIY (≥32 belgi).
   JWT_ACCESS_SECRET: 'test-access-secret-test-access-secret-32',
@@ -25,7 +25,7 @@ const playMobileCreds = {
   PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
   PLAYMOBILE_LOGIN: 'test-login',
   PLAYMOBILE_PASSWORD: 'test-password',
-  PLAYMOBILE_SENDER: 'BoboDoda',
+  PLAYMOBILE_SENDER: 'Bobololadon',
 };
 
 // Bosqich 23 (v4) — SMS_PROVIDER=TEXTUP tanlansa 4 ta maydon HAM majburiy
@@ -88,14 +88,14 @@ describe('validateEnv', () => {
     expect(env.CORS_ORIGINS).toEqual(['http://a.test', 'http://b.test', 'http://c.test']);
   });
 
-  it('STAFF_CORS_ORIGINS — CORS_ORIGINS’dan mustaqil, o‘zining ro‘yxatiga aylanadi (bo‘lim 3 — admin.bobododa.uz izolyatsiyasi)', () => {
+  it('STAFF_CORS_ORIGINS — CORS_ORIGINS’dan mustaqil, o‘zining ro‘yxatiga aylanadi (bo‘lim 3 — admin.bobololadono.uz izolyatsiyasi)', () => {
     const env = validateEnv({
       ...base,
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
     });
-    expect(env.CORS_ORIGINS).toEqual(['https://app.bobododa.uz']);
-    expect(env.STAFF_CORS_ORIGINS).toEqual(['https://admin.bobododa.uz']);
+    expect(env.CORS_ORIGINS).toEqual(['https://app.bobololadono.uz']);
+    expect(env.STAFF_CORS_ORIGINS).toEqual(['https://admin.bobololadono.uz']);
   });
 
   it('production’da STAFF_CORS_ORIGINS sukuti (localhost) rad etiladi (fail closed — ikkinchi security ko‘rib chiqishi topilmasi)', () => {
@@ -107,7 +107,7 @@ describe('validateEnv', () => {
         NODE_ENV: 'production',
         SWAGGER_ENABLED: 'false',
         PAYMENT_PROVIDER: 'PAYME',
-        CORS_ORIGINS: 'https://app.bobododa.uz',
+        CORS_ORIGINS: 'https://app.bobololadono.uz',
         // STAFF_CORS_ORIGINS berilmagan — sukut http://localhost:3000 qoladi.
       }),
     ).toThrow(/STAFF_CORS_ORIGINS/);
@@ -122,8 +122,8 @@ describe('validateEnv', () => {
         NODE_ENV: 'production',
         SWAGGER_ENABLED: 'false',
         PAYMENT_PROVIDER: 'PAYME',
-        CORS_ORIGINS: 'https://app.bobododa.uz,https://admin.bobododa.uz',
-        STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+        CORS_ORIGINS: 'https://app.bobololadono.uz,https://admin.bobololadono.uz',
+        STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       }),
     ).toThrow(/STAFF_CORS_ORIGINS/);
   });
@@ -136,11 +136,11 @@ describe('validateEnv', () => {
       NODE_ENV: 'production',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
     });
-    expect(env.CORS_ORIGINS).toEqual(['https://app.bobododa.uz']);
-    expect(env.STAFF_CORS_ORIGINS).toEqual(['https://admin.bobododa.uz']);
+    expect(env.CORS_ORIGINS).toEqual(['https://app.bobololadono.uz']);
+    expect(env.STAFF_CORS_ORIGINS).toEqual(['https://admin.bobololadono.uz']);
   });
 
   it('SWAGGER_ENABLED "0"/"false" ni boolean false qiladi', () => {
@@ -160,8 +160,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -183,8 +183,8 @@ describe('validateEnv', () => {
         ...base,
         ...paymeCreds,
         NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
         SWAGGER_ENABLED: 'false',
         DB_ROLE_ASSERTION: 'off',
         PAYMENT_PROVIDER: 'PAYME',
@@ -198,8 +198,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -225,8 +225,8 @@ describe('validateEnv', () => {
       ...base,
       ...playMobileCreds,
       NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENTS_ENABLED: 'false',
     });
@@ -245,8 +245,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -314,10 +314,10 @@ describe('validateEnv', () => {
       PLAYMOBILE_API_URL: 'https://send.example.uz/broker-api',
       PLAYMOBILE_LOGIN: 'test-login',
       PLAYMOBILE_PASSWORD: 'test-password',
-      PLAYMOBILE_SENDER: 'BoboDoda',
+      PLAYMOBILE_SENDER: 'Bobololadon',
     });
     expect(env.SMS_PROVIDER).toBe('PLAYMOBILE');
-    expect(env.PLAYMOBILE_SENDER).toBe('BoboDoda');
+    expect(env.PLAYMOBILE_SENDER).toBe('Bobololadon');
   });
 
   it('Bosqich 13 — PLAYMOBILE_SENDER 11 belgidan uzun bo‘lsa rad etiladi', () => {
@@ -345,8 +345,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -378,8 +378,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...textUpCreds,
       NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -392,8 +392,8 @@ describe('validateEnv', () => {
         ...base,
         ...paymeCreds,
         NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
         SWAGGER_ENABLED: 'false',
         PAYMENT_PROVIDER: 'PAYME',
         SMS_PROVIDER: 'TEXTUP',
@@ -408,8 +408,8 @@ describe('validateEnv', () => {
         ...paymeCreds,
         ...playMobileCreds,
         NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
         SWAGGER_ENABLED: 'false',
         PAYMENT_PROVIDER: 'PAYME',
         DEV_EXPOSE_OTP: 'true',
@@ -423,8 +423,8 @@ describe('validateEnv', () => {
       ...paymeCreds,
       ...playMobileCreds,
       NODE_ENV: 'production',
-      CORS_ORIGINS: 'https://app.bobododa.uz',
-      STAFF_CORS_ORIGINS: 'https://admin.bobododa.uz',
+      CORS_ORIGINS: 'https://app.bobololadono.uz',
+      STAFF_CORS_ORIGINS: 'https://admin.bobololadono.uz',
       SWAGGER_ENABLED: 'false',
       PAYMENT_PROVIDER: 'PAYME',
     });
@@ -447,8 +447,8 @@ describe('validateEnv', () => {
     expect(env.OUTBOX_SWEEP_INTERVAL_SECONDS).toBe(30);
   });
 
-  it('DB_APP_ROLE sukut bo’yicha "bobododa_app"', () => {
-    expect(validateEnv({ ...base }).DB_APP_ROLE).toBe('bobododa_app');
+  it('DB_APP_ROLE sukut bo’yicha "bobololadono_app"', () => {
+    expect(validateEnv({ ...base }).DB_APP_ROLE).toBe('bobololadono_app');
   });
 
   it('DB_APP_ROLE boshqa kvotalanmagan identifikatorni qabul qiladi', () => {

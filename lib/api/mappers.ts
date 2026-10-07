@@ -10,7 +10,7 @@
  * `client.ts` faqat HTTP chaqiruvi + shu funksiyalarni chaqiradi.
  */
 import type * as Model from "@/lib/types";
-import type { components } from "@bobododa/contracts";
+import type { components } from "@bobololadono/contracts";
 import type { PaymentDTO } from "./contracts";
 
 type RealService = components["schemas"]["ServiceResponseDto"];

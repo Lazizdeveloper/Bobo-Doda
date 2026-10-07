@@ -193,7 +193,7 @@ export function B2BInvoiceModal({
                   <td className="p-3">
                     <div className="font-semibold text-ink">{contract.title}</div>
                     <div className="text-3xs text-muted">
-                      Bobo-Doda xavfsiz Escrow kafolat hisobi orqali mutaxassis xizmatlari
+                      Bobololadono xavfsiz Escrow kafolat hisobi orqali mutaxassis xizmatlari
                     </div>
                   </td>
                   <td className="p-3 text-center">1 xizmat</td>
@@ -245,7 +245,7 @@ export function B2BInvoiceModal({
           </div>
           <div className="border-2 border-dashed border-primary/40 rounded-xl p-3 text-center text-3xs text-primary font-bold">
             <div>M.O&apos;. (MUHR O&apos;RNI)</div>
-            <div className="font-mono text-2xs">BOBO DODA MCHJ</div>
+            <div className="font-mono text-2xs">BOBOLOLADONO MCHJ</div>
             <div>TOSHKENT SH. 2026</div>
           </div>
         </div>

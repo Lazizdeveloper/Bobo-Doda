@@ -67,11 +67,11 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
   }
 
   t('Login — to‘g‘ri email+parol → accessToken + cookie; noto‘g‘ri parol/email → bir xil INVALID_CREDENTIALS', async () => {
-    await createStaff({ email: 'ops1@bobododa.uz', password: 'CorrectHorse123!' });
+    await createStaff({ email: 'ops1@bobololadono.uz', password: 'CorrectHorse123!' });
 
     const ok = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'ops1@bobododa.uz', password: 'CorrectHorse123!' })
+      .send({ email: 'ops1@bobololadono.uz', password: 'CorrectHorse123!' })
       .expect(200);
     expect(typeof ok.body.accessToken).toBe('string');
     expect(ok.body.role).toBe('OPERATIONS');
@@ -80,22 +80,22 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
 
     const wrongPassword = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'ops1@bobododa.uz', password: 'wrong-password' });
+      .send({ email: 'ops1@bobololadono.uz', password: 'wrong-password' });
     expect(wrongPassword.status).toBe(401);
     expect(wrongPassword.body.code).toBe('INVALID_CREDENTIALS');
 
     const noSuchEmail = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'nobody@bobododa.uz', password: 'wrong-password' });
+      .send({ email: 'nobody@bobololadono.uz', password: 'wrong-password' });
     expect(noSuchEmail.status).toBe(401);
     expect(noSuchEmail.body.code).toBe('INVALID_CREDENTIALS');
   });
 
   t('Bloklangan hisob — parol to‘g‘ri bo‘lsa ham ACCOUNT_BLOCKED', async () => {
-    await createStaff({ email: 'blocked@bobododa.uz', password: 'CorrectHorse123!', status: 'DISABLED' });
+    await createStaff({ email: 'blocked@bobololadono.uz', password: 'CorrectHorse123!', status: 'DISABLED' });
     const res = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'blocked@bobododa.uz', password: 'CorrectHorse123!' });
+      .send({ email: 'blocked@bobololadono.uz', password: 'CorrectHorse123!' });
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('ACCOUNT_BLOCKED');
   });
@@ -103,7 +103,7 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
   t('2FA (TOTP) — kod berilmasa MFA_REQUIRED, noto‘g‘ri kod INVALID_CODE, to‘g‘ri kod → 200', async () => {
     const secret = generateTotpSecret();
     await createStaff({
-      email: 'mfa@bobododa.uz',
+      email: 'mfa@bobololadono.uz',
       password: 'CorrectHorse123!',
       mfaEnabled: true,
       totpSecret: secret,
@@ -111,32 +111,32 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
 
     const missing = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'mfa@bobododa.uz', password: 'CorrectHorse123!' });
+      .send({ email: 'mfa@bobololadono.uz', password: 'CorrectHorse123!' });
     expect(missing.status).toBe(401);
     expect(missing.body.code).toBe('MFA_REQUIRED');
 
     const wrong = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'mfa@bobododa.uz', password: 'CorrectHorse123!', totpCode: '000000' });
+      .send({ email: 'mfa@bobololadono.uz', password: 'CorrectHorse123!', totpCode: '000000' });
     expect(wrong.status).toBe(422);
     expect(wrong.body.code).toBe('INVALID_CODE');
 
     const good = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'mfa@bobododa.uz', password: 'CorrectHorse123!', totpCode: generateTotp(secret) })
+      .send({ email: 'mfa@bobololadono.uz', password: 'CorrectHorse123!', totpCode: generateTotp(secret) })
       .expect(200);
     expect(typeof good.body.accessToken).toBe('string');
   });
 
   t('GET /staff/me — LIVE ruxsatlarni qaytaradi; marketplace JWT rad etiladi (kesishmagan sirlar)', async () => {
     await createStaff({
-      email: 'me1@bobododa.uz',
+      email: 'me1@bobololadono.uz',
       password: 'CorrectHorse123!',
       permissions: ['DASHBOARD', 'AUDIT'],
     });
     const login = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'me1@bobododa.uz', password: 'CorrectHorse123!' })
+      .send({ email: 'me1@bobololadono.uz', password: 'CorrectHorse123!' })
       .expect(200);
 
     const me = await request(app!.getHttpServer())
@@ -160,10 +160,10 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
   });
 
   t('Sessiya (StaffSession) o‘rtada bekor qilinsa (blok) — hali amal qiluvchi access token ham LIVE tekshiruvda rad etiladi', async () => {
-    const staff = await createStaff({ email: 'live-block@bobododa.uz', password: 'CorrectHorse123!' });
+    const staff = await createStaff({ email: 'live-block@bobololadono.uz', password: 'CorrectHorse123!' });
     const login = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'live-block@bobododa.uz', password: 'CorrectHorse123!' })
+      .send({ email: 'live-block@bobololadono.uz', password: 'CorrectHorse123!' })
       .expect(200);
 
     // Access token HALI muddati tugamagan — lekin admin hisobni bloklaydi.
@@ -177,10 +177,10 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
   });
 
   t('Refresh — bitta opaque token butun sessiya davomida; logout’dan keyin TOKEN_EXPIRED', async () => {
-    await createStaff({ email: 'refresh1@bobododa.uz', password: 'CorrectHorse123!' });
+    await createStaff({ email: 'refresh1@bobololadono.uz', password: 'CorrectHorse123!' });
     const login = await request(app!.getHttpServer())
       .post('/api/v1/staff/auth/login')
-      .send({ email: 'refresh1@bobododa.uz', password: 'CorrectHorse123!' })
+      .send({ email: 'refresh1@bobololadono.uz', password: 'CorrectHorse123!' })
       .expect(200);
     const cookie = (login.headers['set-cookie'] as unknown as string[])[0]!.split(';')[0]!;
 
@@ -214,7 +214,7 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
 
   describe('TOTP enrollment/disable/admin-reset (e2e)', () => {
     async function freshLogin(password = 'CorrectHorse123!') {
-      const email = `totp-${uuidv7()}@bobododa.uz`;
+      const email = `totp-${uuidv7()}@bobololadono.uz`;
       await createStaff({ email, password });
       const login = await request(app!.getHttpServer())
         .post('/api/v1/staff/auth/login')
@@ -256,7 +256,7 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
     });
 
     t('Enrollment tugagach — login endi MFA talab qiladi (secret DB’da SHIFRLANGAN saqlanadi)', async () => {
-      const email = `totp-login-${uuidv7()}@bobododa.uz`;
+      const email = `totp-login-${uuidv7()}@bobololadono.uz`;
       const password = 'CorrectHorse123!';
       await createStaff({ email, password });
       const login = await request(app!.getHttpServer())
@@ -289,7 +289,7 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
     t('Disable — joriy parol + to‘g‘ri TOTP kod talab qiladi; noto‘g‘ri ma’lumot rad etiladi', async () => {
       const secret = generateTotpSecret();
       const password = 'CorrectHorse123!';
-      const staff = await createStaff({ email: `totp-disable-${uuidv7()}@bobododa.uz`, password, mfaEnabled: true, totpSecret: secret });
+      const staff = await createStaff({ email: `totp-disable-${uuidv7()}@bobololadono.uz`, password, mfaEnabled: true, totpSecret: secret });
       const login = await request(app!.getHttpServer())
         .post('/api/v1/staff/auth/login')
         .send({ email: staff.email, password, totpCode: generateTotp(secret) })
@@ -326,7 +326,7 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
     t('Admin TOTP reset — MFA’ni o‘chiradi VA barcha sessiyalarni bekor qiladi', async () => {
       const secret = generateTotpSecret();
       const password = 'CorrectHorse123!';
-      const staff = await createStaff({ email: `totp-reset-${uuidv7()}@bobododa.uz`, password, mfaEnabled: true, totpSecret: secret });
+      const staff = await createStaff({ email: `totp-reset-${uuidv7()}@bobololadono.uz`, password, mfaEnabled: true, totpSecret: secret });
       const login = await request(app!.getHttpServer())
         .post('/api/v1/staff/auth/login')
         .send({ email: staff.email, password, totpCode: generateTotp(secret) })
@@ -360,7 +360,7 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
     t('TOTP rate limit — ketma-ket noto‘g‘ri kodlar chegaradan o‘tsa RATE_LIMITED', async () => {
       const secret = generateTotpSecret();
       const password = 'CorrectHorse123!';
-      const staff = await createStaff({ email: `totp-ratelimit-${uuidv7()}@bobododa.uz`, password, mfaEnabled: true, totpSecret: secret });
+      const staff = await createStaff({ email: `totp-ratelimit-${uuidv7()}@bobololadono.uz`, password, mfaEnabled: true, totpSecret: secret });
       const login = await request(app!.getHttpServer())
         .post('/api/v1/staff/auth/login')
         .send({ email: staff.email, password, totpCode: generateTotp(secret) })
@@ -384,7 +384,7 @@ describe('Staff auth (e2e, real Postgres + Redis)', () => {
     t('Replay himoyasi — bir xil TOTP kod bilan 2 ta PARALLEL login — FAQAT BITTASI muvaffaqiyatli', async () => {
       const secret = generateTotpSecret();
       const password = 'CorrectHorse123!';
-      const staff = await createStaff({ email: `totp-replay-${uuidv7()}@bobododa.uz`, password, mfaEnabled: true, totpSecret: secret });
+      const staff = await createStaff({ email: `totp-replay-${uuidv7()}@bobololadono.uz`, password, mfaEnabled: true, totpSecret: secret });
       const code = generateTotp(secret);
 
       const [a, b] = await Promise.all([

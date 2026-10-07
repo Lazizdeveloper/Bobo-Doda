@@ -12,7 +12,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 type SendAttempt = { kind: 'success'; smsId?: string } | { kind: 'http-error'; status: number } | { kind: 'network-error' };
 
 /**
- * Bosqich 23 (v4) — TextUp SMS API, Bobo&Doda'ning o'z hisobi uchun.
+ * Bosqich 23 (v4) — TextUp SMS API, Bobololadono'ning o'z hisobi uchun.
  * `SmsProvider` interfeysini BUZMAYDI — `OtpService`/`OutboxWorkerService`
  * TextUp-specific ID (templateId/nicknameId/userId)ni BILMAYDI, faqat
  * generic `params.purpose` beriladi (bo'lim 15) — TANLASH shu klass
@@ -26,7 +26,7 @@ type SendAttempt = { kind: 'success'; smsId?: string } | { kind: 'http-error'; s
  * muvaffaqiyatsiz, cheksiz aylanma YO'Q. Hujjatlashtirilmagan refresh
  * endpoint O'YLAB TOPILMAGAN.
  *
- * **Shablon/nickname hozircha IXTIYORIY** (bo'lim 10/12/14 — BOBODODA
+ * **Shablon/nickname hozircha IXTIYORIY** (bo'lim 10/12/14 — bobololadono
  * alpha-nom va ikkala OTP shabloni "Tekshirilmoqda"): konfiguratsiya
  * bo'lmasa `templateId`/`nicknameId` so'rovdan BUTUNLAY chiqarib
  * tashlanadi (`null`/`""` YUBORILMAYDI) — xom `message` bilan, qisqa

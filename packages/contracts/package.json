@@ -1,5 +1,5 @@
 {
-  "name": "@bobododa/contracts",
+  "name": "@bobololadono/contracts",
   "version": "0.0.0",
   "private": true,
   "description": "Backend API shartnomasi — OpenAPI'dan generatsiya qilingan TS tiplari + enum map'lar. QO'LDA TAHRIR QILINMAYDI (npm run generate:contracts).",

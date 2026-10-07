@@ -11,7 +11,7 @@ import { buildTestApp } from './support/build-app';
  * Infra — CI'da GitHub Actions service konteynerlari, lokal'da
  * `E2E_SUPERUSER_URL` / `E2E_REDIS_URL`. Ulanish URL'lari
  * `test/jest-e2e.setup.ts` da (import'dan OLDIN) o'rnatiladi — `@nestjs/config`
- * ularni import vaqtida snapshot qiladi. `health_e2e` DB'sini `bobododa_app`
+ * ularni import vaqtida snapshot qiladi. `health_e2e` DB'sini `bobololadono_app`
  * roli bilan ishlatadi (F1 boot-tekshiruvi — happy path shu yerda sinaladi;
  * fail-closed yo'l `db-role-assertion.e2e-spec.ts` da). Postgres yetib
  * bo'lmasa (va `CI_REQUIRE_E2E` yo'q) testlar o'tkazib yuboriladi.
@@ -24,10 +24,10 @@ describe('Health (e2e, real Postgres + Redis)', () => {
     reachable = await requireInfraOrSkip('health.e2e');
     if (!reachable) return;
 
-    await provisionDb('health_e2e'); // rollar + GRANT/REVOKE + migrate (bobododa_migrator)
-    // process.env.DATABASE_URL allaqachon bobododa_app@.../health_e2e (setup.ts)
+    await provisionDb('health_e2e'); // rollar + GRANT/REVOKE + migrate (bobololadono_migrator)
+    // process.env.DATABASE_URL allaqachon bobololadono_app@.../health_e2e (setup.ts)
 
-    app = await buildTestApp(); // F1 (assertDbRoleHardening) shu yerda ishlaydi — bobododa_app → happy path
+    app = await buildTestApp(); // F1 (assertDbRoleHardening) shu yerda ishlaydi — bobololadono_app → happy path
   }, 120_000);
 
   afterAll(async () => {
@@ -59,7 +59,7 @@ describe('Health (e2e, real Postgres + Redis)', () => {
   t('GET /docs-json → 200, OpenAPI hujjati /health yo’llarini o’z ichiga oladi', async () => {
     const res = await request(app!.getHttpServer()).get('/docs-json').expect(200);
     expect(res.body.paths).toHaveProperty('/health/ready');
-    expect(res.body.info.title).toBe('Bobo&Doda API');
+    expect(res.body.info.title).toBe('Bobololadono API');
   });
 
   t('noma’lum marshrut → 404 { code: "NOT_FOUND", requestId }', async () => {

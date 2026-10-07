@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPage } from "@/components/shared/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Ommaviy oferta — Bobo&Doda",
+  title: "Ommaviy oferta — Bobololadono",
   alternates: { canonical: "/oferta" },
 };
 

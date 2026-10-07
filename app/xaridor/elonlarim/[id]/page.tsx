@@ -210,7 +210,7 @@ export default function ElonTafsilotiPage() {
                   {/* Mutaxassis sarlavhasi */}
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <Link
-                      href={`/xaridor/bozor/mutaxassis/${proposal.sellerId}`}
+                      href={`/bozor/mutaxassis/${proposal.sellerId}`}
                       className="group flex items-center gap-3"
                     >
                       <Avatar name={spec?.user.fullName ?? "?"} />

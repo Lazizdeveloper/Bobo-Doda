@@ -1,5 +1,5 @@
 import type * as Model from "@/lib/types";
-import type { PaymentStatus as RealPaymentStatus } from "@bobododa/contracts";
+import type { PaymentStatus as RealPaymentStatus } from "@bobololadono/contracts";
 
 export interface ApiPage<T> {
   items: T[];

@@ -66,7 +66,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(buildValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Bo'lim 3 (admin.bobododa.uz ko'chirish) — security audit topilmasi 3a:
+  // Bo'lim 3 (admin.bobololadono.uz ko'chirish) — security audit topilmasi 3a:
   // yagona umumiy CORS ro'yxat staff sessiyasiga HECH QANDAY real
   // izolyatsiya bermas edi. `staff/*` prefiksli yo'llar endi ALOHIDA,
   // torroq ro'yxatdan (`STAFF_CORS_ORIGINS`) o'tadi — qurilish
@@ -87,7 +87,7 @@ async function bootstrap(): Promise<void> {
   // Swagger — production'da ataylab yoqilmaydi.
   if (config.swaggerEnabled) {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Bobo&Doda API')
+      .setTitle('Bobololadono API')
       .setDescription(
         "Markaziy Osiyo freelance marketplace — milestone escrow, double-entry ledger. " +
           'Frontend `lib/api` chegarasini qoplaydi.',
@@ -106,7 +106,7 @@ async function bootstrap(): Promise<void> {
   await app.listen(config.port);
 
   const logger = new NestLogger('Bootstrap');
-  logger.log(`Bobo&Doda backend tayyor — http://localhost:${config.port}`);
+  logger.log(`Bobololadono backend tayyor — http://localhost:${config.port}`);
   logger.log(`Health:  http://localhost:${config.port}/health/ready`);
   if (config.swaggerEnabled) {
     logger.log(`Swagger: http://localhost:${config.port}/docs`);

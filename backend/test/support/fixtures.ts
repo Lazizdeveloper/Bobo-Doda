@@ -110,7 +110,7 @@ export async function createStaffSession(
   // joylari o'zgarishsiz ishlaydi.
   role: StaffRole = 'OPERATIONS',
 ): Promise<StaffSession> {
-  const email = `staff-${uuidv7()}@bobododa.uz`;
+  const email = `staff-${uuidv7()}@bobololadono.uz`;
   const password = 'SuperSecret123!';
   const staff = await db.staffMember.create({
     data: {

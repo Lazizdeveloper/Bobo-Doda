@@ -40,11 +40,11 @@ describe('buildPaymeCheckoutUrl', () => {
       paymentId: 'p-1',
       amountTiyin: 1_000n,
       lang: 'uz',
-      returnUrl: 'https://bobododa.uz/tolov/natija',
+      returnUrl: 'https://bobololadono.uz/tolov/natija',
     });
     const encoded = url.slice('https://checkout.paycom.uz/'.length);
     const decoded = Buffer.from(encoded, 'base64').toString('utf8');
-    expect(decoded).toBe('m=m-1;ac.payment_id=p-1;a=1000;l=uz;c=https://bobododa.uz/tolov/natija');
+    expect(decoded).toBe('m=m-1;ac.payment_id=p-1;a=1000;l=uz;c=https://bobololadono.uz/tolov/natija');
   });
 
   it('lang/returnUrl bo‘lmasa base64 ichida yo‘q', () => {

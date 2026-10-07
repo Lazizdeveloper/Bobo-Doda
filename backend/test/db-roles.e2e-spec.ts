@@ -5,8 +5,8 @@ import { dropDatabase, provisionDb, requireInfraOrSkip } from './support/e2e-inf
 /**
  * A4 "Definition of Done" — append-only DB DARAJASIDA majburlanganini ISBOTLAYDI.
  *
- * Toza DB → superuser rollarni yaratadi → `bobododa_migrator` bilan
- * `prisma migrate deploy` → `bobododa_app` bilan:
+ * Toza DB → superuser rollarni yaratadi → `bobololadono_migrator` bilan
+ * `prisma migrate deploy` → `bobololadono_app` bilan:
  *   • audit_logs / outbox_events ga INSERT — ✅
  *   • audit_logs UPDATE/DELETE            — ❌ permission denied (42501)
  *   • outbox_events UPDATE payload/DELETE — ❌ permission denied
@@ -50,7 +50,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     expect(names).toEqual(expect.arrayContaining(['btree_gin', 'citext', 'pg_trgm', 'unaccent']));
   });
 
-  t('bobododa_app audit_logs ga INSERT qila oladi', async () => {
+  t('bobololadono_app audit_logs ga INSERT qila oladi', async () => {
     await expect(
       appDb!.$executeRawUnsafe(
         `INSERT INTO audit_logs (id, "actorType", "actorName", action, "resourceType", "resourceId")
@@ -59,19 +59,19 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).resolves.toBeGreaterThanOrEqual(1);
   });
 
-  t('bobododa_app audit_logs ni UPDATE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app audit_logs ni UPDATE qila OLMAYDI — permission denied', async () => {
     await expect(
       appDb!.$executeRawUnsafe(`UPDATE audit_logs SET action = 'TAMPERED'`),
     ).rejects.toThrow(/permission denied for (relation|table) "?audit_logs"?/i);
   });
 
-  t('bobododa_app audit_logs dan DELETE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app audit_logs dan DELETE qila OLMAYDI — permission denied', async () => {
     await expect(appDb!.$executeRawUnsafe(`DELETE FROM audit_logs`)).rejects.toThrow(
       /permission denied/i,
     );
   });
 
-  t('bobododa_app outbox_events ga INSERT + status UPDATE qila oladi (worker)', async () => {
+  t('bobololadono_app outbox_events ga INSERT + status UPDATE qila oladi (worker)', async () => {
     await appDb!.$executeRawUnsafe(
       `INSERT INTO outbox_events (id, "aggregateType", "aggregateId", "eventType", payload)
        VALUES (gen_random_uuid(), 'Test', 'x1', 'test.created', '{}'::jsonb)`,
@@ -81,13 +81,13 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).resolves.toBeGreaterThanOrEqual(1);
   });
 
-  t('bobododa_app outbox_events payload ni UPDATE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app outbox_events payload ni UPDATE qila OLMAYDI — permission denied', async () => {
     await expect(
       appDb!.$executeRawUnsafe(`UPDATE outbox_events SET payload = '{"x":1}'::jsonb`),
     ).rejects.toThrow(/permission denied/i);
   });
 
-  t('bobododa_app outbox_events dan DELETE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app outbox_events dan DELETE qila OLMAYDI — permission denied', async () => {
     await expect(appDb!.$executeRawUnsafe(`DELETE FROM outbox_events`)).rejects.toThrow(
       /permission denied/i,
     );
@@ -95,7 +95,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
 
   // ── Bosqich 6 — ledger append-only + DB-darajasidagi invariantlar ───────
 
-  t('bobododa_app ledger_accounts/ledger_transactions/ledger_entries ga INSERT qila oladi (balanslangan)', async () => {
+  t('bobololadono_app ledger_accounts/ledger_transactions/ledger_entries ga INSERT qila oladi (balanslangan)', async () => {
     const txId = crypto.randomUUID();
     await appDb!.$executeRawUnsafe(
       `INSERT INTO ledger_transactions (id, type, currency, "sourceId") VALUES ('${txId}'::uuid, 'PAYMENT_FUNDING', 'UZS', 'db-roles-proof-1')`,
@@ -109,23 +109,23 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).resolves.toBeGreaterThanOrEqual(1);
   });
 
-  t('bobododa_app ledger_entries ni UPDATE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app ledger_entries ni UPDATE qila OLMAYDI — permission denied', async () => {
     await expect(appDb!.$executeRawUnsafe(`UPDATE ledger_entries SET amount = 999`)).rejects.toThrow(
       /permission denied/i,
     );
   });
 
-  t('bobododa_app ledger_entries dan DELETE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app ledger_entries dan DELETE qila OLMAYDI — permission denied', async () => {
     await expect(appDb!.$executeRawUnsafe(`DELETE FROM ledger_entries`)).rejects.toThrow(/permission denied/i);
   });
 
-  t('bobododa_app ledger_transactions ni UPDATE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app ledger_transactions ni UPDATE qila OLMAYDI — permission denied', async () => {
     await expect(
       appDb!.$executeRawUnsafe(`UPDATE ledger_transactions SET description = 'tampered'`),
     ).rejects.toThrow(/permission denied/i);
   });
 
-  t('bobododa_app ledger_accounts ni UPDATE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app ledger_accounts ni UPDATE qila OLMAYDI — permission denied', async () => {
     await expect(
       appDb!.$executeRawUnsafe(`UPDATE ledger_accounts SET currency = 'USD'`),
     ).rejects.toThrow(/permission denied/i);
@@ -170,7 +170,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     expect(rows).toEqual([{ type: 'REFUND_CLEARING', ownerType: 'PLATFORM' }]);
   });
 
-  t('bobododa_app refund_provider_events/payout_provider_events ga INSERT qila oladi', async () => {
+  t('bobololadono_app refund_provider_events/payout_provider_events ga INSERT qila oladi', async () => {
     await expect(
       appDb!.$executeRawUnsafe(
         `INSERT INTO refund_provider_events (id, provider, "providerEventId", "eventType", outcome)
@@ -185,7 +185,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).resolves.toBeGreaterThanOrEqual(1);
   });
 
-  t('bobododa_app refund_provider_events ni UPDATE/DELETE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app refund_provider_events ni UPDATE/DELETE qila OLMAYDI — permission denied', async () => {
     await expect(
       appDb!.$executeRawUnsafe(`UPDATE refund_provider_events SET outcome = 'TAMPERED'`),
     ).rejects.toThrow(/permission denied/i);
@@ -194,7 +194,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     );
   });
 
-  t('bobododa_app payout_provider_events ni UPDATE/DELETE qila OLMAYDI — permission denied', async () => {
+  t('bobololadono_app payout_provider_events ni UPDATE/DELETE qila OLMAYDI — permission denied', async () => {
     await expect(
       appDb!.$executeRawUnsafe(`UPDATE payout_provider_events SET outcome = 'TAMPERED'`),
     ).rejects.toThrow(/permission denied/i);
@@ -223,10 +223,10 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
 
   // ── Bosqich 8 — dispute append-only + enum-split migratsiya isboti ───────
 
-  t('bobododa_app dispute_evidence/dispute_events ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
+  t('bobololadono_app dispute_evidence/dispute_events ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
     // To'liq FK zanjiri kerak (disputes.contractId/openedByUserId real FK) —
     // tipланган Prisma Client orqali (raw SQL'dan ancha ishonchli/qisqa).
-    // `bobododa_app`ning bu jadvallarga TO'LIQ CRUD huquqi bor (append-only
+    // `bobololadono_app`ning bu jadvallarga TO'LIQ CRUD huquqi bor (append-only
     // RO'YXATIDA EMAS) — faqat `dispute_evidence`/`dispute_events` cheklangan.
     const sellerId = crypto.randomUUID();
     const buyerId = crypto.randomUUID();
@@ -331,7 +331,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
 
   // ── Bosqich 9 — reconciliation_runs append-only, financial_anomalies mutable ──
 
-  t('bobododa_app reconciliation_runs ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
+  t('bobololadono_app reconciliation_runs ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
     const runId = crypto.randomUUID();
     await expect(
       appDb!.$executeRawUnsafe(
@@ -349,7 +349,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     );
   });
 
-  t('bobododa_app financial_anomalies ga INSERT VA UPDATE qila oladi (ataylab mutable — staff acknowledge)', async () => {
+  t('bobololadono_app financial_anomalies ga INSERT VA UPDATE qila oladi (ataylab mutable — staff acknowledge)', async () => {
     const anomalyId = crypto.randomUUID();
     await expect(
       appDb!.$executeRawUnsafe(
@@ -365,7 +365,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
 
   // ── Bosqich 10 — outbox_events yangi ustunlari, outbox_delivery_attempts append-only ──
 
-  t('bobododa_app outbox_events yangi ustunlariga (processingToken/lastErrorCode/processingStartedAt) UPDATE qila oladi', async () => {
+  t('bobololadono_app outbox_events yangi ustunlariga (processingToken/lastErrorCode/processingStartedAt) UPDATE qila oladi', async () => {
     const outboxId = crypto.randomUUID();
     await appDb!.outboxEvent.create({
       data: { id: outboxId, aggregateType: 'TEST', aggregateId: 'db-roles-proof', eventType: 'DB_ROLES_PROOF', payload: {} },
@@ -378,7 +378,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).resolves.toBe(1);
   });
 
-  t('bobododa_app outbox_delivery_attempts ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
+  t('bobololadono_app outbox_delivery_attempts ga INSERT qila oladi, lekin UPDATE/DELETE qila OLMAYDI', async () => {
     const outboxId = crypto.randomUUID();
     await appDb!.outboxEvent.create({
       data: { id: outboxId, aggregateType: 'TEST', aggregateId: 'db-roles-proof-2', eventType: 'DB_ROLES_PROOF', payload: {} },
@@ -400,7 +400,7 @@ describe('DB rollari — append-only majburlash (e2e, real Postgres 16)', () => 
     ).rejects.toThrow(/permission denied/i);
   });
 
-  t('bobododa_app oddiy jadvalni (users) to‘liq boshqara oladi', async () => {
+  t('bobololadono_app oddiy jadvalni (users) to‘liq boshqara oladi', async () => {
     await appDb!.$executeRawUnsafe(
       `INSERT INTO users (id, phone, "passwordHash", "fullName", "updatedAt")
        VALUES (gen_random_uuid(), '+998900000000', 'h', 'T', now())`,

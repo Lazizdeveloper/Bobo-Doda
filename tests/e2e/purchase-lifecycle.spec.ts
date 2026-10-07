@@ -24,7 +24,7 @@ test("xarid -> qabul -> to'lov -> topshirish -> qabul -> yakunlanish", async ({ 
   const { page: sellerPage } = seller;
 
   await test.step("xaridor xizmatni xarid qiladi", async () => {
-    await buyerPage.goto(`/xaridor/bozor/xizmat/${seller.serviceId}`, { waitUntil: "networkidle" });
+    await buyerPage.goto(`/bozor/xizmat/${seller.serviceId}`, { waitUntil: "networkidle" });
     await buyerPage.getByRole("button", { name: /Buyurtma/i }).first().click();
     await buyerPage.waitForTimeout(400);
     await buyerPage.getByRole("button", { name: /Shartnoma yaratish/i }).last().click();

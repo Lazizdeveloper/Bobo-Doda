@@ -1,4 +1,4 @@
-# Bobo&Doda — to'liq ketma-ket review hisoboti
+# Bobololadono — to'liq ketma-ket review hisoboti
 
 **Sana:** 2026-09-04 · **Branch:** `main` · **Commit:** `96cc120`
 **Qamrov:** mutaxassis kabineti + xaridor kabineti + kirish oqimi + umumiy komponentlar + API/mock qatlami

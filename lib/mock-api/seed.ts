@@ -935,7 +935,7 @@ export const seedMilestones: Milestone[] = [
     dueDate: "2026-04-25T00:00:00.000Z",
     submittedAt: "2026-04-19T14:30:00.000Z",
     reviewDeadline: "2026-04-22T14:30:00.000Z",
-    deliverableLink: "https://testflight.apple.com/join/demo-app-bobododa",
+    deliverableLink: "https://testflight.apple.com/join/demo-app-bobololadono",
     deliverableNote: "Mobil ilovaning 2-bosqichi to'liq yakunlandi. TestFlight va APK sinov versiyalari yuklandi. Swagger API hujjatlari va sinov hisobotlari biriktirildi. Ko'rib chiqishingizni so'raymiz.",
     deliverableFiles: [
       {

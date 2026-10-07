@@ -1,4 +1,4 @@
-# RUNBOOK — Bobo&Doda
+# RUNBOOK — Bobololadono
 
 Operatsion qo'llanma: tarmoq strategiyasi, lokal ishga tushirish, migratsiya +
 DB rollari, monorepo, CI. Arxitektura qarorlari — [`02-decisions.md`](./02-decisions.md).
@@ -102,22 +102,22 @@ nix-shell backend/shell.nix
 
 | Rol | URL env | Huquq | Kim ishlatadi |
 |---|---|---|---|
-| `bobododa_migrator` | `DATABASE_MIGRATION_URL` | DDL, `CREATE EXTENSION`, `GRANT` | faqat `prisma migrate deploy` (schema `directUrl`) |
-| `bobododa_app` | `DATABASE_URL` | `SELECT/INSERT/UPDATE/DELETE` — **istisnolar bilan** | ishlaydigan API (`PrismaClient`) |
+| `bobololadono_migrator` | `DATABASE_MIGRATION_URL` | DDL, `CREATE EXTENSION`, `GRANT` | faqat `prisma migrate deploy` (schema `directUrl`) |
+| `bobololadono_app` | `DATABASE_URL` | `SELECT/INSERT/UPDATE/DELETE` — **istisnolar bilan** | ishlaydigan API (`PrismaClient`) |
 
 Ikkala env ham **majburiy** (Zod `env.schema.ts`). `PrismaClient` runtime'da
 `DATABASE_MIGRATION_URL` ni ishlatmaydi — faqat Prisma CLI (`directUrl`).
 
 ### Append-only DB darajasida
 
-Init migratsiya (`20260909232121_init/migration.sql`) oxirida, `bobododa_app`
+Init migratsiya (`20260909232121_init/migration.sql`) oxirida, `bobololadono_app`
 roli mavjud bo'lsa:
 
 ```sql
-REVOKE UPDATE, DELETE ON "audit_logs"   FROM bobododa_app;   -- to'liq append-only
-REVOKE UPDATE, DELETE ON "outbox_events" FROM bobododa_app;
+REVOKE UPDATE, DELETE ON "audit_logs"   FROM bobololadono_app;   -- to'liq append-only
+REVOKE UPDATE, DELETE ON "outbox_events" FROM bobololadono_app;
 GRANT  UPDATE (status, attempts, "lastError", "availableAt", "processedAt")
-       ON "outbox_events" TO bobododa_app;                    -- worker holati
+       ON "outbox_events" TO bobololadono_app;                    -- worker holati
 ```
 
 - **`LedgerEntry` (Bosqich 4)** paydo bo'lganda o'sha migratsiyaga xuddi
@@ -146,9 +146,9 @@ o'zgarsa ham yolg'on qizarmaydi).
   konteynerining BIRINCHI init'ida avtomatik (bo'sh data-dir).
   Reset: `docker compose down -v`.
 - **CI / prod / test:** `backend/prisma/sql/roles.sql`
-  (`psql -v app_pw=… -v migrator_pw=… -v db_name=bobododa
+  (`psql -v app_pw=… -v migrator_pw=… -v db_name=bobololadono
   [-v app_role=… -v migrator_role=…] -f prisma/sql/roles.sql`). Rol
-  nomlari ixtiyoriy (T1, sukut `bobododa_app`/`bobododa_migrator`).
+  nomlari ixtiyoriy (T1, sukut `bobololadono_app`/`bobololadono_migrator`).
   Ichida `DO $$...$$` bloklari YO'Q — psql `:'var'`/`:"var"` almashtirishi
   dollar-quote ICHIDA ishlamaydi (sinab ko'rilgan); o'rniga
   `SELECT format(...) WHERE NOT EXISTS(...) \gexec` naqshi.
@@ -167,9 +167,9 @@ bitta martalik provisioning qadami sifatida yarating:
 psql "$SUPERUSER_URL" \
   -v app_pw="$(openssl rand -base64 24)" \
   -v migrator_pw="$(openssl rand -base64 24)" \
-  -v db_name=bobododa \
-  -v app_role=bobododa_app \
-  -v migrator_role=bobododa_migrator \
+  -v db_name=bobololadono \
+  -v app_role=bobololadono_app \
+  -v migrator_role=bobololadono_migrator \
   -f backend/prisma/sql/roles.sql
 # `app_role`/`migrator_role` — T1: provayder nomga cheklov qo'ysa (prefiks,
 # uzunlik, rezervlangan so'z) shu ikkitasini xohlagan nomga o'zgartiring —
@@ -178,8 +178,8 @@ psql "$SUPERUSER_URL" \
 # ularni faqat o'sha ishga tushirishda ko'rsatadi.
 
 # 2. Migratsiya — MIGRATOR bilan (kengaytma + GRANT/REVOKE shu yerda ishlaydi):
-DATABASE_URL="postgresql://<app_role>:<app_pw>@<host>:5432/bobododa?schema=public" \
-DATABASE_MIGRATION_URL="postgresql://<migrator_role>:<migrator_pw>@<host>:5432/bobododa?schema=public" \
+DATABASE_URL="postgresql://<app_role>:<app_pw>@<host>:5432/bobololadono?schema=public" \
+DATABASE_MIGRATION_URL="postgresql://<migrator_role>:<migrator_pw>@<host>:5432/bobololadono?schema=public" \
   npx prisma migrate deploy
 
 # 3. Runtime .env / secret'da DATABASE_URL — FAQAT <app_role> bilan, VA
@@ -198,13 +198,13 @@ kvotalanadi (identifikator-xavfsiz) — string konkatenatsiya yo'q.
 
 Append-only DB darajasida majburlangan bo'lishi kifoya emas — buni HECH KIM
 tekshirmasa, "himoya bor" degan noto'g'ri ishonch qoladi (masalan
-`DATABASE_URL`ga xatoan `bobododa_migrator` yozilsa, hammasi "ishlaydi",
+`DATABASE_URL`ga xatoan `bobololadono_migrator` yozilsa, hammasi "ishlaydi",
 lekin `audit_logs` yana o'zgartirilishi mumkin bo'lib qoladi — signal yo'q).
 
 `PrismaService.onModuleInit` — `$connect()`dan keyin, `/health/ready` javob
 berishidan OLDIN (`src/infra/prisma/db-role-assertion.ts`):
 
-1. `SELECT current_user` = `bobododa_app` bo'lishi shart
+1. `SELECT current_user` = `bobololadono_app` bo'lishi shart
 2. `has_table_privilege('audit_logs', 'UPDATE'/'DELETE')` = false
 3. `has_table_privilege('outbox_events', 'DELETE')` = false
 4. Kengaytmalar bor: `pg_trgm`, `unaccent`, `citext`, `btree_gin`
@@ -223,9 +223,9 @@ alohida process'da** boot (noto'g'ri rol → process 1 bilan chiqadi, aniq
 xato bilan) — jumladan sukutdan **butunlay boshqa** rol nomi bilan (T1,
 `DB_APP_ROLE`, pastga qarang).
 
-**T1 — rol nomi `DB_APP_ROLE` bilan sozlanadi.** Sukut `bobododa_app`, lekin
+**T1 — rol nomi `DB_APP_ROLE` bilan sozlanadi.** Sukut `bobololadono_app`, lekin
 migratsiya faylida QATTIQ YOZILMAGAN — DB darajasidagi GUC'dan
-(`bobododa.app_role`, `prisma/sql/roles.sql` o'rnatadi) o'qiladi. Managed
+(`bobololadono.app_role`, `prisma/sql/roles.sql` o'rnatadi) o'qiladi. Managed
 Postgres provayderi rol nomiga cheklov qo'ysa (prefiks, uzunlik,
 rezervlangan so'z): `roles.sql`ni boshqa `-v app_role=...` bilan qayta
 ishga tushiring va `DB_APP_ROLE`ni shunga moslang — **migratsiyaga tegilmaydi**.
@@ -240,7 +240,7 @@ ishga tushiring va `DB_APP_ROLE`ni shunga moslang — **migratsiyaga tegilmaydi*
 > qaytishi mumkin, va F1 **yolg'on YIQILISHI** mumkin (ilova aslida to'g'ri
 > huquqlarga ega bo'lsa ham). `session`-mode pooling odatda muammo emas
 > (bitta client — bitta backend, butun sessiya davomida). GUC o'qish
-> (`current_setting('bobododa.app_role', ...)`) o'zi muammo EMAS — bu DB
+> (`current_setting('bobololadono.app_role', ...)`) o'zi muammo EMAS — bu DB
 > darajasidagi sukut, har yangi FIZIK ulanishda avtomatik qo'llanadi, pooling
 > rejimidan qat'i nazar. **Agar pooler qo'shsangiz:** avval `session`-mode
 > tekshiring (F1 o'zgarishsiz ishlaydi); `transaction`/`statement`-mode
@@ -280,7 +280,7 @@ yo'q (PG18+).
 
 ---
 
-## 4. `@bobododa/contracts` generatsiyasi
+## 4. `@bobololadono/contracts` generatsiyasi
 
 ```bash
 npm run generate:contracts       # root'dan
@@ -384,8 +384,8 @@ CI_REQUIRE_E2E=true E2E_SUPERUSER_URL=postgresql://x:x@127.0.0.1:1/x \
 
 **`ledger_accounts`/`ledger_transactions`/`ledger_entries`ga HECH QACHON
 qo'lda `UPDATE`/`DELETE` yozilmasin** — bu shunchaki tavsiya emas, DB
-darajasida majburlangan (`bobododa_app`dan REVOKE qilingan; hatto
-`bobododa_migrator`/superuser bilan qo'lda tuzatish HAM noto'g'ri —
+darajasida majburlangan (`bobololadono_app`dan REVOKE qilingan; hatto
+`bobololadono_migrator`/superuser bilan qo'lda tuzatish HAM noto'g'ri —
 append-only'ning butun maqsadi "hech kim, hech qachon" degani).
 
 Xato journal (masalan noto'g'ri summa bilan post qilingan) topilsa:
@@ -514,7 +514,7 @@ JSON qilib chop etadi va **exit 0** (CRITICAL anomaliya YO'Q) yoki
 pipeline'da shu exit code'ga qarab deploy to'xtatilishi mumkin.
 
 **Diqqat — doimiy lokal dev DB'da "eski" anomaliyalar kutilgan bo'lishi
-mumkin.** Masalan agar `bobododa` DB'da Bosqich 6 (ledger)dan OLDIN qo'lda
+mumkin.** Masalan agar `bobololadono` DB'da Bosqich 6 (ledger)dan OLDIN qo'lda
 sinov uchun yaratilgan `COMPLETED` Contract qatorlari bo'lsa, ular
 `CONTRACT_SETTLEMENT` journal'iga EGA BO'LMAYDI (chunki journal faqat
 Bosqich 6+ kodida yoziladi) — bu **haqiqiy regressiya EMAS**, balki
@@ -1063,7 +1063,7 @@ Payme PAYME_KEY:
   Business kabinetida ESKI kalitni bekor qiling. Downtime YO'Q (bir xil
   paytda ikkala kalit amal qiladigan oyna bor).
 
-DB parol (bobododa_app / bobododa_migrator):
+DB parol (bobololadono_app / bobololadono_migrator):
   `ALTER ROLE ... PASSWORD` (yangi parol) → `DATABASE_URL`/
   `DATABASE_MIGRATION_URL` secret'ni yangilang → rolling restart.
   Eski parol connection pool tugagach ishlamay qoladi — qisqa oyna.
@@ -1187,7 +1187,7 @@ PlayMobile credential bilan REAL tarmoq chaqiruvi bu sessiyada QILINMADI
 ```
 
 **Muhim eslatma**: `pg_restore` `--no-owner` bilan ishlatilganda
-`_prisma_migrations`/append-only jadval huquqlari (`bobododa_migrator`
+`_prisma_migrations`/append-only jadval huquqlari (`bobololadono_migrator`
 egaligi) YO'QOLADI — F1 keyin rad etadi. To'g'ri drill — `--no-owner`SIZ
 (rollar cluster'da allaqachon mavjud bo'lishi kerak) YOKI restore'dan
 keyin `roles.sql`ga teng GRANT/REVOKE qayta qo'llash. Real cloud-provider
@@ -1417,7 +1417,7 @@ nix-shell backend/shell.nix --run 'bash backend/scripts/e2e-stack-up.sh'
 #    Idempotent (email bo'yicha upsert) — mustChangePassword testidan
 #    keyin parolni asl holatiga qaytarish uchun QAYTA ishga tushiring.
 nix-shell backend/shell.nix --run '
-  DATABASE_URL="postgresql://bobododa_app:app@127.0.0.1:55433/bobododa_e2e?schema=public" \
+  DATABASE_URL="postgresql://bobololadono_app:app@127.0.0.1:55433/bobololadono_e2e?schema=public" \
   node backend/scripts/e2e-staff-fixture.cjs
 '
 
@@ -1447,7 +1447,7 @@ bash backend/scripts/e2e-stack-down.sh --purge
 
 Parol — barchasida bir xil, `E2E_STAFF_PASSWORD` env (sukut
 `E2eTest#2026Pass`). **Hech qanday real secret emas** — bu login FAQAT
-`bobododa_e2e` bazasida ishlaydi (skript `DATABASE_URL`da "bobododa_e2e"
+`bobololadono_e2e` bazasida ishlaydi (skript `DATABASE_URL`da "bobololadono_e2e"
 so'zi yo'q bo'lsa ATAYLAB RAD ETADI — dev/prod bazasiga tasodifan yozib
 yuborish ehtimolidan himoya).
 
@@ -1471,7 +1471,7 @@ hech qachon to'qnashmaydi.
 ### Nima uchun bunday (izolyatsiya qarori)
 
 Bosqich 17'da staff login sinovi shu SABABDAN bloklangan edi: yagona
-mavjud staff hisobi (`ops-phase4@bobododa.uz`, dev bazasida) parolini
+mavjud staff hisobi (`ops-phase4@bobololadono.uz`, dev bazasida) parolini
 bilmasdim, va YANGI parol/hash yaratish (hatto yangi test hisob uchun ham)
 "secret-store write" sifatida avtomatik bloklandi. Bosqich 18'da bu
 TO'G'RI hal qilindi — dev/prod parolini reset qilish yoki bypass qilish
@@ -1495,14 +1495,14 @@ ruxsat/403 (frontend + mustaqil backend tekshiruvi). To'liq suite
 Ishga tushirishlar orasida **fixture'larni qayta o'rnatish shart**
 (idempotent, lekin transaktsion ma'lumot yig'ilib boradi):
 ```bash
-psql -h 127.0.0.1 -p 55433 -U bobododa -d bobododa_e2e -c \
+psql -h 127.0.0.1 -p 55433 -U bobololadono -d bobololadono_e2e -c \
   "TRUNCATE TABLE disputes, payments, refunds, milestones, contracts, services, seller_applications CASCADE;"
 nix-shell backend/shell.nix --run '
-  DATABASE_URL="postgresql://bobododa_app:app@127.0.0.1:55433/bobododa_e2e?schema=public" \
+  DATABASE_URL="postgresql://bobololadono_app:app@127.0.0.1:55433/bobololadono_e2e?schema=public" \
   node backend/scripts/e2e-staff-fixture.cjs
 '
 ```
-(`TRUNCATE` — superuser `bobododa` bilan, `bobododa_app`da bu huquq YO'Q,
+(`TRUNCATE` — superuser `bobololadono` bilan, `bobololadono_app`da bu huquq YO'Q,
 append-only dizayn qasddan; `e2e-staff-fixture.cjs` — `mustChangePassword`
 testi `reset@e2e.test` parolini o'zgartirgani sabab, har safar qayta
 kerak.)
@@ -1523,8 +1523,8 @@ Backend'ning O'ZINING Jest e2e suite'i (`test/*.e2e-spec.ts`, Docker/
 Testcontainers EMAS — lokal `E2E_SUPERUSER_URL`/`E2E_REDIS_URL` orqali
 haqiqiy Postgres/Redis'ga ulanadi, standart qiymat mos kelmasa
 `postgresql://postgres:postgres@127.0.0.1:5432/postgres` — bu loyihada
-haqiqiy superuser `bobododa` (trust auth), shuning uchun
-`E2E_SUPERUSER_URL="postgresql://bobododa@127.0.0.1:5432/postgres"`
+haqiqiy superuser `bobololadono` (trust auth), shuning uchun
+`E2E_SUPERUSER_URL="postgresql://bobololadono@127.0.0.1:5432/postgres"`
 berish kerak) uzoq muddat ishlab turgan ODDIY dev backend (`npm run
 start:dev`, `:4000`) bilan BIR XIL Redis'ga (`:6379`) ulanganda, ikkalasi
 ham `otp-sms` BullMQ navbatiga (`src/infra/sms/otp-sms.processor.ts`)
@@ -1615,7 +1615,7 @@ cd backend && nix-shell --run "npx jest src/config/env.schema.spec.ts"
 cd backend && nix-shell --run "npx jest src/modules/auth/otp-policy.audit.spec.ts"
 # To'liq OTP xavfsizlik xossalari (expiry/single-use/attempt-limit/
 # cooldown/IP-limit/channel-whitelist) — E2E_SUPERUSER_URL §18/19dagidek
-cd backend && nix-shell --run 'E2E_SUPERUSER_URL="postgresql://bobododa@127.0.0.1:5432/postgres" npm run test:e2e'
+cd backend && nix-shell --run 'E2E_SUPERUSER_URL="postgresql://bobololadono@127.0.0.1:5432/postgres" npm run test:e2e'
 ```
 
 ## 20. Login va Registration ajratilishi (Bosqich 20)
@@ -1732,12 +1732,12 @@ hisoblanadi — open redirect yuzasi yo'q.
 ### Migratsiya (dev DB ownership anomaliyasi)
 
 `otp_codes`/`sms_logs` jadvallari lokal dev DB'da (aniqlanmagan tarixiy
-sabab bilan) `bobododa_migrator` o'rniga superuser `bobododa`ga tegishli
-edi (boshqa BARCHA jadval to'g'ri `bobododa_migrator`da) — bu Bosqich
-20 migratsiyasini `bobododa_migrator` bilan (standart `prisma migrate
+sabab bilan) `bobololadono_migrator` o'rniga superuser `bobololadono`ga tegishli
+edi (boshqa BARCHA jadval to'g'ri `bobololadono_migrator`da) — bu Bosqich
+20 migratsiyasini `bobololadono_migrator` bilan (standart `prisma migrate
 deploy` yo'li) qo'llashni bloklagan (`must be owner of table
 otp_codes`). Tuzatildi: `ALTER TABLE otp_codes OWNER TO
-bobododa_migrator;` (superuser bilan, bir martalik). Bu FAQAT lokal dev
+bobololadono_migrator;` (superuser bilan, bir martalik). Bu FAQAT lokal dev
 anomaliyasi edi — yangi/boshqa muhitlarda takrorlanmasligi kerak
 (`roles.sql` barcha jadvalni to'g'ri rolga yaratadi).
 
@@ -1924,7 +1924,7 @@ POST {TEXTUP_SMS_URL}    (https://sms-api.textup.uz/v1/send)
 
 ### Xabar matni — moderatsiyaga ANIQ mos kelishi shart
 
-**E'TIBOR (2026-09-17 tuzatildi)**: dastlabki taxmin (`"BOBODODA
+**E'TIBOR (2026-09-17 tuzatildi)**: dastlabki taxmin (`"bobololadono
 tasdiqlash kodi: ..."`, qisqa) TextUp moderatsiyasi tomonidan HAQIQATDA
 RAD ETILGAN edi ("Rad etildi: Yo'riqnomadagi Punkt 2 dan foydalanib yozib
 bering") — bu `GET /v1/templates`ning HAQIQIY javobidan (pastga qarang)
@@ -1932,21 +1932,21 @@ tasdiqlangan, taxmin emas. Haqiqatda TASDIQLANGAN (`status:"active"`)
 matn UZUNROQ:
 
 ```text
-Ro'yxatdan o'tish: BOBODODA saytida ro'yxatdan o'tish uchun tasdiqlash kodi: <6 raqam>
-Parolni tiklash:   BOBODODA saytida parolni tiklash uchun tasdiqlash kodi: <6 raqam>
+Ro'yxatdan o'tish: bobololadono saytida ro'yxatdan o'tish uchun tasdiqlash kodi: <6 raqam>
+Parolni tiklash:   bobololadono saytida parolni tiklash uchun tasdiqlash kodi: <6 raqam>
 ```
 
 `renderTextUpText()` shu ANIQ matnga moslashtirilgan (`textup-text.util.ts`).
 `name` maydoni (ichki operatsion yorliq, SMS matni EMAS) — o'zgarmagan:
-`"BoboDoda Registration OTP"` / `"BoboDoda Password Reset OTP"`.
+`"bobololadono Registration OTP"` / `"bobololadono Password Reset OTP"`.
 
 ### Hisob holati (2026-09-17, real API javoblari bilan tasdiqlangan)
 
 | Element | TextUp nomi | Holat |
 |---|---|---|
-| Shablon (ro'yxatdan o'tish) | `BOBODODA Registration OTP` | **`active`** (tasdiqlangan) |
-| Shablon (parolni tiklash) | `BOBODODA Password Reset OTP` | **`active`** (tasdiqlangan) |
-| Alpha-nom | `BOBODODA` | **`in_verify`** (`GET /v1/nick-names` orqali tekshirilgan — hali tasdiqlanmagan) |
+| Shablon (ro'yxatdan o'tish) | `bobololadono Registration OTP` | **`active`** (tasdiqlangan) |
+| Shablon (parolni tiklash) | `bobololadono Password Reset OTP` | **`active`** (tasdiqlangan) |
+| Alpha-nom | `bobololadono` | **`in_verify`** (`GET /v1/nick-names` orqali tekshirilgan — hali tasdiqlanmagan) |
 
 Har ikkala shablonning ESKI, qisqa varianti (`status:"cancelled"`,
 xuddi shu rad etish sababi bilan) ham hisobda saqlangan — bu ATAYLAB
@@ -1994,7 +1994,7 @@ curl -s "https://api-auth.textup.uz/v1/templates?userId=$(jq -r '.user.id' /tmp/
   -H "Authorization: Bearer $(cat /tmp/textup-token.txt)" \
   | jq '.templates[] | select(.status=="active") | {name, id, status}'
 rm -f /tmp/textup-login.json /tmp/textup-token.txt   # token faylni darhol o'chiring
-# 3. O'z nicknameId'ni top — BAJARILDI 2026-09-17: "BOBODODA" topildi,
+# 3. O'z nicknameId'ni top — BAJARILDI 2026-09-17: "bobololadono" topildi,
 #    lekin status="in_verify" (hali tasdiqlanmagan) — shuning uchun
 #    TEXTUP_NICKNAME_ID SOZLANMADI (qisqa raqamdan yuborishga qoldirildi,
 #    bu ham TO'G'RI). `GET /v1/nick-names` HAM `page`/`limit` talab qiladi
@@ -2041,8 +2041,8 @@ qayta ishga tushirishi kerak (yuqoridagi 4-qadam eslatmasiga qarang).
 - **Bitta umumiy `TEXTUP_TEMPLATE_ID`** — rad etildi: ikkita ALOHIDA
   moderatsiya matni (ro'yxatdan o'tish/parolni tiklash) ikkita ALOHIDA
   ID talab qiladi, aralashtirib bo'lmaydi.
-- **`"BOBO&DODA"`/`"Bobo&Doda"` (ampersand bilan) SMS matnida** — rad
-  etildi: moderatsiyaga aynan `"BOBODODA"` (bitta so'z) topshirilgan,
+- **`"BOBOLOLADONO"`/`"Bobololadono"` (ampersand bilan) SMS matnida** — rad
+  etildi: moderatsiyaga aynan `"bobololadono"` (bitta so'z) topshirilgan,
   boshqa formatlash tasdiqlangan shablonga mos kelmasligi mumkin.
 
 ## 23. Railway production deploy (Bosqich 23)
@@ -2050,7 +2050,7 @@ qayta ishga tushirishi kerak (yuqoridagi 4-qadam eslatmasiga qarang).
 ### Xizmat topologiyasi
 
 ```text
-Railway loyihasi "Bobo-Doda" (workspace: Laziz Shakarov's Projects)
+Railway loyihasi "Bobololadono" (workspace: Laziz Shakarov's Projects)
 └─ production environment
    ├─ backend   — Dockerfile (backend/Dockerfile), build konteksti backend/
    ├─ frontend  — Nixpacks (avtomatik aniqlangan, root next build/next start)
@@ -2079,7 +2079,7 @@ haqiqatan yuz berdi va tuzatildi, ikkala xizmatda ham).
 ### DB rollarini bootstrap qilish (bir martalik, Railway Postgres'da)
 
 Railway Postgres'ning `DATABASE_URL`/`PGUSER` — superuser (`postgres`)
-darajasida. `bobododa_app`/`bobododa_migrator` (RUNBOOK §3) shu superuser
+darajasida. `bobololadono_app`/`bobololadono_migrator` (RUNBOOK §3) shu superuser
 orqali BIR MARTA yaratiladi:
 
 ```bash
@@ -2092,21 +2092,21 @@ railway connect postgres --tunnel-only
 psql "postgresql://postgres@127.0.0.1:<port>/railway" \
   -v app_pw="$(openssl rand -base64 24)" \
   -v migrator_pw="$(openssl rand -base64 24)" \
-  -v db_name=railway -v app_role=bobododa_app -v migrator_role=bobododa_migrator \
+  -v db_name=railway -v app_role=bobololadono_app -v migrator_role=bobololadono_migrator \
   -f prisma/sql/roles.sql
 
 # 3. Migratsiya (xuddi shu tunnel orqali, migrator rol bilan):
-DATABASE_MIGRATION_URL="postgresql://bobododa_migrator:<pw>@127.0.0.1:<port>/railway?schema=public" \
-DATABASE_URL="postgresql://bobododa_app:<pw>@127.0.0.1:<port>/railway?schema=public" \
+DATABASE_MIGRATION_URL="postgresql://bobololadono_migrator:<pw>@127.0.0.1:<port>/railway?schema=public" \
+DATABASE_URL="postgresql://bobololadono_app:<pw>@127.0.0.1:<port>/railway?schema=public" \
   npx prisma migrate deploy
 
 # 4. Backend Railway o'zgaruvchilariga PRIVATE domen bilan yozing (tunnel
 #    portiga EMAS — u faqat bir martalik admin ishi uchun):
-#    DATABASE_URL=postgresql://bobododa_app:<pw>@postgres.railway.internal:5432/railway?schema=public
-#    DATABASE_MIGRATION_URL=postgresql://bobododa_migrator:<pw>@postgres.railway.internal:5432/railway?schema=public
+#    DATABASE_URL=postgresql://bobololadono_app:<pw>@postgres.railway.internal:5432/railway?schema=public
+#    DATABASE_MIGRATION_URL=postgresql://bobololadono_migrator:<pw>@postgres.railway.internal:5432/railway?schema=public
 ```
 
-**Tekshiruv (haqiqiy Railway DB'da bajarilgan)**: `bobododa_app` bilan
+**Tekshiruv (haqiqiy Railway DB'da bajarilgan)**: `bobololadono_app` bilan
 `SELECT` ✓ ishlaydi, `CREATE TABLE` ✗ "permission denied for schema
 public", `UPDATE ledger_entries` ✗ "permission denied for table
 ledger_entries" — append-only himoya kod darajasida EMAS, DB darajasida
@@ -2154,22 +2154,22 @@ railway variable set PAYME_MERCHANT_ID=<qiymat> PAYME_LOGIN=<qiymat> PAYME_KEY=<
 Kod o'zgarishi SHART EMAS — `payment.module.ts` avtomatik `PaymeProvider`ga
 o'tadi (`PAYMENTS_ENABLED`/`PAYMENT_PROVIDER`ni tekshirib).
 
-## 24. Domen bo'linishi (Bosqich 23) — bobododa.uz / app / api
+## 24. Domen bo'linishi (Bosqich 23) — bobololadono.uz / app / api
 
 ### Egalik
-- **Vercel** (`bobo-doda` loyihasi, `prj_IuWC7zsb2aGnTeGe0P0SLIm1LaZ1`) —
-  FAQAT `bobododa.uz` + `www.bobododa.uz` (landing + huquqiy/FAQ/yordam).
-- **Railway** (`Bobo-Doda` loyihasi) — `frontend` (`app.bobododa.uz`),
-  `backend` (`api.bobododa.uz`), Postgres, Redis — HAMMASI shu yerda.
+- **Vercel** (`bobololadono` loyihasi, `prj_IuWC7zsb2aGnTeGe0P0SLIm1LaZ1`) —
+  FAQAT `bobololadono.uz` + `www.bobololadono.uz` (landing + huquqiy/FAQ/yordam).
+- **Railway** (`Bobololadono` loyihasi) — `frontend` (`app.bobololadono.uz`),
+  `backend` (`api.bobololadono.uz`), Postgres, Redis — HAMMASI shu yerda.
 - **DNS** — AHOST (`rdns1/2/3.ahost.uz`), Vercel/Railway nazorat qilmaydi.
 
 ### Railway custom domain qo'shish (bir martalik, boshqa domen kerak bo'lsa)
 ```bash
-railway domain <sub>.bobododa.uz --service <frontend|backend> --port 8080
+railway domain <sub>.bobololadono.uz --service <frontend|backend> --port 8080
 # Chiqargan CNAME + TXT (_railway-verify.<sub>) yozuvlarini AHOST'da qo'shing.
 # TXT — FAQAT bir martalik egalik tasdiqlash uchun; tasdiqlangandan keyin
 # saqlansa ham, o'chirilsa ham keyingi ishlashga ta'sir qilmaydi.
-railway domain status <sub>.bobododa.uz --service <nom>   # Verified: yes / Certificate: VALID kutiladi
+railway domain status <sub>.bobololadono.uz --service <nom>   # Verified: yes / Certificate: VALID kutiladi
 ```
 DIQQAT — AHOST'da ba'zan yangi TXT yozuv authoritative nameserver'ning
 BARCHA tugunlarida bir vaqtda ko'rinmasligi mumkin (klaster ichi kechikish):
@@ -2181,7 +2181,7 @@ kelishi kerak, xatosiz).
 ### `NEXT_PUBLIC_API_URL` o'zgartirilganda — MUHIM
 Bu BUILD VAQTIDA o'qiladigan qiymat (Next.js `NEXT_PUBLIC_*` konvensiyasi).
 ```bash
-railway variable set NEXT_PUBLIC_API_URL=https://api.bobododa.uz --service frontend --skip-deploys
+railway variable set NEXT_PUBLIC_API_URL=https://api.bobololadono.uz --service frontend --skip-deploys
 railway redeploy --service frontend --from-source --yes   # --from-source SHART!
 ```
 `--from-source`siz oddiy `railway redeploy` faqat ESKI build image'ni qayta
@@ -2190,7 +2190,7 @@ ishga tushiradi — yangi qiymat JS bundle'ga hech qachon kirmaydi (backend'dagi
 
 ### Vercel landing-only deploy
 ```bash
-vercel link --project bobo-doda --scope shakarovlaziz243-5791s-projects  # bir martalik
+vercel link --project bobololadono --scope shakarovlaziz243-5791s-projects  # bir martalik
 vercel deploy --prod --yes   # mavjud loyihaga, YANGI loyiha yaratmaydi
 ```
 `.vercelignore` MAVJUD — mavjud bo'lgach `.gitignore` E'TIBORGA OLINMAYDI,
@@ -2208,7 +2208,7 @@ redirect qo'shmaydi.
 ### Rollback
 **Vercel landing** — oldingi deploy'ga qaytarish:
 ```bash
-vercel ls bobo-doda --prod          # oldingi deployment ID/URL toping
+vercel ls bobololadono --prod          # oldingi deployment ID/URL toping
 vercel promote <oldingi-deployment-url>   # yoki dashboard: Deployments → ... → Promote to Production
 ```
 **Railway frontend/backend** — oldingi (ishlaydigan) deployment'ga qaytarish:
@@ -2255,7 +2255,7 @@ qayta ko'rib chiqing.
 
 **Tavsiya (bajarilmadi — arxitektura qarori, operator tasdig'i kerak)**:
 Railway xizmatlarini GitHub'ga ulash (`railway service source connect
---repo Lazizdeveloper/Bobo-Doda --branch develop`) — shunda push avtomatik
+--repo Lazizdeveloper/Bobololadono --branch develop`) — shunda push avtomatik
 deploy qiladi, har doim "nima push qilingan — o'sha ishlayapti" kafolati
 bo'ladi. Hozircha bajarilmadi, chunki bu deploy MODELINI tubdan o'zgartiradi
 (CLI qo'lda nazoratidan avtomatikka) — operatorning ochiq roziligisiz
@@ -2279,7 +2279,7 @@ railway up backend --path-as-root --service backend --ci   # yoki frontend uchun
 git checkout develop -- .               # ishchi papkani qaytaring
 
 # Tasdiqlash:
-curl https://api.bobododa.uz/health/ready
+curl https://api.bobololadono.uz/health/ready
 ```
 Railway dashboard'ida ham "Deployments" ro'yxatida eski (hali REMOVED
 bo'lmagan) deployment qatorida "Redeploy" tugmasi bor — bu tezroq, lekin
@@ -2374,7 +2374,7 @@ git checkout develop -- .
 tekshira oladi:
 
 ```bash
-curl -s https://api.bobododa.uz/health/live | jq .commit
+curl -s https://api.bobololadono.uz/health/live | jq .commit
 # Solishtiring: git rev-parse origin/main
 ```
 Agar ikkalasi mos kelmasa — production ESKI (yoki BOSHQA) commit bilan

@@ -45,11 +45,11 @@ const nextConfig = {
      (masalan `NEXT_DIST_DIR=.next-check npm run build`) — aks holda build
      dev serverning ".next" papkasini ustiga yozib, uni buzadi. */
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  /* Monorepo (npm workspaces). `@bobododa/contracts` — OpenAPI'dan
+  /* Monorepo (npm workspaces). `@bobololadono/contracts` — OpenAPI'dan
      generatsiya qilingan TS manbasini (`.ts`, kompilyatsiyalanmagan)
      eksport qiladi; Next uni o'zi transpil qilishi kerak. Bosqich 2 dan
      `lib/api/wire-enums.ts` shu paketdan import qiladi. */
-  transpilePackages: ["@bobododa/contracts"],
+  transpilePackages: ["@bobololadono/contracts"],
   /* FAQAT DEV. Next 16 dev serveri `/_next/*` (HMR, chunk'lar) ga
      "cross-origin" so'rovlarni bloklaydi — va u `localhost` bilan
      `127.0.0.1` ni HAR XIL origin deb biladi. Natijada `127.0.0.1:3000`
@@ -61,8 +61,8 @@ const nextConfig = {
      uchun uni topish juda qiyin. E2E skriptlari ham aynan shu manzilga
      uriladi. Ishlab chiqarish build'iga (`next start`) taalluqli emas. */
   allowedDevOrigins: ["127.0.0.1", "localhost"],
-  /* Domen bo'linishi (2026-09) — bobododa.uz FAQAT landing+huquqiy
-     sahifalarni ko'rsatadi, asosiy ilova app.bobododa.uz'da (Railway,
+  /* Domen bo'linishi (2026-09) — bobololadono.uz FAQAT landing+huquqiy
+     sahifalarni ko'rsatadi, asosiy ilova app.bobololadono.uz'da (Railway,
      shu bitta kodning ALOHIDA deploy'i, real backend'ga ulangan).
      `process.env.VERCEL === "1"` — Vercel PLATFORMASI o'zi HAR BIR build'ga
      avtomatik beradi (qo'lda sozlash shart emas, unutib qo'yish xavfi yo'q);
@@ -75,13 +75,13 @@ const nextConfig = {
      FAQ/yordam markazi — real backend'ga bog'liq emas) bu ro'yxatda YO'Q. */
   async redirects() {
     if (process.env.VERCEL !== "1") return [];
-    const APP_ORIGIN = "https://app.bobododa.uz";
-    /* Admin domen ko'chirishi (2026-09) — admin.bobododa.uz o'z alohida
+    const APP_ORIGIN = "https://app.bobololadono.uz";
+    /* Admin domen ko'chirishi (2026-09) — admin.bobololadono.uz o'z alohida
        nishoni (bo'lim 3). `/admin` bu yerda PREFIKSI OLIB TASHLANGAN holda
-       ko'chadi (`/admin/kirish` → `admin.bobododa.uz/kirish`), root
+       ko'chadi (`/admin/kirish` → `admin.bobololadono.uz/kirish`), root
        `proxy.ts`dagi kanonik xaritalash bilan bir xil qoida. `/rahbariyat`
        o'zgarishsiz ko'chadi (super_admin kirish — o'z yo'lida qoladi). */
-    const ADMIN_ORIGIN = "https://admin.bobododa.uz";
+    const ADMIN_ORIGIN = "https://admin.bobololadono.uz";
     const appOnlyPaths = [
       "/kirish",
       "/royxatdan-otish",
@@ -102,11 +102,11 @@ const nextConfig = {
       { source: "/rahbariyat/:rest*", destination: `${ADMIN_ORIGIN}/rahbariyat/:rest*`, permanent: true },
     ];
     return [
-      /* www → apex — kanonik domen bobododa.uz (huquqiy qism, section 10). */
+      /* www → apex — kanonik domen bobololadono.uz (huquqiy qism, section 10). */
       {
         source: "/:path*",
-        has: [{ type: "host", value: "www.bobododa.uz" }],
-        destination: "https://bobododa.uz/:path*",
+        has: [{ type: "host", value: "www.bobololadono.uz" }],
+        destination: "https://bobololadono.uz/:path*",
         permanent: true,
       },
       ...appRedirects,

@@ -48,10 +48,10 @@ jobs:
             fi
           }
 
-          check "Landing (bobododa.uz)" "https://bobododa.uz"
-          check "App (app.bobododa.uz)" "https://app.bobododa.uz"
-          check "API health/live" "https://api.bobododa.uz/health/live"
-          check "API health/ready" "https://api.bobododa.uz/health/ready"
+          check "Landing (bobololadono.uz)" "https://bobololadono.uz"
+          check "App (app.bobololadono.uz)" "https://app.bobololadono.uz"
+          check "API health/live" "https://api.bobololadono.uz/health/live"
+          check "API health/ready" "https://api.bobololadono.uz/health/ready"
 
           if [ "${{ github.event.inputs.simulate_failure }}" = "true" ]; then
             fail=1
@@ -89,7 +89,7 @@ jobs:
             gh issue comment ${{ steps.existing.outputs.id }} --repo "${{ github.repository }}" --body "$body"
           else
             gh issue create --repo "${{ github.repository }}" \
-              --title "🔴 Production down: bobododa.uz / app / api" \
+              --title "🔴 Production down: bobololadono.uz / app / api" \
               --label production-alert \
               --body "$body"
           fi

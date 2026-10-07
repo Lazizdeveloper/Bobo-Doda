@@ -108,7 +108,7 @@ const seedAdmins: AdminAccount[] = [
   {
     id: "adm-ceo",
     fullName: "Saidkarim — CEO",
-    email: "ceo@bobododa.uz",
+    email: "ceo@bobololadono.uz",
     role: "super_admin",
     title: "Chief Executive Officer",
     active: true,
@@ -118,7 +118,7 @@ const seedAdmins: AdminAccount[] = [
   {
     id: "adm-ops",
     fullName: "Dilnoza Rahimova",
-    email: "admin@bobododa.uz",
+    email: "admin@bobololadono.uz",
     role: "admin",
     title: "Operations Administrator",
     active: true,
@@ -214,8 +214,8 @@ function accounts(): AdminAccount[] {
 
 function credentials() {
   const seed: Record<string, string> = {
-    "ceo@bobododa.uz": "CEOsecure2026",
-    "admin@bobododa.uz": "Adminsecure2026",
+    "ceo@bobololadono.uz": "CEOsecure2026",
+    "admin@bobololadono.uz": "Adminsecure2026",
   };
   const value = read<Record<string, string>>(CREDENTIALS, {});
   if (Object.keys(value).length) return value;

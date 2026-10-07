@@ -33,7 +33,7 @@ export function CabinetFooter() {
           type="button"
           onClick={() => {
             if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("bobododa:open-feedback"));
+              window.dispatchEvent(new CustomEvent("bobololadono:open-feedback"));
             }
           }}
           className="text-2xs text-muted transition-colors duration-150 hover:text-ink hover:underline cursor-pointer"
@@ -41,7 +41,7 @@ export function CabinetFooter() {
           {t("foot.feedback")}
         </button>
         <span className="ml-auto text-2xs text-faint">
-          © {new Date().getFullYear()} Bobo&amp;Doda
+          © {new Date().getFullYear()} Bobololadono
         </span>
       </nav>
     </footer>

@@ -1,4 +1,4 @@
-# Bobo&Doda backend — ko'p bosqichli Docker image.
+# Bobololadono backend — ko'p bosqichli Docker image.
 #   target: build    → to'liq deps + kompilyatsiya (`npm run build`)
 #   target: runtime  → faqat prod deps + dist/  (lean image, `node dist/main.js`)
 #
@@ -6,7 +6,7 @@
 # ISHLAMAYDI (na build, na runtime bosqichida). Migratsiya DEPLOY
 # pipeline'ning ALOHIDA, image ishga tushishidan OLDINGI qadami
 # (`DATABASE_MIGRATION_URL` — migrator rol, `docs/RUNBOOK.md` §12
-# "Deployment ketma-ketligi") — runtime konteyner faqat `bobododa_app`
+# "Deployment ketma-ketligi") — runtime konteyner faqat `bobololadono_app`
 # (kam huquqli) rol bilan ishlaydi, uning `DATABASE_URL`'ida DDL huquqi
 # UMUMAN yo'q (A4).
 #
@@ -14,7 +14,7 @@
 # loyiha npm workspaces monorepo, lekin `backend/package-lock.json`
 # ATAYLAB standalone (root lockfile'dan MUSTAQIL, `npm install
 # --package-lock-only` alohida, izolyatsiyalangan papkada generatsiya
-# qilingan) — backend HECH QANDAY workspace paketiga (`@bobododa/
+# qilingan) — backend HECH QANDAY workspace paketiga (`@bobololadono/
 # contracts`) bog'liq EMAS, shuning uchun bu xavfsiz. Railway'da:
 # `railway up backend --path-as-root --service backend` — `backend/`
 # papkasi MUSTAQIL yuklanadi, shu Dockerfile uning ILDIZIDA topiladi

@@ -23,4 +23,4 @@ export const STAFF_PASSWORD_MIN_LENGTH = 10;
 /** Argon2 DoS himoyasi — cheksiz uzun kirish hash CPU vaqtini chizada oshiradi. */
 export const STAFF_PASSWORD_MAX_LENGTH = 128;
 
-export const TOTP_ISSUER = 'Bobo&Doda Admin';
+export const TOTP_ISSUER = 'Bobololadono Admin';

@@ -1,4 +1,4 @@
-# @bobododa/contracts
+# @bobololadono/contracts
 
 Backend API shartnomasi — **GENERATSIYA QILINGAN**, qo'lda tahrir qilinmaydi.
 

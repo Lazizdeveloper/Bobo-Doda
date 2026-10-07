@@ -21,10 +21,10 @@ async function main() {
   const cases = [
     // ── Standart (isRealDeploy=false) — lokal dev / CI / Vercel landing ──
     { name: "bo'sh/berilmagan (Vercel landing, CI, lokal dev)", value: undefined, options: {}, shouldThrow: false },
-    { name: "to'g'ri production qiymat", value: "https://api.bobododa.uz/api/v1", options: {}, shouldThrow: false },
+    { name: "to'g'ri production qiymat", value: "https://api.bobololadono.uz/api/v1", options: {}, shouldThrow: false },
     {
       name: "trailing slash bilan to'g'ri qiymat",
-      value: "https://api.bobododa.uz/api/v1/",
+      value: "https://api.bobololadono.uz/api/v1/",
       options: {},
       shouldThrow: false,
     },
@@ -43,7 +43,7 @@ async function main() {
     },
     {
       name: "prefikssiz xom origin, isRealDeploy=false bo'lsa ham — /api/v1 talabi HAR DOIM ishlaydi",
-      value: "https://api.bobododa.uz",
+      value: "https://api.bobololadono.uz",
       options: {},
       shouldThrow: true,
     },
@@ -51,13 +51,13 @@ async function main() {
     {
       name: "REGRESSIYA (security-engineer topilmasi) — query-string orqali /api/v1 'aldash' RAD ETILISHI SHART " +
         "(pathname'da prefiks yo'q, faqat ?next=... ichida)",
-      value: "https://api.bobododa.uz/?next=/api/v1",
+      value: "https://api.bobololadono.uz/?next=/api/v1",
       options: {},
       shouldThrow: true,
     },
     {
       name: "REGRESSIYA (security-engineer topilmasi) — fragment orqali /api/v1 'aldash' RAD ETILISHI SHART",
-      value: "https://api.bobododa.uz/#/api/v1",
+      value: "https://api.bobololadono.uz/#/api/v1",
       options: {},
       shouldThrow: true,
     },
@@ -65,7 +65,7 @@ async function main() {
     // ── isRealDeploy=true — Railway asosiy ilova / Vercel landing ──
     {
       name: "to'g'ri production qiymat, isRealDeploy=true",
-      value: "https://api.bobododa.uz/api/v1",
+      value: "https://api.bobololadono.uz/api/v1",
       options: { isRealDeploy: true },
       shouldThrow: false,
     },
@@ -83,13 +83,13 @@ async function main() {
     },
     {
       name: "http (https emas) haqiqiy domen, isRealDeploy=true — rad etilishi SHART",
-      value: "http://api.bobododa.uz/api/v1",
+      value: "http://api.bobololadono.uz/api/v1",
       options: { isRealDeploy: true },
       shouldThrow: true,
     },
     {
       name: "prefikssiz xom origin — 2026-09-20 insidentining aynan o'zi",
-      value: "https://api.bobododa.uz",
+      value: "https://api.bobololadono.uz",
       options: { isRealDeploy: true },
       shouldThrow: true,
     },
@@ -110,7 +110,7 @@ async function main() {
     },
     {
       name: "requireForApp=true, lekin qiymat to'g'ri berilgan — o'tishi shart",
-      value: "https://api.bobododa.uz/api/v1",
+      value: "https://api.bobololadono.uz/api/v1",
       options: { requireForApp: true, isRealDeploy: true },
       shouldThrow: false,
     },

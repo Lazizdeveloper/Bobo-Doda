@@ -20,7 +20,7 @@ test.describe("Frontend WCAG 2.1 AA Accessibility Audit", () => {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
 
-      // Bobo&Doda brend to'q sariq (#FF7A1A) tugmalari oq matnda 2.6:1 kontrastga ega;
+      // Bobololadono brend to'q sariq (#FF7A1A) tugmalari oq matnda 2.6:1 kontrastga ega;
       // dizayn tizimi brend o'ziga xosligini saqlab qolgan holda alohida ko'rib chiqilgan.
       const accessibilityScanResults = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

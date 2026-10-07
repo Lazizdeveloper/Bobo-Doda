@@ -1,4 +1,4 @@
-# Bobo&Doda
+# Bobololadono
 
 Markaziy Osiyo uchun ikki tomonlama xizmatlar marketplace frontend’i. Xaridor
 mutaxassis yoki tayyor xizmat topadi, ish e’loni joylaydi va bosqichli escrow

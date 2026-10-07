@@ -1,4 +1,4 @@
-import type { components } from "@bobododa/contracts";
+import type { components } from "@bobololadono/contracts";
 import type {
   AuthService,
   CatalogService,
@@ -409,7 +409,7 @@ export const usersService: UsersService = {
         exportedAt: new Date().toISOString(),
         user: me,
         application: app,
-        platform: "Bobo&Doda",
+        platform: "Bobololadono",
       };
     }),
   deleteAccount: () =>
@@ -426,7 +426,7 @@ function fallbackSellerProfile(userId: string): Model.SellerProfile {
   return {
     userId,
     headline: "Professional mutaxassis",
-    bio: "Bobo&Doda platformasidagi tasdiqlangan mutaxassis.",
+    bio: "Bobololadono platformasidagi tasdiqlangan mutaxassis.",
     location: "Toshkent",
     skills: ["Dasturlash", "Dizayn"],
     categories: ["dasturlash", "dizayn"],
@@ -1875,5 +1875,5 @@ export const supportRequestService: SupportRequestService = {
  * joylari (`window.addEventListener(DATA_CHANGED_EVENT, ...)`) buzilmasin
  * deb saqlangan — hodisa shunchaki hech qachon `dispatchEvent` qilinmaydi.
  */
-export const DATA_CHANGED_EVENT = "bobododa:data-changed";
+export const DATA_CHANGED_EVENT = "bobololadono:data-changed";
 export const resetDemoData = (): void => {};

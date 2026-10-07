@@ -21,7 +21,7 @@ const config: Config = {
         "card-hover": "#FFF8F2",
         /* Yumshoq iliq to'ldirish (Landing page bilan bir xil) */
         surface: "#FBFBFA",
-        /* Harakat — Bobo&Doda Brand Orange. Matn oq (on-primary) */
+        /* Harakat — Bobololadono Brand Orange. Matn oq (on-primary) */
         primary: "#FF7A1A",
         "primary-hover": "#EA670C",
         "on-primary": "#FFFFFF",

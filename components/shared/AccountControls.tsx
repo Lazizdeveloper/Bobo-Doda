@@ -66,7 +66,7 @@ export function AccountControls() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `bobododa-export-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.download = `bobololadono-export-${new Date().toISOString().slice(0, 10)}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
       toast(t("privacy.exported"));

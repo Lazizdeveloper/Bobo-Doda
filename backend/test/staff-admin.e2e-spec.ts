@@ -56,7 +56,7 @@ describe('Staff admin — lifecycle/permissions/sessions (e2e)', () => {
 
   function createStaffMemberPayload(overrides: Record<string, unknown> = {}) {
     return {
-      email: `new-${Date.now()}-${Math.random().toString(36).slice(2)}@bobododa.uz`,
+      email: `new-${Date.now()}-${Math.random().toString(36).slice(2)}@bobololadono.uz`,
       fullName: 'Yangi Xodim',
       title: 'Operator',
       role: 'OPERATIONS',

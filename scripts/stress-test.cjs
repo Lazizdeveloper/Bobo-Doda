@@ -13,9 +13,9 @@ const roles = {
     base: "/xaridor",
     routes: [
       "/xaridor",
-      "/xaridor/bozor",
-      "/xaridor/bozor/xizmat/svc-1",
-      "/xaridor/bozor/mutaxassis/u-1",
+      "/bozor",
+      "/bozor/xizmat/svc-1",
+      "/bozor/mutaxassis/u-1",
       "/xaridor/elonlarim",
       "/xaridor/elonlarim/job-1",
       "/xaridor/elonlarim/yangi",

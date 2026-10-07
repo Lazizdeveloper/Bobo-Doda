@@ -5361,7 +5361,7 @@
     }
   },
   "info": {
-    "title": "Bobo&Doda API",
+    "title": "Bobololadono API",
     "description": "Markaziy Osiyo freelance marketplace — milestone escrow, double-entry ledger. Frontend `lib/api` chegarasini qoplaydi.",
     "version": "0.1.0",
     "contact": {}
@@ -5785,7 +5785,7 @@
         "properties": {
           "email": {
             "type": "string",
-            "example": "admin@bobododa.uz"
+            "example": "admin@bobololadono.uz"
           },
           "password": {
             "type": "string"
@@ -8079,7 +8079,7 @@
         "properties": {
           "email": {
             "type": "string",
-            "example": "ops@bobododa.uz"
+            "example": "ops@bobololadono.uz"
           },
           "fullName": {
             "type": "string"

@@ -155,7 +155,7 @@ export function ReceiptModal({
             </p>
           </div>
 
-          {/* Bobo&Doda Rasmiy Muhri (Official Escrow Stamp) */}
+          {/* Bobololadono Rasmiy Muhri (Official Escrow Stamp) */}
           <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-success/60 text-success p-2 text-center select-none rotate-[-6deg]">
             <div className="flex flex-col items-center justify-center leading-none">
               <span className="text-[9px] font-black uppercase tracking-wider">BOBO & DODA</span>

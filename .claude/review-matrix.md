@@ -1,15 +1,15 @@
-# Bobo&Doda — Review Matrix
+# Bobololadono — Review Matrix
 
-Which agent owns a change, who must independently review it, and who gives the final gate. Routing and cross-review coordination is done by `bobododa-engineering-lead` (`.claude/agents/bobododa-engineering-lead.md`) per `.claude/workflows/task-routing.md`, or by the main coordinator directly when the lead agent isn't invoked — either way, this matrix is the source of truth both must follow.
+Which agent owns a change, who must independently review it, and who gives the final gate. Routing and cross-review coordination is done by `bobololadono-engineering-lead` (`.claude/agents/bobololadono-engineering-lead.md`) per `.claude/workflows/task-routing.md`, or by the main coordinator directly when the lead agent isn't invoked — either way, this matrix is the source of truth both must follow.
 
 **No self-approval, ever.** The agent that implements or primarily audits a change cannot be its only reviewer, no matter how confident it is.
 
 ## Orchestration role — read before delegating
 
-`bobododa-engineering-lead` is:
+`bobololadono-engineering-lead` is:
 - **ROLE:** orchestrator — classifies the task, selects the minimum sufficient specialist team per this matrix, and enforces the no-self-approval and disagreement-resolution rules below.
 
-`bobododa-engineering-lead` is explicitly **NOT**:
+`bobololadono-engineering-lead` is explicitly **NOT**:
 - **NOT a reviewer of record** — its own classification is never counted as one of the required independent reviews for a category.
 - **NOT an implementation owner** — it does not write application code; see its agent definition's boundaries.
 - **NOT the final release authority** — `release-engineer` remains the only release gate; the lead cannot send anything to production and cannot override a specialist FAIL.

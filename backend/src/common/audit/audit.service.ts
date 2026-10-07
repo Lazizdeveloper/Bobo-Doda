@@ -39,7 +39,7 @@ export interface AuditWriteInput {
 /**
  * `AuditLog` — YAGONA yozish yo'li (Bosqich 3'da BIRINCHI marta ishlatiladi;
  * jadvalning o'zi Bosqich 1'dan bor). Append-only invariant DB DARAJASIDA
- * majburlangan (A4 — `bobododa_app`dan `UPDATE`/`DELETE` REVOKE qilingan,
+ * majburlangan (A4 — `bobololadono_app`dan `UPDATE`/`DELETE` REVOKE qilingan,
  * `APPEND_ONLY_TABLES`), shuning uchun bu servis ham faqat `create()` beradi
  * — `update`/`delete` metodlari ATAYLAB YO'Q.
  *

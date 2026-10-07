@@ -109,7 +109,7 @@ const KEYS = {
   seeded: "sb2_seeded",
 } as const;
 
-export const DATA_CHANGED_EVENT = "bobododa:data-changed";
+export const DATA_CHANGED_EVENT = "bobololadono:data-changed";
 
 /* Operatsion sozlamalar admin panelidan boshqariladi (`lib/platform-settings.ts`
    — yagona manba). Ilgari ilova `sb2_system_settings` dan, admin esa
@@ -1435,7 +1435,7 @@ export async function getContract(id: string): Promise<Contract | null> {
 
 /** Shartnomani bekor qilish (ikkala tomon ham qila oladi — imzolangan yoki
    faol). Tekshiruvdagi ish bo'lsa bloklanadi; escrow'dagi (mablag'langan,
-   hali qabul qilinmagan) pul xaridorning Bobo&Doda hisobiga QAYTARILADI —
+   hali qabul qilinmagan) pul xaridorning Bobololadono hisobiga QAYTARILADI —
    u yerdan kartaga yechib oladi. Qabul qilingan bosqichlar to'langanicha qoladi. */
 export async function cancelContract(id: string): Promise<Contract> {
   await delay(500);
@@ -3304,7 +3304,7 @@ function findOwnMilestone(
 }
 
 /** Shartnomani escrow'ga to'liq mablag'lash (Fiverr/Kwork modeli):
-   xaridor BUTUN summani birdan Bobo&Doda hisobiga to'laydi → shartnoma
+   xaridor BUTUN summani birdan Bobololadono hisobiga to'laydi → shartnoma
    faollashadi, barcha bosqichlar 'mablaglangan' bo'ladi, ish boshlanishi
    mumkin. Pul har bosqich qabul qilinganda mutaxassisga o'tadi. */
 export async function fundContract(
@@ -3506,7 +3506,7 @@ function creditBalance(userId: string, sum: number): void {
   write(KEYS.balances, balances);
 }
 
-/** Joriy xaridorning Bobo&Doda hisobidagi (qaytarilgan) mablag'i */
+/** Joriy xaridorning Bobololadono hisobidagi (qaytarilgan) mablag'i */
 export async function getBalance(): Promise<number> {
   ensureSeed();
   await delay(150);

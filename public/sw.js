@@ -1,4 +1,4 @@
-const CACHE = "bobo-doda-shell-v1";
+const CACHE = "bobololadono-shell-v1";
 const FALLBACK = "/offline.html";
 const PRIVATE_PATH_PREFIXES = ["/admin", "/xaridor", "/mutaxassis", "/kirish", "/tolov"];
 

@@ -43,7 +43,7 @@ export class AppConfigService {
     return this.get('CORS_ORIGINS');
   }
 
-  /** Bo'lim 3 (admin.bobododa.uz) — `staff/*` yo'llari uchun ALOHIDA, torroq
+  /** Bo'lim 3 (admin.bobololadono.uz) — `staff/*` yo'llari uchun ALOHIDA, torroq
       ro'yxat (`main.ts`dagi CORS delegate). `corsOrigins`dan mustaqil. */
   get staffCorsOrigins(): string[] {
     return this.get('STAFF_CORS_ORIGINS');
@@ -58,7 +58,7 @@ export class AppConfigService {
     return this.get('DATABASE_URL');
   }
 
-  /** `bobododa_migrator` roli — faqat `prisma migrate` CLI ishlatadi. */
+  /** `bobololadono_migrator` roli — faqat `prisma migrate` CLI ishlatadi. */
   get databaseMigrationUrl(): string {
     return this.get('DATABASE_MIGRATION_URL');
   }
@@ -68,7 +68,7 @@ export class AppConfigService {
     return this.get('DB_ROLE_ASSERTION');
   }
 
-  /** T1 — runtime uchun kutilgan DB roli (F1 shu bilan solishtiradi). Sukut `bobododa_app`. */
+  /** T1 — runtime uchun kutilgan DB roli (F1 shu bilan solishtiradi). Sukut `bobololadono_app`. */
   get dbAppRole(): string {
     return this.get('DB_APP_ROLE');
   }

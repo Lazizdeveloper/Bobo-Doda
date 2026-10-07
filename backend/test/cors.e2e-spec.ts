@@ -6,9 +6,9 @@ import { buildTestApp } from './support/build-app';
 import { AppConfigService } from '@/config/app-config.service';
 
 /**
- * Bo'lim 3 (admin.bobododa.uz ko'chirish) — security audit topilmasi 3a:
+ * Bo'lim 3 (admin.bobololadono.uz ko'chirish) — security audit topilmasi 3a:
  * yagona umumiy CORS ro'yxat staff sessiyasiga HECH QANDAY real izolyatsiya
- * bermas edi — `app.bobododa.uz`da ishlaydigan har qanday skript
+ * bermas edi — `app.bobololadono.uz`da ishlaydigan har qanday skript
  * `credentials:'include'` bilan `/staff/auth/refresh`ni chaqirib, staff
  * access token'ini o'qiy olardi (SameSite=Strict sibling subdomenlardan
  * himoya qilmaydi). Bu test `main.ts`/`build-app.ts`dagi CORS delegate
@@ -38,8 +38,8 @@ describe('CORS isolation — staff/* vs marketplace (e2e, real Postgres + Redis)
   let app: INestApplication | undefined;
   let reachable = false;
 
-  const MARKETPLACE_ORIGIN = 'https://app.bobododa.uz';
-  const ADMIN_ORIGIN = 'https://admin.bobododa.uz';
+  const MARKETPLACE_ORIGIN = 'https://app.bobololadono.uz';
+  const ADMIN_ORIGIN = 'https://admin.bobololadono.uz';
 
   beforeAll(async () => {
     reachable = await requireInfraOrSkip('cors.e2e');

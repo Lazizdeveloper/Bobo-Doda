@@ -16,7 +16,7 @@ test("xaridor nizo ochadi, sotuvchi ko'radi, xaridor qaytarib oladi", async ({ b
 
   let contractId = "";
   await test.step("xaridor xarid qiladi, sotuvchi qabul qiladi, to'lov muvaffaqiyatli bo'ladi", async () => {
-    await buyerPage.goto(`/xaridor/bozor/xizmat/${seller.serviceId}`, { waitUntil: "networkidle" });
+    await buyerPage.goto(`/bozor/xizmat/${seller.serviceId}`, { waitUntil: "networkidle" });
     await buyerPage.getByRole("button", { name: /Buyurtma/i }).first().click();
     await buyerPage.waitForTimeout(400);
     await buyerPage.getByRole("button", { name: /Shartnoma yaratish/i }).last().click();

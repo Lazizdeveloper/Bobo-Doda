@@ -17,7 +17,7 @@ const { chromium } = require("playwright");
 
 const BASE = process.env.TEST_BASE_URL || "http://127.0.0.1:3100";
 
-/** Operator admin (`admin@bobododa.uz`) huquqi yetadigan barcha marshrutlar */
+/** Operator admin (`admin@bobololadono.uz`) huquqi yetadigan barcha marshrutlar */
 const OPERATOR_ROUTES = [
   "/admin",
   "/admin/foydalanuvchilar",
@@ -99,7 +99,7 @@ let browser;
     viewport: { width: 1280, height: 900 },
   });
   const adminPage = await adminContext.newPage();
-  await login(adminPage, "admin@bobododa.uz", "Adminsecure2026");
+  await login(adminPage, "admin@bobololadono.uz", "Adminsecure2026");
   for (const route of OPERATOR_ROUTES) await auditPage(adminPage, route);
 
   /* --- Operator admin: super-admin marshrutlari YOPIQ --- */
@@ -118,7 +118,7 @@ let browser;
     viewport: { width: 360, height: 800 },
   });
   const ceoPage = await ceoContext.newPage();
-  await login(ceoPage, "ceo@bobododa.uz", "CEOsecure2026", "super_admin");
+  await login(ceoPage, "ceo@bobololadono.uz", "CEOsecure2026", "super_admin");
   for (const route of [...OPERATOR_ROUTES, ...SUPER_ONLY_ROUTES]) {
     await auditPage(ceoPage, route);
   }

@@ -1,4 +1,4 @@
-# Bobo&Doda — Backend
+# Bobololadono — Backend
 
 Markaziy Osiyo freelance marketplace backend. **NestJS 11 modular monolith**,
 PostgreSQL 16 + Prisma 6, Redis 7 + BullMQ. Frontend'ning `lib/api` chegarasini
@@ -71,7 +71,7 @@ src/
   modules/
     health/                /health/live, /health/ready
 scripts/
-  emit-openapi.ts          @bobododa/contracts uchun OpenAPI (DB/Redis'ga ulanmaydi)
+  emit-openapi.ts          @bobololadono/contracts uchun OpenAPI (DB/Redis'ga ulanmaydi)
   boot-check.ts            ilovani ko'taradi, natijani exit code bilan beradi (F1 e2e shuni chaqiradi)
   prove-append-only.sh     A4 isboti, Docker'siz (throwaway PG klaster)
 prisma/
@@ -81,7 +81,7 @@ prisma/
 test/
   jest-e2e.setup.ts        e2e env'ni import'dan OLDIN o'rnatadi (@nestjs/config snapshot)
   support/e2e-infra.ts     pgReachable / requireInfraOrSkip (F2) / provisionDb / bootCheck
-  health.e2e-spec.ts       Bosqich 1 DoD (health/ready, docs, 404) — bobododa_app roli bilan (F1)
+  health.e2e-spec.ts       Bosqich 1 DoD (health/ready, docs, 404) — bobololadono_app roli bilan (F1)
   db-roles.e2e-spec.ts     A4 — append-only DB darajasida (permission denied isboti)
   db-role-assertion.e2e-spec.ts  F1 — boot tekshiruvi: happy/fail-closed/bypass + real process boot
 ```

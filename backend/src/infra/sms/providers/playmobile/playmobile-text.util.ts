@@ -16,7 +16,7 @@ export function renderPlayMobileText(template: string, params: Record<string, st
     if (!code) {
       throw new DomainError('INVALID_INPUT', 'OTP SMS uchun "code" parametri yo‘q');
     }
-    return `Bobo&Doda tasdiqlash kodi: ${code}. Hech kimga aytmang.`;
+    return `Bobololadono tasdiqlash kodi: ${code}. Hech kimga aytmang.`;
   }
   const message = params.message;
   if (!message) {

@@ -14,7 +14,7 @@ export const ADMIN_API_BASE = process.env.E2E_ADMIN_API_URL || "http://localhost
 const OTP_LOG_PATH = process.env.E2E_ADMIN_OTP_LOG_PATH || "/home/laziz/Bobo-Doda/scratch/e2e-infra/backend.log";
 const DB_CMD =
   process.env.E2E_ADMIN_DB_CMD ||
-  "psql -h 127.0.0.1 -p 55433 -U bobododa_app -d bobododa_e2e";
+  "psql -h 127.0.0.1 -p 55433 -U bobololadono_app -d bobololadono_e2e";
 const WEBHOOK_SECRET = process.env.PAYMENT_TEST_WEBHOOK_SECRET || "test-only-insecure-secret-change-me";
 
 export const E2E_STAFF_PASSWORD = process.env.E2E_STAFF_PASSWORD || "E2eTest#2026Pass";

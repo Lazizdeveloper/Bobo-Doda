@@ -23,7 +23,7 @@ export function AdminPageHeader({
             <BackButton href={backHref} />
           </div>
         )}
-        <p className="text-2xs font-bold uppercase tracking-[.18em] text-primary">Bobo&amp;Doda Control</p>
+        <p className="text-2xs font-bold uppercase tracking-[.18em] text-primary">Bobololadono Control</p>
         <h1 className="mt-1 font-heading text-2xl font-extrabold text-ink">{title}</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">{description}</p>
       </div>

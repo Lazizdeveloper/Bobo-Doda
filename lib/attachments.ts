@@ -96,7 +96,7 @@ export function readAsDataUrl(file: Blob): Promise<string> {
   const fileName = (file as File).name || "fayl";
   if (file.size > 1.5 * 1024 * 1024) {
     const safeName = encodeURIComponent(fileName);
-    return Promise.resolve(`https://storage.bobododa.uz/deliverables/${Date.now()}-${safeName}`);
+    return Promise.resolve(`https://storage.bobololadono.uz/deliverables/${Date.now()}-${safeName}`);
   }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

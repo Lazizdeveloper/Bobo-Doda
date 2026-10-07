@@ -1,8 +1,8 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- A2 — Postgres kengaytmalari.
--- Init migratsiyada, `bobododa_migrator` roli bilan o'rnatiladi: `CREATE
+-- Init migratsiyada, `bobololadono_migrator` roli bilan o'rnatiladi: `CREATE
 -- EXTENSION` superuser YOKI DB ustidan `CREATE` huquqi talab qiladi, prod
--- runtime roli (`bobododa_app`) da bu huquq BO'LMASLIGI kerak. pg_trgm +
+-- runtime roli (`bobololadono_app`) da bu huquq BO'LMASLIGI kerak. pg_trgm +
 -- unaccent — kirill/lotin aralash qidiruv (Bosqich 3). citext — email va
 -- normallashtirilgan telefon. btree_gin — aralash (enum + trigram) GIN
 -- indekslar. Hammasi PG13+ da "trusted" — migrator superuser bo'lishi shart
@@ -224,21 +224,21 @@ ALTER TABLE "staff_sessions" ADD CONSTRAINT "staff_sessions_staffId_fkey" FOREIG
 -- A4/T1 — "append-only" ni DB DARAJASIDA majburlash, sozlanadigan rol nomi
 -- bilan.
 --
--- Runtime roli (sukut `bobododa_app`) audit_logs / outbox_events qatorlarini
+-- Runtime roli (sukut `bobololadono_app`) audit_logs / outbox_events qatorlarini
 -- O'ZGARTIRA yoki O'CHIRA olmasin. Kod darajasidagi qoidani bir kun kimdir
 -- buzadi (shoshilinch tuzatish, xato `updateMany`, migratsiya skripti); DB
--- darajasida buzish uchun ONGLI ravishda `bobododa_migrator` ga o'tish kerak.
+-- darajasida buzish uchun ONGLI ravishda `bobololadono_migrator` ga o'tish kerak.
 -- `LedgerEntry` (Bosqich 4) paydo bo'lganda o'sha migratsiyaga xuddi shunday
 -- REVOKE qo'shiladi (yagona manba — `src/common/db/append-only.constants.ts`,
 -- F1 tekshiruvi shundan o'qiydi; bu migratsiya QO'LDA shunga mos yoziladi —
 -- `test/db-role-assertion.e2e-spec.ts` ikkalasi orasidagi drift'ni ushlaydi).
 --
 -- T1 — rol NOMI bu faylga QATTIQ YOZILMAGAN: DB darajasidagi maxsus GUC'dan
--- (`bobododa.app_role`) o'qiladi — buni `prisma/sql/roles.sql`
--- (`ALTER DATABASE ... SET bobododa.app_role = ...`) o'rnatadi. Hech qanday
+-- (`bobololadono.app_role`) o'qiladi — buni `prisma/sql/roles.sql`
+-- (`ALTER DATABASE ... SET bobololadono.app_role = ...`) o'rnatadi. Hech qanday
 -- kengaytma shart emas — Postgres nuqtali ("namespace.nom") GUC'larni
 -- o'ziga tanish qilmasdan ham qabul qiladi. GUC o'rnatilmagan bo'lsa (masalan
--- toza lokal `prisma migrate dev`) — sukut `bobododa_app`ga qaytadi.
+-- toza lokal `prisma migrate dev`) — sukut `bobololadono_app`ga qaytadi.
 -- Barcha identifikatorlar `format('%I', …)` bilan quote qilinadi — string
 -- konkatenatsiya YO'Q.
 --
@@ -249,7 +249,7 @@ ALTER TABLE "staff_sessions" ADD CONSTRAINT "staff_sessions_staffId_fkey" FOREIG
 -- ─────────────────────────────────────────────────────────────────────────────
 DO $$
 DECLARE
-  app_role text := COALESCE(NULLIF(current_setting('bobododa.app_role', true), ''), 'bobododa_app');
+  app_role text := COALESCE(NULLIF(current_setting('bobololadono.app_role', true), ''), 'bobololadono_app');
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app_role) THEN
 

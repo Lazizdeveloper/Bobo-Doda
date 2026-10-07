@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   /* `logicalPath` — prefikssiz mantiqiy yo'l. Lokal dev/xom Railway
      domenida `pathname` haqiqatan `/admin/...` (fayl yo'liga to'g'ri
-     keladi); kanonik admin.bobododa.uz'da `proxy.ts` prefiksni allaqachon
+     keladi); kanonik admin.bobololadono.uz'da `proxy.ts` prefiksni allaqachon
      striplagan, `pathname` esa `/kirish` kabi ko'rinadi. Ikkalasini ham
      bitta shaklga keltiramiz — qolgan guard mantiqi shu bittasiga ishonadi
      (`lib/admin-routes.ts`). */

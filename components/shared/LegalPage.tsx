@@ -15,7 +15,7 @@ const CONTENT: Record<
   terms: {
     uz: {
       title: "Foydalanish shartlari",
-      intro: "Ushbu shartlar Bobo&Doda platformasidan foydalanishning asosiy qoidalarini belgilaydi.",
+      intro: "Ushbu shartlar Bobololadono platformasidan foydalanishning asosiy qoidalarini belgilaydi.",
       sections: [
         ["Hisob va xavfsizlik", "Foydalanuvchi haqiqiy ma'lumot taqdim etishi, hisob ma'lumotlarini sir saqlashi va shubhali faoliyat haqida darhol xabar berishi shart."],
         ["Marketplace qoidalari", "Taklif, shartnoma, topshiriq va fayllar platforma ichida rasmiylashtiriladi. Aldov, spam, noqonuniy xizmat va platformadan tashqari xavfli to'lovlar taqiqlanadi."],
@@ -25,7 +25,7 @@ const CONTENT: Record<
     },
     ru: {
       title: "Условия использования",
-      intro: "Эти условия определяют основные правила использования платформы Bobo&Doda.",
+      intro: "Эти условия определяют основные правила использования платформы Bobololadono.",
       sections: [
         ["Аккаунт и безопасность", "Пользователь обязан предоставлять достоверные данные, сохранять данные входа в тайне и немедленно сообщать о подозрительной активности."],
         ["Правила маркетплейса", "Предложения, контракты, результаты и файлы оформляются внутри платформы. Запрещены мошенничество, спам, незаконные услуги и небезопасные внешние платежи."],
@@ -35,7 +35,7 @@ const CONTENT: Record<
     },
     en: {
       title: "Terms of use",
-      intro: "These terms set the main rules for using the Bobo&Doda platform.",
+      intro: "These terms set the main rules for using the Bobololadono platform.",
       sections: [
         ["Account and security", "Users must provide accurate information, protect login credentials, and report suspicious activity immediately."],
         ["Marketplace rules", "Offers, contracts, deliverables, and files should be handled on-platform. Fraud, spam, illegal services, and unsafe off-platform payments are prohibited."],
@@ -123,7 +123,7 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
       </header>
       <main className="mx-auto max-w-4xl px-4 py-10 sm:py-16">
         <Link href="/" className="text-xs text-primary-deep hover:text-ink">
-          ← Bobo&Doda
+          ← Bobololadono
         </Link>
         <h1 className="mt-5 font-heading text-2xl font-extrabold text-ink sm:text-3xl">
           {content.title}
@@ -140,8 +140,8 @@ export function LegalPage({ kind }: { kind: LegalKind }) {
         </div>
         <p className="mt-8 text-xs text-faint">
           Legal contact:{" "}
-          <a className="text-primary-deep hover:underline" href="mailto:legal@bobododa.uz">
-            legal@bobododa.uz
+          <a className="text-primary-deep hover:underline" href="mailto:legal@bobololadono.uz">
+            legal@bobololadono.uz
           </a>
         </p>
       </main>

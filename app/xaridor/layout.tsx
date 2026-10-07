@@ -31,7 +31,7 @@ export default function XaridorLayout({ children }: { children: ReactNode }) {
 
       setUserRole(session.role);
 
-      const isMarketRoute = pathname.startsWith("/xaridor/bozor");
+      const isMarketRoute = pathname.startsWith("/bozor");
       if (session.role !== "xaridor" && !isMarketRoute) {
         const dest = session.role === "mutaxassis" ? "/mutaxassis" : "/rol-tanlash";
         if (pathname !== dest) router.replace(dest);

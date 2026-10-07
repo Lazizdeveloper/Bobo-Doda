@@ -81,7 +81,7 @@ export function AntiCircumventionModal({
               <strong>Firibgarlikdan himoya:</strong> Platformadan tashqarida yuborilgan to&apos;lovlar qaytarilmaydi.
             </li>
             <li>
-              <strong>Nizolarni hal qilish:</strong> Bahsli vaziyatlarda Bobo-Doda arbitraji platformadagi chat va topshirilgan ishlarga tayanadi.
+              <strong>Nizolarni hal qilish:</strong> Bahsli vaziyatlarda Bobololadono arbitraji platformadagi chat va topshirilgan ishlarga tayanadi.
             </li>
           </ul>
         </div>

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Bobo&Doda dev serveri.
+/* Bobololadono dev serveri.
  *
  * Ilgari bu skript IKKI Next.js dev serverini ko'tarardi: asosiy ilova (:3000)
  * va admin panel (:3001, alohida `.next-admin` papkasi bilan). Admin panel

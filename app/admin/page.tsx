@@ -64,7 +64,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="Operatsion Boshqaruv Markazi" description="Bobo&Doda bozorining jonli faoliyati va xavfsizlik navbatlari." />
+      <AdminPageHeader title="Operatsion Boshqaruv Markazi" description="Bobololadono bozorining jonli faoliyati va xavfsizlik navbatlari." />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Foydalanuvchilar" value={counters.totalUsers} detail="Jami ro'yxatdan o'tganlar" tone="primary" />
