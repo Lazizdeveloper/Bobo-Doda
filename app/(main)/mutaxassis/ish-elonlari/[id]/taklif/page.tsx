@@ -101,7 +101,7 @@ export default function TaklifYuborishPage() {
         estimatedDeliveryDays: Number(deliveryDays),
       });
       toast(t("prop.sent"));
-      router.push("/mutaxassis/takliflarim");
+      router.push("/mutaxassis/applications");
     } catch (err) {
       if (err instanceof Error && err.message === "DUPLICATE_PROPOSAL") {
         setAlreadySent(true);

@@ -62,7 +62,7 @@ export default function TakliflarimPage() {
     proposals?.filter((p) => filter === "all" || p.status === filter) ?? [];
 
   function openProposal(proposal: Proposal) {
-    router.push(`/mutaxassis/takliflarim/${proposal.id}`);
+    router.push(`/mutaxassis/applications/${proposal.id}`);
   }
 
   return (
@@ -89,7 +89,7 @@ export default function TakliflarimPage() {
             {offers.map((offer) => (
               <Link
                 key={offer.id}
-                href={`/mutaxassis/takliflarim/kelgan/${offer.id}`}
+                href={`/mutaxassis/applications/kelgan/${offer.id}`}
                 className="block"
               >
                 <Card hoverable className="flex flex-col gap-2.5">

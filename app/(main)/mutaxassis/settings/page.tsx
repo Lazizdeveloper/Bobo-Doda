@@ -942,7 +942,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
                     {t("card.sectionHint")}
                   </p>
                 </div>
-                <Link href="/mutaxassis/daromad">
+                <Link href="/mutaxassis/billing">
                   <Button variant="secondary" size="sm">
                     {t("nav.earnings")} →
                   </Button>

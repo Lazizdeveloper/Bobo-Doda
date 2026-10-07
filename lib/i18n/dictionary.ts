@@ -202,7 +202,10 @@ export const dictionary: Record<string, Entry> = {
   },
 
   /* Navigatsiya */
-  "nav.dashboard": { uz: "Boshqaruv", ru: "Обзор" },
+  "nav.dashboard": { uz: "Dashboard", ru: "Дашборд" },
+  "nav.applications": { uz: "Arizalarim", ru: "Мои отклики" },
+  "nav.billing": { uz: "Moliya", ru: "Финансы" },
+  "nav.disputes": { uz: "Nizolar", ru: "Споры" },
   "nav.services": { uz: "Xizmatlarim", ru: "Мои услуги" },
   "nav.jobs": { uz: "Ishlar", ru: "Работа" },
   "nav.bozorServices": { uz: "Xizmatlar", ru: "Услуги" },

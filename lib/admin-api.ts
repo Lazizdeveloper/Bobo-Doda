@@ -857,7 +857,7 @@ export function forceCloseContract(
     contract.sellerId,
     "tizim",
     "ntf.disputeResolved",
-    `/mutaxassis/shartnomalar/${contractId}`,
+    `/mutaxassis/contracts/${contractId}`,
     {
       title: contract.title,
       amount: formatAmount(escrowPool - buyerShare),
@@ -914,7 +914,7 @@ export function replyToTicket(
       ticketOwner.id,
       "xabar",
       "ntf.supportReplied",
-      ticketOwner.role === "mutaxassis" ? "/mutaxassis/yordam" : "/xaridor/yordam",
+      ticketOwner.role === "mutaxassis" ? "/mutaxassis/disputes" : "/xaridor/yordam",
       { subject: tickets[idx].subject }
     );
   }
@@ -994,7 +994,7 @@ export function approveWithdrawal(requestId: string) {
     req.userId,
     "tolov",
     "ntf.withdrawalApproved",
-    req.userRole === "mutaxassis" ? "/mutaxassis/daromad" : "/xaridor/xarajatlar",
+    req.userRole === "mutaxassis" ? "/mutaxassis/billing" : "/xaridor/xarajatlar",
     { amount: formatAmount(req.amount) }
   );
 
@@ -1055,7 +1055,7 @@ export function rejectWithdrawal(requestId: string, reason: string) {
     req.userId,
     "tolov",
     "ntf.withdrawalRejected",
-    req.userRole === "mutaxassis" ? "/mutaxassis/daromad" : "/xaridor/xarajatlar",
+    req.userRole === "mutaxassis" ? "/mutaxassis/billing" : "/xaridor/xarajatlar",
     { reason: reason.trim() }
   );
 
@@ -1138,7 +1138,7 @@ export function approveB2bPayment(contractId: string) {
     contract.sellerId,
     "bosqich",
     "ntf.contractFunded",
-    `/mutaxassis/shartnomalar/${contractId}`,
+    `/mutaxassis/contracts/${contractId}`,
     { title: contract.title }
   );
   pushNotification(
@@ -1442,7 +1442,7 @@ export function closeJobAsAdmin(jobId: string, reason: string) {
         proposals[i].sellerId,
         "taklif",
         "ntf.proposalRejected",
-        `/mutaxassis/takliflarim/${proposals[i].id}`,
+        `/mutaxassis/applications/${proposals[i].id}`,
         { title: job.title }
       );
     }
@@ -1486,7 +1486,7 @@ export function setServiceStatus(
     service.sellerId,
     "tizim",
     status === "active" ? "ntf.serviceRestored" : "ntf.servicePaused",
-    `/mutaxassis/xizmatlarim/${service.id}`,
+    `/mutaxassis/services/${service.id}`,
     { title: service.title, reason: reason?.trim() ?? "" }
   );
 

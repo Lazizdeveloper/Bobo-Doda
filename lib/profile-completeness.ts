@@ -42,7 +42,7 @@ export function completenessItems(
       key: "settings.ckService",
       done: input.activeServicesCount >= 1,
       tab: "profile",
-      href: "/mutaxassis/xizmatlarim/yangi",
+      href: "/mutaxassis/services/yangi",
     },
   ];
 }

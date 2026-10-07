@@ -23,7 +23,7 @@ test("xaridor nizo ochadi, sotuvchi ko'radi, xaridor qaytarib oladi", async ({ b
     await buyerPage.waitForURL("**/xaridor/shartnomalar/*", { timeout: 15_000 });
     contractId = new URL(buyerPage.url()).pathname.split("/").pop()!;
 
-    await sellerPage.goto(`/mutaxassis/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await sellerPage.goto(`/mutaxassis/contracts/${contractId}`, { waitUntil: "networkidle" });
     await sellerPage.getByRole("button", { name: "Qabul qilish" }).click({ timeout: 8000 });
 
     await buyerPage.goto(`/xaridor/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
@@ -48,7 +48,7 @@ test("xaridor nizo ochadi, sotuvchi ko'radi, xaridor qaytarib oladi", async ({ b
   });
 
   await test.step("sotuvchi nizoni shartnoma sahifasida ko'radi", async () => {
-    await sellerPage.goto(`/mutaxassis/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await sellerPage.goto(`/mutaxassis/contracts/${contractId}`, { waitUntil: "networkidle" });
     await expect(sellerPage.getByText(/[Nn]izo/).first()).toBeVisible({ timeout: 5000 });
   });
 

@@ -61,7 +61,7 @@ export default function XabarlarPage() {
           if (contract) {
             list.push({
               id: contract.id,
-              href: `/mutaxassis/shartnomalar/${contract.id}`,
+              href: `/mutaxassis/contracts/${contract.id}`,
               name: contract.buyerName,
               title: contract.title,
               last,
@@ -86,7 +86,7 @@ export default function XabarlarPage() {
           const last = msgs[msgs.length - 1];
           list.push({
             id: offer.id,
-            href: `/mutaxassis/takliflarim/kelgan/${offer.id}`,
+            href: `/mutaxassis/applications/kelgan/${offer.id}`,
             name: offer.buyerName,
             title: offer.title,
             last,

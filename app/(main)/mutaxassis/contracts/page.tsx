@@ -81,7 +81,7 @@ export default function ShartnomalarPage() {
         <Table
           rows={filtered}
           rowKey={(c) => c.id}
-          onRowClick={(c) => router.push(`/mutaxassis/shartnomalar/${c.id}`)}
+          onRowClick={(c) => router.push(`/mutaxassis/contracts/${c.id}`)}
           columns={[
             {
               key: "buyer",

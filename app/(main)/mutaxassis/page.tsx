@@ -161,28 +161,28 @@ export default function MutaxassisDashboardPage() {
           ))
         ) : (
           <>
-            <Link href="/mutaxassis/daromad" className="block">
+            <Link href="/mutaxassis/billing" className="block">
               <Card hoverable className="border-l-4 border-l-primary h-full">
                 <p className="text-2xs font-bold uppercase text-primary-deep tracking-wider">{t("dash.netIncome")}</p>
                 <p className="mt-2 font-heading text-xl font-black text-ink">{formatMoney(totalEarnings, lang)}</p>
               </Card>
             </Link>
 
-            <Link href="/mutaxassis/shartnomalar" className="block">
+            <Link href="/mutaxassis/contracts" className="block">
               <Card hoverable className="border-l-4 border-l-success h-full">
                 <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.activeContracts")}</p>
                 <p className="mt-2 font-heading text-xl font-black text-ink">{activeContracts.length}</p>
               </Card>
             </Link>
 
-            <Link href="/mutaxassis/takliflarim" className="block">
+            <Link href="/mutaxassis/applications" className="block">
               <Card hoverable className="border-l-4 border-l-accent h-full">
                 <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.proposalsSent")}</p>
                 <p className="mt-2 font-heading text-xl font-black text-ink">{proposals?.length || 0}</p>
               </Card>
             </Link>
 
-            <Link href="/mutaxassis/takliflarim" className="block">
+            <Link href="/mutaxassis/applications" className="block">
               <Card hoverable className="border-l-4 border-l-warning h-full">
                 <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.awaitingResponse")}</p>
                 <p className={`mt-2 font-heading text-xl font-black ${awaitingResponseProposals.length > 0 ? "text-warning" : "text-ink"}`}>
@@ -191,7 +191,7 @@ export default function MutaxassisDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/mutaxassis/xizmatlarim" className="block">
+            <Link href="/mutaxassis/services" className="block">
               <Card hoverable className="border-l-4 border-l-primary-deep h-full">
                 <p className="text-2xs font-bold uppercase text-muted tracking-wider">{t("dash.activeServices")}</p>
                 <p className="mt-2 font-heading text-xl font-black text-ink">{activeServices.length}</p>
@@ -283,7 +283,7 @@ export default function MutaxassisDashboardPage() {
               <span className="text-xs text-muted">({offers.length})</span>
             </div>
             {offers.length > 0 && (
-              <Link href="/mutaxassis/takliflarim" className="text-xs font-semibold text-primary hover:underline">
+              <Link href="/mutaxassis/applications" className="text-xs font-semibold text-primary hover:underline">
                 {t("dash.viewAll")} →
               </Link>
             )}
@@ -304,7 +304,7 @@ export default function MutaxassisDashboardPage() {
           ) : (
             <div className="flex flex-col gap-2.5">
               {offers.slice(0, 4).map((offer) => (
-                <Link key={offer.id} href={`/mutaxassis/takliflarim/kelgan/${offer.id}`} className="block">
+                <Link key={offer.id} href={`/mutaxassis/applications/kelgan/${offer.id}`} className="block">
                   <Card hoverable padding="md" className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <Avatar name={offer.buyerName} size="sm" />
@@ -326,7 +326,7 @@ export default function MutaxassisDashboardPage() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-bold text-ink">{t("dash.recentContracts")}</h2>
-            <Link href="/mutaxassis/shartnomalar" className="text-xs font-semibold text-primary hover:underline">
+            <Link href="/mutaxassis/contracts" className="text-xs font-semibold text-primary hover:underline">
               {t("dash.viewAll")} ({contracts?.length || 0}) →
             </Link>
           </div>
@@ -344,7 +344,7 @@ export default function MutaxassisDashboardPage() {
           ) : (
             <div className="flex flex-col gap-2.5">
               {recentContracts.map((c) => (
-                <Link key={c.id} href={`/mutaxassis/shartnomalar/${c.id}`} className="block">
+                <Link key={c.id} href={`/mutaxassis/contracts/${c.id}`} className="block">
                   <Card hoverable padding="md" className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-bold text-ink text-sm truncate">{c.title}</p>
@@ -367,7 +367,7 @@ export default function MutaxassisDashboardPage() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-bold text-ink">{t("dash.myServices")}</h2>
-            <Link href="/mutaxassis/xizmatlarim" className="text-xs font-semibold text-primary hover:underline">
+            <Link href="/mutaxassis/services" className="text-xs font-semibold text-primary hover:underline">
               {t("dash.viewAll")} ({services.length}) →
             </Link>
           </div>
@@ -378,14 +378,14 @@ export default function MutaxassisDashboardPage() {
             <Card className="text-center py-8">
               <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyServicesCta")}</p>
               <p className="mt-1 text-xs text-muted">Xizmat yarating va bozorga taklif qiling.</p>
-              <Link href="/mutaxassis/xizmatlarim/yangi" className="mt-3 inline-block">
+              <Link href="/mutaxassis/services/yangi" className="mt-3 inline-block">
                 <Button size="sm">{t("dash.newService")}</Button>
               </Link>
             </Card>
           ) : (
             <div className="flex flex-col gap-2.5">
               {services.slice(0, 4).map((s) => (
-                <Link key={s.id} href={`/mutaxassis/xizmatlarim/${s.id}`} className="block">
+                <Link key={s.id} href={`/mutaxassis/services/${s.id}`} className="block">
                   <Card hoverable padding="md" className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-ink text-sm truncate">{s.title}</p>

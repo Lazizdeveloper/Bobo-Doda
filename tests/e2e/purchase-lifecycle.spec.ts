@@ -34,7 +34,7 @@ test("xarid -> qabul -> to'lov -> topshirish -> qabul -> yakunlanish", async ({ 
   const contractId = new URL(buyerPage.url()).pathname.split("/").pop()!;
 
   await test.step("sotuvchi shartnomani qabul qiladi", async () => {
-    await sellerPage.goto(`/mutaxassis/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await sellerPage.goto(`/mutaxassis/contracts/${contractId}`, { waitUntil: "networkidle" });
     await sellerPage.getByRole("button", { name: "Qabul qilish" }).click({ timeout: 8000 });
     await expect(sellerPage.getByText(/Faol/i).first()).toBeVisible({ timeout: 8000 });
   });
@@ -60,7 +60,7 @@ test("xarid -> qabul -> to'lov -> topshirish -> qabul -> yakunlanish", async ({ 
   });
 
   await test.step("sotuvchi 'mablag'langan' holatini ko'radi (regressiya: avval hech qachon ko'rinmasdi)", async () => {
-    await sellerPage.goto(`/mutaxassis/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await sellerPage.goto(`/mutaxassis/contracts/${contractId}`, { waitUntil: "networkidle" });
     await expect(sellerPage.getByText(/Mablag'langan|TO'LOV KAFOLATLANGAN/i).first()).toBeVisible({ timeout: 8000 });
   });
 

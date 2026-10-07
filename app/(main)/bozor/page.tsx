@@ -469,7 +469,7 @@ export default function BozorPage() {
                   <Button variant="secondary" size="sm" onClick={clearAllFilters}>
                     {t("market.clearFilters")}
                   </Button>
-                  <Link href="/mutaxassis/xizmatlarim/yangi">
+                  <Link href="/mutaxassis/services/yangi">
                     <Button size="sm">{t("market.createServiceCta")}</Button>
                   </Link>
                 </div>

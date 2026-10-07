@@ -76,7 +76,7 @@ export default function TaklifTafsilotiPage() {
     <div className="flex max-w-2xl flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.proposals"), href: "/mutaxassis/takliflarim" },
+          { label: t("nav.proposals"), href: "/mutaxassis/applications" },
           { label: t("prop.detailTitle") },
         ]}
       />
@@ -174,7 +174,7 @@ export default function TaklifTafsilotiPage() {
           <span />
         )}
         {proposal.status === "yollandi" && contract && (
-          <Link href={`/mutaxassis/shartnomalar/${contract.id}`}>
+          <Link href={`/mutaxassis/contracts/${contract.id}`}>
             <Button>{t("props.openContract")}</Button>
           </Link>
         )}

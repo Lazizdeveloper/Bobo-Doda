@@ -117,6 +117,9 @@ export const en: Record<string, string> = {
 
   /* Navigation */
   "nav.dashboard": "Dashboard",
+  "nav.applications": "Applications",
+  "nav.billing": "Billing",
+  "nav.disputes": "Disputes",
   "nav.services": "My services",
   "nav.jobs": "Jobs",
   "nav.bozorServices": "Services",

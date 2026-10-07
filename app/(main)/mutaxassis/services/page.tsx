@@ -82,7 +82,7 @@ export default function XizmatlarimPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-2xl font-extrabold text-ink">{t("services.title")}</h1>
-        <Link href="/mutaxassis/xizmatlarim/yangi">
+        <Link href="/mutaxassis/services/yangi">
           <Button>{t("services.add")}</Button>
         </Link>
       </div>
@@ -147,7 +147,7 @@ export default function XizmatlarimPage() {
           title={services.length === 0 ? t("services.empty") : t("services.emptyFiltered")}
           action={
             services.length === 0 ? (
-              <Link href="/mutaxassis/xizmatlarim/yangi">
+              <Link href="/mutaxassis/services/yangi">
                 <Button>{t("services.emptyCta")}</Button>
               </Link>
             ) : undefined

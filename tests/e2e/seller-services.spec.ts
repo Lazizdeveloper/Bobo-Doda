@@ -16,12 +16,12 @@ test.describe.serial("sotuvchi: boshqaruv va xizmatlar", () => {
   test("sotuvchi boshqaruv paneli va xizmatlarim ro'yxati yuklanadi", async () => {
     await page.goto("/mutaxassis");
     await expect(page.getByRole("heading", { name: "Boshqaruv" })).toBeVisible();
-    await page.goto("/mutaxassis/xizmatlarim");
+    await page.goto("/mutaxassis/services");
     await expect(page.getByText("Xizmatlarim").first()).toBeVisible();
   });
 
   test("yangi xizmat yaratish -> ko'rib chiqishga yuborish (real oqim: DRAFT -> PENDING_REVIEW)", async () => {
-    await page.goto("/mutaxassis/xizmatlarim/yangi", { waitUntil: "networkidle" });
+    await page.goto("/mutaxassis/services/yangi", { waitUntil: "networkidle" });
     // 4 bosqichli wizard: kategoriya -> sarlavha/tavsif -> narx -> ko'rib chiqish
     await page.locator("button", { hasText: /Dizayn/i }).first().click();
     await page.getByRole("button", { name: /Keyingi/i }).click();
@@ -43,7 +43,7 @@ test.describe.serial("sotuvchi: boshqaruv va xizmatlar", () => {
   test("sotuvchi sozlamalari xatosiz yuklanadi", async () => {
     const consoleErrors: string[] = [];
     page.on("pageerror", (err) => consoleErrors.push(err.message));
-    await page.goto("/mutaxassis/sozlamalar");
+    await page.goto("/mutaxassis/settings");
     await page.waitForTimeout(500);
     expect(consoleErrors, "sahifa JS xatosiz render bo'lishi kerak").toEqual([]);
   });

@@ -144,7 +144,7 @@ export default function ShartnomaWorkroomPage() {
     <div className="flex flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.contracts"), href: "/mutaxassis/shartnomalar" },
+          { label: t("nav.contracts"), href: "/mutaxassis/contracts" },
           { label: contract.title },
         ]}
       />

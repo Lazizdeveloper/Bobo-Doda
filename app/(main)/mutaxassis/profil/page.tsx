@@ -119,7 +119,7 @@ export default function ProfilPage() {
           <p className="mt-1 text-sm text-muted">{t("profile.publicNote")}</p>
         </div>
         <Link
-          href="/mutaxassis/sozlamalar"
+          href="/mutaxassis/settings"
           className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink transition-colors duration-150 hover:bg-card-hover"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">

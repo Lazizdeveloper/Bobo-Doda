@@ -75,7 +75,7 @@ export default function KelganTaklifPage() {
     try {
       const contract = await offersService.accept(offer.id);
       toast(t("soffer.accepted"));
-      router.push(`/mutaxassis/shartnomalar/${contract.id}`);
+      router.push(`/mutaxassis/contracts/${contract.id}`);
     } catch {
       toast(t("common.error"), "error");
       setBusy(false);
@@ -133,7 +133,7 @@ export default function KelganTaklifPage() {
     <div className="flex max-w-2xl flex-col gap-6">
       <Breadcrumb
         items={[
-          { label: t("nav.proposals"), href: "/mutaxassis/takliflarim" },
+          { label: t("nav.proposals"), href: "/mutaxassis/applications" },
           { label: offer.title },
         ]}
       />
@@ -153,7 +153,7 @@ export default function KelganTaklifPage() {
       {offer.status === "qabul_qilindi" && offer.contractId && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-success/25 bg-success/5 p-4">
           <p className="text-xs text-muted">{t("soffer.accepted")}</p>
-          <Link href={`/mutaxassis/shartnomalar/${offer.contractId}`}>
+          <Link href={`/mutaxassis/contracts/${offer.contractId}`}>
             <Button size="sm">{t("props.openContract")}</Button>
           </Link>
         </div>

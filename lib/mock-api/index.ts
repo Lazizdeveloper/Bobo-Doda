@@ -288,7 +288,7 @@ function applyEscrowRules(): void {
       approvedAt: m.reviewDeadline,
     };
     msChanged = true;
-    pushNotification(contract.sellerId, "bosqich", "ntf.milestoneAutoAccepted", `/mutaxassis/shartnomalar/${m.contractId}`, { title: m.title });
+    pushNotification(contract.sellerId, "bosqich", "ntf.milestoneAutoAccepted", `/mutaxassis/contracts/${m.contractId}`, { title: m.title });
     pushNotification(contract.buyerId, "bosqich", "ntf.milestoneAutoAccepted", `/xaridor/shartnomalar/${m.contractId}`, { title: m.title });
   }
 
@@ -303,7 +303,7 @@ function applyEscrowRules(): void {
          bir xil hisoblanadi, aks holda avto-qabuldan o'tgan shartnomalar
          mutaxassis obro'siga umuman qo'shilmasdi. */
       incrementCompletedContracts(c.sellerId);
-      pushNotification(c.sellerId, "tolov", "ntf.contractCompleted", `/mutaxassis/shartnomalar/${c.id}`, { title: c.title });
+      pushNotification(c.sellerId, "tolov", "ntf.contractCompleted", `/mutaxassis/contracts/${c.id}`, { title: c.title });
       pushNotification(c.buyerId, "tolov", "ntf.contractCompleted", `/xaridor/shartnomalar/${c.id}`, { title: c.title });
     }
   }
@@ -822,7 +822,7 @@ export function ensureUserData(userId: string): void {
         userId,
         kind: "tolov",
         messageKey: "ntf.milestoneApproved",
-        href: `/mutaxassis/shartnomalar/${activeContractId}`,
+        href: `/mutaxassis/contracts/${activeContractId}`,
         params: { title: "Ma'lumotlar bazasi arxitekturasi va Auth tizimi" },
         read: false,
         createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
@@ -832,7 +832,7 @@ export function ensureUserData(userId: string): void {
         userId,
         kind: "bosqich",
         messageKey: "ntf.milestoneFunded",
-        href: `/mutaxassis/shartnomalar/${activeContractId}`,
+        href: `/mutaxassis/contracts/${activeContractId}`,
         params: { title: "To'lov tizimlari integratsiyasi" },
         read: false,
         createdAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
@@ -842,7 +842,7 @@ export function ensureUserData(userId: string): void {
         userId,
         kind: "elon",
         messageKey: "ntf.newContract",
-        href: `/mutaxassis/shartnomalar/${activeContractId}`,
+        href: `/mutaxassis/contracts/${activeContractId}`,
         params: { title: "E-commerce platformasi backend API" },
         read: true,
         createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
@@ -1738,7 +1738,7 @@ export async function sendMessage(
         "ntf.newMessage",
         toBuyer
           ? `/xaridor/takliflarim/${offer.id}`
-          : `/mutaxassis/takliflarim/kelgan/${offer.id}`,
+          : `/mutaxassis/applications/kelgan/${offer.id}`,
         { name: senderName }
       );
     } else {
@@ -1757,7 +1757,7 @@ export async function sendMessage(
           "ntf.newMessage",
           toBuyer
             ? `/xaridor/elonlarim/${job.id}/suhbat/${proposal.id}`
-            : `/mutaxassis/takliflarim/${proposal.id}`,
+            : `/mutaxassis/applications/${proposal.id}`,
           { name: senderName }
         );
       }
@@ -1857,7 +1857,7 @@ export async function approveCloseContract(id: string): Promise<Contract> {
     contract.sellerId,
     "tolov",
     "ntf.contractCompleted",
-    `/mutaxassis/shartnomalar/${contract.id}`,
+    `/mutaxassis/contracts/${contract.id}`,
     { title: contract.title }
   );
   pushNotification(
@@ -2885,7 +2885,7 @@ export async function closeJob(id: string): Promise<Job> {
         proposals[i].sellerId,
         "taklif",
         "ntf.proposalRejected",
-        `/mutaxassis/takliflarim/${proposals[i].id}`,
+        `/mutaxassis/applications/${proposals[i].id}`,
         { title: jobs[idx].title }
       );
     }
@@ -2933,7 +2933,7 @@ export async function setProposalStatus(
       proposals[idx].sellerId,
       "taklif",
       status === "suhbat" ? "ntf.proposalInterview" : "ntf.proposalRejected",
-      `/mutaxassis/takliflarim/${proposals[idx].id}`,
+      `/mutaxassis/applications/${proposals[idx].id}`,
       { title: notificationJob.title }
     );
   }
@@ -3037,7 +3037,7 @@ export async function hireProposal(
         proposals[i].sellerId,
         "taklif",
         "ntf.proposalRejected",
-        `/mutaxassis/takliflarim/${proposals[i].id}`,
+        `/mutaxassis/applications/${proposals[i].id}`,
         { title: job.title }
       );
     }
@@ -3051,7 +3051,7 @@ export async function hireProposal(
     proposal.sellerId,
     "taklif",
     "ntf.hired",
-    `/mutaxassis/shartnomalar/${contract.id}`,
+    `/mutaxassis/contracts/${contract.id}`,
     { title: job.title }
   );
   return contract;
@@ -3125,7 +3125,7 @@ export async function createOffer(data: {
     data.sellerId,
     "taklif",
     "ntf.newOffer",
-    `/mutaxassis/takliflarim/kelgan/${offer.id}`,
+    `/mutaxassis/applications/kelgan/${offer.id}`,
     { title: offer.title }
   );
   return offer;
@@ -3258,7 +3258,7 @@ export async function withdrawOffer(id: string): Promise<Offer> {
     offers[idx].sellerId,
     "taklif",
     "ntf.offerWithdrawn",
-    `/mutaxassis/takliflarim/kelgan/${id}`,
+    `/mutaxassis/applications/kelgan/${id}`,
     { title: offers[idx].title }
   );
   return offers[idx];
@@ -3375,7 +3375,7 @@ export async function fundContract(
       contract.sellerId,
       "tizim",
       "ntf.b2bPending",
-      `/mutaxassis/shartnomalar/${id}`,
+      `/mutaxassis/contracts/${id}`,
       { title: contract.title }
     );
     return contracts[idx];
@@ -3430,7 +3430,7 @@ export async function fundContract(
       contract.sellerId,
       "tolov",
       "ntf.milestoneFunded",
-      `/mutaxassis/shartnomalar/${id}`,
+      `/mutaxassis/contracts/${id}`,
       { title: contract.title }
     );
     return contracts[idx];
@@ -3485,7 +3485,7 @@ export async function fundMilestone(
     contract.sellerId,
     "tolov",
     "ntf.milestoneFunded",
-    `/mutaxassis/shartnomalar/${contractId}`,
+    `/mutaxassis/contracts/${contractId}`,
     { title: milestone.title }
   );
 
@@ -3650,11 +3650,11 @@ export async function acceptMilestone(id: string): Promise<Milestone> {
     contract.sellerId,
     "tolov",
     "ntf.milestoneAccepted",
-    `/mutaxassis/shartnomalar/${contract.id}`,
+    `/mutaxassis/contracts/${contract.id}`,
     { title: milestones[idx].title }
   );
   if (contractCompleted) {
-    pushNotification(contract.sellerId, "tolov", "ntf.contractCompleted", `/mutaxassis/shartnomalar/${contract.id}`, { title: contract.title });
+    pushNotification(contract.sellerId, "tolov", "ntf.contractCompleted", `/mutaxassis/contracts/${contract.id}`, { title: contract.title });
     pushNotification(contract.buyerId, "tolov", "ntf.contractCompleted", `/xaridor/shartnomalar/${contract.id}`, { title: contract.title });
   }
   return milestones[idx];
@@ -3706,7 +3706,7 @@ export async function requestRevision(
     contract.sellerId,
     "bosqich",
     "ntf.revisionRequested",
-    `/mutaxassis/shartnomalar/${contract.id}`,
+    `/mutaxassis/contracts/${contract.id}`,
     { title: milestones[idx].title }
   );
   return milestones[idx];
@@ -3750,7 +3750,7 @@ export async function createReview(
     contract.sellerId,
     "tolov",
     "ntf.newReview",
-    `/mutaxassis/shartnomalar/${contractId}`,
+    `/mutaxassis/contracts/${contractId}`,
     { rating: String(safeRating) }
   );
   return review;

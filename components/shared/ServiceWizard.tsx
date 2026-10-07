@@ -129,7 +129,7 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
         toast(isEdit ? t("wizard.changesSaved") : t("wizard.draftSaved"));
       }
       clearDraft();
-      router.push("/mutaxassis/xizmatlarim");
+      router.push("/mutaxassis/services");
     } catch (err) {
       console.error("ServiceWizard save error:", err);
       const isApi = err instanceof ApiError;
@@ -160,7 +160,7 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <BackButton href="/mutaxassis/xizmatlarim" label={t("nav.services")} />
+        <BackButton href="/mutaxassis/services" label={t("nav.services")} />
       </div>
 
       <h1 className="font-heading text-2xl font-extrabold text-ink">{isEdit ? t("wizard.editTitle") : t("wizard.newTitle")}</h1>

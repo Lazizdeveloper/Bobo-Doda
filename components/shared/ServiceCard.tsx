@@ -43,7 +43,7 @@ export function ServiceCard({ service, onAction, busy = false }: ServiceCardProp
 
       <div className="mt-1 flex flex-wrap items-center gap-2 border-t border-line pt-3">
         {(service.status === "draft" || service.status === "rejected") && (
-          <Link href={`/mutaxassis/xizmatlarim/${service.id}`}>
+          <Link href={`/mutaxassis/services/${service.id}`}>
             <Button variant="secondary" size="sm">
               {t("common.edit")}
             </Button>
