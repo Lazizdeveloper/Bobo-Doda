@@ -109,3 +109,4 @@ test/
 - **Prisma:** faqat repository qatlamida. Migratsiya faqat `prisma migrate`.
 - **Config:** `process.env` hech qayerda to'g'ridan-to'g'ri o'qilmaydi —
   faqat `AppConfigService`.
+
