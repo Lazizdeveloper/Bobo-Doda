@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "job_status" AS ENUM ('OPEN', 'CLOSED');
+CREATE TYPE "JobStatus" AS ENUM ('OPEN', 'CLOSED');
 
 -- CreateTable
 CREATE TABLE "jobs" (
@@ -14,7 +14,7 @@ CREATE TABLE "jobs" (
     "skillsRequired" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "screeningQuestions" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "proposalsCount" INTEGER NOT NULL DEFAULT 0,
-    "status" "job_status" NOT NULL DEFAULT 'OPEN',
+    "status" "JobStatus" NOT NULL DEFAULT 'OPEN',
     "deadline" TIMESTAMPTZ(6),
     "attachedImages" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
