@@ -77,7 +77,7 @@ export function ReceiptModal({
             </div>
             <div>
               <span className="font-heading text-base font-extrabold tracking-tight text-ink">
-                BOBO & DODA
+                BOBOLOLADONO
               </span>
               <p className="text-2xs text-muted">Kafolatlangan Freelance Platformasi</p>
             </div>
@@ -150,7 +150,7 @@ export function ReceiptModal({
         <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
           <div className="max-w-xs text-2xs text-faint">
             <p>
-              Ushbu to&apos;lov Bobo & Doda Escrow kafolat tizimi orqali to&apos;liq himoyalangan va
+              Ushbu to&apos;lov Bobololadono Escrow kafolat tizimi orqali to&apos;liq himoyalangan va
               tasdiqlangan. Qog&apos;oz nusxada ham, elektron shaklda ham yuridik kuchga ega.
             </p>
           </div>
@@ -158,7 +158,7 @@ export function ReceiptModal({
           {/* Bobololadono Rasmiy Muhri (Official Escrow Stamp) */}
           <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-success/60 text-success p-2 text-center select-none rotate-[-6deg]">
             <div className="flex flex-col items-center justify-center leading-none">
-              <span className="text-[9px] font-black uppercase tracking-wider">BOBO & DODA</span>
+              <span className="text-[9px] font-black uppercase tracking-wider">BOBOLOLADONO</span>
               <span className="my-0.5 text-xs font-black uppercase text-success-deep">
                 TO&apos;LANGAN
               </span>

@@ -122,7 +122,7 @@ export function ContractDocumentModal({
               </div>
               <div>
                 <span className="font-heading text-lg font-extrabold tracking-tight text-ink">
-                  BOBO & DODA
+                  BOBOLOLADONO
                 </span>
                 <p className="text-2xs text-muted">
                   Kafolatlangan Freelance va Masofaviy Ishlar Platformasi
@@ -205,7 +205,7 @@ export function ContractDocumentModal({
           </h2>
           <p className="text-muted">
             1.1. Mazkur shartnomaga muvofiq, Ijrochi Buyurtmachining topshirig&apos;iga binoan{" "}
-            <strong className="text-ink">&quot;{contract.title}&quot;</strong> bo&apos;yicha texnik topshiriqda ko&apos;rsatilgan vazifalarni o&apos;z vaqtida va sifatli bajarish, Buyurtmachi esa ushbu xizmat natijasini qabul qilib, kelishilgan haqni Bobo & Doda Escrow kafolat tizimi orqali to&apos;lash majburiyatini oladi.
+            <strong className="text-ink">&quot;{contract.title}&quot;</strong> bo&apos;yicha texnik topshiriqda ko&apos;rsatilgan vazifalarni o&apos;z vaqtida va sifatli bajarish, Buyurtmachi esa ushbu xizmat natijasini qabul qilib, kelishilgan haqni Bobololadono Escrow kafolat tizimi orqali to&apos;lash majburiyatini oladi.
           </p>
           <p className="text-muted">
             1.2. Ijro muddati, bosqichlar va texnik talablar shartnomaning 2-moddasidagi jadval hamda platforma ichidagi o&apos;zaro yozishmalar bilan belgilanadi.
@@ -275,7 +275,7 @@ export function ContractDocumentModal({
             3-MODDA. ESCROW (KAFOLATLI HISOB) VA MABLAG&apos;LARNI MUZLATISH TARTIBI
           </h2>
           <p className="text-muted">
-            3.1. Mazkur shartnoma bo&apos;yicha to&apos;lovlar faqat Bobo & Doda platformasining rasmiy Escrow tranzit hisobvarag&apos;i orqali amalga oshiriladi.
+            3.1. Mazkur shartnoma bo&apos;yicha to&apos;lovlar faqat Bobololadono platformasining rasmiy Escrow tranzit hisobvarag&apos;i orqali amalga oshiriladi.
           </p>
           <p className="text-muted">
             3.2. Buyurtmachi tomonidan kiritilgan mablag&apos; ish to&apos;liq yakunlanib, Buyurtmachi tomonidan tekshirilib qabul qilinmaguncha yoki belgilangan 3 kunlik avtomatik tekshiruv muddati tugamaguncha platforma depozitida xavfsiz muzlatiladi.
@@ -317,7 +317,7 @@ export function ContractDocumentModal({
             </h2>
           </div>
           <p className="text-ink font-medium">
-            6.1. &quot;Bobo & Doda&quot; platformasi O&apos;zbekiston Respublikasining &quot;Elektron tijorat to&apos;g&apos;risida&quot;gi Qonuni va Fuqarolik Kodeksiga muvofiq, tomonlar o&apos;rtasida mustaqil axborot vositachisi hamda kafillik (Escrow) operatori sifatida ishtirok etadi.
+            6.1. &quot;Bobololadono&quot; platformasi O&apos;zbekiston Respublikasining &quot;Elektron tijorat to&apos;g&apos;risida&quot;gi Qonuni va Fuqarolik Kodeksiga muvofiq, tomonlar o&apos;rtasida mustaqil axborot vositachisi hamda kafillik (Escrow) operatori sifatida ishtirok etadi.
           </p>
           <p className="text-muted">
             6.2. <strong>Platforma javobgarligi chegarasi:</strong> Platforma tomonlarning soliq majburiyatlari, shaxsiy noqonuniy harakatlari, shuningdek tomonlar tomonidan platformadan tashqarida qilingan qilmishlar uchun javobgar bo&apos;lmaydi.
@@ -326,7 +326,7 @@ export function ContractDocumentModal({
             6.3. <strong>Majburiyatlardan qochishning oldini olish:</strong> Har ikkala tomon platformada qonuniy identifikatsiyadan o&apos;tgan (telefon raqami, pasport/verifikatsiya ma&apos;lumotlari, IP-manzillar va xabarlar jurnali qat&apos;iy qayd qilinadi). Tomonlardan birortasi asossiz ravishda o&apos;z majburiyatlarini bajarmasdan qochib keta olmaydi — barcha harakatlar yuridik dalil sifatida saqlanadi va zarur hollarda huquqni muhofaza qiluvchi organlarga taqdim etiladi.
           </p>
           <p className="text-muted">
-            6.4. <strong>Arbitraj vakolati:</strong> Tomonlar o&apos;rtasida kelishmovchilik kelib chiqqan taqdirda, Bobo & Doda Mustaqil Arbitraj xizmati taqdim etilgan dalillarni xolisona o&apos;rganib chiqib, muzlatilgan Escrow depozitini tegishli tarafga to&apos;lab berish yoki qaytarish bo&apos;yicha uzil-kesil qaror chiqaradi.
+            6.4. <strong>Arbitraj vakolati:</strong> Tomonlar o&apos;rtasida kelishmovchilik kelib chiqqan taqdirda, Bobololadono Mustaqil Arbitraj xizmati taqdim etilgan dalillarni xolisona o&apos;rganib chiqib, muzlatilgan Escrow depozitini tegishli tarafga to&apos;lab berish yoki qaytarish bo&apos;yicha uzil-kesil qaror chiqaradi.
           </p>
         </section>
 
@@ -372,7 +372,7 @@ export function ContractDocumentModal({
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span>BOBO & DODA VERIFIED E-SIGN</span>
+                <span>BOBOLOLADONO VERIFIED E-SIGN</span>
               </div>
               <p className="mt-1 font-mono text-3xs text-muted break-all">
                 SHA256:BUYER-{contract.id}-{contract.buyerId.slice(-4)}-{contract.buyerAcceptedAt ? contract.buyerAcceptedAt.slice(0, 10) : "OK"}
@@ -401,7 +401,7 @@ export function ContractDocumentModal({
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  <span>BOBO & DODA VERIFIED E-SIGN</span>
+                  <span>BOBOLOLADONO VERIFIED E-SIGN</span>
                 </div>
                 <p className="mt-1 font-mono text-3xs text-muted break-all">
                   SHA256:SELLER-{contract.id}-{contract.sellerId.slice(-4)}-{contract.sellerAcceptedAt.slice(0, 10)}
@@ -430,7 +430,7 @@ export function ContractDocumentModal({
             <span className="text-lg">🏛️</span>
             <div>
               <p className="font-bold text-ink">
-                BOBO & DODA RAQAMLI KAFOLAT VA ARBITRAJ REYESTRI
+                BOBOLOLADONO RAQAMLI KAFOLAT VA ARBITRAJ REYESTRI
               </p>
               <p className="text-3xs text-faint">
                 Ushbu shartnoma xavfsiz Escrow depoziti va Ommaviy oferta qoidalari bilan himoyalangan.

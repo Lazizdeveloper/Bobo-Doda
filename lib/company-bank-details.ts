@@ -1,5 +1,5 @@
 /**
- * Bobo & Doda platformasining rasmiy bank rekvizitlari (MVP Manual Bank Transfer)
+ * Bobololadono platformasining rasmiy bank rekvizitlari (MVP Manual Bank Transfer)
  *
  * Xaridorlar buyurtmalar uchun to'lovni istalgan qulay usulda (bank ilovasi,
  * bank o'tkazmasi, Click, Payme, mobil banking yoki bank kassasi orqali)
@@ -19,7 +19,7 @@ export interface CompanyBankDetails {
 }
 
 export const COMPANY_BANK_DETAILS: CompanyBankDetails = {
-  companyName: "Bobo & Doda MChJ",
+  companyName: "Bobololadono MChJ",
   bankName: "ATIB 'Kapitalbank' Toshkent shahar filiali",
   accountNumber: "20208000405678901001",
   mfo: "00974",

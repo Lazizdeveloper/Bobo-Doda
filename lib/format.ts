@@ -109,7 +109,7 @@ export function triggerFileDownload(file: { name: string; url?: string; size?: n
   }
 
   // Demo / mock fayllar (#) uchun haqiqiy yuklanadigan test blob yaratish
-  const content = `BOBO & DODA PLATFORM\nTopshirilgan ish natijasi fayli: ${file.name}\nHajmi: ${file.size || 0} bayt\nYuklangan vaqt: ${new Date().toLocaleString()}\n\nUshbu fayl platforma orqali muvaffaqiyatli saqlangan.`;
+  const content = `BOBOLOLADONO PLATFORM\nTopshirilgan ish natijasi fayli: ${file.name}\nHajmi: ${file.size || 0} bayt\nYuklangan vaqt: ${new Date().toLocaleString()}\n\nUshbu fayl platforma orqali muvaffaqiyatli saqlangan.`;
   const blob = new Blob([content], { type: file.type || "text/plain;charset=utf-8" });
   const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");

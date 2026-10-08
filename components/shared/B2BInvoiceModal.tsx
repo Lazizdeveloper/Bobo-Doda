@@ -82,7 +82,7 @@ export function B2BInvoiceModal({
             </div>
             <div>
               <h2 className="font-heading text-lg sm:text-xl font-black tracking-tight text-ink">
-                BOBO & DODA MChJ
+                BOBOLOLADONO MChJ
               </h2>
               <p className="text-2xs text-muted">
                 Kafolatlangan IT va frilans xizmatlari platformasi
