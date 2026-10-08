@@ -204,6 +204,11 @@ enum ServiceStatus {
   ARCHIVED
 }
 
+enum JobStatus {
+  OPEN
+  CLOSED
+}
+
 /// Bosqich 4 — `Contract` holat mashinasi. Docs eskizi (`SIGNED|ACTIVE|
 /// COMPLETED|CANCELLED|DISPUTED`) YANGI seller accept/reject darvozasini
 /// (PENDING_SELLER) va hali mavjud bo'lmagan Dispute'ni (DISPUTED) hisobga
@@ -529,6 +534,7 @@ model User {
   staffMember        StaffMember?
   sellerApplications SellerApplication[]
   services           Service[]
+  jobs               Job[]
   contractsAsBuyer   Contract[]          @relation("ContractsAsBuyer")
   contractsAsSeller  Contract[]          @relation("ContractsAsSeller")
   payments           Payment[]
@@ -921,6 +927,7 @@ model Category {
   version   Int            @default(0)
 
   services Service[]
+  jobs     Job[]
 
   @@map("categories")
 }
@@ -962,6 +969,34 @@ model Service {
   @@index([status, createdAt])
   @@index([categoryId, status])
   @@map("services")
+}
+
+/// Xaridor e'loni (Job posting) — Bosqich 22
+model Job {
+  id                 String    @id @db.Uuid
+  buyerId            String    @db.Uuid
+  buyer              User      @relation(fields: [buyerId], references: [id])
+  categoryId         String    @db.Uuid
+  category           Category  @relation(fields: [categoryId], references: [id])
+  title              String
+  description        String
+  budgetMin          BigInt
+  budgetMax          BigInt
+  currency           String    @default("UZS")
+  skillsRequired     String[]  @default([])
+  screeningQuestions String[]  @default([])
+  proposalsCount     Int       @default(0)
+  status             JobStatus @default(OPEN)
+  deadline           DateTime? @db.Timestamptz(6)
+  attachedImages     String[]  @default([])
+  createdAt          DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(6)
+  version            Int       @default(0)
+
+  @@index([buyerId, status])
+  @@index([status, createdAt])
+  @@index([categoryId, status])
+  @@map("jobs")
 }
 
 // ── Bosqich 4: Contract/Order/Milestone ────────────────────────────────────

@@ -48,11 +48,15 @@ export default function YollashPage() {
   const load = useCallback(() => {
     setLoadError(null);
     Promise.all([
-      jobsService.listMine(),
+      jobsService.get(params.id).then(async (found) => {
+        if (found) return found;
+        const myJobs = await jobsService.listMine().catch(() => []);
+        return myJobs.find((j) => j.id === params.id) ?? null;
+      }),
       proposalsService.get(params.proposalId),
     ])
-      .then(async ([jobs, found]) => {
-        setJob(jobs.find((j) => j.id === params.id) ?? null);
+      .then(async ([foundJob, found]) => {
+        setJob(foundJob);
         setProposal(found);
         if (found) {
           setSpec(await catalogService.getSpecialist(found.sellerId));

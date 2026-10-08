@@ -57,7 +57,8 @@ export default function YangiElonPage() {
       budgetMin,
       budgetMax,
       deadline,
-      attachedImages,
+      // Katta base64 fayllar sessionStorage kvotasini to'ldirmasligi uchun faqat yengil ma'lumotlar saqlanadi
+      attachedImages: attachedImages.filter((img) => !img.startsWith("data:") || img.length < 50000),
     }),
     [step, category, title, description, skills, questions, budgetMin, budgetMax, deadline, attachedImages]
   );

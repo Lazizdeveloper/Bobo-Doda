@@ -1042,6 +1042,52 @@ export const servicesService: ServicesService = {
     }),
 };
 
+interface RealJob {
+  id: string;
+  buyerId: string;
+  buyerName?: string;
+  buyerRating?: number;
+  title: string;
+  description: string;
+  category: string;
+  categoryId?: string;
+  budgetMin: number;
+  budgetMax: number;
+  currency?: string;
+  skillsRequired?: string[];
+  screeningQuestions?: string[];
+  proposalsCount?: number;
+  status: "ochiq" | "yopilgan" | "OPEN" | "CLOSED";
+  postedAt?: string;
+  deadline?: string;
+  attachedImages?: string[];
+  createdAt?: string;
+}
+
+function mapJob(dto: RealJob): Model.Job {
+  const status: Model.JobStatus =
+    dto.status === "CLOSED" || dto.status === "yopilgan" ? "yopilgan" : "ochiq";
+  return {
+    id: dto.id,
+    buyerId: dto.buyerId,
+    buyerName: dto.buyerName || "Ish beruvchi",
+    buyerRating: dto.buyerRating ?? 5.0,
+    title: dto.title,
+    description: dto.description,
+    category: (dto.category as Model.ServiceCategory) || "dasturlash",
+    budgetMin: Number(dto.budgetMin) || 0,
+    budgetMax: Number(dto.budgetMax) || 0,
+    currency: "UZS",
+    skillsRequired: dto.skillsRequired || [],
+    screeningQuestions: dto.screeningQuestions || [],
+    proposalsCount: dto.proposalsCount || 0,
+    postedAt: dto.postedAt || dto.createdAt || new Date().toISOString(),
+    status,
+    deadline: dto.deadline,
+    attachedImages: dto.attachedImages || [],
+  };
+}
+
 /* Job/Proposal/Offer — ish e'lonlari va takliflar xizmatlari */
 function getLocalJobs(): Model.Job[] {
   if (typeof window === "undefined") return seedJobs;
@@ -1051,78 +1097,163 @@ function getLocalJobs(): Model.Job[] {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-    localStorage.setItem("bbd_public_jobs", JSON.stringify(seedJobs));
     return seedJobs;
   } catch {
     return seedJobs;
   }
 }
 
+function saveLocalJob(job: Model.Job): void {
+  if (typeof window === "undefined") return;
+  try {
+    const all = getLocalJobs();
+    const filtered = all.filter((j) => j.id !== job.id);
+    const next = [job, ...filtered];
+    try {
+      localStorage.setItem("bbd_public_jobs", JSON.stringify(next));
+    } catch {
+      // Agar kvota oshsa (katta base64 fayllar sababli), faqat yengil metadata qoldirib qayta uriniladi
+      const slim = next.map((j) => ({
+        ...j,
+        attachedImages: (j.attachedImages || []).filter((img) => !img.startsWith("data:") || img.length < 50000),
+      }));
+      try {
+        localStorage.setItem("bbd_public_jobs", JSON.stringify(slim));
+      } catch {}
+    }
+  } catch {}
+}
+
 export const jobsService: JobsService = {
   list: () =>
     call(async () => {
+      try {
+        const res = await http<Page<RealJob> | RealJob[]>("/jobs");
+        const items = Array.isArray(res) ? res : res?.items;
+        if (Array.isArray(items) && items.length > 0) {
+          const remote = items.map(mapJob);
+          const local = getLocalJobs();
+          const map = new Map<string, Model.Job>();
+          for (const j of remote) map.set(j.id, j);
+          for (const j of local) {
+            if (!map.has(j.id)) map.set(j.id, j);
+          }
+          return Array.from(map.values());
+        }
+      } catch {}
       return getLocalJobs();
     }),
   get: (id: string) =>
     call(async () => {
+      try {
+        const dto = await http<RealJob>(`/jobs/${id}`);
+        if (dto) {
+          const mapped = mapJob(dto);
+          saveLocalJob(mapped);
+          return mapped;
+        }
+      } catch {}
       const all = getLocalJobs();
       return all.find((j) => j.id === id) ?? null;
     }),
   listMine: () =>
     call(async () => {
-      const all = getLocalJobs();
+      let remote: Model.Job[] = [];
+      try {
+        const res = await http<Page<RealJob> | RealJob[]>("/jobs/mine");
+        const items = Array.isArray(res) ? res : res?.items;
+        if (Array.isArray(items)) {
+          remote = items.map(mapJob);
+        }
+      } catch {}
+
+      const local = getLocalJobs();
+      let uid: string | undefined;
       if (typeof window !== "undefined") {
         try {
           const me = await http<RealMe>("/me").catch(() => null);
-          const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
-          return all.filter((j) => j.buyerId === uid);
-        } catch {}
+          uid = me?.id ?? sessionStore.read()?.userId ?? "me";
+        } catch {
+          uid = sessionStore.read()?.userId ?? "me";
+        }
       }
-      return [];
+
+      const localMine = local.filter((j) => !uid || j.buyerId === uid || j.buyerId === "me");
+      const map = new Map<string, Model.Job>();
+      for (const j of remote) map.set(j.id, j);
+      for (const j of localMine) {
+        if (!map.has(j.id)) map.set(j.id, j);
+      }
+      return Array.from(map.values());
     }),
   create: (input) =>
     call(async () => {
-      const me = await http<RealMe>("/me").catch(() => null);
-      const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
-      const job: Model.Job = {
-        id: `job_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        buyerId: uid,
-        buyerName: asStr(me?.fullName) || "Ish beruvchi",
-        buyerRating: 5.0,
-        title: input.title,
-        description: input.description,
-        category: input.category,
-        budgetMin: input.budgetMin,
-        budgetMax: input.budgetMax,
-        currency: "UZS",
-        skillsRequired: input.skillsRequired || [],
-        screeningQuestions: input.screeningQuestions || [],
-        proposalsCount: 0,
-        postedAt: new Date().toISOString(),
-        status: "ochiq",
-        deadline: input.deadline,
-        attachedImages: input.attachedImages || [],
-      };
-      if (typeof window !== "undefined") {
-        try {
-          const all = getLocalJobs();
-          localStorage.setItem("bbd_public_jobs", JSON.stringify([job, ...all]));
-        } catch {}
+      let created: Model.Job | null = null;
+      try {
+        const dto = await http<RealJob>("/jobs", {
+          method: "POST",
+          body: {
+            title: input.title,
+            description: input.description,
+            category: input.category,
+            budgetMin: input.budgetMin,
+            budgetMax: input.budgetMax,
+            skillsRequired: input.skillsRequired,
+            screeningQuestions: input.screeningQuestions,
+            deadline: input.deadline,
+            attachedImages: (input.attachedImages || []).slice(0, 5),
+          },
+        });
+        created = mapJob(dto);
+      } catch (err) {
+        if (err instanceof ApiError && (err.code === "VALIDATION" || err.status === 422)) {
+          throw err;
+        }
       }
-      return job;
+
+      if (!created) {
+        const me = await http<RealMe>("/me").catch(() => null);
+        const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
+        created = {
+          id: `job_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+          buyerId: uid,
+          buyerName: asStr(me?.fullName) || "Ish beruvchi",
+          buyerRating: 5.0,
+          title: input.title,
+          description: input.description,
+          category: input.category,
+          budgetMin: input.budgetMin,
+          budgetMax: input.budgetMax,
+          currency: "UZS",
+          skillsRequired: input.skillsRequired || [],
+          screeningQuestions: input.screeningQuestions || [],
+          proposalsCount: 0,
+          postedAt: new Date().toISOString(),
+          status: "ochiq",
+          deadline: input.deadline,
+          attachedImages: input.attachedImages || [],
+        };
+      }
+
+      saveLocalJob(created);
+      return created;
     }),
   close: (id: string) =>
     call(async () => {
-      if (typeof window !== "undefined") {
-        try {
-          const all = getLocalJobs();
-          const found = all.find((j) => j.id === id);
-          if (found) {
-            found.status = "yopilgan";
-            localStorage.setItem("bbd_public_jobs", JSON.stringify(all));
-            return found;
-          }
-        } catch {}
+      try {
+        const dto = await http<RealJob>(`/jobs/${id}/close`, { method: "PATCH" });
+        if (dto) {
+          const mapped = mapJob(dto);
+          saveLocalJob(mapped);
+          return mapped;
+        }
+      } catch {}
+      const all = getLocalJobs();
+      const found = all.find((j) => j.id === id);
+      if (found) {
+        found.status = "yopilgan";
+        saveLocalJob(found);
+        return found;
       }
       throw new Error("JOB_NOT_FOUND");
     }),

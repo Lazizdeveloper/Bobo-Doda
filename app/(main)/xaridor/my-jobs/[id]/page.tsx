@@ -40,14 +40,18 @@ export default function ElonTafsilotiPage() {
   const load = useCallback(() => {
     setLoadError(null);
     Promise.all([
-      jobsService.listMine(),
+      jobsService.get(params.id).then(async (found) => {
+        if (found) return found;
+        const myJobs = await jobsService.listMine().catch(() => []);
+        return myJobs.find((j) => j.id === params.id) ?? null;
+      }),
       catalogService.listSpecialists(),
       /* Bu e'lon bo'yicha ochilgan shartnoma (yollangandan keyin) */
       contractsService.list(),
       proposalsService.listForJob(params.id),
     ])
-      .then(async ([jobs, specialistList, allContracts, list]) => {
-        setJob(jobs.find((j) => j.id === params.id) ?? null);
+      .then(async ([foundJob, specialistList, allContracts, list]) => {
+        setJob(foundJob);
         setSpecialists(new Map(specialistList.map((s) => [s.user.id, s])));
         setContract(allContracts.find((c) => c.jobId === params.id) ?? null);
         /* Ochilganda yangi takliflar "ko'rib chiqilmoqda"ga o'tadi (Upwork: viewed) */

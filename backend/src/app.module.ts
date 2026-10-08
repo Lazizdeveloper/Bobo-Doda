@@ -35,6 +35,7 @@ import { ReconciliationModule } from '@/modules/reconciliation/reconciliation.mo
 import { NotificationModule } from '@/modules/notification/notification.module';
 import { StaffAdminModule } from '@/modules/staff-admin/staff-admin.module';
 import { StaffAuditModule } from '@/modules/staff-audit/staff-audit.module';
+import { JobsModule } from '@/modules/jobs/jobs.module';
 
 /**
  * Ildiz modul. Domen modullari (`users`, `catalog`, `contracts`,
@@ -80,6 +81,7 @@ import { StaffAuditModule } from '@/modules/staff-audit/staff-audit.module';
     NotificationModule,
     StaffAdminModule,
     StaffAuditModule,
+    JobsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

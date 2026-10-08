@@ -43,7 +43,11 @@ export function useFormDraft<T>(
         savedAt: new Date().toISOString(),
         value,
       };
-      sessionStorage.setItem(key, JSON.stringify(envelope));
+      try {
+        sessionStorage.setItem(key, JSON.stringify(envelope));
+      } catch {
+        // QuotaExceededError yoki sessionStorage o'chirilgan bo'lsa xato tashlamaydi
+      }
     }, 300);
     return () => window.clearTimeout(timer);
   }, [dirty, key, value]);
