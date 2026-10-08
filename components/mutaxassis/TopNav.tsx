@@ -64,18 +64,18 @@ export function TopNav({ base }: TopNavProps) {
   return (
     <header className="sticky top-0 z-30 w-full border-b border-line bg-surface/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-6 lg:gap-8">
-          <Logo href={base} />
+        <div className="flex items-center gap-4 lg:gap-6 xl:gap-8 min-w-0">
+          <Logo href={base} className="shrink-0" />
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink-0">
             {navLinks.map((link) => {
               const isActive = link.href === "/mutaxassis" ? pathname === "/mutaxassis" : pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-btn text-sm font-medium transition-colors ${
+                  className={`px-2 xl:px-3 py-1.5 xl:py-2 rounded-btn text-xs xl:text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
                     isActive
                       ? "bg-primary/10 text-primary-deep font-semibold"
                       : "text-muted hover:bg-card-hover hover:text-ink"
@@ -88,10 +88,10 @@ export function TopNav({ base }: TopNavProps) {
           </nav>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <Link
             href="/mutaxassis/services/yangi"
-            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-btn bg-primary/10 text-primary-deep hover:bg-primary hover:text-white transition-colors"
+            className="hidden sm:inline-flex lg:hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-btn bg-primary/10 text-primary-deep hover:bg-primary hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -104,7 +104,7 @@ export function TopNav({ base }: TopNavProps) {
           {/* Mobile menu button */}
           <button
             type="button"
-            className="lg:hidden p-2 text-muted hover:text-ink"
+            className="lg:hidden p-2 text-muted hover:text-ink shrink-0"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? t("a11y.closeMenu") : t("a11y.openMenu")}
             aria-expanded={menuOpen}
@@ -115,18 +115,18 @@ export function TopNav({ base }: TopNavProps) {
             </svg>
           </button>
 
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2.5 xl:gap-3 shrink-0">
             <Link
               href="/mutaxassis/settings"
               aria-label={t("nav.settings")}
-              className="rounded-full"
+              className="rounded-full shrink-0"
             >
               <Avatar name={name || "?"} size="sm" />
             </Link>
             <button
               type="button"
               onClick={handleLogout}
-              className="text-xs font-medium text-muted hover:text-danger"
+              className="text-xs font-medium text-muted hover:text-danger whitespace-nowrap shrink-0"
             >
               {t("common.logout")}
             </button>

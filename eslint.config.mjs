@@ -23,7 +23,7 @@ export default defineConfig([
        tushmaydi, lekin lint'da `require()` xatosi berib `npm run verify`
        ni yiqitardi (ya'ni deploy oldidan majburiy tekshiruv umuman
        o'tmasdi). */
-    files: ["scripts/**/*.cjs", "scratch/**/*.js"],
+    files: ["scripts/**/*.cjs", "scratch/**/*.{js,cjs}"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-unused-vars": "off",

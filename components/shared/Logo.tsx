@@ -16,9 +16,13 @@ export function LogoMark({ size = 32 }: { size?: number }) {
 
 export function Logo({ href = "/", className = "" }: { href?: string; className?: string }) {
   return (
-    <Link href={href} className={`inline-flex items-center gap-2.5 ${className}`} aria-label="Bobololadono">
+    <Link
+      href={href}
+      className={`inline-flex shrink-0 items-center gap-2.5 select-none ${className}`}
+      aria-label="Bobololadono"
+    >
       <LogoMark size={28} />
-      <span className="font-heading text-base font-extrabold tracking-tight text-ink">
+      <span className="shrink-0 font-heading text-base font-extrabold tracking-tight text-ink whitespace-nowrap">
         Bobololadono
       </span>
     </Link>
