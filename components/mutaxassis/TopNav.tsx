@@ -91,7 +91,7 @@ export function TopNav({ base }: TopNavProps) {
         <div className="flex items-center gap-2 sm:gap-2.5 xl:gap-3 shrink-0">
           <Link
             href="/mutaxassis/services/yangi"
-            className="hidden 2xl:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-btn bg-primary/10 text-primary-deep hover:bg-primary hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-btn bg-primary/10 text-primary-deep hover:bg-primary hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
