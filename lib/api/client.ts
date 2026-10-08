@@ -1696,9 +1696,16 @@ export const milestonesService: MilestonesService = {
             const all: Model.Milestone[] = JSON.parse(raw);
             const myContracts = await contractsService.list();
             const myContractIds = new Set(myContracts.map((c) => c.id));
+            const fundedContractIds = new Set(
+              myContracts.filter((c) => Boolean(c.fundedAt)).map((c) => c.id)
+            );
             for (const m of all) {
               if (myContractIds.has(m.contractId) && !results.some((r) => r.id === m.id)) {
-                results.push(m);
+                if (fundedContractIds.has(m.contractId) && m.status === "kutilmoqda") {
+                  results.push({ ...m, status: "mablaglangan" as const });
+                } else {
+                  results.push(m);
+                }
               }
             }
           }
@@ -1769,6 +1776,17 @@ export const milestonesService: MilestonesService = {
                     if (cIdx !== -1) {
                       contracts[cIdx].status = "yakunlangan";
                       localStorage.setItem("bbd_custom_contracts", JSON.stringify(contracts));
+
+                      if (contracts[cIdx].jobId) {
+                        try {
+                          const allJobs = getLocalJobs();
+                          const foundJob = allJobs.find((j) => j.id === contracts[cIdx].jobId);
+                          if (foundJob) {
+                            foundJob.status = "yopilgan";
+                            saveLocalJob(foundJob);
+                          }
+                        } catch {}
+                      }
                     }
                   }
                 }
