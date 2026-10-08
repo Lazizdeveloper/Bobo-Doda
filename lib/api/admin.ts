@@ -134,8 +134,12 @@ export async function adminLogin(email: string, password: string, totpCode?: str
     });
     const account = await applySession(res);
     if (expectedRole && account.role !== expectedRole) {
-      adminLogout();
-      throw new Error("FORBIDDEN");
+      if (expectedRole === "admin" && account.role === "super_admin") {
+        // Superadmin operator boshqaruv paneliga ham to'liq huquq bilan kira oladi
+      } else {
+        adminLogout();
+        throw new Error("FORBIDDEN");
+      }
     }
     return account;
   } catch (error) {

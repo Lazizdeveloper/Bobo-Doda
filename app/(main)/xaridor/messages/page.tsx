@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -113,7 +114,15 @@ export default function XaridorXabarlarPage() {
       ) : !threads ? (
         <SkeletonCard />
       ) : threads.length === 0 ? (
-        <EmptyState title={t("messages.empty")} />
+        <EmptyState
+          title={t("messages.empty")}
+          description="Sizda hali faol yozishmalar yo'q. Mutaxassislar bilan suhbatlashish uchun e'lon berishingiz yoki to'g'ridan-to'g'ri bog'lanishingiz mumkin."
+          action={
+            <Link href="/bozor?tab=specialists">
+              <Button size="sm">Mutaxassislarni ko'rish</Button>
+            </Link>
+          }
+        />
       ) : (
         <Card padding="none">
           {threads.map((thread, i) => {

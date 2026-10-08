@@ -59,7 +59,18 @@ export default function MutaxassisProfiliPage() {
       <SkeletonCard />
     );
   }
-  if (specialist === null) return <EmptyState title={t("spec.notFound")} />;
+  if (specialist === null)
+    return (
+      <EmptyState
+        title={t("spec.notFound")}
+        description="Ushbu mutaxassis profili mavjud emas yoki o'chirilgan bo'lishi mumkin."
+        action={
+          <Link href="/bozor?tab=specialists">
+            <Button size="sm">Barcha mutaxassislarni ko'rish</Button>
+          </Link>
+        }
+      />
+    );
 
   const { user, profile } = specialist;
 
@@ -247,7 +258,15 @@ export default function MutaxassisProfiliPage() {
               {t("profile.services")}
             </h2>
             {services.length === 0 ? (
-              <EmptyState title={t("profile.noServices")} />
+              <EmptyState
+                title={t("profile.noServices")}
+                description="Ushbu mutaxassis hali alohida xizmatlar joylashtirmagan. Siz unga to'g'ridan-to'g'ri loyiha taklifini yuborishingiz mumkin."
+                action={
+                  <Button size="sm" onClick={() => setOfferOpen(true)}>
+                    Taklif yuborish
+                  </Button>
+                }
+              />
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {services.map((service) => (
@@ -332,7 +351,10 @@ export default function MutaxassisProfiliPage() {
             </div>
 
             {reviews.length === 0 ? (
-              <EmptyState title={t("profile.noReviews")} />
+              <EmptyState
+                title={t("profile.noReviews")}
+                description="Ushbu mutaxassis hali yakunlangan buyurtmalar bo'yicha sharh olmagan."
+              />
             ) : filteredReviews.length === 0 ? (
               <div className="rounded-card border border-line bg-card p-6 text-center text-xs text-muted">
                 Tanlangan yulduzlar bo&apos;yicha sharhlar mavjud emas.

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -115,7 +116,15 @@ export default function XabarlarPage() {
       ) : !threads ? (
         <SkeletonCard />
       ) : threads.length === 0 ? (
-        <EmptyState title={t("messages.empty")} />
+        <EmptyState
+          title={t("messages.empty")}
+          description="Sizda hali xabarlar yo'q. E'lonlarga ariza yuborsangiz yoki buyurtma olsangiz, mijozlar bilan muloqot shu yerda bo'ladi."
+          action={
+            <Link href="/bozor?tab=jobs">
+              <Button size="sm">Ochiq ishlarni ko'rish</Button>
+            </Link>
+          }
+        />
       ) : (
         <Card padding="none">
           {threads.map((thread, i) => {

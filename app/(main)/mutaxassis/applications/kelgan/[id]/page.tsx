@@ -124,7 +124,18 @@ export default function KelganTaklifPage() {
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (offer === undefined) return <SkeletonCard />;
-  if (offer === null) return <EmptyState title={t("offer.notFound")} />;
+  if (offer === null)
+    return (
+      <EmptyState
+        title={t("offer.notFound")}
+        description="Kelgan taklif topilmadi yoki bekor qilingan bo'lishi mumkin."
+        action={
+          <Link href="/mutaxassis/applications">
+            <Button size="sm">Barcha takliflar</Button>
+          </Link>
+        }
+      />
+    );
 
   const myId = authService.getSession()?.userId ?? null;
   const pending = offer.status === "yuborilgan";

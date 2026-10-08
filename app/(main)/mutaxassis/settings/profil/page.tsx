@@ -204,7 +204,17 @@ export default function ProfilPage() {
           {t("profile.languages")}
         </h2>
         {profile.languages.length === 0 ? (
-          <EmptyState title={t("profile.noLanguages")} />
+          <EmptyState
+            title={t("profile.noLanguages")}
+            description="Mijozlar bilan muloqot qila olishingizni ko'rsatish uchun tillarni qo'shing."
+            action={
+              <Link href="/mutaxassis/settings?tab=languages">
+                <Button size="sm" variant="secondary">
+                  Til qo'shish
+                </Button>
+              </Link>
+            }
+          />
         ) : (
           <Card padding="none">
             {profile.languages.map((lng, i) => (
@@ -228,7 +238,15 @@ export default function ProfilPage() {
           {t("profile.services")}
         </h2>
         {services.length === 0 ? (
-          <EmptyState title={t("profile.noServices")} />
+          <EmptyState
+            title={t("profile.noServices")}
+            description="Mijozlar buyurtma berishi uchun o'z xizmatlaringizni qo'shing."
+            action={
+              <Link href="/mutaxassis/services/yangi">
+                <Button size="sm">Yangi xizmat yaratish</Button>
+              </Link>
+            }
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {services.map((service) => (
@@ -262,7 +280,15 @@ export default function ProfilPage() {
           {t("profile.portfolio")}
         </h2>
         {profile.portfolio.length === 0 ? (
-          <EmptyState title={t("profile.noPortfolio")} />
+          <EmptyState
+            title={t("profile.noPortfolio")}
+            description="Bajarilgan ishlar namunalari mijozlar ishonchini sezilarli darajada oshiradi."
+            action={
+              <Link href="/mutaxassis/settings?tab=portfolio">
+                <Button size="sm">Portfolio qo'shish</Button>
+              </Link>
+            }
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {profile.portfolio.map((item) => (
@@ -308,7 +334,10 @@ export default function ProfilPage() {
           {t("profile.reviews")}
         </h2>
         {reviews.length === 0 ? (
-          <EmptyState title={t("profile.noReviews")} />
+          <EmptyState
+            title={t("profile.noReviews")}
+            description="Buyurtmalarni muvaffaqiyatli topshirganingizdan so'ng mijozlar sharhlari shu yerda ko'rinadi."
+          />
         ) : (
           <>
             {/* Reyting xulosasi + taqsimot */}

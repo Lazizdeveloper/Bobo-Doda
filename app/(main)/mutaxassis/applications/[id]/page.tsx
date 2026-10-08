@@ -70,7 +70,18 @@ export default function TaklifTafsilotiPage() {
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (proposal === undefined) return <SkeletonCard />;
-  if (proposal === null) return <EmptyState title={t("common.notFound")} />;
+  if (proposal === null)
+    return (
+      <EmptyState
+        title={t("common.notFound")}
+        description="Ariza topilmadi yoki qaytarib olingan bo'lishi mumkin."
+        action={
+          <Link href="/mutaxassis/applications">
+            <Button size="sm">Barcha arizalar</Button>
+          </Link>
+        }
+      />
+    );
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">

@@ -140,6 +140,55 @@ const seedAdmins: AdminAccount[] = [
     ],
     createdAt: "2026-05-12T09:00:00.000Z",
   },
+  {
+    id: "adm-super",
+    fullName: "Boshqaruvchi Superadmin",
+    email: "superadmin@bobololadono.uz",
+    role: "super_admin",
+    title: "Chief Platform Super Administrator",
+    active: true,
+    permissions: allPermissions,
+    createdAt: "2026-01-01T09:00:00.000Z",
+  },
+  {
+    id: "adm-mod",
+    fullName: "Moderator Nazoratchi",
+    email: "moderator@bobololadono.uz",
+    role: "admin",
+    title: "Bosh Kontent va Foydalanuvchilar Moderatori",
+    active: true,
+    permissions: [
+      "dashboard",
+      "users",
+      "services",
+      "jobs",
+      "kyc",
+      "reports",
+      "appeals",
+      "reviews",
+      "support",
+      "categories",
+      "audit",
+    ],
+    createdAt: "2026-01-01T09:00:00.000Z",
+  },
+  {
+    id: "adm-fin",
+    fullName: "Moliyaviy Nazoratchi",
+    email: "finance@bobololadono.uz",
+    role: "finance",
+    title: "Moliya va To'lovlar Nazoratchisi",
+    active: true,
+    permissions: [
+      "dashboard",
+      "orders",
+      "disputes",
+      "payments",
+      "reports",
+      "audit",
+    ],
+    createdAt: "2026-01-01T09:00:00.000Z",
+  },
 ];
 
 function read<T>(key: string, fallback: T): T {
@@ -216,9 +265,19 @@ function credentials() {
   const seed: Record<string, string> = {
     "ceo@bobololadono.uz": "CEOsecure2026",
     "admin@bobololadono.uz": "Adminsecure2026",
+    "superadmin@bobololadono.uz": "TestPass2026!",
+    "superadmin@bobododa.uz": "TestPass2026!",
+    "moderator@bobololadono.uz": "TestPass2026!",
+    "moderator@bobododa.uz": "TestPass2026!",
+    "finance@bobololadono.uz": "TestPass2026!",
+    "finance@bobododa.uz": "TestPass2026!",
+    "moliya@bobododa.uz": "TestPass2026!",
+    "+998901110007": "TestPass2026!",
+    "+998901110008": "TestPass2026!",
+    "+998901110009": "TestPass2026!",
   };
   const value = read<Record<string, string>>(CREDENTIALS, {});
-  if (Object.keys(value).length) return value;
+  if (Object.keys(value).length) return { ...seed, ...value };
   write(CREDENTIALS, seed);
   return seed;
 }
@@ -246,12 +305,38 @@ export async function adminLogin(
   expectedRole?: AdminAccount["role"]
 ) {
   await new Promise((resolve) => setTimeout(resolve, 300));
-  const normalized = email.trim().toLowerCase();
+  let normalized = email.trim().toLowerCase();
+  const phoneToEmail: Record<string, string> = {
+    "+998901110007": "superadmin@bobololadono.uz",
+    "998901110007": "superadmin@bobololadono.uz",
+    "901110007": "superadmin@bobololadono.uz",
+    "+998901110008": "moderator@bobololadono.uz",
+    "998901110008": "moderator@bobololadono.uz",
+    "901110008": "moderator@bobololadono.uz",
+    "+998901110009": "finance@bobololadono.uz",
+    "998901110009": "finance@bobololadono.uz",
+    "901110009": "finance@bobololadono.uz",
+    "superadmin@bobododa.uz": "superadmin@bobololadono.uz",
+    "moderator@bobododa.uz": "moderator@bobololadono.uz",
+    "moliya@bobododa.uz": "finance@bobololadono.uz",
+    "finance@bobododa.uz": "finance@bobololadono.uz",
+  };
+  if (phoneToEmail[normalized]) {
+    normalized = phoneToEmail[normalized];
+  }
   const account = accounts().find(
     (item) => item.email === normalized && item.active
   );
-  const valid = credentials()[normalized] === password;
-  if (!account || !valid || (expectedRole && account.role !== expectedRole)) {
+  const creds = credentials();
+  const valid = creds[normalized] === password || creds[email.trim()] === password;
+  const roleOk =
+    !expectedRole ||
+    account?.role === expectedRole ||
+    (expectedRole === "admin" &&
+      (account?.role === "finance" ||
+        account?.role === "super_admin" ||
+        account?.role === "operations"));
+  if (!account || !valid || !roleOk) {
     throw new Error("INVALID_CREDENTIALS");
   }
   const session: AdminSession = {

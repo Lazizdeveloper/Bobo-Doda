@@ -53,7 +53,17 @@ export default function TaklifSuhbatiPage() {
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (job === undefined || proposal === undefined) return <SkeletonCard />;
   if (job === null || proposal === null) {
-    return <EmptyState title={t("common.notFound")} />;
+    return (
+      <EmptyState
+        title={t("common.notFound")}
+        description="Suhbat yoki ariza topilmadi."
+        action={
+          <Link href="/xaridor/my-jobs">
+            <Button size="sm">E'lonlarga qaytish</Button>
+          </Link>
+        }
+      />
+    );
   }
 
   return (

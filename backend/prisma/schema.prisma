@@ -900,6 +900,7 @@ model SellerApplication {
 
   @@index([userId, status])
   @@index([status, submittedAt])
+  @@index([status, createdAt])
   @@map("seller_applications")
 }
 
@@ -1022,6 +1023,9 @@ model Contract {
 
   @@index([buyerId, status, createdAt])
   @@index([sellerId, status, createdAt])
+  @@index([buyerId, status])
+  @@index([sellerId, status])
+  @@index([status, createdAt])
   @@index([serviceId])
   @@map("contracts")
 }
@@ -1058,6 +1062,7 @@ model Milestone {
 
   @@unique([contractId, position])
   @@index([contractId, status])
+  @@index([status, createdAt])
   @@map("milestones")
 }
 
@@ -1162,6 +1167,8 @@ model Payment {
 
   @@index([contractId, createdAt])
   @@index([payerUserId, createdAt])
+  @@index([payerUserId, status])
+  @@index([contractId, status])
   @@index([status, createdAt])
   /// Bosqich 9, bo'lim 57 — stuck-scan uchun (`status IN (...) AND updatedAt < threshold ORDER BY updatedAt, id`).
   @@index([status, updatedAt])
@@ -1621,6 +1628,8 @@ model Dispute {
   refunds  Refund[]
 
   @@index([contractId, createdAt])
+  @@index([contractId, status])
+  @@index([openedByUserId, status])
   @@index([status, createdAt])
   @@index([openedByUserId])
   @@map("disputes")

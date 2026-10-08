@@ -150,7 +150,11 @@ export default function XizmatlarimPage() {
               <Link href="/mutaxassis/services/yangi">
                 <Button>{t("services.emptyCta")}</Button>
               </Link>
-            ) : undefined
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setFilter("all")}>
+                Barcha xizmatlar
+              </Button>
+            )
           }
         />
       ) : (

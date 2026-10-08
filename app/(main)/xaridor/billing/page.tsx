@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -143,7 +144,15 @@ export default function XarajatlarPage() {
         {!milestones ? (
           <SkeletonCard />
         ) : payments.length === 0 ? (
-          <EmptyState title={t("spend.empty")} />
+          <EmptyState
+            title={t("spend.empty")}
+            description="Sizda hali to'lovlar tarixi mavjud emas. Shartnoma tuzib, bosqichma-bosqich xavfsiz to'lovlarni amalga oshiring."
+            action={
+              <Link href="/bozor">
+                <Button size="sm">Bozorni ko'rish</Button>
+              </Link>
+            }
+          />
         ) : (
           <Table
             rows={payments}

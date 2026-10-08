@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
@@ -75,6 +77,27 @@ export default function ShartnomalarPage() {
         <EmptyState
           title={
             contracts.length === 0 ? t("contracts.emptyAll") : t("contracts.empty")
+          }
+          description={
+            contracts.length === 0
+              ? "Sizda hali faol shartnomalar yo'q. Bozordagi ochiq ishlarga ariza yuboring yoki yangi xizmat qo'shing."
+              : "Tanlangan holat bo'yicha shartnomalar topilmadi."
+          }
+          action={
+            contracts.length === 0 ? (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Link href="/bozor?tab=jobs">
+                  <Button size="sm">Ochiq ishlarni ko'rish</Button>
+                </Link>
+                <Link href="/mutaxassis/services/yangi">
+                  <Button variant="secondary" size="sm">Yangi xizmat yaratish</Button>
+                </Link>
+              </div>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setFilter("all")}>
+                Barcha shartnomalar
+              </Button>
+            )
           }
         />
       ) : (

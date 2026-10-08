@@ -515,7 +515,7 @@ export default function BozorPage() {
                   <Button variant="secondary" size="sm" onClick={clearAllFilters}>
                     {t("market.clearFilters")}
                   </Button>
-                  <Link href="/xaridor/elonlarim/yangi">
+                  <Link href="/xaridor/my-jobs/yangi">
                     <Button size="sm">{t("market.postJobCta")}</Button>
                   </Link>
                 </div>
@@ -602,10 +602,13 @@ export default function BozorPage() {
               <Card className="text-center py-12 flex flex-col items-center justify-center">
                 <p className="font-heading text-base font-bold text-ink">{t("market.empty")}</p>
                 <p className="mt-1 max-w-md text-xs text-muted">{t("market.emptySpecialists")}</p>
-                <div className="mt-5">
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <Button variant="secondary" size="sm" onClick={clearAllFilters}>
                     {t("market.clearFilters")}
                   </Button>
+                  <Link href="/xaridor/my-jobs/yangi">
+                    <Button size="sm">{t("market.postJobCta")}</Button>
+                  </Link>
                 </div>
               </Card>
             ) : (

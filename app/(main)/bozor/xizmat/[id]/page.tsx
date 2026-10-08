@@ -68,7 +68,18 @@ export default function XizmatTafsilotiPage() {
   if (service === undefined) {
     return loadError ? <ErrorState error={loadError} onRetry={load} /> : <SkeletonCard />;
   }
-  if (service === null) return <EmptyState title={t("svc.notFound")} />;
+  if (service === null)
+    return (
+      <EmptyState
+        title={t("svc.notFound")}
+        description="Ushbu xizmat mavjud emas yoki muallif tomonidan to'xtatilgan bo'lishi mumkin."
+        action={
+          <Link href="/bozor?tab=services">
+            <Button size="sm">Barcha xizmatlarni ko'rish</Button>
+          </Link>
+        }
+      />
+    );
 
   function openBuyModal() {
     idempotencyKeyRef.current = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`;
@@ -118,7 +129,7 @@ export default function XizmatTafsilotiPage() {
         idempotencyKeyRef.current,
       );
       toast(t("purchase.created"));
-      router.push(`/xaridor/shartnomalar/${contract.id}`);
+      router.push(`/xaridor/contracts/${contract.id}`);
     } catch (err) {
       const code = err instanceof ApiError ? err.message : "";
       toast(code === "SELLER_NOT_APPROVED" ? t("purchase.errSellerNotApproved") : t("common.error"), "error");

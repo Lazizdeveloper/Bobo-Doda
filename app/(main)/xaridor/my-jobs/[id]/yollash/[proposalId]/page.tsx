@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
@@ -131,7 +132,17 @@ export default function YollashPage() {
     );
   }
   if (job === null || proposal === null || job.status !== "ochiq") {
-    return <EmptyState title={t("common.notFound")} />;
+    return (
+      <EmptyState
+        title={t("common.notFound")}
+        description="E'lon yoki ariza topilmadi, yoki e'lon allaqachon yopilgan."
+        action={
+          <Link href="/xaridor/my-jobs">
+            <Button size="sm">Barcha e'lonlarim</Button>
+          </Link>
+        }
+      />
+    );
   }
 
   return (

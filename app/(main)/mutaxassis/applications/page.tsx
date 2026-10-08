@@ -141,7 +141,11 @@ export default function TakliflarimPage() {
               <Link href="/bozor?tab=jobs">
                 <Button>{t("props.emptyCta")}</Button>
               </Link>
-            ) : undefined
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => setFilter("all")}>
+                Barcha arizalarni ko'rish
+              </Button>
+            )
           }
         />
       ) : (

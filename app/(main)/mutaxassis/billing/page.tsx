@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -125,7 +126,15 @@ export default function DaromadPage() {
             {!milestones ? (
               <SkeletonCard />
             ) : payments.length === 0 ? (
-              <EmptyState title={t("earn.empty")} />
+              <EmptyState
+                title={t("earn.empty")}
+                description="Hozircha daromad tarixi mavjud emas. Buyurtmalarni bajaring va mablag'laringizni xavfsiz qabul qiling."
+                action={
+                  <Link href="/bozor?tab=jobs">
+                    <Button size="sm">Ish qidirish</Button>
+                  </Link>
+                }
+              />
             ) : (
               <Table
                 rows={payments}

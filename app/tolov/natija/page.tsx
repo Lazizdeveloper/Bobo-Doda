@@ -32,7 +32,7 @@ export default function PaymentResultPage() {
           <h1 className="mt-5 font-heading text-xl font-bold text-ink">{t("paymentResult.checkingTitle")}</h1>
           <p className="mt-2 text-sm text-muted">{t("paymentResult.checkingDesc")}</p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <Link href="/xaridor/shartnomalar">
+            <Link href="/xaridor/contracts">
               <Button>{t("paymentResult.contracts")}</Button>
             </Link>
             <Link href="/xaridor/yordam">

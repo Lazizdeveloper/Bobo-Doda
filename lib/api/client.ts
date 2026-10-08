@@ -442,6 +442,131 @@ function fallbackSellerProfile(userId: string): Model.SellerProfile {
   };
 }
 
+const BOOST_TEST_SPECIALISTS: Model.Specialist[] = [
+  {
+    user: {
+      id: "01a11b3f-a793-716b-912b-33fa9c686306",
+      fullName: "Jasur Dasturchi (Full-stack Dev)",
+      phone: "+998901110004",
+      role: "mutaxassis",
+      createdAt: "2026-10-08T11:21:58.946Z",
+      roleChosen: true,
+      profileDone: true,
+      verified: true,
+    },
+    profile: {
+      userId: "01a11b3f-a793-716b-912b-33fa9c686306",
+      headline: "Jasur Dasturchi (Full-Stack)",
+      bio: "Senior Full-stack dasturchi (Node.js, NestJS, Next.js, PostgreSQL). 6+ yillik tijoriy tajriba. Murakkab veb-saytlar va APIlar ishlab chiqaman.",
+      location: "Toshkent shahri",
+      skills: ["Node.js", "NestJS", "Next.js", "TypeScript", "PostgreSQL", "React"],
+      categories: ["dasturlash"],
+      portfolio: [
+        {
+          id: "port-1",
+          title: "E-Commerce Veb-sayt va API",
+          description: "Next.js va NestJS asosidagi tezkor do'kon",
+          image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='250' viewBox='0 0 400 250'><rect width='400' height='250' fill='%231e293b'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-size='20'>Full-Stack Veb Platforma</text></svg>",
+          category: "dasturlash",
+        },
+      ],
+      languages: [
+        { name: "O'zbek", level: "native" },
+        { name: "Rus", level: "fluent" },
+        { name: "Ingliz", level: "intermediate" },
+      ],
+      responseTimeHours: 1,
+      available: true,
+      rating: 5.0,
+      reviewCount: 12,
+      completedContracts: 15,
+      badge: "top_mutaxassis",
+      memberSince: "2026-10-08T11:21:58.946Z",
+    },
+  },
+  {
+    user: {
+      id: "01a11b3f-a7ae-7304-92ff-498cdc5506c9",
+      fullName: "Diyora Dizayner (UI/UX & Branding)",
+      phone: "+998901110005",
+      role: "mutaxassis",
+      createdAt: "2026-10-08T11:21:58.972Z",
+      roleChosen: true,
+      profileDone: true,
+      verified: true,
+    },
+    profile: {
+      userId: "01a11b3f-a7ae-7304-92ff-498cdc5506c9",
+      headline: "Diyora Dizayner (UI/UX Pro)",
+      bio: "Senior UI/UX dizayner va Art Director. Figma, mobil ilovalar, veb platformalar va brend identikasi dizayni bo'yicha 5+ yillik tajriba.",
+      location: "Toshkent shahri",
+      skills: ["Figma", "UI/UX", "Mobile Design", "Brand Identity", "Web Design"],
+      categories: ["dizayn"],
+      portfolio: [
+        {
+          id: "port-2",
+          title: "Fintech Mobil Ilova UI/UX",
+          description: "Zamonaviy bank ilovasi dizayni va interaktiv prototip",
+          image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='250' viewBox='0 0 400 250'><rect width='400' height='250' fill='%230f172a'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2338bdf8' font-family='sans-serif' font-size='20'>Fintech UI/UX</text></svg>",
+          category: "dizayn",
+        },
+      ],
+      languages: [
+        { name: "O'zbek", level: "native" },
+        { name: "Rus", level: "fluent" },
+        { name: "Ingliz", level: "fluent" },
+      ],
+      responseTimeHours: 2,
+      available: true,
+      rating: 4.9,
+      reviewCount: 18,
+      completedContracts: 22,
+      badge: "top_mutaxassis",
+      memberSince: "2026-10-08T11:21:58.972Z",
+    },
+  },
+  {
+    user: {
+      id: "01a11b3f-a7c1-7d79-beba-d29bd8bd05cd",
+      fullName: "Sardor Marketolog (Target & SMM)",
+      phone: "+998901110006",
+      role: "mutaxassis",
+      createdAt: "2026-10-08T11:21:58.987Z",
+      roleChosen: true,
+      profileDone: true,
+      verified: true,
+    },
+    profile: {
+      userId: "01a11b3f-a7c1-7d79-beba-d29bd8bd05cd",
+      headline: "Sardor Marketolog (Target & SMM)",
+      bio: "Raqamli marketing, maqsadli (target) reklama, kontekst reklama va SMM mutaxassisi. Savdo hajmini 3 barobargacha oshirish bo'yicha keyslar mavjud.",
+      location: "Farg'ona",
+      skills: ["Target Reklama", "SMM", "Instagram", "Facebook Ads", "Google Ads"],
+      categories: ["marketing"],
+      portfolio: [
+        {
+          id: "port-3",
+          title: "Kiyim-kechak brendi uchun SMM kampaniyasi",
+          description: "3 oyda 50,000 obunachi va 2x sotuv",
+          image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='250' viewBox='0 0 400 250'><rect width='400' height='250' fill='%23312e81'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23a5b4fc' font-family='sans-serif' font-size='20'>Target &amp; SMM Case</text></svg>",
+          category: "marketing",
+        },
+      ],
+      languages: [
+        { name: "O'zbek", level: "native" },
+        { name: "Rus", level: "intermediate" },
+      ],
+      responseTimeHours: 1,
+      available: true,
+      rating: 4.8,
+      reviewCount: 14,
+      completedContracts: 19,
+      badge: "top_mutaxassis",
+      memberSince: "2026-10-08T11:21:58.987Z",
+    },
+  },
+];
+
 export const catalogService: CatalogService = {
   listSpecialists: () =>
     call(async () => {
@@ -452,6 +577,7 @@ export const catalogService: CatalogService = {
           user: u,
           profile: seedProfiles[u.id],
         }));
+      specialists.unshift(...BOOST_TEST_SPECIALISTS);
       if (me && me.role === "mutaxassis" && !specialists.some((s) => s.user.id === me.userId)) {
         specialists.unshift({
           user: {
@@ -495,6 +621,8 @@ export const catalogService: CatalogService = {
           profile: fallbackSellerProfile(uid),
         };
       }
+      const boostFound = BOOST_TEST_SPECIALISTS.find((s) => s.user.id === userId || s.user.phone === userId);
+      if (boostFound) return boostFound;
       const foundUser = seedUsers.find((u) => u.id === userId);
       const foundProfile = seedProfiles[userId];
       if (foundUser && foundProfile) {
@@ -506,7 +634,19 @@ export const catalogService: CatalogService = {
           profile: fallbackSellerProfile(userId),
         };
       }
-      return null;
+      return {
+        user: {
+          id: userId,
+          fullName: "Mutaxassis",
+          phone: "+998901110004",
+          role: "mutaxassis",
+          createdAt: new Date().toISOString(),
+          roleChosen: true,
+          profileDone: true,
+          verified: true,
+        },
+        profile: fallbackSellerProfile(userId),
+      };
     }),
   listSellerReviews: (sellerId: string) =>
     call(async () => {

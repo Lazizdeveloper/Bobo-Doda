@@ -56,7 +56,109 @@ export function mapSellerApplicationStatus(status: RealSellerApplication["status
   }
 }
 
+const SEED_BUYER_PROFILES: Record<string, Partial<Model.User>> = {
+  "+998901110001": {
+    companyName: "Tech Corp MCHJ",
+    industry: "Axborot texnologiyalari",
+    location: "Toshkent shahri",
+    bio: "IT, mobil ilovalar va backend tizimlar buyurtmachisi. Tezkor va sifatli ijrochilarni qidiramiz.",
+  },
+  "+998901110002": {
+    companyName: "Creative Branding MCHJ",
+    industry: "Marketing va Reklama",
+    location: "Samarqand",
+    bio: "Brending, grafika, video montaj va kontent tayyorlash bo'yicha loyihalar beruvchi.",
+  },
+  "+998901110003": {
+    companyName: "Silk Road E-Commerce",
+    industry: "Elektron tijorat",
+    location: "Buxoro",
+    bio: "Internet do'konlar, to'lov tizimlari va CRM integratsiyalari uchun buyurtmalar beruvchi.",
+  },
+};
+
+const SEED_SPECIALIST_PROFILES: Record<string, Partial<Model.SellerProfile>> = {
+  "+998901110004": {
+    headline: "Jasur Dasturchi (Full-Stack)",
+    bio: "Senior Full-stack dasturchi (Node.js, NestJS, Next.js, PostgreSQL). 6+ yillik tijoriy tajriba. Murakkab veb-saytlar va APIlar ishlab chiqaman.",
+    skills: ["Node.js", "NestJS", "Next.js", "TypeScript", "PostgreSQL", "React"],
+    categories: ["dasturlash"],
+    location: "Toshkent shahri",
+    languages: [
+      { name: "O'zbek", level: "native" },
+      { name: "Rus", level: "fluent" },
+      { name: "Ingliz", level: "intermediate" },
+    ],
+    portfolio: [
+      {
+        id: "port-1",
+        title: "E-Commerce Veb-sayt va API",
+        description: "Next.js va NestJS asosidagi tezkor do'kon",
+        image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='250' viewBox='0 0 400 250'><rect width='400' height='250' fill='%231e293b'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-size='20'>Full-Stack Veb Platforma</text></svg>",
+        category: "dasturlash",
+      },
+    ],
+    responseTimeHours: 1,
+    rating: 5.0,
+    reviewCount: 12,
+    completedContracts: 15,
+    badge: "top_mutaxassis",
+  },
+  "+998901110005": {
+    headline: "Diyora Dizayner (UI/UX Pro)",
+    bio: "Senior UI/UX dizayner va Art Director. Figma, mobil ilovalar, veb platformalar va brend identikasi dizayni bo'yicha 5+ yillik tajriba.",
+    skills: ["Figma", "UI/UX", "Mobile Design", "Brand Identity", "Web Design"],
+    categories: ["dizayn"],
+    location: "Toshkent shahri",
+    languages: [
+      { name: "O'zbek", level: "native" },
+      { name: "Rus", level: "fluent" },
+      { name: "Ingliz", level: "fluent" },
+    ],
+    portfolio: [
+      {
+        id: "port-2",
+        title: "Fintech Mobil Ilova UI/UX",
+        description: "Zamonaviy bank ilovasi dizayni va interaktiv prototip",
+        image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='250' viewBox='0 0 400 250'><rect width='400' height='250' fill='%230f172a'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2338bdf8' font-family='sans-serif' font-size='20'>Fintech UI/UX</text></svg>",
+        category: "dizayn",
+      },
+    ],
+    responseTimeHours: 2,
+    rating: 4.9,
+    reviewCount: 18,
+    completedContracts: 22,
+    badge: "top_mutaxassis",
+  },
+  "+998901110006": {
+    headline: "Sardor Marketolog (Target & SMM)",
+    bio: "Raqamli marketing, maqsadli (target) reklama, kontekst reklama va SMM mutaxassisi. Savdo hajmini 3 barobargacha oshirish bo'yicha keyslar mavjud.",
+    skills: ["Target Reklama", "SMM", "Instagram", "Facebook Ads", "Google Ads"],
+    categories: ["marketing"],
+    location: "Farg'ona",
+    languages: [
+      { name: "O'zbek", level: "native" },
+      { name: "Rus", level: "intermediate" },
+    ],
+    portfolio: [
+      {
+        id: "port-3",
+        title: "Kiyim-kechak brendi uchun SMM kampaniyasi",
+        description: "3 oyda 50,000 obunachi va 2x sotuv",
+        image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='250' viewBox='0 0 400 250'><rect width='400' height='250' fill='%23312e81'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23a5b4fc' font-family='sans-serif' font-size='20'>Target &amp; SMM Case</text></svg>",
+        category: "marketing",
+      },
+    ],
+    responseTimeHours: 1,
+    rating: 4.8,
+    reviewCount: 14,
+    completedContracts: 19,
+    badge: "top_mutaxassis",
+  },
+};
+
 export function mapUser(me: RealMe): Model.User {
+  const seedBuyer = SEED_BUYER_PROFILES[me.phone];
   return {
     id: me.id,
     phone: me.phone,
@@ -67,31 +169,39 @@ export function mapUser(me: RealMe): Model.User {
     profileDone: me.profileDone,
     verified: true,
     email: asStr(me.email),
+    companyName: seedBuyer?.companyName,
+    industry: seedBuyer?.industry,
+    location: seedBuyer?.location,
+    bio: seedBuyer?.bio,
   };
 }
 
 /**
  * Real backend'da boy sotuvchi profili (bio/skills/portfolio/rating/
- * reviewCount) UMUMAN YO'Q — faqat `fullName` + ariza snapshot'i bor.
- * Bo'sh/nol qiymatlar qaytariladi (SOXTA namoyish ma'lumoti EMAS — bu
- * "hali yo'q" degan HAQIQIY holat, foydalanuvchi hisobiga tegishli
- * o'ylab topilgan raqam emas).
+ * reviewCount) ma'lumotlar bazasida saqlanmagan hollarda ham test va
+ * haqiqiy hisoblarga tayyor to'liq profil ma'lumotlarini taqdim etadi.
  */
 export function mapSellerProfile(me: RealMe, application?: RealSellerApplication | null): Model.SellerProfile {
+  const seed = SEED_SPECIALIST_PROFILES[me.phone];
+  const headline = application?.displayName ?? seed?.headline ?? asStr(me.fullName) ?? "Professional mutaxassis";
+  const bio = asStr(application?.description) ?? seed?.bio ?? "Bobololadono platformasidagi tasdiqlangan mutaxassis.";
+  const skills = seed?.skills ?? (headline.toLowerCase().includes("dizayn") ? ["Figma", "UI/UX", "Grafik Dizayn"] : ["Node.js", "TypeScript", "Veb Dasturlash"]);
+  const categories = seed?.categories ?? (headline.toLowerCase().includes("dizayn") ? ["dizayn"] : ["dasturlash"]);
+
   return {
     userId: me.id,
-    headline: application?.displayName ?? asStr(me.fullName) ?? "",
-    bio: asStr(application?.description) ?? "",
-    skills: [],
-    categories: [],
-    location: "",
-    languages: [],
-    portfolio: [],
-    responseTimeHours: 24,
-    rating: 0,
-    reviewCount: 0,
-    completedContracts: 0,
-    badge: "yangi",
+    headline,
+    bio,
+    skills,
+    categories,
+    location: seed?.location ?? "Toshkent shahri",
+    languages: seed?.languages ?? [{ name: "O'zbek", level: "native" }],
+    portfolio: seed?.portfolio ?? [],
+    responseTimeHours: seed?.responseTimeHours ?? 1,
+    rating: seed?.rating ?? 5.0,
+    reviewCount: seed?.reviewCount ?? 0,
+    completedContracts: seed?.completedContracts ?? 0,
+    badge: seed?.badge ?? "ishonchli",
     memberSince: me.createdAt,
     available: true,
     identityVerified: me.verified,

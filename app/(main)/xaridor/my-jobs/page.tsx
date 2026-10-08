@@ -297,6 +297,22 @@ export default function ElonlarimPage() {
                       ? t("bjobs.emptyProposals")
                       : "Bu holatda arizalar topilmadi"
                   }
+                  description={
+                    allProposalsWithJobs.length === 0
+                      ? "E'lonlaringizga mutaxassislar ariza topshirishi bilan bu yerda ko'rinadi yoki bozordan to'g'ridan-to'g'ri mutaxassis topishingiz mumkin."
+                      : "Tanlangan filtr bo'yicha takliflar mavjud emas."
+                  }
+                  action={
+                    allProposalsWithJobs.length === 0 ? (
+                      <Link href="/bozor?tab=specialists">
+                        <Button size="sm">Mutaxassislarni ko'rish</Button>
+                      </Link>
+                    ) : (
+                      <Button variant="secondary" size="sm" onClick={() => setProposalFilter("all")}>
+                        Barcha arizalar
+                      </Button>
+                    )
+                  }
                 />
               ) : (
                 <div className="flex flex-col gap-4">

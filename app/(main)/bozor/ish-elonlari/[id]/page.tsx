@@ -60,7 +60,18 @@ export default function IshEloniPage() {
 
   if (loadError) return <ErrorState error={loadError} onRetry={load} />;
   if (job === undefined) return <SkeletonCard />;
-  if (job === null) return <EmptyState title={t("job.notFound")} />;
+  if (job === null)
+    return (
+      <EmptyState
+        title={t("job.notFound")}
+        description="Ushbu ish e'loni mavjud emas yoki muddati tugagan bo'lishi mumkin."
+        action={
+          <Link href="/bozor?tab=jobs">
+            <Button size="sm">Barcha ishlarni ko'rish</Button>
+          </Link>
+        }
+      />
+    );
 
   const canApply = job.status === "ochiq" && !alreadySent;
 

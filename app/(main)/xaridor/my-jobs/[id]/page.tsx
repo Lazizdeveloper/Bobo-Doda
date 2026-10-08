@@ -112,7 +112,18 @@ export default function ElonTafsilotiPage() {
       <SkeletonCard />
     );
   }
-  if (job === null) return <EmptyState title={t("job.notFound")} />;
+  if (job === null)
+    return (
+      <EmptyState
+        title={t("job.notFound")}
+        description="E'lon topilmadi yoki o'chirilgan bo'lishi mumkin."
+        action={
+          <Link href="/xaridor/my-jobs">
+            <Button size="sm">Barcha e'lonlarim</Button>
+          </Link>
+        }
+      />
+    );
 
   const visible = proposals.filter((p) => p.status !== "qaytarib_olingan");
   const ACTIONABLE = ["yuborilgan", "korib_chiqilmoqda", "suhbat"];
@@ -198,7 +209,15 @@ export default function ElonTafsilotiPage() {
         </h2>
 
         {visible.length === 0 ? (
-          <EmptyState title={t("bjob.noProposals")} />
+          <EmptyState
+            title={t("bjob.noProposals")}
+            description="Bu e'longa hali arizalar kelib tushmadi. Mutaxassislarni o'zingiz qidirib, to'g'ridan-to'g'ri taklif yuborishingiz mumkin."
+            action={
+              <Link href="/bozor?tab=specialists">
+                <Button size="sm">Mutaxassislarni ko'rish</Button>
+              </Link>
+            }
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {visible.map((proposal) => {
