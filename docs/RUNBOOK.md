@@ -1703,7 +1703,7 @@ o'zi past-friction pivotni nazarda tutadi).
 Redirect xavfsizligi: hech qaysi sahifa query-param orqali arbitrary
 `redirect=`ni qabul qilmaydi — muvaffaqiyatli login/register'dan keyingi
 yo'naltirish har doim FIXED, ichki marshrutlar (`/xaridor`, `/mutaxassis`,
-`/mutaxassis/royxat`, `/rol-tanlash`) orasidan sessiya holatiga qarab
+`/mutaxassis/settings/royxat`, `/rol-tanlash`) orasidan sessiya holatiga qarab
 hisoblanadi — open redirect yuzasi yo'q.
 
 ### Testlar

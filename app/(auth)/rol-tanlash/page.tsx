@@ -60,7 +60,7 @@ export default function RolTanlashPage() {
       await authService.chooseRole(role);
       const session = authService.getSession();
       if (role === "mutaxassis") {
-        router.push(session?.profileDone ? "/mutaxassis" : "/mutaxassis/royxat");
+        router.push(session?.profileDone ? "/mutaxassis" : "/mutaxassis/settings/royxat");
       } else {
         /* Xaridor uchun alohida profil bosqichi yo'q — to'g'ridan-to'g'ri kabinetga.
            (Bosqich 21 — tasdiqlash SMS OTP orqali hisob yaratishning o'zida

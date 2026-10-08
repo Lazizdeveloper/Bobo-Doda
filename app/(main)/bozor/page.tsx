@@ -545,7 +545,7 @@ export default function BozorPage() {
                         </button>
                       </div>
 
-                      <Link href={`/mutaxassis/ish-elonlari/${job.id}`}>
+                      <Link href={`/bozor/ish-elonlari/${job.id}`}>
                         <h3 className="font-heading text-base font-bold text-ink hover:text-primary transition-colors line-clamp-2">
                           {job.title}
                         </h3>
@@ -578,12 +578,12 @@ export default function BozorPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Link href={`/mutaxassis/ish-elonlari/${job.id}`}>
+                        <Link href={`/bozor/ish-elonlari/${job.id}`}>
                           <Button variant="secondary" size="sm">
                             {t("market.detailsBtn")}
                           </Button>
                         </Link>
-                        <Link href={`/mutaxassis/ish-elonlari/${job.id}/taklif`}>
+                        <Link href={`/bozor/ish-elonlari/${job.id}/taklif`}>
                           <Button size="sm">
                             {t("market.applyBtn")}
                           </Button>

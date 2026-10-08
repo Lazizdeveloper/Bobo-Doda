@@ -42,7 +42,7 @@ No row in this document is `UNKNOWN`.
   27 (7 buyer + 7 seller + 10 admin + 1 shared specialist-profile + 2 legal —
   see breakdown per panel; some routes are double-counted across panels
   where a shared component is reused, e.g. `/xaridor/verifikatsiya` and
-  `/mutaxassis/verifikatsiya` both hit the same disabled `verificationService`).
+  `/mutaxassis/settings/verifikatsiya` both hit the same disabled `verificationService`).
 - Routes `N/A` (static, no controls beyond nav chrome): 6
   (`/maxfiylik`, `/oferta`, `/shartlar`, `/not-found`, `/error`, `/tolov/natija`).
 - **Routes untested (no dedicated Playwright assertion) that ARE fully
@@ -64,7 +64,7 @@ table is the Admin table.
 
 | Route | Auth | Key controls | API | Playwright | Status |
 |---|---|---|---|---|---|
-| `/` (landing) | none | lang capsule, 8 category cards, escrow calculator (client-only), FAQ accordion, Support modal, footer legal links, **"Ish topish" CTA (×2)** | none (SupportModal → `POST /api/support`) | No dedicated test | `PASS (STATIC)` — **1 bug found & fixed this phase**: both "Ish topish" CTAs pointed to the dead `/mutaxassis/ish-elonlari` route; repointed to `/kirish?tab=register&role=mutaxassis` (the actual working "become a specialist" path). A pre-existing `display:none` dead link ("Barchasi →" in the portfolio marquee) was left in place — it has zero user reach (no CSS makes it visible), documented here as a cleanup candidate, not fixed (zero functional impact). |
+| `/` (landing) | none | lang capsule, 8 category cards, escrow calculator (client-only), FAQ accordion, Support modal, footer legal links, **"Ish topish" CTA (×2)** | none (SupportModal → `POST /api/support`) | No dedicated test | `PASS (STATIC)` — **1 bug found & fixed this phase**: both "Ish topish" CTAs pointed to the dead `/bozor/ish-elonlari` route; repointed to `/kirish?tab=register&role=mutaxassis` (the actual working "become a specialist" path). A pre-existing `display:none` dead link ("Barchasi →" in the portfolio marquee) was left in place — it has zero user reach (no CSS makes it visible), documented here as a cleanup candidate, not fixed (zero functional impact). |
 | `/kirish` | guest-preferred | phone+password login, "Parolni unutdingizmi?", "Ro'yxatdan o'tish" | `POST /auth/login` | `PASS (E2E)` — `auth.spec.ts` (5 tests: render, valid login, wrong password/phone, register-then-login, forgot-password roundtrip) + `logout.spec.ts` (3 tests, land here post-logout) | `PASS (E2E)` |
 | `/royxatdan-otish` | guest-preferred | phone input, "Kod yuborish" | `POST /auth/register/request-otp` | `PASS (E2E)` — `auth.spec.ts` register/dev-otp tests | `PASS (E2E)` |
 | `/royxatdan-otish/tasdiqlash` | guest-preferred + sessionStorage phone | OTP input (6-digit, digit-strip, maxLength), dev-OTP box, resend | `POST /auth/register/verify-otp`, resend | `PASS (E2E)` — 5 format tests + 2 error-mapping tests + dev-otp test | `PASS (E2E)` |
@@ -135,9 +135,9 @@ Settings profile-save/avatar-upload/password-change/preferences-save flows
 
 **Layout guard** (`app/mutaxassis/layout.tsx`, audited): no session → `/kirish`;
 wrong role → `/xaridor`/`/rol-tanlash`; `!profileDone` → forced to
-`/mutaxassis/royxat`. **No `sellerStatus` gate at the layout level** — a
+`/mutaxassis/settings/royxat`. **No `sellerStatus` gate at the layout level** — a
 PENDING/REJECTED seller can still browse Services/Contracts/Earnings; only
-`/mutaxassis/royxat` itself branches on application status (this is correct
+`/mutaxassis/settings/royxat` itself branches on application status (this is correct
 per this phase's seller-application lifecycle fix — see prior commit `db3ba6b`).
 
 **TopNav** (`components/mutaxassis/TopNav.tsx`): Dashboard, Xizmatlarim,
@@ -147,8 +147,8 @@ persistent "Chiqish" addition as buyer TopNav.
 | Route | Controls (summary) | API | Playwright | Status |
 |---|---|---|---|---|
 | `/mutaxassis` (dashboard) | reapply link (if rejected), stat cards (read-only), recent-contracts | `contractsService.list`, `milestonesService.listMine`, `servicesService.listMine`, `usersService.getCurrent`, `sellerApplicationService.getCurrent` (all real) | `PASS (E2E)` — `seller-services.spec.ts`, `seller-application.spec.ts` (dashboard CTA), `logout.spec.ts` | `PASS (E2E)` |
-| `/mutaxassis/royxat` | full 4-state application lifecycle (see commit `db3ba6b` this session) | `sellerApplicationService.*`, `usersService.updateName`, `authService.refresh` (all real) | `PASS (E2E)` — **8 dedicated tests**, `seller-application.spec.ts` (fresh→pending→refresh→multi-tab-race→admin-reject→reapply→admin-approve→approved-blocks-reapply) | `PASS (E2E)` — most thoroughly tested route in the app |
-| `/mutaxassis/ish-elonlari` (+`[id]`,`taklif`) — 3 routes | job browse/detail/apply | `jobsService`/`proposalsService` **[disabled]** | No test | `OUT_OF_SCOPE_FEATURE_GAP` — also **fixed this phase**: the only real, discoverable entry point (landing page "Ish topish" CTA) was repointed away from this dead route; the route itself is correctly absent from TopNav already. |
+| `/mutaxassis/settings/royxat` | full 4-state application lifecycle (see commit `db3ba6b` this session) | `sellerApplicationService.*`, `usersService.updateName`, `authService.refresh` (all real) | `PASS (E2E)` — **8 dedicated tests**, `seller-application.spec.ts` (fresh→pending→refresh→multi-tab-race→admin-reject→reapply→admin-approve→approved-blocks-reapply) | `PASS (E2E)` — most thoroughly tested route in the app |
+| `/bozor/ish-elonlari` (+`[id]`,`taklif`) — 3 routes | job browse/detail/apply | `jobsService`/`proposalsService` **[disabled]** | No test | `OUT_OF_SCOPE_FEATURE_GAP` — also **fixed this phase**: the only real, discoverable entry point (landing page "Ish topish" CTA) was repointed away from this dead route; the route itself is correctly absent from TopNav already. |
 | `/mutaxassis/takliflarim` (+`[id]`,`kelgan/[id]`) — 3 routes | proposal/offer inbox, accept/decline, chat | `proposalsService`/`offersService` **[disabled]** | No test | `OUT_OF_SCOPE_FEATURE_GAP` |
 | `/mutaxassis/xabarlar` | thread list | `messagesService` **[disabled]** | No test | `OUT_OF_SCOPE_FEATURE_GAP` |
 | `/mutaxassis/shartnomalar` | tabs, table/mobile-card | `contractsService.list`, `milestonesService.listMine` (real) | `PASS (E2E)` — implicit (dashboard link-through); no dedicated filter/tab test | `PASS (E2E)` load; gap: tab filters untested |
@@ -158,8 +158,8 @@ persistent "Chiqish" addition as buyer TopNav.
 | `/mutaxassis/xizmatlarim/yangi` | 4-step wizard (category/title-desc/price-delivery/review), draft autosave | `servicesService.create/update/submit` (real) | `PASS (E2E)` — full happy path, `seller-services.spec.ts` | `PASS (E2E)`; gap: draft-save path (vs. publish), validation-error paths untested |
 | `/mutaxassis/daromad` | 3 read-only stat cards, payments table, receipt modal, monthly chart | `milestonesService.listMine`, `contractsService.list`, `paymentsService.getBalance` (all real) | No test | `PASS (STATIC)` — **explicitly audited for no editable balance/payout input anywhere**: confirmed every monetary figure across Dashboard/Daromad/Profil/Shartnomalar is static `<p>`/`<span>` text; no "withdraw" control exists (matches `PAYOUTS_ENABLED=false` by design, not a bug). |
 | `/mutaxassis/sozlamalar` | 9 tabs, all reachable via nav + `?tab=` | mix of real (profile/skills/portfolio/availability/notifications/logout) and disabled (`paymentsService.getCards`, caught→`[]`) | `PASS (E2E)` — load-only smoke test + logout (`logout.spec.ts`) | `PASS (E2E)` load+logout; gap: the other 8 tabs' save/validation logic untested |
-| `/mutaxassis/profil` | read-only public-profile preview | `usersService.*`, `servicesService.listMine`, `reviewsService.listMine` **[stub, always `[]`]** | No test | `PASS (STATIC)` — read-only page, only 2 controls (edit link, portfolio lightbox), both trivial/non-mutating. **Finding**: Reviews section can never show real data platform-wide (`reviewsService.create` also disabled) — pre-existing, documented, not a regression. |
-| `/mutaxassis/verifikatsiya` | KYC form (shared `VerificationCenter`) | `verificationService` **[disabled]** | No test | `OUT_OF_SCOPE_FEATURE_GAP` |
+| `/mutaxassis/settings/profil` | read-only public-profile preview | `usersService.*`, `servicesService.listMine`, `reviewsService.listMine` **[stub, always `[]`]** | No test | `PASS (STATIC)` — read-only page, only 2 controls (edit link, portfolio lightbox), both trivial/non-mutating. **Finding**: Reviews section can never show real data platform-wide (`reviewsService.create` also disabled) — pre-existing, documented, not a regression. |
+| `/mutaxassis/settings/verifikatsiya` | KYC form (shared `VerificationCenter`) | `verificationService` **[disabled]** | No test | `OUT_OF_SCOPE_FEATURE_GAP` |
 | `/mutaxassis/yordam` | ticket form + list (shared `HelpCenter`) | `supportService` **[disabled]** | No test | `OUT_OF_SCOPE_FEATURE_GAP` |
 
 **Minor finding, not fixed:** `ServiceCard`'s archive-button visibility
@@ -349,7 +349,7 @@ source audit:
    mobile), reusing the existing `authService.logout()` call. Regression
    test: `tests/e2e/logout.spec.ts` (new file, 3 tests, run twice green).
 2. **Landing page's "Ish topish" CTA (2 locations) linked to a permanently
-   broken route** (`/mutaxassis/ish-elonlari` — Job/Proposal backend never
+   broken route** (`/bozor/ish-elonlari` — Job/Proposal backend never
    migrated). Fixed: repointed both to the working
    `/kirish?tab=register&role=mutaxassis` path.
 3. **Admin sidebar's "Adminlar & Rollar" link (super_admin only) was the

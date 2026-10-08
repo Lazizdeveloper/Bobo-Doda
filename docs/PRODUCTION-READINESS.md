@@ -531,7 +531,7 @@ Bosqich 19) — hech biriga tegilmadi.
 ## 20. Bosqich 22 — Bug-fix: seller-application 409 + to'liq UI QA audit
 
 **Qism A — Seller-application 409 tuzatildi** (commit `db3ba6b`):
-`/mutaxassis/royxat` foydalanuvchining HAQIQIY ariza holatini (yo'q/
+`/mutaxassis/settings/royxat` foydalanuvchining HAQIQIY ariza holatini (yo'q/
 kutilmoqda/tasdiqlangan/rad etilgan) tekshirmasdan doim yangi forma
 ko'rsatardi — mavjud PENDING/APPROVED arizasi bo'lgan foydalanuvchi
 "Yuborish"ni bossa, backend to'g'ri 409 qaytarardi, lekin frontend buni
@@ -556,7 +556,7 @@ ko'rinadigan "o'lik tugma"lar edi):
    (faqat Sozlamalar ichida, uzoq scroll bilan) — ikkala `TopNav`ga
    qo'shildi. Regressiya: `tests/e2e/logout.spec.ts` (yangi, 3 test).
 2. Landing sahifasining "Ish topish" CTA'si (2 joyda) doim xato
-   ko'rsatadigan `/mutaxassis/ish-elonlari`ga (Job/Proposal — hali real
+   ko'rsatadigan `/bozor/ish-elonlari`ga (Job/Proposal — hali real
    backendga ko'chirilmagan) olib borardi — ishlaydigan
    `/kirish?tab=register&role=mutaxassis`ga yo'naltirildi.
 3. Admin sidebar'idagi "Adminlar & Rollar" (super_admin) — sidebar orqali

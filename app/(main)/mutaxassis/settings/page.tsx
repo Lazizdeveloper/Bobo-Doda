@@ -402,7 +402,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/mutaxassis/profil"
+            href="/mutaxassis/settings/profil"
             className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors hover:border-primary hover:bg-card-hover"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -412,7 +412,7 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
             {t("nav.profile")}
           </Link>
           <Link
-            href="/mutaxassis/verifikatsiya"
+            href="/mutaxassis/settings/verifikatsiya"
             className="inline-flex h-9 items-center gap-2 rounded-btn border border-line bg-card px-3.5 text-xs font-medium text-ink shadow-card transition-colors hover:border-primary hover:bg-card-hover"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">

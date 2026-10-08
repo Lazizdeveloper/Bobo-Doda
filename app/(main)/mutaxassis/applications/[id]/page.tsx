@@ -92,7 +92,7 @@ export default function TaklifTafsilotiPage() {
         </h1>
         {job && (
           <Link
-            href={`/mutaxassis/ish-elonlari/${job.id}`}
+            href={`/bozor/ish-elonlari/${job.id}`}
             className="text-sm font-medium text-primary transition-colors duration-150 hover:text-ink"
           >
             {job.title} →

@@ -36,7 +36,7 @@ export default function RoyxatdanOtishPage() {
         if (session) {
           let dest = "/rol-tanlash";
           if (session.role === "xaridor") dest = "/xaridor";
-          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/royxat";
+          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/settings/royxat";
           if (pathname !== dest) router.replace(dest);
           return;
         }

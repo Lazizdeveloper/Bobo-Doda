@@ -19,7 +19,7 @@ export function JobCard({ job, saved = false, onToggleSave }: JobCardProps) {
   const { t, lang } = useT();
 
   return (
-    <Link href={`/mutaxassis/ish-elonlari/${job.id}`} className="block">
+    <Link href={`/bozor/ish-elonlari/${job.id}`} className="block">
       <Card hoverable className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="primary">{t(`cat.${job.category}`)}</Badge>

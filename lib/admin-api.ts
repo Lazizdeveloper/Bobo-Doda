@@ -688,7 +688,7 @@ export function adminModerateKYC(
   if (target) {
     const href =
       target.role === "mutaxassis"
-        ? "/mutaxassis/verifikatsiya"
+        ? "/mutaxassis/settings/verifikatsiya"
         : "/xaridor/verifikatsiya";
     if (outcome === "approve") {
       pushNotification(userId, "tizim", "ntf.kycApproved", href);

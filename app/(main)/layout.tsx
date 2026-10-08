@@ -43,9 +43,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         }
         
         // Enforce onboarding boundary for mutaxassis
-        const isOnboarding = pathname === "/mutaxassis/royxat";
+        const isOnboarding = pathname === "/mutaxassis/settings/royxat";
         if (session.role === "mutaxassis" && !session.profileDone && !isOnboarding) {
-          router.replace("/mutaxassis/royxat");
+          router.replace("/mutaxassis/settings/royxat");
           return;
         }
       } else {
@@ -70,7 +70,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   const isSpecialist = userRole === "mutaxassis";
   const isBuyer = userRole === "xaridor";
-  const isOnboarding = pathname === "/mutaxassis/royxat";
+  const isOnboarding = pathname === "/mutaxassis/settings/royxat";
 
   if (isOnboarding) {
     return (

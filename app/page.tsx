@@ -1495,7 +1495,7 @@ export default function LandingPage() {
                   <span>{tr("Kirish", "Войти", "Log in")}</span>
                 </Link>
 
-                {/* Bosqich 24 — QA audit: ilgari `/mutaxassis/ish-elonlari`ga
+                {/* Bosqich 24 — QA audit: ilgari `/bozor/ish-elonlari`ga
                     olib borardi — bu yo'l (Job/Proposal, "B yo'l") backend'da
                     hech qachon ulanmagan, sahifa doim ErrorState ko'rsatardi
                     (bosilsa doim ishlamaydigan tugma). Platformada mutaxassis

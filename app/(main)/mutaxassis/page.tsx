@@ -143,7 +143,7 @@ export default function MutaxassisDashboardPage() {
             {applicationStatus === "rad_etilgan" ? t("dash.applicationRejectedDesc") : t("dash.applicationPendingDesc")}
           </p>
           {applicationStatus === "rad_etilgan" && (
-            <Link href="/mutaxassis/royxat" className="mt-3 inline-block text-xs font-semibold text-primary hover:underline">
+            <Link href="/mutaxassis/settings/royxat" className="mt-3 inline-block text-xs font-semibold text-primary hover:underline">
               {t("onboard.reapplyBtn")}
             </Link>
           )}
@@ -296,7 +296,7 @@ export default function MutaxassisDashboardPage() {
               <p className="font-heading text-sm font-bold text-ink">Hozircha sizga to'g'ridan-to'g'ri ish taklifi kelmagan.</p>
               <div className="mt-4 pt-4 border-t border-line/60">
                 <p className="text-xs text-muted mb-2">Profilni to'ldirish tavsiya etiladi</p>
-                <Link href="/mutaxassis/profil" className="inline-block text-xs font-semibold text-primary hover:underline">
+                <Link href="/mutaxassis/settings/profil" className="inline-block text-xs font-semibold text-primary hover:underline">
                   Profilni to'ldirish →
                 </Link>
               </div>

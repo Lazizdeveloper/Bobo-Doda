@@ -37,7 +37,7 @@ export default function KirishPage() {
         if (session) {
           let dest = "/rol-tanlash";
           if (session.role === "xaridor") dest = "/xaridor";
-          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/royxat";
+          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/settings/royxat";
           if (pathname !== dest) router.replace(dest);
           return;
         }
@@ -98,7 +98,7 @@ export default function KirishPage() {
           ? "/xaridor"
           : session.profileDone
             ? "/mutaxassis"
-            : "/mutaxassis/royxat";
+            : "/mutaxassis/settings/royxat";
       router.push(dest);
     } catch (err) {
       const code = err instanceof Error ? err.message : "";

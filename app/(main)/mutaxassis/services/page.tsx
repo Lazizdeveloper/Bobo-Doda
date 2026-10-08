@@ -112,7 +112,7 @@ export default function XizmatlarimPage() {
           {applicationStatus !== "korib_chiqilmoqda" && (
             <div className="mt-2">
               <Link
-                href="/mutaxassis/royxat"
+                href="/mutaxassis/settings/royxat"
                 className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
               >
                 {applicationStatus === "rad_etilgan" ? t("onboard.reapplyBtn") : t("wizard.applyBtn")} →

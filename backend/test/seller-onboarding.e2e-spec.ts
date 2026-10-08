@@ -216,7 +216,7 @@ describe('Seller onboarding + Service lifecycle (e2e)', () => {
   });
 
   // ── Bosqich 23 — real foydalanuvchi holatlari to'liq auditi ─────────────
-  // (frontend /mutaxassis/royxat 409 bug'idan keyin: bu holatlarning
+  // (frontend /mutaxassis/settings/royxat 409 bug'idan keyin: bu holatlarning
   // HECH biri avval sinalmagan edi — faqat "yo'q → PENDING" va "PENDING →
   // duplicate" qamrab olingan edi.)
 

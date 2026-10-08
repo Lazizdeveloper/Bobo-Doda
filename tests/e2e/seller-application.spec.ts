@@ -3,7 +3,7 @@ import { freshPhone, registerViaUi, chooseRole } from "./helpers";
 import { ADMIN_BASE_URL, ADMIN_API_BASE, E2E_STAFF_PASSWORD, SUPER_ADMIN_EMAIL, latestOtpFor } from "./admin-helpers";
 
 /**
- * Bosqich 23 — `/mutaxassis/royxat` to'liq real-holat auditi (409 bug'idan
+ * Bosqich 23 — `/mutaxassis/settings/royxat` to'liq real-holat auditi (409 bug'idan
  * keyin). Izolyatsiyalangan admin E2E stack'ida ishlaydi (`:3010`/`:4010`)
  * — sabab: admin tasdiqlash/rad etish qadami kerak, va loyihaning
  * o'rnatilgan siyosati (RUNBOOK §18) staff/admin login FAQAT shu stack'da
@@ -60,7 +60,7 @@ async function getMyApplication(page: Page): Promise<{ id: string; status: strin
   return (await res.json()) as { id: string; status: string };
 }
 
-test.describe.serial("Sotuvchi arizasi — to'liq real-holat oqimi (/mutaxassis/royxat)", () => {
+test.describe.serial("Sotuvchi arizasi — to'liq real-holat oqimi (/mutaxassis/settings/royxat)", () => {
   let context: BrowserContext;
   let page: Page;
   let staleTab: Page;
@@ -78,7 +78,7 @@ test.describe.serial("Sotuvchi arizasi — to'liq real-holat oqimi (/mutaxassis/
   test("1) yangi foydalanuvchi: ro'yxatdan o'tish → Mutaxassis roli → /royxat forma ko'rinadi", async () => {
     await registerViaUi(page, phone, { baseUrl: ADMIN_BASE_URL, getCode: latestOtpFor });
     await chooseRole(page, "Mutaxassis");
-    await page.waitForURL((url) => url.pathname.includes("/mutaxassis/royxat"), { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.includes("/mutaxassis/settings/royxat"), { timeout: 10_000 });
     await expect(page.getByLabel("Rasmiy F.I.Sh (hujjat bo'yicha)")).toBeVisible();
     await expect(page.getByRole("button", { name: "Arizani yuborish" })).toBeVisible();
   });
@@ -87,7 +87,7 @@ test.describe.serial("Sotuvchi arizasi — to'liq real-holat oqimi (/mutaxassis/
     // Bo'lim 11 — ikkinchi tab HALI eski (bo'sh) forma bilan ochiq bo'ladi,
     // keyingi testda shu tab orqali "stale form" poyga holatini sinaymiz.
     staleTab = await context.newPage();
-    await staleTab.goto(`${ADMIN_BASE_URL}/mutaxassis/royxat`, { waitUntil: "networkidle" });
+    await staleTab.goto(`${ADMIN_BASE_URL}/mutaxassis/settings/royxat`, { waitUntil: "networkidle" });
     await expect(staleTab.getByRole("button", { name: "Arizani yuborish" })).toBeVisible();
 
     await page.getByLabel("To'liq ism").fill("Alisher Nematov");
@@ -169,7 +169,7 @@ test.describe.serial("Sotuvchi arizasi — to'liq real-holat oqimi (/mutaxassis/
   });
 
   test("8) allaqachon TASDIQLANGAN sotuvchi — /royxat qayta ochilsa forma YO'Q, yangi ariza yubora olmaydi", async () => {
-    await page.goto(`${ADMIN_BASE_URL}/mutaxassis/royxat`, { waitUntil: "networkidle" });
+    await page.goto(`${ADMIN_BASE_URL}/mutaxassis/settings/royxat`, { waitUntil: "networkidle" });
     await expect(page.getByText("Arizangiz tasdiqlangan")).toBeVisible();
     await expect(page.getByLabel("Rasmiy F.I.Sh (hujjat bo'yicha)")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Arizani yuborish" })).toHaveCount(0);

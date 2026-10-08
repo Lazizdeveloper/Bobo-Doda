@@ -175,7 +175,7 @@ export default function IshEloniPage() {
             </p>
 
             {canApply ? (
-              <Link href={`/mutaxassis/ish-elonlari/${job.id}/taklif`}>
+              <Link href={`/bozor/ish-elonlari/${job.id}/taklif`}>
                 <Button className="w-full">{t("job.sendProposal")}</Button>
               </Link>
             ) : (

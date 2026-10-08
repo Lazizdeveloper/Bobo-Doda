@@ -58,6 +58,7 @@ export function TopNav({ base }: TopNavProps) {
     { href: "/mutaxassis/billing", label: t("nav.billing") },
     { href: "/mutaxassis/services", label: t("nav.services") },
     { href: "/mutaxassis/disputes", label: t("nav.disputes") },
+    { href: "/mutaxassis/settings", label: t("nav.settings") },
   ];
 
   return (
@@ -162,10 +163,6 @@ export function TopNav({ base }: TopNavProps) {
                 {link.label}
               </Link>
             ))}
-
-            <Link href="/mutaxassis/settings" className="block px-3 py-2 rounded-btn text-sm font-medium text-ink hover:bg-card-hover">
-              {t("nav.settings")}
-            </Link>
             <button
               type="button"
               onClick={handleLogout}

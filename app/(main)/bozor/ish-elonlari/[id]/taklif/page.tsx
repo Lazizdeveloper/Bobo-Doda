@@ -118,7 +118,7 @@ export default function TaklifYuborishPage() {
       <Breadcrumb
         items={[
           { label: t("nav.jobs"), href: "/bozor?tab=jobs" },
-          { label: job.title, href: `/mutaxassis/ish-elonlari/${job.id}` },
+          { label: job.title, href: `/bozor/ish-elonlari/${job.id}` },
           { label: t("prop.formTitle") },
         ]}
       />
