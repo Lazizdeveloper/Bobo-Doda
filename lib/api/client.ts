@@ -1401,14 +1401,28 @@ export const proposalsService: ProposalsService = {
       const totalAmount = milestones.reduce((sum, m) => sum + m.amount, 0);
       const me = sessionStore.read();
       const contractId = `cnt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+
+      let buyerName = "Alisher Xaridor (Tech Corp)";
+      try {
+        const remoteMe = await http<RealMe>("/me").catch(() => null);
+        const fn = asStr(remoteMe?.fullName);
+        if (fn) buyerName = fn;
+      } catch {}
+
+      let sellerName = "Jasur Dasturchi (Full-stack Dev)";
+      if (foundProp?.sellerId) {
+        const spec = await catalogService.getSpecialist(foundProp.sellerId).catch(() => null);
+        if (spec?.user.fullName) sellerName = spec.user.fullName;
+      }
+
       const contract: Model.Contract = {
         id: contractId,
         sourceType: "taklif",
         title: job?.title ?? "Shartnoma",
         buyerId: me?.userId ?? "me",
-        buyerName: "Xaridor",
+        buyerName,
         sellerId: foundProp?.sellerId ?? "u-1",
-        sellerName: "Mutaxassis",
+        sellerName,
         totalAmount,
         status: "faol",
         createdAt: new Date().toISOString(),
@@ -1509,9 +1523,15 @@ export const contractsService: ContractsService = {
         typeof window !== "undefined"
           ? JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]")
           : [];
+      const rawMs = typeof window !== "undefined" ? localStorage.getItem("sb2_milestones") : null;
+      const allMs: Model.Milestone[] = rawMs ? JSON.parse(rawMs) : [];
       const map = new Map<string, Model.Contract>();
       for (const c of remote) map.set(c.id, c);
       for (const c of local) {
+        const cMilestones = allMs.filter((m) => m.contractId === c.id);
+        if (cMilestones.length > 0 && cMilestones.every((m) => m.status === "qabul_qilindi")) {
+          c.status = "yakunlangan";
+        }
         if (!map.has(c.id)) map.set(c.id, c);
       }
       return Array.from(map.values());
@@ -1528,7 +1548,17 @@ export const contractsService: ContractsService = {
           try {
             const local: Model.Contract[] = JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]");
             const found = local.find((c) => c.id === id);
-            if (found) return found;
+            if (found) {
+              const rawMs = localStorage.getItem("sb2_milestones");
+              if (rawMs) {
+                const allMs: Model.Milestone[] = JSON.parse(rawMs);
+                const cMilestones = allMs.filter((m) => m.contractId === id);
+                if (cMilestones.length > 0 && cMilestones.every((m) => m.status === "qabul_qilindi")) {
+                  found.status = "yakunlangan";
+                }
+              }
+              return found;
+            }
           } catch {}
         }
         if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
@@ -1629,7 +1659,18 @@ export const milestonesService: MilestonesService = {
             if (raw) {
               const all: Model.Milestone[] = JSON.parse(raw);
               const found = all.filter((m) => m.contractId === contractId);
-              if (found.length > 0) return found;
+              if (found.length > 0) {
+                const storedCnt = localStorage.getItem("bbd_custom_contracts");
+                const customContracts: Model.Contract[] = storedCnt ? JSON.parse(storedCnt) : [];
+                const parent = customContracts.find((c) => c.id === contractId);
+                const isFunded = Boolean(parent?.fundedAt);
+                return found.map((m) => {
+                  if (isFunded && m.status === "kutilmoqda") {
+                    return { ...m, status: "mablaglangan" as const };
+                  }
+                  return m;
+                });
+              }
             }
           } catch {}
         }
@@ -1716,6 +1757,21 @@ export const milestonesService: MilestonesService = {
                 found.status = "qabul_qilindi";
                 found.approvedAt = new Date().toISOString();
                 localStorage.setItem("sb2_milestones", JSON.stringify(all));
+
+                // If all milestones for this contract are accepted, complete contract
+                const contractMilestones = all.filter((m) => m.contractId === contractId);
+                const allDone = contractMilestones.length > 0 && contractMilestones.every((m) => m.status === "qabul_qilindi");
+                if (allDone) {
+                  const storedCnt = localStorage.getItem("bbd_custom_contracts");
+                  if (storedCnt) {
+                    const contracts: Model.Contract[] = JSON.parse(storedCnt);
+                    const cIdx = contracts.findIndex((c) => c.id === contractId);
+                    if (cIdx !== -1) {
+                      contracts[cIdx].status = "yakunlangan";
+                      localStorage.setItem("bbd_custom_contracts", JSON.stringify(contracts));
+                    }
+                  }
+                }
                 return found;
               }
             }
@@ -1869,6 +1925,21 @@ export const paymentsService: PaymentsService = {
               found.fundedAt = new Date().toISOString();
               found.status = "faol";
               localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
+
+              const rawMs = localStorage.getItem("sb2_milestones");
+              if (rawMs) {
+                const allMs: Model.Milestone[] = JSON.parse(rawMs);
+                let changed = false;
+                for (const m of allMs) {
+                  if (m.contractId === contractId && m.status === "kutilmoqda") {
+                    m.status = "mablaglangan";
+                    changed = true;
+                  }
+                }
+                if (changed) {
+                  localStorage.setItem("sb2_milestones", JSON.stringify(allMs));
+                }
+              }
 
               const paymentDTO: PaymentDTO = {
                 id: `pay_${Date.now().toString(36)}`,
