@@ -131,3 +131,4 @@ const nextConfig = {
 };
 
 export default nextConfig;
+// Cache bust: trigger rebuild for brand update to bobololadono.uz

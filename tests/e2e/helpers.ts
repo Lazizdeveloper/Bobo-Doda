@@ -6,7 +6,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
     orqali `/home/laziz/...` ostiga ko'chirilgan backend jurnali — steam-run
     sandboxi tashqi `/tmp` yo'llarini ko'rmaydi. */
 export const OTP_LOG_PATH =
-  process.env.E2E_OTP_LOG_PATH || "/home/laziz/Bobo-Doda/scratch/backend-mirror.log";
+  process.env.E2E_OTP_LOG_PATH || "/home/laziz/bobololadono/scratch/backend-mirror.log";
 export const DB_CMD =
   process.env.E2E_DB_CMD ||
   "PGPASSWORD=app psql -h 127.0.0.1 -p 5432 -U bobololadono_app -d bobololadono";

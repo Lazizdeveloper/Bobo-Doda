@@ -11,7 +11,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
  */
 export const ADMIN_BASE_URL = process.env.E2E_ADMIN_BASE_URL || "http://localhost:3010";
 export const ADMIN_API_BASE = process.env.E2E_ADMIN_API_URL || "http://localhost:4010/api/v1";
-const OTP_LOG_PATH = process.env.E2E_ADMIN_OTP_LOG_PATH || "/home/laziz/Bobo-Doda/scratch/e2e-infra/backend.log";
+const OTP_LOG_PATH = process.env.E2E_ADMIN_OTP_LOG_PATH || "/home/laziz/bobololadono/scratch/e2e-infra/backend.log";
 const DB_CMD =
   process.env.E2E_ADMIN_DB_CMD ||
   "psql -h 127.0.0.1 -p 55433 -U bobololadono_app -d bobololadono_e2e";

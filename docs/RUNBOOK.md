@@ -1254,7 +1254,7 @@ cd backend && nix-shell --run "npm run start:dev"
 # VAQTIDA o'qiladi (hot-reload qilinmaydi) — server ishga tushmasdan OLDIN
 # .env.local (gitignored, .env.example ga qarang) yozilgan bo'lsin:
 #   NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
-cd /home/laziz/Bobo-Doda && npm run dev
+cd /home/laziz/bobololadono && npm run dev
 #  → http://localhost:3000
 ```
 
