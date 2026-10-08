@@ -15,8 +15,8 @@ const routes = [
   ["/xaridor/elonlarim", { userId: "u-b2", role: "xaridor", profileDone: false, verified: true }],
   ["/xaridor/shartnomalar", { userId: "u-b2", role: "xaridor", profileDone: false, verified: true }],
   ["/mutaxassis", { userId: "u-1", role: "mutaxassis", profileDone: true, verified: true }],
-  ["/mutaxassis/ish-elonlari", { userId: "u-1", role: "mutaxassis", profileDone: true, verified: true }],
-  ["/mutaxassis/shartnomalar", { userId: "u-1", role: "mutaxassis", profileDone: true, verified: true }],
+  ["/bozor/ish-elonlari", { userId: "u-1", role: "mutaxassis", profileDone: true, verified: true }],
+  ["/mutaxassis/contracts", { userId: "u-1", role: "mutaxassis", profileDone: true, verified: true }],
 ];
 
 (async () => {
