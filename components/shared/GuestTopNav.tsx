@@ -7,8 +7,8 @@ export function GuestTopNav() {
   
   return (
     <header className="sticky top-0 z-40 w-full border-b border-hair bg-bg/80 backdrop-blur-md">
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-14">
-        <div className="flex items-center gap-6 shrink-0 min-w-0">
+      <div className="workspace-container mx-auto flex h-16 items-center justify-between gap-3 px-4 sm:px-6 xl:px-10 2xl:px-14">
+        <div className="flex items-center gap-4 sm:gap-6 shrink-0 min-w-0">
           <Logo href="/" className="shrink-0" />
           <nav className="hidden items-center gap-6 md:flex shrink-0">
             <Link

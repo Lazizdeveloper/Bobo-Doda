@@ -18,11 +18,11 @@ export function Logo({ href = "/", className = "" }: { href?: string; className?
   return (
     <Link
       href={href}
-      className={`inline-flex shrink-0 items-center gap-2.5 select-none ${className}`}
+      className={`inline-flex shrink-0 items-center gap-2 sm:gap-2.5 select-none ${className}`}
       aria-label="Bobololadono"
     >
       <LogoMark size={28} />
-      <span className="shrink-0 font-heading text-base font-extrabold tracking-tight text-ink whitespace-nowrap">
+      <span className="shrink-0 font-heading text-sm sm:text-base font-extrabold tracking-tight text-ink whitespace-nowrap">
         Bobololadono
       </span>
     </Link>
