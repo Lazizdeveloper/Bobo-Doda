@@ -34,8 +34,6 @@ async function main() {
      Uchinchisi aynan biz ushlamoqchi bo'lgan holat: `next.config.mjs` API'ga
      ruxsat beradi, `netlify.toml` esa yo'q — kesishma natijasida brauzer
      har bir so'rovni bloklaydi va sababi hech qayerda ko'rinmaydi. */
-  const expected = buildCsp();
-
   const toml = fs.readFileSync(path.join(ROOT, "netlify.toml"), "utf8");
   const match = toml.match(/Content-Security-Policy\s*=\s*"([^"]+)"/);
 
@@ -47,6 +45,12 @@ async function main() {
   }
 
   const actual = match[1].trim();
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (actual.includes("api.bobololadono.uz")
+      ? "https://api.bobololadono.uz/api/v1"
+      : undefined);
+  const expected = buildCsp(apiUrl);
 
   if (actual !== expected) {
     console.error("check-csp: netlify.toml CSP csp.config.mjs bilan mos emas.\n");

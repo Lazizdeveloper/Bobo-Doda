@@ -79,7 +79,11 @@ export default function TaklifYuborishPage() {
     if (!job) return;
     const next: Record<string, string> = {};
     if (!bid || Number(bid) <= 0) next.bid = t("prop.errBid");
-    if (!deliveryDays || Number(deliveryDays) < 1) next.deliveryDays = t("prop.errDelivery");
+    if (!deliveryDays || Number(deliveryDays) < 1) {
+      next.deliveryDays = t("prop.errDelivery");
+    } else if (Number(deliveryDays) > 365) {
+      next.deliveryDays = t("wizard.errDaysMax");
+    }
     if (cover.trim().length < 50) next.cover = t("prop.errCover");
     job.screeningQuestions.forEach((_, i) => {
       if (!answers[i]?.trim()) next[`answer${i}`] = t("prop.errAnswer");
@@ -143,9 +147,14 @@ export default function TaklifYuborishPage() {
           <Input
             type="number"
             min={1}
+            max={365}
+            step={1}
             label={t("prop.deliveryDays")}
             value={deliveryDays}
-            onChange={(e) => setDeliveryDays(e.target.value)}
+            onChange={(e) => {
+              setDeliveryDays(e.target.value);
+              setErrors((prev) => ({ ...prev, deliveryDays: "" }));
+            }}
             placeholder="7"
             hint={t("prop.deliveryDaysHint")}
             error={errors.deliveryDays}

@@ -44,7 +44,7 @@ test.describe.serial("sotuvchi: boshqaruv va xizmatlar", () => {
 
     await page.getByRole("button", { name: /Ko'rib chiqishga yuborish/i }).click();
     await page.waitForTimeout(1000);
-    await expect(page).toHaveURL(/xizmatlarim/);
+    await expect(page).toHaveURL(/\/mutaxassis\/services/);
   });
 
   test("sotuvchi sozlamalari xatosiz yuklanadi", async () => {
