@@ -26,7 +26,7 @@ const roles = {
       "/xaridor/xarajatlar",
       "/xaridor/sozlamalar",
       "/xaridor/verifikatsiya",
-      "/xaridor/yordam",
+      "/yordam-markazi",
     ],
     session: {
       userId: "u-b2",

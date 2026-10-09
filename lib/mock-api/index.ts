@@ -879,7 +879,12 @@ function isBuyerSession(): boolean {
 
 /** Joriy foydalanuvchiga tegishli shartnomalar id to'plami (rolga mos tomondan) */
 function myContractIds(): Set<string> {
-  const uid = currentUserId();
+  let uid = "";
+  try {
+    uid = currentUserId();
+  } catch {
+    return new Set();
+  }
   const asBuyer = isBuyerSession();
   const custom = read<Contract[]>("bbd_custom_contracts", []);
   const all = [...read<Contract[]>(KEYS.contracts, []), ...custom];
@@ -1660,8 +1665,13 @@ function sanitizeAttachments(files?: DeliverableFile[]): DeliverableFile[] | und
 export async function getMessages(contractId: string): Promise<Message[]> {
   ensureSeed();
   await delay(200);
-  const userId = currentUserId();
-  if (!isThreadParticipant(contractId, userId)) throw new Error("NOT_FOUND");
+  let userId = "";
+  try {
+    userId = currentUserId();
+  } catch {
+    return [];
+  }
+  if (!isThreadParticipant(contractId, userId)) return [];
   const messages = read<Message[]>(KEYS.messages, []);
   return messages
     .filter((m) => m.contractId === contractId)
@@ -1688,7 +1698,12 @@ export async function getAllMessages(): Promise<Message[]> {
     ko'rish uchun getMessages'ni chaqirsa ham buni AVTOMATIK belgilamaydi,
     faqat haqiqiy workroom/taklif sahifalari chaqirganda "o'qilgan" bo'ladi. */
 export async function markThreadRead(threadId: string): Promise<void> {
-  const userId = currentUserId();
+  let userId = "";
+  try {
+    userId = currentUserId();
+  } catch {
+    return;
+  }
   if (!isThreadParticipant(threadId, userId)) return;
   const reads = read<Record<string, Record<string, string>>>(
     KEYS.threadReads,
@@ -1703,7 +1718,12 @@ export async function markThreadRead(threadId: string): Promise<void> {
 export async function getThreadReads(): Promise<Record<string, string>> {
   ensureSeed();
   await delay(80);
-  const userId = currentUserId();
+  let userId = "";
+  try {
+    userId = currentUserId();
+  } catch {
+    return {};
+  }
   const reads = read<Record<string, Record<string, string>>>(
     KEYS.threadReads,
     {}
@@ -3166,7 +3186,12 @@ export async function createOffer(data: {
 export async function getSentOffers(): Promise<Offer[]> {
   ensureSeed();
   await delay();
-  const uid2 = currentUserId();
+  let uid2 = "";
+  try {
+    uid2 = currentUserId();
+  } catch {
+    return [];
+  }
   return read<Offer[]>(KEYS.offers, [])
     .filter((o) => o.buyerId === uid2)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -3176,7 +3201,12 @@ export async function getSentOffers(): Promise<Offer[]> {
 export async function getIncomingOffers(): Promise<Offer[]> {
   ensureSeed();
   await delay();
-  const uid2 = currentUserId();
+  let uid2 = "";
+  try {
+    uid2 = currentUserId();
+  } catch {
+    return [];
+  }
   return read<Offer[]>(KEYS.offers, [])
     .filter((o) => o.sellerId === uid2)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -3185,7 +3215,12 @@ export async function getIncomingOffers(): Promise<Offer[]> {
 export async function getOffer(id: string): Promise<Offer | null> {
   ensureSeed();
   await delay(200);
-  const uid2 = currentUserId();
+  let uid2 = "";
+  try {
+    uid2 = currentUserId();
+  } catch {
+    return null;
+  }
   const offer = read<Offer[]>(KEYS.offers, []).find((o) => o.id === id);
   /* Faqat taklif tomonlari ochishi mumkin */
   return offer && (offer.buyerId === uid2 || offer.sellerId === uid2)

@@ -999,7 +999,7 @@ export function replyToTicket(
       ticketOwner.id,
       "xabar",
       "ntf.supportReplied",
-      ticketOwner.role === "mutaxassis" ? "/mutaxassis/disputes" : "/xaridor/yordam",
+      ticketOwner.role === "mutaxassis" ? "/mutaxassis/disputes" : "/yordam-markazi",
       { subject: tickets[idx].subject }
     );
   }

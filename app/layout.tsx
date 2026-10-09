@@ -63,8 +63,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uz">
-      <body className="font-sans antialiased">
+    <html lang="uz" suppressHydrationWarning>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <LanguageProvider>
           <ToastProvider>
             <SupportModalProvider>

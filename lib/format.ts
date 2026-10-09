@@ -14,8 +14,10 @@ const UZS_LABEL: Record<Lang, string> = { uz: "so'm", ru: "сум", en: "soum" }
     variant BRAUZER lokalini oladi, ya'ni bitta summa bir foydalanuvchida
     "3 500 000", boshqasida "3,500,000" va uchinchisida "3.500.000" bo'lib
     ko'rinardi. Pul ko'rsatiladigan joyda bu qabul qilib bo'lmaydi. */
+const TIMEZONE = "Asia/Tashkent";
+
 export function formatAmount(amount: number): string {
-  return new Intl.NumberFormat("ru-RU").format(amount);
+  return new Intl.NumberFormat("ru-RU").format(amount).replace(/[\u00A0\u202F]/g, " ");
 }
 
 export function formatMoney(amount: number, lang: Lang = "uz"): string {
@@ -36,9 +38,25 @@ export function formatDate(iso: string, lang: Lang = "uz"): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   if (lang === "uz") {
-    return `${d.getDate()}-${UZ_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: TIMEZONE,
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+    });
+    const parts = formatter.formatToParts(d);
+    let day = "";
+    let monthIdx = 0;
+    let year = "";
+    for (const p of parts) {
+      if (p.type === "day") day = p.value;
+      if (p.type === "month") monthIdx = parseInt(p.value, 10) - 1;
+      if (p.type === "year") year = p.value;
+    }
+    return `${day}-${UZ_MONTHS_SHORT[monthIdx] ?? ""} ${year}`;
   }
   return d.toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", {
+    timeZone: TIMEZONE,
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -54,6 +72,7 @@ export function formatMonth(yearMonth: string, lang: Lang = "uz"): string {
   }
   const d = new Date(year, month - 1, 1);
   return d.toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", {
+    timeZone: TIMEZONE,
     month: "short",
     year: "2-digit",
   });
@@ -66,6 +85,7 @@ export function formatTime(iso: string, lang: Lang = "uz"): string {
   if (Number.isNaN(d.getTime())) return "";
   const locale = lang === "ru" ? "ru-RU" : lang === "en" ? "en-US" : "uz-UZ";
   return d.toLocaleTimeString(locale, {
+    timeZone: TIMEZONE,
     hour: "2-digit",
     minute: "2-digit",
     hour12: lang === "en",
