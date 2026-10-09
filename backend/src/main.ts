@@ -39,6 +39,11 @@ async function bootstrap(): Promise<void> {
     app.set('trust proxy', Number.isInteger(asNumber) && trustProxy.trim() !== '' ? asNumber : trustProxy);
   }
 
+  // Bo'lim 3 (admin.bobololadono.uz ko'chirish) — CORS delegate middleware'lar
+  // (body-parser, helmet)dan OLDIN yoqiladi, shunda har qanday xato (413 Payload Too Large,
+  // 400 Bad Request, preflight OPTIONS) to'liq CORS header'lari bilan qaytadi.
+  app.enableCors(buildStaffAwareCorsDelegate(config, `/${API_GLOBAL_PREFIX}/staff`));
+
   // Xavfsizlik header'lari (X-Frame-Options, HSTS va h.k.). HSTS faqat
   // haqiqiy HTTPS deployment orqasida mazmunli — reverse proxy/CDN TLS
   // terminatsiya qiladi (RUNBOOK production readiness bo'limi).
@@ -46,12 +51,10 @@ async function bootstrap(): Promise<void> {
   // Refresh token cookie'lari (`auth`/`staff-auth`) — httpOnly, `req.cookies`
   // orqali o'qiladi.
   app.use(cookieParser());
-  // Bosqich 12, bo'lim 40 — global so'rov tanasi chegarasi (DoS himoyasi).
-  // Provider JSON-RPC payload'lari (Payme) doim kichik (bir necha KB) —
-  // 1mb keng zaxira bilan yetarli. Fayl yuklash ALOHIDA oqim (bo'lim 78 —
-  // hozircha backend'da yo'q), shuning uchun bu yerga ta'sir qilmaydi.
-  app.useBodyParser('json', { limit: '1mb' });
-  app.useBodyParser('urlencoded', { limit: '1mb', extended: true });
+  // Global so'rov tanasi chegarasi (DoS himoyasi). E'lonlarda rasmlar (base64)
+  // biriktirilishi mumkinligi sababli 15mb qilib belgilandi (1mb 413 CORS xatosini chaqirardi).
+  app.useBodyParser('json', { limit: '15mb' });
+  app.useBodyParser('urlencoded', { limit: '15mb', extended: true });
 
   // `api/v1` prefiksi — health va docs undan tashqarida. Konstanta
   // (`config/api-prefix.ts`) — `emit-openapi.ts` va `test/support/
@@ -65,16 +68,6 @@ async function bootstrap(): Promise<void> {
   // holatda ishlashi kafolatlansin).
   app.useGlobalPipes(buildValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
-
-  // Bo'lim 3 (admin.bobololadono.uz ko'chirish) — security audit topilmasi 3a:
-  // yagona umumiy CORS ro'yxat staff sessiyasiga HECH QANDAY real
-  // izolyatsiya bermas edi. `staff/*` prefiksli yo'llar endi ALOHIDA,
-  // torroq ro'yxatdan (`STAFF_CORS_ORIGINS`) o'tadi — qurilish
-  // `common/http/cors.ts`da (YAGONA MANBA, `test/support/build-app.ts`
-  // ham shu funksiyadan foydalanadi — ikkinchi security ko'rib chiqishida
-  // topilgan: qo'lda ikki marta yozilsa, ikkisi ajralib ketishi mumkin
-  // edi va test nusxani, haqiqiy faylni emas, sinardi).
-  app.enableCors(buildStaffAwareCorsDelegate(config, `/${API_GLOBAL_PREFIX}/staff`));
 
   // Bosqich 12, bo'lim 44 — aniq signallar (Nest'ning "barcha signal"
   // sukutiga ishonib qolmaymiz): SIGTERM (deployment platform normal

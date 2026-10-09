@@ -259,8 +259,7 @@ function ensureSeed(): void {
       "u-1": 3325000,
       "u-2": 1900000,
     });
-    /* Eski versiya sessiyasi endi mavjud bo'lmagan hisobga ishora qilishi mumkin */
-    window.localStorage.removeItem(KEYS.session);
+    // Yangi seed versiyasi o'rnatiladi, lekin mavjud foydalanuvchi sessiyasiga tegilmaydi
     window.localStorage.setItem(KEYS.seeded, SEED_VERSION);
   }
 }
@@ -363,7 +362,17 @@ function uid(prefix: string): string {
 
 export function getSession(): Session | null {
   ensureSeed();
-  const session = read<Session | null>(KEYS.session, null);
+  let session = read<Session | null>(KEYS.session, null);
+  if (!session && typeof window !== "undefined") {
+    // Real auth sessiyasi ("bd_session") mavjud bo'lsa, undan tiklaymiz
+    try {
+      const raw = window.localStorage.getItem("bd_session");
+      if (raw) {
+        session = JSON.parse(raw) as Session;
+        window.localStorage.setItem(KEYS.session, raw);
+      }
+    } catch {}
+  }
   if (!session) return null;
   if (read<string[]>("sb2_blocked_users", []).includes(session.userId)) {
     window.localStorage.removeItem(KEYS.session);
@@ -377,7 +386,18 @@ export function getSession(): Session | null {
 /** Joriy sessiya foydalanuvchisi. Data API anonim demo hisobga tushib qolmaydi. */
 function currentUserId(): string {
   const session = getSession();
-  if (!session) throw new Error("NO_SESSION");
+  if (!session) {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bd_session");
+        if (raw) {
+          const s = JSON.parse(raw) as { userId?: string };
+          if (s?.userId) return s.userId;
+        }
+      } catch {}
+    }
+    throw new Error("NO_SESSION");
+  }
   ensureUserData(session.userId);
   return session.userId;
 }
@@ -871,6 +891,7 @@ function myContractIds(): Set<string> {
 }
 
 function isThreadParticipant(threadId: string, userId: string): boolean {
+  if (!userId) return false;
   const custom = read<Contract[]>("bbd_custom_contracts", []);
   const allContracts = [...read<Contract[]>(KEYS.contracts, []), ...custom];
   const contract = allContracts.find((item) => item.id === threadId);
@@ -880,10 +901,13 @@ function isThreadParticipant(threadId: string, userId: string): boolean {
   /* Taklif (Proposal) suhbati: mutaxassis — taklif egasi, xaridor — e'lon egasi.
      Busiz "Suhbatga taklif qilish" hech qanday muloqot kanalini ochmasdi. */
   const proposal = read<Proposal[]>(KEYS.proposals, []).find((item) => item.id === threadId);
-  if (!proposal) return false;
-  if (proposal.sellerId === userId || userId === "me") return true;
-  const job = read<Job[]>(KEYS.jobs, []).find((item) => item.id === proposal.jobId);
-  return !!job && (job.buyerId === userId || userId === "me");
+  if (proposal) {
+    if (proposal.sellerId === userId || userId === "me") return true;
+    const job = read<Job[]>(KEYS.jobs, []).find((item) => item.id === proposal.jobId);
+    return !!job && (job.buyerId === userId || userId === "me");
+  }
+  // Real backend shartnomalari (UUID) yoki boshqa muloqot iplari: tizimga kirgan foydalanuvchi qatnashishi mumkin
+  return Boolean(threadId);
 }
 
 /** Yangi ro'yxatdan o'tgan mutaxassis uchun bo'sh profil */
@@ -1647,9 +1671,16 @@ export async function getMessages(contractId: string): Promise<Message[]> {
 export async function getAllMessages(): Promise<Message[]> {
   ensureSeed();
   await delay();
+  let uid = "";
+  try {
+    uid = currentUserId();
+  } catch {
+    return [];
+  }
   const mine = myContractIds();
-  return read<Message[]>(KEYS.messages, []).filter((m) =>
-    mine.has(m.contractId)
+  const all = read<Message[]>(KEYS.messages, []);
+  return all.filter((m) =>
+    mine.has(m.contractId) || (uid && m.senderId === uid)
   );
 }
 

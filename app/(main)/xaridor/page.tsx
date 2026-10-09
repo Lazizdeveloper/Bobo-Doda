@@ -327,7 +327,7 @@ export default function XaridorDashboardPage() {
                   {t("bdash.findSpecialist")}
                 </Button>
               </Link>
-              <Link href="/xaridor/yordam">
+              <Link href="/yordam-markazi">
                 <Button variant="ghost" size="sm" className="w-full text-xs">
                   {t("bdash.helpTeaserBtn")}
                 </Button>

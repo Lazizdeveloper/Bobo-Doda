@@ -35,7 +35,7 @@ export default function PaymentResultPage() {
             <Link href="/xaridor/contracts">
               <Button>{t("paymentResult.contracts")}</Button>
             </Link>
-            <Link href="/xaridor/yordam">
+            <Link href="/yordam-markazi">
               <Button variant="secondary">{t("nav.help")}</Button>
             </Link>
           </div>

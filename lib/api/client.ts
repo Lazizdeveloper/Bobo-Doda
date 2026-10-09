@@ -1145,6 +1145,10 @@ export const jobsService: JobsService = {
     }),
   get: (id: string) =>
     call(async () => {
+      if (id.startsWith("job_")) {
+        const all = getLocalJobs();
+        return all.find((j) => j.id === id) ?? null;
+      }
       try {
         const dto = await http<RealJob>(`/jobs/${id}`);
         if (dto) {

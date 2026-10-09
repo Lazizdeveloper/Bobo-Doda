@@ -337,7 +337,7 @@ export function ContractWorkroomChat({
                       </div>
 
                       {/* Muallif va vaqt */}
-                      <span className="text-3xs text-faint px-1">
+                      <span suppressHydrationWarning className="text-3xs text-faint px-1">
                         {mine ? t("chat.you") : counterpartName.split(" ")[0]} ·{" "}
                         {formatTime(msg.createdAt, lang)}
                       </span>

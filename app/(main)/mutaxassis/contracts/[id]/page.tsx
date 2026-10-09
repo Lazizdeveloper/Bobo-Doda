@@ -158,7 +158,7 @@ export default function ShartnomaWorkroomPage() {
               <h1 className="mt-0.5 font-heading text-xl font-bold text-ink">{contract.title}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <ContractStatusBadge status={contract.status} />
-                <span className="text-2xs text-faint">{formatDate(contract.createdAt, lang)}</span>
+                <span suppressHydrationWarning className="text-2xs text-faint">{formatDate(contract.createdAt, lang)}</span>
               </div>
             </div>
           </div>

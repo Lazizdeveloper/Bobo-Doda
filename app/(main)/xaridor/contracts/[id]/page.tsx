@@ -54,7 +54,7 @@ export default function XaridorWorkroomPage() {
   const [receiptMilestone, setReceiptMilestone] = useState<Milestone | null>(null);
 
   const [paying, setPaying] = useState(false);
-  const [paymentState, setPaymentState] = useState<"idle" | "processing" | "failed" | "cancelled" | "expired">("idle");
+  const [paymentState, setPaymentState] = useState<"idle" | "processing" | "failed" | "cancelled" | "expired" | "disabled">("idle");
 
   const reload = useCallback(async () => {
     const version = ++loadVersionRef.current;
@@ -178,7 +178,14 @@ export default function XaridorWorkroomPage() {
       setWatchingPayment(true);
       toast(t("cfund.done"));
     } catch (error) {
-      if (error instanceof ApiError && error.message === "FEATURE_DISABLED") {
+      if (
+        error instanceof ApiError &&
+        (error.code === "FEATURE_DISABLED" ||
+          error.code === "PAYMENTS_PAUSED" ||
+          error.status === 503 ||
+          error.message === "FEATURE_DISABLED")
+      ) {
+        setPaymentState("disabled");
         toast(t("cfund.paymentsDisabled"), "error");
       } else {
         toast(t("common.error"), "error");
@@ -270,7 +277,7 @@ export default function XaridorWorkroomPage() {
               <h1 className="mt-0.5 font-heading text-xl font-bold text-ink">{contract.title}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <ContractStatusBadge status={contract.status} />
-                <span className="text-2xs text-faint">{formatDate(contract.createdAt, lang)}</span>
+                <span suppressHydrationWarning className="text-2xs text-faint">{formatDate(contract.createdAt, lang)}</span>
               </div>
             </div>
           </div>
@@ -296,6 +303,15 @@ export default function XaridorWorkroomPage() {
               {t("cfund.pay")} · {formatMoney(contract.totalAmount, lang)}
             </Button>
           </Card>
+        )}
+
+        {contract.status === "faol" && !funded && paymentState === "disabled" && (
+          <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-4 text-xs text-warning-deep">
+            <p className="font-semibold text-ink text-sm mb-1">{t("cfund.paymentsDisabled")}</p>
+            <p className="text-muted leading-relaxed">
+              To'lov tizimi (Payme) sozlanmoqda yoki texnik xizmat ko'rsatilmoqda. Shartnoma faol saqlanadi, to'lov imkoniyati yoqilishi bilanoq uni amalga oshirishingiz mumkin.
+            </p>
+          </div>
         )}
 
         {contract.status === "faol" && !funded && paymentState === "processing" && (
@@ -383,7 +399,7 @@ export default function XaridorWorkroomPage() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pl-9 text-xs text-muted">
                 <span className="font-medium text-ink">{formatMoney(milestone.amount, lang)}</span>
                 {milestone.status === "qabul_qilindi" && milestone.approvedAt && (
-                  <span className="text-success">{t("ms.paid")} · {formatDate(milestone.approvedAt, lang)}</span>
+                  <span suppressHydrationWarning className="text-success">{t("ms.paid")} · {formatDate(milestone.approvedAt, lang)}</span>
                 )}
               </div>
 
