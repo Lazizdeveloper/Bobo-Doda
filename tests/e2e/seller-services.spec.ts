@@ -32,6 +32,13 @@ test.describe.serial("sotuvchi: boshqaruv va xizmatlar", () => {
 
     const numberInputs = page.locator('input[type="number"]');
     await numberInputs.nth(0).fill("500000"); // narx
+
+    // Chegara tekshiruvi: 365 kundan ortiq (masalan, 660000) kiritilsa xatolik ko'rsatiladi va o'tkazilmaydi
+    await numberInputs.nth(1).fill("660000");
+    await page.getByRole("button", { name: /Keyingi/i }).click();
+    await expect(page.getByText(/365 kun/i)).toBeVisible();
+
+    // To'g'ri muddat bilan davom etish
     await numberInputs.nth(1).fill("7"); // bajarish muddati (kun)
     await page.getByRole("button", { name: /Keyingi/i }).click();
 

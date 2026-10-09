@@ -884,7 +884,39 @@ export const dictionary: Record<string, Entry> = {
     ru: "Описание должно содержать минимум 30 символов",
   },
   "wizard.errPrice": { uz: "Narx 0 dan katta bo'lishi kerak", ru: "Цена должна быть больше 0" },
+  "wizard.errPriceMax": {
+    uz: "Narx 10 mlrd so'mdan oshmasligi kerak",
+    ru: "Цена не может превышать 10 млрд сум",
+  },
+  "wizard.errPriceInt": {
+    uz: "Narx butun so'mda kiritilishi kerak",
+    ru: "Цена должна быть целым числом",
+  },
+  "wizard.priceHint": {
+    uz: "Xizmat narxi so'mda (masalan: 500 000)",
+    ru: "Стоимость услуги в сумах (например: 500 000)",
+  },
   "wizard.errDays": { uz: "Muddat kamida 1 kun bo'lishi kerak", ru: "Срок должен быть не менее 1 дня" },
+  "wizard.errDaysMax": {
+    uz: "Muddat ko'pi bilan 365 kun bo'lishi mumkin",
+    ru: "Срок не может превышать 365 дней",
+  },
+  "wizard.errDaysInt": {
+    uz: "Muddat butun kunlarda kiritilishi kerak",
+    ru: "Срок должен быть целым числом дней",
+  },
+  "wizard.daysHint": {
+    uz: "Xizmatni bajarish muddati (1 dan 365 kungacha)",
+    ru: "Срок выполнения услуги (от 1 до 365 дней)",
+  },
+  "wizard.errTitleMax": {
+    uz: "Sarlavha ko'pi bilan 200 ta belgidan oshmasligi kerak",
+    ru: "Название не может превышать 200 символов",
+  },
+  "wizard.errDescMax": {
+    uz: "Tavsif ko'pi bilan 5000 ta belgidan oshmasligi kerak",
+    ru: "Описание не может превышать 5000 символов",
+  },
   "wizard.errNotApproved": {
     uz: "Xizmat yaratish uchun sotuvchi arizangiz tasdiqlangan bo'lishi kerak. Arizangiz moderatsiya jarayonida.",
     ru: "Для создания услуги ваша заявка продавца должна быть одобрена. Заявка на модерации.",

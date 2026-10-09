@@ -17,6 +17,7 @@ import type { Service, ServiceCategory, VerificationStatus } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useFormDraft } from "@/lib/hooks/useFormDraft";
+import { MAX_AMOUNT, MAX_DELIVERY_DAYS, MIN_DELIVERY_DAYS, LIMITS } from "@/lib/validate";
 
 interface ServiceWizardProps {
   initial?: Service;
@@ -80,12 +81,32 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
     const next: Record<string, string> = {};
     if (current === 0 && !category) next.category = t("wizard.errCategory");
     if (current === 1) {
-      if (title.trim().length < 10) next.title = t("wizard.errTitle");
-      if (description.trim().length < 30) next.description = t("wizard.errDesc");
+      const trimmedTitle = title.trim();
+      if (trimmedTitle.length < 10) next.title = t("wizard.errTitle");
+      else if (trimmedTitle.length > LIMITS.title) next.title = t("wizard.errTitleMax");
+
+      const trimmedDesc = description.trim();
+      if (trimmedDesc.length < 30) next.description = t("wizard.errDesc");
+      else if (trimmedDesc.length > LIMITS.description) next.description = t("wizard.errDescMax");
     }
     if (current === 2) {
-      if (!price || Number(price) <= 0) next.price = t("wizard.errPrice");
-      if (!days || Number(days) < 1) next.days = t("wizard.errDays");
+      const priceNum = Number(price);
+      if (!price || isNaN(priceNum) || priceNum <= 0) {
+        next.price = t("wizard.errPrice");
+      } else if (priceNum > MAX_AMOUNT) {
+        next.price = t("wizard.errPriceMax");
+      } else if (!Number.isInteger(priceNum)) {
+        next.price = t("wizard.errPriceInt");
+      }
+
+      const daysNum = Number(days);
+      if (!days || isNaN(daysNum) || daysNum < MIN_DELIVERY_DAYS) {
+        next.days = t("wizard.errDays");
+      } else if (!Number.isInteger(daysNum)) {
+        next.days = t("wizard.errDaysInt");
+      } else if (daysNum > MAX_DELIVERY_DAYS) {
+        next.days = t("wizard.errDaysMax");
+      }
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -105,7 +126,12 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
       setStep(0);
       return;
     }
-    if (!validateStep(1) || !validateStep(2)) {
+    if (!validateStep(1)) {
+      setStep(1);
+      return;
+    }
+    if (!validateStep(2)) {
+      setStep(2);
       return;
     }
     if (applicationStatus === "rad_etilgan") {
@@ -114,7 +140,13 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
     }
     setSaving(kind);
     try {
-      const data = { category, title: title.trim(), description: description.trim(), price: Number(price), deliveryDays: Number(days) };
+      const data = {
+        category,
+        title: title.trim(),
+        description: description.trim(),
+        price: Math.round(Number(price)),
+        deliveryDays: Math.round(Number(days)),
+      };
       let id = initial?.id;
       if (isEdit) {
         await servicesService.update(initial.id, data);
@@ -143,10 +175,35 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
         setStep(0);
         toast(t("wizard.errCategoryInvalid"), "error");
       } else if (isApi && err.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
-        setErrors((prev) => ({ ...prev, ...err.fieldErrors }));
-        if (err.fieldErrors.category) setStep(0);
+        const mappedErrors: Record<string, string> = {};
+        for (const [key, msg] of Object.entries(err.fieldErrors)) {
+          const lowerMsg = (msg || "").toLowerCase();
+          if (key === "deliveryDays") {
+            mappedErrors.days = lowerMsg.includes("365") || lowerMsg.includes("greater")
+              ? t("wizard.errDaysMax")
+              : (msg || t("wizard.errDays"));
+          } else if (key === "categoryId") {
+            mappedErrors.category = msg || t("wizard.errCategory");
+          } else if (key === "price") {
+            mappedErrors.price = lowerMsg.includes("10") || lowerMsg.includes("max")
+              ? t("wizard.errPriceMax")
+              : (msg || t("wizard.errPrice"));
+          } else if (key === "title") {
+            mappedErrors.title = lowerMsg.includes("200")
+              ? t("wizard.errTitleMax")
+              : (msg || t("wizard.errTitle"));
+          } else if (key === "description") {
+            mappedErrors.description = lowerMsg.includes("5000")
+              ? t("wizard.errDescMax")
+              : (msg || t("wizard.errDesc"));
+          } else {
+            mappedErrors[key] = msg;
+          }
+        }
+        setErrors((prev) => ({ ...prev, ...err.fieldErrors, ...mappedErrors }));
+        if (err.fieldErrors.category || err.fieldErrors.categoryId) setStep(0);
         else if (err.fieldErrors.title || err.fieldErrors.description) setStep(1);
-        else if (err.fieldErrors.price || err.fieldErrors.deliveryDays) setStep(2);
+        else if (err.fieldErrors.price || err.fieldErrors.deliveryDays || err.fieldErrors.days) setStep(2);
         toast(t("wizard.errValidation"), "error");
       } else if (isApi && err.message && err.message !== "UNKNOWN" && err.message !== "VALIDATION") {
         toast(err.message, "error");
@@ -218,15 +275,64 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
 
         {step === 1 && (
           <div className="flex flex-col gap-4">
-            <Input label={t("wizard.titleLabel")} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("wizard.titlePh")} error={errors.title} />
-            <Textarea label={t("wizard.descLabel")} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("wizard.descPh")} rows={6} error={errors.description} />
+            <Input
+              label={t("wizard.titleLabel")}
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setErrors((prev) => ({ ...prev, title: "" }));
+              }}
+              placeholder={t("wizard.titlePh")}
+              maxLength={LIMITS.title}
+              error={errors.title}
+            />
+            <Textarea
+              label={t("wizard.descLabel")}
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setErrors((prev) => ({ ...prev, description: "" }));
+              }}
+              placeholder={t("wizard.descPh")}
+              rows={6}
+              maxLength={LIMITS.description}
+              error={errors.description}
+            />
           </div>
         )}
 
         {step === 2 && (
           <div className="flex flex-col gap-4">
-            <Input type="number" min={0} label={t("wizard.priceLabel")} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="500000" error={errors.price} />
-            <Input type="number" min={1} label={t("wizard.daysLabel")} value={days} onChange={(e) => setDays(e.target.value)} placeholder="3" error={errors.days} />
+            <Input
+              type="number"
+              min={1000}
+              max={MAX_AMOUNT}
+              step={1000}
+              label={t("wizard.priceLabel")}
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setErrors((prev) => ({ ...prev, price: "" }));
+              }}
+              placeholder="500000"
+              hint={t("wizard.priceHint")}
+              error={errors.price}
+            />
+            <Input
+              type="number"
+              min={MIN_DELIVERY_DAYS}
+              max={MAX_DELIVERY_DAYS}
+              step={1}
+              label={t("wizard.daysLabel")}
+              value={days}
+              onChange={(e) => {
+                setDays(e.target.value);
+                setErrors((prev) => ({ ...prev, days: "", deliveryDays: "" }));
+              }}
+              placeholder="3"
+              hint={t("wizard.daysHint")}
+              error={errors.days || errors.deliveryDays}
+            />
           </div>
         )}
 

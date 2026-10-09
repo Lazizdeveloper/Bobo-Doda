@@ -980,6 +980,10 @@ export const servicesService: ServicesService = {
         saveLocalCustomService(mapped);
         return mapped;
       } catch (err) {
+        const isApi = err instanceof ApiError;
+        if (isApi && (err.code === "VALIDATION" || err.status === 422)) {
+          throw err;
+        }
         const local = getLocalCustomServices().find((s) => s.id === id);
         if (local) return local;
         throw err;

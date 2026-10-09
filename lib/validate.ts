@@ -4,6 +4,9 @@
 
 /** Pul summasi uchun yuqori chegara (10 mlrd so'm — real loyihalar ostida) */
 export const MAX_AMOUNT = 10_000_000_000;
+/** Xizmat bajarish muddati chegaralari (kun) */
+export const MIN_DELIVERY_DAYS = 1;
+export const MAX_DELIVERY_DAYS = 365;
 
 /** Matn maydonlari uchun uzunlik chegaralari (belgi) */
 export const LIMITS = {
