@@ -544,4 +544,36 @@ describe('Payment (e2e)', () => {
     });
     expect(conflictAudit).toBe(1);
   });
+
+  t('Har xil kalit bilan 8 parallel to‘lov so‘rovi — faqat BITTA to‘lov yaratiladi, qolgan 7 tasi PAYMENT_ALREADY_IN_PROGRESS (409)', async () => {
+    const { contractId, buyer } = await createActiveContract();
+    const responses = await Promise.all(
+      Array.from({ length: 8 }, (_, i) => createPaymentReq(buyer, contractId, `idem-concurrent-${i}`)),
+    );
+
+    const successful = responses.filter((r) => r.status === 200);
+    const blocked = responses.filter((r) => r.status === 409 && r.body.code === 'PAYMENT_ALREADY_IN_PROGRESS');
+
+    expect(successful).toHaveLength(1);
+    expect(blocked).toHaveLength(7);
+
+    const paymentsCount = await db!.payment.count({ where: { contractId } });
+    expect(paymentsCount).toBe(1);
+  });
+
+  t('Test provayderida simulate-success endpointi to‘lovni SUCCEEDED qiladi', async () => {
+    const { contractId, buyer } = await createActiveContract();
+    const created = await createPaymentReq(buyer, contractId, 'idem-sim-1').expect(200);
+    expect(created.body.status).toBe('PROCESSING');
+
+    const simRes = await request(app!.getHttpServer())
+      .post(`/api/v1/me/payments/${created.body.id}/simulate-success`)
+      .set('Authorization', `Bearer ${buyer.accessToken}`)
+      .expect(200);
+
+    expect(simRes.body.status).toBe('SUCCEEDED');
+
+    const payment = await db!.payment.findUniqueOrThrow({ where: { id: created.body.id } });
+    expect(payment.status).toBe('SUCCEEDED');
+  });
 });

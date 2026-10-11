@@ -62,6 +62,27 @@ describe('Health (e2e, real Postgres + Redis)', () => {
     expect(res.body.info.title).toBe('Bobololadono API');
   });
 
+  t('GET /metrics → 200, Prometheus metrikalarini qaytaradi', async () => {
+    const res = await request(app!.getHttpServer()).get('/metrics').expect(200);
+    expect(res.text).toContain('process_cpu_user_seconds_total');
+  });
+
+  t('GET /version → 200, versiya va uptime ma’lumotlarini qaytaradi', async () => {
+    const res = await request(app!.getHttpServer()).get('/version').expect(200);
+    expect(res.body).toMatchObject({
+      name: 'bobololadono-backend',
+      version: '0.1.0',
+    });
+    expect(typeof res.body.uptimeSeconds).toBe('number');
+  });
+
+  t('Xavfsizlik sarlavhalari (helmet) to‘g‘ri o‘rnatilgan', async () => {
+    const res = await request(app!.getHttpServer()).get('/health/live');
+    expect(res.headers['x-dns-prefetch-control']).toBe('off');
+    expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+  });
+
   t('noma’lum marshrut → 404 { code: "NOT_FOUND", requestId }', async () => {
     const res = await request(app!.getHttpServer()).get('/api/v1/nope').expect(404);
     expect(res.body.code).toBe('NOT_FOUND');

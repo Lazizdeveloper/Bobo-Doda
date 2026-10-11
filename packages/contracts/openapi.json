@@ -2845,6 +2845,41 @@
         ]
       }
     },
+    "/api/v1/me/contracts/{contractId}/payment/simulate-success": {
+      "post": {
+        "operationId": "PaymentController_simulateSuccess",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-payments"
+        ]
+      }
+    },
     "/api/v1/me/payments": {
       "get": {
         "operationId": "MePaymentController_list",
@@ -2913,6 +2948,41 @@
     "/api/v1/me/payments/{id}": {
       "get": {
         "operationId": "MePaymentController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me-payments"
+        ]
+      }
+    },
+    "/api/v1/me/payments/{id}/simulate-success": {
+      "post": {
+        "operationId": "MePaymentController_simulateSuccess",
         "parameters": [
           {
             "name": "id",
@@ -6208,6 +6278,18 @@
             "type": "object",
             "nullable": true
           },
+          "passportNumber": {
+            "type": "object",
+            "nullable": true
+          },
+          "inn": {
+            "type": "object",
+            "nullable": true
+          },
+          "companyDetails": {
+            "type": "object",
+            "nullable": true
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -6255,7 +6337,20 @@
             "description": "Bozorda ko’rinadigan nom"
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "description": "Qo‘shimcha tavsif yoki kasbiy ma’lumot"
+          },
+          "passportNumber": {
+            "type": "string",
+            "description": "Pasport yoki ID karta raqami (masalan: AA1234567) — KYC/AML tekshiruvi uchun"
+          },
+          "inn": {
+            "type": "string",
+            "description": "STIR (INN) soliq to‘lovchi identifikatsiya raqami (9 xonali)"
+          },
+          "companyDetails": {
+            "type": "string",
+            "description": "Yuridik shaxs yoki YTT ma’lumotlari"
           }
         },
         "required": [

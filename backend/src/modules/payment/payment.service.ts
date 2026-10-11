@@ -82,6 +82,11 @@ export class PaymentService {
     let payment: Payment;
     try {
       payment = await this.prisma.$transaction(async (tx) => {
+        // Serializatsiya (Yakuniy raund talabi 1): bitta shartnomaga bir vaqtda
+        // faqat bitta to'lov yaratish oqimi kirishi uchun Contract qatorini
+        // `FOR UPDATE` bilan qulflaymiz. Parallel so'rovlar navbatda kutadi.
+        await tx.$queryRaw`SELECT id FROM contracts WHERE id = ${contractId}::uuid FOR UPDATE`;
+
         const existingTx = await tx.payment.findFirst({
           where: { contractId, status: { in: ['PENDING', 'PROCESSING', 'SUCCEEDED'] } },
           select: { id: true, status: true },
@@ -121,11 +126,19 @@ export class PaymentService {
         return created;
       });
     } catch (err) {
-      // Bo'lim 35 — `UNIQUE(contractId) WHERE status='SUCCEEDED'` partial
-      // index'ni ATAYLAB BUZMAYDI (yangi qator har doim PENDING bilan
-      // boshlanadi) — lekin himoya sifatida: agar shu oraliqda parallel
-      // so'rov muvaffaqiyatli bo'lib ulgurgan bo'lsa, aniqroq xato beramiz.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === PRISMA_UNIQUE_VIOLATION) {
+        const target = Array.isArray(err.meta?.target)
+          ? err.meta.target.join(',')
+          : typeof err.meta?.target === 'string'
+            ? err.meta.target
+            : '';
+        const message = err.message;
+        if (target.includes('active') || message.includes('payments_contract_active_uidx')) {
+          throw new DomainError(
+            'PAYMENT_ALREADY_IN_PROGRESS',
+            'Ushbu shartnoma uchun to‘lov allaqachon jarayonda (PENDING yoki PROCESSING)',
+          );
+        }
         throw new DomainError('PAYMENT_ALREADY_SUCCEEDED', 'Bu shartnoma allaqachon to‘langan');
       }
       throw err;

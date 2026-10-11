@@ -80,8 +80,8 @@ async function bootstrap(): Promise<void> {
   // yopiladi (`@nestjs/bullmq` bilan avtomatik).
   app.enableShutdownHooks(['SIGTERM', 'SIGINT']);
 
-  // Swagger — production'da ataylab yoqilmaydi.
-  if (config.swaggerEnabled) {
+  // Swagger — production'da ataylab yoqilmaydi (DevSecOps requirement).
+  if (config.swaggerEnabled && !config.isProduction) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Bobololadono API')
       .setDescription(

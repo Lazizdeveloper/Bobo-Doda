@@ -36,7 +36,7 @@ export class AppConfigService {
   }
 
   get swaggerEnabled(): boolean {
-    return this.get('SWAGGER_ENABLED');
+    return this.isProduction ? false : this.get('SWAGGER_ENABLED');
   }
 
   get corsOrigins(): string[] {

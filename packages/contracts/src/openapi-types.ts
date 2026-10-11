@@ -1172,6 +1172,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/contracts/{contractId}/payment/simulate-success": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PaymentController_simulateSuccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/payments": {
         parameters: {
             query?: never;
@@ -1198,6 +1214,22 @@ export interface paths {
         get: operations["MePaymentController_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/payments/{id}/simulate-success": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MePaymentController_simulateSuccess"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2242,6 +2274,9 @@ export interface components {
             legalName: string;
             displayName: string;
             description?: Record<string, never> | null;
+            passportNumber?: Record<string, never> | null;
+            inn?: Record<string, never> | null;
+            companyDetails?: Record<string, never> | null;
             /** @enum {string} */
             status: "PENDING" | "APPROVED" | "REJECTED";
             /** Format: date-time */
@@ -2256,7 +2291,14 @@ export interface components {
             legalName: string;
             /** @description Bozorda ko’rinadigan nom */
             displayName: string;
+            /** @description Qo‘shimcha tavsif yoki kasbiy ma’lumot */
             description?: string;
+            /** @description Pasport yoki ID karta raqami (masalan: AA1234567) — KYC/AML tekshiruvi uchun */
+            passportNumber?: string;
+            /** @description STIR (INN) soliq to‘lovchi identifikatsiya raqami (9 xonali) */
+            inn?: string;
+            /** @description Yuridik shaxs yoki YTT ma’lumotlari */
+            companyDetails?: string;
         };
         RejectSellerApplicationDto: {
             reason: string;
@@ -4599,6 +4641,27 @@ export interface operations {
             };
         };
     };
+    PaymentController_simulateSuccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contractId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentResponseDto"];
+                };
+            };
+        };
+    };
     MePaymentController_list: {
         parameters: {
             query?: {
@@ -4622,6 +4685,27 @@ export interface operations {
         };
     };
     MePaymentController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentResponseDto"];
+                };
+            };
+        };
+    };
+    MePaymentController_simulateSuccess: {
         parameters: {
             query?: never;
             header?: never;
