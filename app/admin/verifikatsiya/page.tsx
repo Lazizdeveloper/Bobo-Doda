@@ -368,6 +368,24 @@ export default function VerificationQueuePage() {
                   </Badge>
                 </dd>
               </div>
+              {selectedRecord.passportNumber && (
+                <div>
+                  <dt className="text-2xs text-muted font-semibold uppercase">Pasport / ID raqam</dt>
+                  <dd className="mt-0.5 text-ink font-medium font-mono">{selectedRecord.passportNumber}</dd>
+                </div>
+              )}
+              {selectedRecord.inn && (
+                <div>
+                  <dt className="text-2xs text-muted font-semibold uppercase">STIR / INN</dt>
+                  <dd className="mt-0.5 text-ink font-medium font-mono">{selectedRecord.inn}</dd>
+                </div>
+              )}
+              {selectedRecord.companyDetails && (
+                <div className="col-span-2">
+                  <dt className="text-2xs text-muted font-semibold uppercase">Yuridik shaxs / YTT</dt>
+                  <dd className="mt-0.5 text-ink font-medium">{selectedRecord.companyDetails}</dd>
+                </div>
+              )}
             </dl>
 
             {/* Document Image Previews */}

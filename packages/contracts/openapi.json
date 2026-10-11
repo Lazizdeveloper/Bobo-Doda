@@ -367,73 +367,6 @@
         ]
       }
     },
-    "/api/v1/me/roles/switch": {
-      "post": {
-        "operationId": "MeController_switchRole",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SwitchRoleDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthSessionDto"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "me"
-        ]
-      }
-    },
-    "/api/v1/me/sessions": {
-      "get": {
-        "operationId": "MeController_listSessions",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SessionDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "me"
-        ]
-      },
-      "delete": {
-        "operationId": "MeController_revokeAllSessions",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "me"
-        ]
-      }
-    },
     "/api/v1/me/change-password": {
       "post": {
         "operationId": "MeController_changePassword",
@@ -471,6 +404,20 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/sessions": {
+      "delete": {
+        "operationId": "MeController_revokeAllSessions",
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
@@ -5358,6 +5305,246 @@
           "staff-audit-logs"
         ]
       }
+    },
+    "/api/v1/jobs": {
+      "get": {
+        "operationId": "JobsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Kategoriya slug yoki UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Qidiruv so‘zi",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "budgetMin",
+            "required": false,
+            "in": "query",
+            "description": "Minimal byudjet",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "budgetMax",
+            "required": false,
+            "in": "query",
+            "description": "Maksimal byudjet",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "jobs"
+        ]
+      },
+      "post": {
+        "operationId": "JobsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/mine": {
+      "get": {
+        "operationId": "JobsController_listMine",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{id}": {
+      "get": {
+        "operationId": "JobsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{id}/close": {
+      "patch": {
+        "operationId": "JobsController_close",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "jobs"
+        ]
+      },
+      "post": {
+        "operationId": "JobsController_closePost",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "jobs"
+        ]
+      }
     }
   },
   "info": {
@@ -5703,64 +5890,6 @@
         },
         "required": [
           "role"
-        ]
-      },
-      "SwitchRoleDto": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "type": "string",
-            "enum": [
-              "SELLER",
-              "BUYER"
-            ],
-            "example": "SELLER"
-          }
-        },
-        "required": [
-          "role"
-        ]
-      },
-      "SessionDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "activeRole": {
-            "type": "string",
-            "enum": [
-              "SELLER",
-              "BUYER"
-            ],
-            "nullable": true
-          },
-          "userAgent": {
-            "type": "object",
-            "nullable": true
-          },
-          "ip": {
-            "type": "object",
-            "nullable": true
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "expiresAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "current": {
-            "type": "boolean",
-            "description": "Shu so‘rovni yuborgan tokenning o‘zi shu sessiyagami"
-          }
-        },
-        "required": [
-          "id",
-          "createdAt",
-          "expiresAt",
-          "current"
         ]
       },
       "ChangePasswordDto": {
@@ -6286,7 +6415,7 @@
           "price": {
             "type": "number",
             "description": "Butun so‘m",
-            "minimum": 1,
+            "minimum": 50000,
             "maximum": 10000000000
           },
           "deliveryDays": {
@@ -6403,7 +6532,7 @@
           },
           "price": {
             "type": "number",
-            "minimum": 1,
+            "minimum": 50000,
             "maximum": 10000000000
           },
           "deliveryDays": {
@@ -6553,7 +6682,7 @@
           "amount": {
             "type": "number",
             "description": "Butun so‘m",
-            "minimum": 1,
+            "minimum": 50000,
             "maximum": 10000000000
           },
           "dueAt": {
@@ -8345,6 +8474,174 @@
           "resourceType",
           "resourceId",
           "createdAt"
+        ]
+      },
+      "JobResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "buyerId": {
+            "type": "string"
+          },
+          "buyerName": {
+            "type": "string"
+          },
+          "buyerRating": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "description": "Kategoriya slug"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "budgetMin": {
+            "type": "number",
+            "description": "Minimal byudjet (butun so‘m)"
+          },
+          "budgetMax": {
+            "type": "number",
+            "description": "Maksimal byudjet (butun so‘m)"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "skillsRequired": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screeningQuestions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "proposalsCount": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ochiq",
+              "yopilgan",
+              "OPEN",
+              "CLOSED"
+            ]
+          },
+          "postedAt": {
+            "type": "string"
+          },
+          "deadline": {
+            "type": "string",
+            "nullable": true
+          },
+          "attachedImages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "buyerId",
+          "buyerName",
+          "buyerRating",
+          "title",
+          "description",
+          "category",
+          "categoryId",
+          "budgetMin",
+          "budgetMax",
+          "currency",
+          "skillsRequired",
+          "screeningQuestions",
+          "proposalsCount",
+          "status",
+          "postedAt",
+          "attachedImages",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateJobDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Kategoriya slug yoki UUID"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 5000
+          },
+          "budgetMin": {
+            "type": "number",
+            "description": "Minimal byudjet (butun so‘m, kamida 50 000)",
+            "minimum": 50000,
+            "maximum": 10000000000
+          },
+          "budgetMax": {
+            "type": "number",
+            "description": "Maksimal byudjet (butun so‘m, kamida 50 000)",
+            "minimum": 50000,
+            "maximum": 10000000000
+          },
+          "skillsRequired": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screeningQuestions": {
+            "description": "Maksimal 3 ta savol",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "deadline": {
+            "type": "string"
+          },
+          "attachedImages": {
+            "description": "Ixtiyoriy ilova qilingan rasmlar/fayllar",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "title",
+          "description",
+          "budgetMin",
+          "budgetMax"
         ]
       }
     }

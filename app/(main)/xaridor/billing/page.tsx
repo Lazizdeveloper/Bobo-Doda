@@ -127,7 +127,7 @@ export default function XarajatlarPage() {
               <p className="text-2xs font-medium uppercase tracking-wide text-faint">
                 {t("spend.inEscrow")}
               </p>
-              <p className="mt-2 font-heading text-xl font-bold text-accent">
+              <p className="mt-2 font-heading text-xl font-bold text-ink">
                 {formatMoney(totalEscrow, lang)}
               </p>
               <p className="mt-1 text-2xs text-faint">{t("spend.escrowHint")}</p>

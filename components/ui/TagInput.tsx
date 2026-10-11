@@ -24,7 +24,7 @@ export function TagInput({
 
   function addTag() {
     const tag = draft.trim();
-    if (!tag || value.includes(tag) || value.length >= max) return;
+    if (!tag || value.some((v) => v.toLowerCase() === tag.toLowerCase()) || value.length >= max) return;
     onChange([...value, tag]);
     setDraft("");
   }

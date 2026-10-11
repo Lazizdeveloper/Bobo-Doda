@@ -94,7 +94,7 @@ export default function ProfilPage() {
   }));
 
   const stats = [
-    { label: t("profile.statRating"), value: profile.rating.toFixed(1) },
+    { label: t("profile.statRating"), value: profile.reviewCount > 0 ? profile.rating.toFixed(1) : "—" },
     { label: t("profile.statCompleted"), value: String(profile.completedContracts) },
     {
       label: t("profile.statResponse"),

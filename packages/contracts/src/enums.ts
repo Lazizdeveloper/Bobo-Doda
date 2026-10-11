@@ -129,6 +129,13 @@ export const ServiceStatus = {
 export type ServiceStatus = (typeof ServiceStatus)[keyof typeof ServiceStatus];
 export const ServiceStatusValues = ['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'PAUSED', 'ARCHIVED'] as const;
 
+export const JobStatus = {
+  OPEN: 'OPEN',
+  CLOSED: 'CLOSED',
+} as const;
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
+export const JobStatusValues = ['OPEN', 'CLOSED'] as const;
+
 export const ContractStatus = {
   PENDING_SELLER: 'PENDING_SELLER',
   ACTIVE: 'ACTIVE',

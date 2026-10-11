@@ -39,7 +39,7 @@ import {
   roleToUz,
 } from "./mappers";
 import type * as Model from "@/lib/types";
-import { detectCardType, cardExpiry } from "@/lib/validate";
+import { detectCardType, cardExpiry, MIN_JOB_BUDGET } from "@/lib/validate";
 import { seedJobs, seedProfiles, seedReviews, seedServices, seedUsers } from "@/lib/mock-api/seed";
 import {
   getMessages,
@@ -139,14 +139,48 @@ function idBySlug(categories: RealCategory[], slug: string): string | undefined 
 async function hydrateContract(c: RealContract, role: Model.UserRole | null): Promise<Model.Contract> {
   let funded = false;
   let fundedAt: string | undefined;
+  let buyerName: string | undefined;
+
+  if (typeof window !== "undefined") {
+    try {
+      const foundSeed = seedUsers.find((u) => u.id === c.buyerId);
+      if (foundSeed) buyerName = foundSeed.fullName;
+      else {
+        const stored = localStorage.getItem(`bbd_buyer_profile_${c.buyerId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.companyName || parsed.fullName) buyerName = parsed.companyName || parsed.fullName;
+        }
+      }
+    } catch {}
+  }
+
   if (role === "mutaxassis") {
-    funded = c.milestones.some((m) => m.status !== "PENDING");
-    /* `mapContract` `funded=true` bo'lganda `fundedAt` YO'Q bo'lsa uni
-       yana `undefined`ga qaytaradi (pastga qarang) — shuning uchun bu
-       yerda albatta bir qiymat berish SHART, aks holda UI hech qachon
-       "mablag'langan" holatini ko'rsatmaydi. Aniq vaqt yo'q — kontrakt
-       oxirgi yangilangan payti bilan taxminlanadi. */
-    fundedAt = funded ? c.updatedAt : undefined;
+    if (typeof window !== "undefined") {
+      try {
+        const customContracts = JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]");
+        const match = customContracts.find((x: Model.Contract) => x.id === c.id);
+        if (match?.fundedAt) {
+          funded = true;
+          fundedAt = match.fundedAt;
+        }
+        if (!funded) {
+          const customPayments = JSON.parse(localStorage.getItem("bbd_custom_payments") || "[]");
+          const pMatch = customPayments.find((p: PaymentDTO) => p.contractId === c.id && p.status === "SUCCEEDED");
+          if (pMatch) {
+            funded = true;
+            fundedAt = pMatch.createdAt;
+          }
+        }
+      } catch {}
+    }
+    if (!funded) {
+      const hasWorkProgression = c.milestones.some((m) => m.status === "APPROVED");
+      if (hasWorkProgression) {
+        funded = true;
+        fundedAt = c.updatedAt;
+      }
+    }
   } else {
     try {
       const page = await http<Page<RealPayment>>(`/me/payments${toQuery({ contractId: c.id, perPage: 5 })}`);
@@ -157,7 +191,7 @@ async function hydrateContract(c: RealContract, role: Model.UserRole | null): Pr
       /* xaridor bo'lmasa yoki so'rov muvaffaqiyatsiz bo'lsa — unfunded deb qoladi */
     }
   }
-  return mapContract(c, { funded, fundedAt });
+  return mapContract(c, { funded, fundedAt, buyerName });
 }
 
 /* ==========================================================================
@@ -254,8 +288,10 @@ export const authService: AuthService = {
       }
     }),
   refresh: () => call(refreshSession),
-  logout: () => {
-    void http("/auth/logout", { method: "POST" }, false).catch(() => {});
+  logout: async () => {
+    try {
+      await http("/auth/logout", { method: "POST" }, false);
+    } catch {}
     setAccessToken(null);
     sessionStore.clear();
   },
@@ -434,10 +470,10 @@ function fallbackSellerProfile(userId: string): Model.SellerProfile {
     languages: [{ name: "O'zbek", level: "native" }],
     responseTimeHours: 1,
     available: true,
-    rating: 5,
+    rating: 0,
     reviewCount: 0,
     completedContracts: 0,
-    badge: "ishonchli",
+    badge: "yangi",
     memberSince: "2026-01-01T00:00:00.000Z",
   };
 }
@@ -477,10 +513,10 @@ const BOOST_TEST_SPECIALISTS: Model.Specialist[] = [
       ],
       responseTimeHours: 1,
       available: true,
-      rating: 5.0,
-      reviewCount: 12,
-      completedContracts: 15,
-      badge: "top_mutaxassis",
+      rating: 0,
+      reviewCount: 0,
+      completedContracts: 0,
+      badge: "yangi",
       memberSince: "2026-10-08T11:21:58.946Z",
     },
   },
@@ -1196,6 +1232,26 @@ export const jobsService: JobsService = {
     }),
   create: (input) =>
     call(async () => {
+      const min = Number(input.budgetMin);
+      const max = Number(input.budgetMax);
+      if (!min || Number.isNaN(min) || min < MIN_JOB_BUDGET) {
+        throw new ApiError({
+          code: "VALIDATION",
+          status: 400,
+          message: `Minimal byudjet kamida ${MIN_JOB_BUDGET} so'm bo'lishi kerak`,
+          retryable: false,
+          fieldErrors: { budgetMin: `Minimal byudjet kamida ${MIN_JOB_BUDGET} so'm bo'lishi kerak` },
+        });
+      }
+      if (!max || Number.isNaN(max) || max < min) {
+        throw new ApiError({
+          code: "VALIDATION",
+          status: 400,
+          message: "Minimal byudjet maksimal byudjetdan katta bo'lishi mumkin emas",
+          retryable: false,
+          fieldErrors: { budgetMin: "Minimal byudjet maksimal byudjetdan katta bo'lishi mumkin emas" },
+        });
+      }
       let created: Model.Job | null = null;
       try {
         const dto = await http<RealJob>("/jobs", {
@@ -1204,8 +1260,8 @@ export const jobsService: JobsService = {
             title: input.title,
             description: input.description,
             category: input.category,
-            budgetMin: input.budgetMin,
-            budgetMax: input.budgetMax,
+            budgetMin: min,
+            budgetMax: max,
             skillsRequired: input.skillsRequired,
             screeningQuestions: input.screeningQuestions,
             deadline: input.deadline,
@@ -1214,7 +1270,10 @@ export const jobsService: JobsService = {
         });
         created = mapJob(dto);
       } catch (err) {
-        if (err instanceof ApiError && (err.code === "VALIDATION" || err.status === 422)) {
+        if (
+          err instanceof ApiError &&
+          (err.status === 400 || err.status === 422 || err.code === "VALIDATION")
+        ) {
           throw err;
         }
       }
@@ -1312,6 +1371,9 @@ export const proposalsService: ProposalsService = {
     }),
   create: (input) =>
     call(async () => {
+      if (input.bidAmount < 50_000) {
+        throw new Error("MIN_BID_50000");
+      }
       const me = await http<RealMe>("/me").catch(() => null);
       const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
       const proposal: Model.Proposal = {
@@ -1408,6 +1470,46 @@ export const proposalsService: ProposalsService = {
       const job = allJobs.find((j) => j.id === foundProp?.jobId);
       const totalAmount = milestones.reduce((sum, m) => sum + m.amount, 0);
       const me = sessionStore.read();
+
+      // Real backend orqali shartnoma yaratishga urinish (agar faol xizmat mavjud bo'lsa)
+      if (foundProp?.sellerId) {
+        try {
+          const servicesPage = await http<Page<RealService>>(`/services${toQuery({ perPage: 50 })}`).catch(() => null);
+          const activeService =
+            servicesPage?.items?.find((s) => s.sellerId === foundProp?.sellerId && s.status === "ACTIVE") ||
+            servicesPage?.items?.find((s) => s.status === "ACTIVE");
+
+          if (activeService) {
+            const sumMilestones = milestones.reduce((sum, m) => sum + m.amount, 0);
+            const targetTotal = activeService.price;
+            const adaptedMilestones = milestones.map((m) => ({
+              title: m.title,
+              description: "",
+              amount: m.amount,
+              dueAt: m.dueDate ? new Date(m.dueDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString(),
+            }));
+
+            if (sumMilestones !== targetTotal && adaptedMilestones.length > 0) {
+              const diff = targetTotal - sumMilestones;
+              adaptedMilestones[adaptedMilestones.length - 1]!.amount += diff;
+            }
+
+            const deadline = new Date(Date.now() + 14 * 86400000).toISOString();
+            const realContract = await contractsService.create(
+              {
+                serviceId: activeService.id,
+                deadline,
+                milestones: adaptedMilestones,
+              },
+              `hire_${proposalId}`
+            );
+            if (realContract) {
+              return realContract;
+            }
+          }
+        } catch {}
+      }
+
       const contractId = `cnt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
       let buyerName = "Alisher Xaridor (Tech Corp)";
@@ -1432,7 +1534,7 @@ export const proposalsService: ProposalsService = {
         sellerId: foundProp?.sellerId ?? "u-1",
         sellerName,
         totalAmount,
-        status: "faol",
+        status: "imzolangan",
         createdAt: new Date().toISOString(),
         jobId: job?.id,
       };
@@ -2031,6 +2133,21 @@ export const reviewsService: ReviewsService = {
    DISPUTES — real backend oqimi.
    ========================================================================== */
 export const disputesService: DisputesService = {
+  listMine: () =>
+    call(async () => {
+      try {
+        const page = await http<Page<RealDispute>>(`/me/disputes${toQuery({ perPage: 100 })}`);
+        return page.items.map(mapDispute);
+      } catch {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("sb2_disputes");
+            if (raw) return JSON.parse(raw);
+          } catch {}
+        }
+        return [];
+      }
+    }),
   getForContract: (contractId) =>
     call(async () => {
       const page = await http<Page<RealDispute>>(`/me/disputes${toQuery({ perPage: 100 })}`);
@@ -2091,6 +2208,10 @@ export const verificationService: VerificationService = {
             APPROVED: "tasdiqlangan",
             REJECTED: "rad_etilgan",
           };
+          const descStr = typeof app.description === "string" ? app.description : "";
+          const passportMatch = descStr.match(/Pasport\/ID:\s*([^|\]]+)/);
+          const innMatch = descStr.match(/STIR\/INN:\s*([^|\]]+)/);
+          const companyMatch = descStr.match(/Yuridik:\s*([^|\]]+)/);
           return {
             userId: app.userId,
             country: "UZ",
@@ -2101,6 +2222,9 @@ export const verificationService: VerificationService = {
             status: statusMap[app.status] ?? "korib_chiqilmoqda",
             submittedAt: app.createdAt,
             rejectionReason: app.rejectionReason,
+            passportNumber: passportMatch ? passportMatch[1].trim() : undefined,
+            inn: innMatch ? innMatch[1].trim() : undefined,
+            companyDetails: companyMatch ? companyMatch[1].trim() : undefined,
           };
         }
       } catch {}
@@ -2126,6 +2250,9 @@ export const verificationService: VerificationService = {
             legalName: input.legalName,
             displayName: input.legalName,
             description: `Hujjat turi: ${input.documentType}, Davlat: ${input.country}`,
+            passportNumber: input.passportNumber,
+            inn: input.inn,
+            companyDetails: input.companyDetails,
           },
         });
       } catch {}

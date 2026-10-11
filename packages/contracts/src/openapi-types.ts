@@ -228,38 +228,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/roles/switch": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["MeController_switchRole"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MeController_listSessions"];
-        put?: never;
-        post?: never;
-        delete: operations["MeController_revokeAllSessions"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me/change-password": {
         parameters: {
             query?: never;
@@ -287,6 +255,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["MeController_revokeSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["MeController_revokeAllSessions"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1988,6 +1972,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["JobsController_list"];
+        put?: never;
+        post: operations["JobsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["JobsController_listMine"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["JobsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["JobsController_closePost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["JobsController_close"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2113,26 +2161,6 @@ export interface components {
              * @enum {string}
              */
             role: "SELLER" | "BUYER";
-        };
-        SwitchRoleDto: {
-            /**
-             * @example SELLER
-             * @enum {string}
-             */
-            role: "SELLER" | "BUYER";
-        };
-        SessionDto: {
-            id: string;
-            /** @enum {string|null} */
-            activeRole?: "SELLER" | "BUYER" | null;
-            userAgent?: Record<string, never> | null;
-            ip?: Record<string, never> | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            expiresAt: string;
-            /** @description Shu so‘rovni yuborgan tokenning o‘zi shu sessiyagami */
-            current: boolean;
         };
         ChangePasswordDto: {
             currentPassword: string;
@@ -2817,6 +2845,50 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        JobResponseDto: {
+            id: string;
+            buyerId: string;
+            buyerName: string;
+            buyerRating: number;
+            title: string;
+            description: string;
+            /** @description Kategoriya slug */
+            category: string;
+            categoryId: string;
+            /** @description Minimal byudjet (butun so‘m) */
+            budgetMin: number;
+            /** @description Maksimal byudjet (butun so‘m) */
+            budgetMax: number;
+            currency: string;
+            skillsRequired: string[];
+            screeningQuestions: string[];
+            proposalsCount: number;
+            /** @enum {string} */
+            status: "ochiq" | "yopilgan" | "OPEN" | "CLOSED";
+            postedAt: string;
+            deadline?: string | null;
+            attachedImages: string[];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateJobDto: {
+            /** @description Kategoriya slug yoki UUID */
+            category: string;
+            title: string;
+            description: string;
+            /** @description Minimal byudjet (butun so‘m, kamida 50 000) */
+            budgetMin: number;
+            /** @description Maksimal byudjet (butun so‘m, kamida 50 000) */
+            budgetMax: number;
+            skillsRequired?: string[];
+            /** @description Maksimal 3 ta savol */
+            screeningQuestions?: string[];
+            deadline?: string;
+            /** @description Ixtiyoriy ilova qilingan rasmlar/fayllar */
+            attachedImages?: string[];
+        };
     };
     responses: never;
     parameters: never;
@@ -3128,65 +3200,6 @@ export interface operations {
             };
         };
     };
-    MeController_switchRole: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SwitchRoleDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthSessionDto"];
-                };
-            };
-        };
-    };
-    MeController_listSessions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionDto"][];
-                };
-            };
-        };
-    };
-    MeController_revokeAllSessions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     MeController_changePassword: {
         parameters: {
             query?: never;
@@ -3215,6 +3228,23 @@ export interface operations {
             path: {
                 id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MeController_revokeAllSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -5779,6 +5809,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditLogResponseDto"];
+                };
+            };
+        };
+    };
+    JobsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                /** @description Kategoriya slug yoki UUID */
+                category?: string;
+                /** @description Qidiruv so‘zi */
+                q?: string;
+                /** @description Minimal byudjet */
+                budgetMin?: number;
+                /** @description Maksimal byudjet */
+                budgetMax?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    JobsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateJobDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponseDto"];
+                };
+            };
+        };
+    };
+    JobsController_listMine: {
+        parameters: {
+            query: {
+                page: string;
+                perPage: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    JobsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponseDto"];
+                };
+            };
+        };
+    };
+    JobsController_closePost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponseDto"];
+                };
+            };
+        };
+    };
+    JobsController_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobResponseDto"];
                 };
             };
         };

@@ -27,6 +27,9 @@ export function VerificationCenter() {
     useState<VerificationRecord["documentType"]>("passport");
   const [legalName, setLegalName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [passportNumber, setPassportNumber] = useState("");
+  const [inn, setInn] = useState("");
+  const [companyDetails, setCompanyDetails] = useState("");
   const [documents, setDocuments] = useState<string[]>([]);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
@@ -72,6 +75,9 @@ export function VerificationCenter() {
         legalName,
         birthDate,
         documents,
+        passportNumber: passportNumber.trim() || undefined,
+        inn: inn.trim() || undefined,
+        companyDetails: companyDetails.trim() || undefined,
       });
       setRecord(created);
       toast(t("verify.submitted"));
@@ -125,6 +131,13 @@ export function VerificationCenter() {
               >
                 {t(`verify.${record.status}`)}
               </Badge>
+              {(record.passportNumber || record.inn || record.companyDetails) && (
+                <div className="w-full border-t border-line pt-2 text-2xs text-muted flex flex-wrap gap-x-4 gap-y-1">
+                  {record.passportNumber && <span><strong className="text-ink font-medium">Pasport/ID:</strong> {record.passportNumber}</span>}
+                  {record.inn && <span><strong className="text-ink font-medium">STIR:</strong> {record.inn}</span>}
+                  {record.companyDetails && <span><strong className="text-ink font-medium">Yuridik:</strong> {record.companyDetails}</span>}
+                </div>
+              )}
               {record.rejectionReason && (
                 <p className="w-full border-t border-line pt-3 text-xs text-danger">
                   {record.rejectionReason}
@@ -189,6 +202,38 @@ export function VerificationCenter() {
                     setError("");
                   }}
                 />
+                <Input
+                  label={lang === "ru" ? "Номер паспорта / ID карты" : "Pasport yoki ID-karta raqami"}
+                  value={passportNumber}
+                  placeholder="AA1234567"
+                  maxLength={20}
+                  onChange={(event) => {
+                    setPassportNumber(event.target.value);
+                    setError("");
+                  }}
+                />
+                <Input
+                  label={lang === "ru" ? "ИНН (ПИНФЛ / СТИР)" : "STIR (INN) yoki JShShIR"}
+                  value={inn}
+                  placeholder="123456789"
+                  maxLength={14}
+                  onChange={(event) => {
+                    setInn(event.target.value);
+                    setError("");
+                  }}
+                />
+                <div className="sm:col-span-2">
+                  <Input
+                    label={lang === "ru" ? "Юридическое лицо / ИП (при наличии)" : "Yuridik shaxs yoki YTT nomi (ixtiyoriy)"}
+                    value={companyDetails}
+                    placeholder={lang === "ru" ? "ООО «Компания» или ИП Фамилия И.О." : "MChJ yoki YaTT nomi"}
+                    maxLength={100}
+                    onChange={(event) => {
+                      setCompanyDetails(event.target.value);
+                      setError("");
+                    }}
+                  />
+                </div>
               </div>
               <div className="mt-5">
                 <FileUpload

@@ -7,7 +7,8 @@ import "@fontsource/unbounded/800.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "@fontsource/jetbrains-mono/700.css";
 import "./globals.css";
-import { LanguageProvider } from "@/lib/i18n";
+import { cookies, headers } from "next/headers";
+import { LanguageProvider, type Lang } from "@/lib/i18n";
 import { ToastProvider } from "@/components/ui/Toast";
 import { OfflineSupport } from "@/components/shared/OfflineSupport";
 import { SupportModalProvider } from "@/components/shared/SupportModalProvider";
@@ -57,15 +58,26 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const headerList = await headers();
+  const headerLang = headerList.get("x-lang");
+  const cookieLang = cookieStore.get("sb_lang")?.value;
+  const initialLang: Lang =
+    headerLang === "ru" || headerLang === "en"
+      ? (headerLang as Lang)
+      : cookieLang === "ru" || cookieLang === "en"
+      ? (cookieLang as Lang)
+      : "uz";
+
   return (
-    <html lang="uz" suppressHydrationWarning>
+    <html lang={initialLang} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <LanguageProvider>
+        <LanguageProvider initialLang={initialLang}>
           <ToastProvider>
             <SupportModalProvider>
               <OfflineSupport />

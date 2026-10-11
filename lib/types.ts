@@ -7,8 +7,6 @@ export interface User {
   role: UserRole;
   avatarUrl?: string;
   createdAt: string;
-  /** MOCK: parol localStorage'da ochiq saqlanadi — real himoya faqat backend'da */
-  password?: string;
   /* Onboarding holati hisobda ham saqlanadi — login'da sessiya tiklanadi */
   roleChosen?: boolean;
   profileDone?: boolean;
@@ -223,6 +221,7 @@ export interface Contract {
   title: string;
   totalAmount: number;
   status: ContractStatus;
+  rawStatus?: "PENDING_SELLER" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "REJECTED";
   createdAt: string;
   closeRequested?: boolean;
   closeRequestNote?: string;
@@ -484,6 +483,10 @@ export interface VerificationRecord {
   /** Admin qaror qabul qilgan vaqt (tasdiqlash yoki rad etish) */
   reviewedAt?: string;
   rejectionReason?: string;
+  /** KYC/AML maydonlari */
+  passportNumber?: string;
+  inn?: string;
+  companyDetails?: string;
 }
 
 /** Yordam chiptasidagi javob (hozircha faqat support operatoridan).

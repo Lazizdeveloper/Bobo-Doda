@@ -14,5 +14,13 @@
  */
 export const API_GLOBAL_PREFIX = 'api/v1';
 
-/** Prefiksdan tashqarida qoladigan yo'llar — health check va API docs. */
-export const API_GLOBAL_PREFIX_EXCLUDE = ['health', 'health/live', 'health/ready', 'docs', 'docs-json'];
+/** Prefiksdan tashqarida qoladigan yo'llar — health check, observability va API docs. */
+export const API_GLOBAL_PREFIX_EXCLUDE = [
+  'health',
+  'health/live',
+  'health/ready',
+  'docs',
+  'docs-json',
+  'metrics',
+  'version',
+];

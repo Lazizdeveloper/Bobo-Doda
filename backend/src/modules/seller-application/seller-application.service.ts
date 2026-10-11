@@ -57,7 +57,14 @@ export class SellerApplicationService {
 
   async submit(
     userId: string,
-    input: { legalName: string; displayName: string; description?: string },
+    input: {
+      legalName: string;
+      displayName: string;
+      description?: string;
+      passportNumber?: string;
+      inn?: string;
+      companyDetails?: string;
+    },
   ): Promise<SellerApplication> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (user.sellerStatus === 'APPROVED') {
@@ -67,6 +74,22 @@ export class SellerApplicationService {
       throw new DomainError('BAD_STATE', 'Sotuvchi huquqingiz to‘xtatilgan — staff bilan bog‘laning');
     }
 
+    const kycMeta: string[] = [];
+    if (input.passportNumber) {
+      kycMeta.push(`Pasport/ID: ${input.passportNumber}`);
+    }
+    if (input.inn) {
+      kycMeta.push(`STIR/INN: ${input.inn}`);
+    }
+    if (input.companyDetails) {
+      kycMeta.push(`Yuridik: ${input.companyDetails}`);
+    }
+
+    const mergedDescription = [
+      input.description?.trim(),
+      kycMeta.length > 0 ? `[KYC/AML: ${kycMeta.join(' | ')}]` : undefined,
+    ].filter(Boolean).join('\n') || null;
+
     try {
       const [application] = await this.prisma.$transaction([
         this.prisma.sellerApplication.create({
@@ -75,7 +98,7 @@ export class SellerApplicationService {
             userId,
             legalName: input.legalName,
             displayName: input.displayName,
-            description: input.description,
+            description: mergedDescription,
           },
         }),
         this.prisma.user.update({ where: { id: userId }, data: { sellerStatus: 'PENDING' } }),
@@ -85,7 +108,12 @@ export class SellerApplicationService {
         action: 'SELLER_APPLICATION_SUBMITTED',
         resourceType: 'SELLER_APPLICATION',
         resourceId: application.id,
-        newState: { status: 'PENDING' },
+        newState: {
+          status: 'PENDING',
+          passportNumber: input.passportNumber,
+          inn: input.inn,
+          companyDetails: input.companyDetails,
+        },
       });
       return application;
     } catch (err) {

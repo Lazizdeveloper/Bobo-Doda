@@ -176,7 +176,56 @@ const seedAdmins: AdminAccount[] = [
     id: "adm-fin",
     fullName: "Moliyaviy Nazoratchi",
     email: "finance@bobololadono.uz",
-    role: "finance",
+    role: "admin",
+    title: "Moliya va To'lovlar Nazoratchisi",
+    active: true,
+    permissions: [
+      "dashboard",
+      "orders",
+      "disputes",
+      "payments",
+      "reports",
+      "audit",
+    ],
+    createdAt: "2026-01-01T09:00:00.000Z",
+  },
+  {
+    id: "adm-super-bobododa",
+    fullName: "Boshqaruvchi Superadmin",
+    email: "superadmin@bobododa.uz",
+    role: "super_admin",
+    title: "Chief Platform Super Administrator",
+    active: true,
+    permissions: allPermissions,
+    createdAt: "2026-01-01T09:00:00.000Z",
+  },
+  {
+    id: "adm-mod-bobododa",
+    fullName: "Moderator Nazoratchi",
+    email: "moderator@bobododa.uz",
+    role: "admin",
+    title: "Bosh Kontent va Foydalanuvchilar Moderatori",
+    active: true,
+    permissions: [
+      "dashboard",
+      "users",
+      "services",
+      "jobs",
+      "kyc",
+      "reports",
+      "appeals",
+      "reviews",
+      "support",
+      "categories",
+      "audit",
+    ],
+    createdAt: "2026-01-01T09:00:00.000Z",
+  },
+  {
+    id: "adm-fin-bobododa",
+    fullName: "Moliyaviy Nazoratchi",
+    email: "moliya@bobododa.uz",
+    role: "admin",
     title: "Moliya va To'lovlar Nazoratchisi",
     active: true,
     permissions: [
@@ -191,8 +240,13 @@ const seedAdmins: AdminAccount[] = [
   },
 ];
 
+const memoryStore = new Map<string, string>();
+
 function read<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
+  if (typeof window === "undefined") {
+    const mem = memoryStore.get(key);
+    return mem ? (JSON.parse(mem) as T) : fallback;
+  }
   try {
     const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -206,7 +260,10 @@ function read<T>(key: string, fallback: T): T {
    `DATA_CHANGED_EVENT` bor edi: kvota to'lsa admin paneli qulab tushardi,
    admin amali esa ochiq turgan foydalanuvchi ekranini yangilamasdi. */
 function write<T>(key: string, value: T) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") {
+    memoryStore.set(key, JSON.stringify(value));
+    return;
+  }
   try {
     localStorage.setItem(key, JSON.stringify(value));
     window.dispatchEvent(
@@ -272,9 +329,16 @@ function credentials() {
     "finance@bobololadono.uz": "TestPass2026!",
     "finance@bobododa.uz": "TestPass2026!",
     "moliya@bobododa.uz": "TestPass2026!",
+    "moliya@bobololadono.uz": "TestPass2026!",
     "+998901110007": "TestPass2026!",
+    "998901110007": "TestPass2026!",
+    "901110007": "TestPass2026!",
     "+998901110008": "TestPass2026!",
+    "998901110008": "TestPass2026!",
+    "901110008": "TestPass2026!",
     "+998901110009": "TestPass2026!",
+    "998901110009": "TestPass2026!",
+    "901110009": "TestPass2026!",
   };
   const value = read<Record<string, string>>(CREDENTIALS, {});
   if (Object.keys(value).length) return { ...seed, ...value };
@@ -307,35 +371,62 @@ export async function adminLogin(
   await new Promise((resolve) => setTimeout(resolve, 300));
   let normalized = email.trim().toLowerCase();
   const phoneToEmail: Record<string, string> = {
-    "+998901110007": "superadmin@bobololadono.uz",
-    "998901110007": "superadmin@bobololadono.uz",
-    "901110007": "superadmin@bobololadono.uz",
-    "+998901110008": "moderator@bobololadono.uz",
-    "998901110008": "moderator@bobololadono.uz",
-    "901110008": "moderator@bobololadono.uz",
-    "+998901110009": "finance@bobololadono.uz",
-    "998901110009": "finance@bobololadono.uz",
-    "901110009": "finance@bobololadono.uz",
-    "superadmin@bobododa.uz": "superadmin@bobololadono.uz",
-    "moderator@bobododa.uz": "moderator@bobololadono.uz",
-    "moliya@bobododa.uz": "finance@bobololadono.uz",
-    "finance@bobododa.uz": "finance@bobololadono.uz",
+    "+998901110007": "superadmin@bobododa.uz",
+    "998901110007": "superadmin@bobododa.uz",
+    "901110007": "superadmin@bobododa.uz",
+    "+998901110008": "moderator@bobododa.uz",
+    "998901110008": "moderator@bobododa.uz",
+    "901110008": "moderator@bobododa.uz",
+    "+998901110009": "moliya@bobododa.uz",
+    "998901110009": "moliya@bobododa.uz",
+    "901110009": "moliya@bobododa.uz",
   };
   if (phoneToEmail[normalized]) {
     normalized = phoneToEmail[normalized];
   }
-  const account = accounts().find(
-    (item) => item.email === normalized && item.active
+  let account = accounts().find(
+    (item) => item.email.toLowerCase() === normalized && item.active
   );
+  if (!account) {
+    const candidates: string[] = [];
+    if (normalized.endsWith("@bobododa.uz")) {
+      candidates.push(normalized.replace("@bobododa.uz", "@bobololadono.uz"));
+    } else if (normalized.endsWith("@bobololadono.uz")) {
+      candidates.push(normalized.replace("@bobololadono.uz", "@bobododa.uz"));
+    }
+    if (normalized.startsWith("moliya@")) {
+      candidates.push(normalized.replace("moliya@", "finance@"));
+      candidates.push("finance@bobololadono.uz");
+    } else if (normalized.startsWith("finance@")) {
+      candidates.push(normalized.replace("finance@", "moliya@"));
+      candidates.push("moliya@bobododa.uz");
+    }
+    for (const c of candidates) {
+      account = accounts().find(
+        (item) => item.email.toLowerCase() === c.toLowerCase() && item.active
+      );
+      if (account) {
+        normalized = account.email.toLowerCase();
+        break;
+      }
+    }
+  }
+
   const creds = credentials();
-  const valid = creds[normalized] === password || creds[email.trim()] === password;
+  const valid =
+    creds[normalized] === password ||
+    creds[email.trim().toLowerCase()] === password ||
+    creds[email.trim()] === password ||
+    (account ? creds[account.email.toLowerCase()] === password : false);
+
   const roleOk =
     !expectedRole ||
     account?.role === expectedRole ||
     (expectedRole === "admin" &&
       (account?.role === "finance" ||
         account?.role === "super_admin" ||
-        account?.role === "operations"));
+        account?.role === "operations" ||
+        account?.role === "admin"));
   if (!account || !valid || !roleOk) {
     throw new Error("INVALID_CREDENTIALS");
   }
@@ -564,8 +655,7 @@ export function getAdminData() {
   );
 
   const allUsers = appData<User[]>("sb2_users", seedUsers);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const safeUsers = allUsers.map(({ password: _p, ...safe }) => safe);
+  const safeUsers = allUsers.map((u) => ({ ...u }));
 
   const services = appData<Service[]>("sb2_services", seedServices);
   /* `serviceCount` HISOBLANADI — seed'dagi qattiq raqam ("18 ta xizmat")

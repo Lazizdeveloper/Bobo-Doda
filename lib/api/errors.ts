@@ -100,6 +100,7 @@ const LEGACY_CODES: Record<string, Pick<ApiErrorShape, "code" | "status" | "retr
   SELLER_APPLICATION_ALREADY_PENDING: { code: "CONFLICT", status: 409, retryable: false },
   CATEGORY_SLUG_EXISTS: { code: "CONFLICT", status: 409, retryable: false },
   PAYMENT_ALREADY_SUCCEEDED: { code: "CONFLICT", status: 409, retryable: false },
+  PAYMENT_ALREADY_IN_PROGRESS: { code: "CONFLICT", status: 409, retryable: false },
   PAYMENT_INVALID_STATE: { code: "CONFLICT", status: 409, retryable: false },
   PAYMENT_WEBHOOK_CONFLICT: { code: "CONFLICT", status: 409, retryable: false },
   REFUND_ALREADY_SUCCEEDED: { code: "CONFLICT", status: 409, retryable: false },

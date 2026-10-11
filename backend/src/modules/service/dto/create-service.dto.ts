@@ -20,9 +20,9 @@ export class CreateServiceDto {
   @MaxLength(5000, { message: 'Tavsif ko‘pi bilan 5000 ta belgidan oshmasligi kerak' })
   description!: string;
 
-  @ApiProperty({ description: 'Butun so‘m', minimum: 1, maximum: MAX_SOM })
+  @ApiProperty({ description: 'Butun so‘m', minimum: 50_000, maximum: MAX_SOM })
   @IsInt({ message: 'Narx butun son bo‘lishi kerak' })
-  @Min(1, { message: 'Narx kamida 1 so‘m bo‘lishi kerak' })
+  @Min(50_000, { message: 'Narx kamida 50 000 so‘m bo‘lishi kerak' })
   @Max(MAX_SOM, { message: 'Narx 10 mlrd so‘mdan oshmasligi kerak' })
   price!: number;
 

@@ -40,7 +40,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       en: "What is Bobololadono?",
     },
     a: {
-      uz: "Bobololadono — Markaziy Osiyo uchun bosqichli to'lov kafolati (eskrou) bilan ishlaydigan ish bozori. Xaridorlar loyiha joylashtiradi yoki mutaxassis topadi, mutaxassislar esa ish topadi va pulini xavfsiz oladi.",
+      uz: "Bobololadono — Markaziy Osiyo uchun bosqichli to'lov kafolati (Escrow) bilan ishlaydigan ish bozori. Xaridorlar loyiha joylashtiradi yoki mutaxassis topadi, mutaxassislar esa ish topadi va pulini xavfsiz oladi.",
       ru: "Bobololadono — биржа труда для Центральной Азии с поэтапной гарантией оплаты (эскроу). Клиенты размещают проекты или находят специалистов, а специалисты находят работу и безопасно получают оплату.",
       en: "Bobololadono is a job marketplace for Central Asia with milestone escrow protection. Clients post projects or find specialists, and specialists find work and get paid safely.",
     },

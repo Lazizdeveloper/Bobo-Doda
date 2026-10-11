@@ -40,7 +40,7 @@ export interface PlatformSettingsValues {
 }
 
 export const PLATFORM_SETTING_DEFAULTS: PlatformSettingsValues = {
-  platformCommissionPercent: 10,
+  platformCommissionPercent: 5,
   escrowAutoReleaseDays: 3,
   minPayoutAmount: 50_000,
   instantOffersEnabled: true,

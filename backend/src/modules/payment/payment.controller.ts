@@ -70,4 +70,20 @@ export class PaymentController {
     );
     return body;
   }
+
+  @Post('simulate-success')
+  @HttpCode(200)
+  @ApiOkResponse({ type: PaymentResponseDto })
+  async simulateSuccess(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('contractId') contractId: string,
+  ): Promise<PaymentResponseDto> {
+    const existing = await this.payments.listForBuyer(user.sub, 1, 1, undefined, contractId);
+    const target = existing.items[0];
+    if (!target) {
+      throw new DomainError('PAYMENT_NOT_FOUND', 'Bu shartnoma uchun to‘lov topilmadi');
+    }
+    const payment = await this.payments.simulateSuccessForTest(target.id, user.sub);
+    return toPaymentResponseDto(payment);
+  }
 }

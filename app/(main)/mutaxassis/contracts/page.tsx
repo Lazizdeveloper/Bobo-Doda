@@ -47,8 +47,15 @@ export default function ShartnomalarPage() {
     return `${done}/${list.length}`;
   }
 
+  function getEffectiveStatus(c: Contract): ContractStatus {
+    if ((c.status === "faol" || c.status === "imzolangan") && !c.fundedAt) {
+      return "imzolangan";
+    }
+    return c.status;
+  }
+
   const filtered =
-    contracts?.filter((c) => filter === "all" || c.status === filter) ?? [];
+    contracts?.filter((c) => filter === "all" || getEffectiveStatus(c) === filter) ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,7 +71,7 @@ export default function ShartnomalarPage() {
           ...STATUSES.map((status) => ({
             value: status,
             label: t(`cstatus.${status}`),
-            count: contracts?.filter((c) => c.status === status).length,
+            count: contracts?.filter((c) => getEffectiveStatus(c) === status).length,
           })),
         ]}
       />
@@ -136,7 +143,7 @@ export default function ShartnomalarPage() {
             {
               key: "status",
               header: t("contracts.colStatus"),
-              render: (c) => <ContractStatusBadge status={c.status} />,
+              render: (c) => <ContractStatusBadge status={getEffectiveStatus(c)} />,
             },
           ]}
           renderMobileCard={(c) => (
@@ -146,7 +153,7 @@ export default function ShartnomalarPage() {
                   <Avatar name={c.buyerName} size="sm" />
                   <span className="text-sm font-medium text-ink">{c.buyerName}</span>
                 </span>
-                <ContractStatusBadge status={c.status} />
+                <ContractStatusBadge status={getEffectiveStatus(c)} />
               </div>
               <p className="truncate text-xs text-muted">{c.title}</p>
               <div className="flex items-center justify-between text-xs">

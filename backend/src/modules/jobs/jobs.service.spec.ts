@@ -71,6 +71,18 @@ describe('JobsService', () => {
       expect(prisma.job?.create).toHaveBeenCalled();
     });
 
+    it('throws INVALID_AMOUNT when budgetMin < 50_000', async () => {
+      await expect(
+        service.create('01925b6a-8888-7000-8000-000000000002', {
+          title: 'Veb-sayt yaratish kerak',
+          description: 'Biznesimiz uchun zamonaviy landing page kerak',
+          category: 'dasturlash',
+          budgetMin: 10,
+          budgetMax: 2_000_000,
+        }),
+      ).rejects.toThrow(DomainError);
+    });
+
     it('throws INVALID_AMOUNT when budgetMin > budgetMax', async () => {
       await expect(
         service.create('01925b6a-8888-7000-8000-000000000002', {

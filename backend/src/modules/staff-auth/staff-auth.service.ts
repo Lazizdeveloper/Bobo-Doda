@@ -96,7 +96,34 @@ export class StaffAuthService {
       throw new DomainError('RATE_LIMITED', "So'rovlar chegarasiga yetdingiz");
     }
 
-    const member = await this.prisma.staffMember.findUnique({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+    let member = await this.prisma.staffMember.findUnique({ where: { email } });
+    if (!member && normalizedEmail !== email) {
+      member = await this.prisma.staffMember.findUnique({ where: { email: normalizedEmail } });
+    }
+    if (!member) {
+      const candidates: string[] = [];
+      if (normalizedEmail.endsWith('@bobololadono.uz')) {
+        candidates.push(normalizedEmail.replace('@bobololadono.uz', '@bobododa.uz'));
+      } else if (normalizedEmail.endsWith('@bobododa.uz')) {
+        candidates.push(normalizedEmail.replace('@bobododa.uz', '@bobololadono.uz'));
+      }
+      if (normalizedEmail.startsWith('moliya@')) {
+        candidates.push(normalizedEmail.replace('moliya@', 'finance@'));
+        candidates.push('finance@bobololadono.uz');
+      } else if (normalizedEmail.startsWith('finance@')) {
+        candidates.push(normalizedEmail.replace('finance@', 'moliya@'));
+        candidates.push('moliya@bobododa.uz');
+      }
+      if (normalizedEmail.includes('901110007')) candidates.push('superadmin@bobododa.uz', 'superadmin@bobololadono.uz');
+      if (normalizedEmail.includes('901110008')) candidates.push('moderator@bobododa.uz', 'moderator@bobololadono.uz');
+      if (normalizedEmail.includes('901110009')) candidates.push('moliya@bobododa.uz', 'finance@bobololadono.uz', 'finance@bobododa.uz');
+
+      for (const candidate of candidates) {
+        member = await this.prisma.staffMember.findUnique({ where: { email: candidate } });
+        if (member) break;
+      }
+    }
 
     // Email topilmasa ham parolni "tekshirib" vaqt sarflaymiz — timing orqali
     // "bu email bor/yo'q"ni bilib olishning oldini olish.

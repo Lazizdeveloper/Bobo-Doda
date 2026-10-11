@@ -20,7 +20,7 @@ const { readFileSync } = require("fs");
 
 const OPENAPI_PATH = path.join(__dirname, "..", "packages", "contracts", "openapi.json");
 const REQUIRED_PREFIX = "/api/v1";
-const EXEMPT_PATHS = new Set(["/health/live", "/health/ready"]);
+const EXEMPT_PATHS = new Set(["/health/live", "/health/ready", "/metrics", "/version"]);
 
 function main() {
   const doc = JSON.parse(readFileSync(OPENAPI_PATH, "utf8"));

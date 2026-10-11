@@ -115,7 +115,7 @@ export interface AuthService {
    * ekran o'zi token boshqarishi kerak bo'lardi.
    */
   refresh(): Promise<Model.Session | null>;
-  logout(): void;
+  logout(): Promise<void> | void;
 }
 
 export interface UsersService {
@@ -437,6 +437,7 @@ export interface ReviewsService {
 }
 
 export interface DisputesService {
+  listMine(): Promise<Model.Dispute[]>;
   getForContract(contractId: string): Promise<Model.Dispute | null>;
   open(
     contractId: string,

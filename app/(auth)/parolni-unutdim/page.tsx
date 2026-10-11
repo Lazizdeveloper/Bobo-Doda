@@ -25,6 +25,15 @@ export default function ParolniUnutdimPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    const titles: Record<string, string> = {
+      uz: "Parolni tiklash — Bobololadono",
+      ru: "Восстановление пароля — Bobololadono",
+      en: "Reset Password — Bobololadono",
+    };
+    document.title = titles[t("common.lang") || "uz"] || titles.uz;
+  }, [t]);
+
+  useEffect(() => {
     let active = true;
 
     async function checkAuth() {
@@ -114,7 +123,13 @@ export default function ParolniUnutdimPage() {
             if (error) setError("");
           }}
         />
-        <Button type="submit" size="lg" loading={loading} className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl">
+        <Button
+          type="submit"
+          size="lg"
+          loading={loading}
+          disabled={loading || !phoneValid}
+          className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl"
+        >
           {t("auth.sendCode")}
         </Button>
       </form>

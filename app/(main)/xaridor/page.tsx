@@ -73,7 +73,7 @@ export default function XaridorDashboardPage() {
 
   const loading = !contracts || !milestones || !jobs || proposals === null;
 
-  const activeContracts = contracts?.filter((c) => c.status === "faol") || [];
+  const activeContracts = contracts?.filter((c) => c.status === "faol" && !!c.fundedAt) || [];
   const openJobs = jobs?.filter((j) => j.status === "ochiq") || [];
   const contractById = new Map(contracts?.map((c) => [c.id, c]));
 
@@ -304,7 +304,7 @@ export default function XaridorDashboardPage() {
                     <Card hoverable padding="md" className="flex flex-col gap-2">
                       <div className="flex justify-between items-start gap-2">
                         <h3 className="font-bold text-ink text-sm line-clamp-1">{contract.title}</h3>
-                        <ContractStatusBadge status={contract.status} />
+                        <ContractStatusBadge status={contract.fundedAt ? contract.status : "imzolangan"} />
                       </div>
                       <div className="flex items-center justify-between text-2xs text-muted pt-1 border-t border-line/60">
                         <span>Mutaxassis: <strong className="text-ink font-semibold">{contract.sellerName}</strong></span>

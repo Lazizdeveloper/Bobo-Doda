@@ -437,7 +437,7 @@ export function ContractDocumentModal({
               </p>
             </div>
           </div>
-          <div className="font-mono text-3xs font-semibold text-accent">
+          <div className="font-mono text-3xs font-semibold text-accent-deep">
             REG: BD-UZ-{contractNo}
           </div>
         </div>

@@ -42,7 +42,7 @@ export function Tabs({ items, value, onChange, size = "md" }: TabsProps) {
       ref={listRef}
       role="tablist"
       onKeyDown={onKeyDown}
-      className="flex gap-1 overflow-x-auto border-b border-line"
+      className="flex gap-1 overflow-x-auto border-b border-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {items.map((item) => {
         const active = item.value === value;

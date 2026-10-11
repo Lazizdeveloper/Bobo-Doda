@@ -89,7 +89,7 @@ export default function XaridorWorkroomPage() {
      "To'lash" tugmasini DARHOL ko'rishi kerak — kuzatishni "processing"
      bilan optimistik boshlash uni 2 daqiqaga yashirib qo'yardi. */
   useEffect(() => {
-    if (!contract || contract.status !== "faol" || contract.fundedAt) return;
+    if (!contract || (contract.status !== "faol" && contract.status !== "imzolangan") || contract.fundedAt) return;
     let cancelled = false;
     paymentsService
       .getContractPayment(contract.id)
@@ -257,7 +257,9 @@ export default function XaridorWorkroomPage() {
 
   const funded = !!contract.fundedAt;
   const actionable = contract.status === "faol" && funded;
-  const canCancel = contract.status === "imzolangan";
+  const canCancel =
+    contract.rawStatus === "PENDING_SELLER" ||
+    (!contract.sellerAcceptedAt && contract.status === "imzolangan" && !contract.rawStatus);
   const disputeOpen = !!dispute && dispute.status !== "hal_qilindi";
 
   return (
@@ -276,7 +278,7 @@ export default function XaridorWorkroomPage() {
               <p className="text-xs text-muted">{contract.sellerName}</p>
               <h1 className="mt-0.5 font-heading text-xl font-bold text-ink">{contract.title}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <ContractStatusBadge status={contract.status} />
+                <ContractStatusBadge status={funded ? contract.status : "imzolangan"} />
                 <span suppressHydrationWarning className="text-2xs text-faint">{formatDate(contract.createdAt, lang)}</span>
               </div>
             </div>
@@ -287,15 +289,8 @@ export default function XaridorWorkroomPage() {
           </div>
         </div>
 
-        {/* Sotuvchi javobini kutish */}
-        {contract.status === "imzolangan" && (
-          <div className="mt-4 rounded-xl border border-line bg-surface p-4 text-xs text-muted">
-            {t("contract.awaitingSellerDecision")}
-          </div>
-        )}
-
-        {/* To'lov kerak */}
-        {contract.status === "faol" && !funded && paymentState === "idle" && (
+        {/* To'lov kerak (hali mablag'lanmagan) */}
+        {!funded && contract.status !== "bekor_qilingan" && contract.status !== "yakunlangan" && contract.status !== "nizo" && paymentState === "idle" && (
           <Card padding="lg" className="mt-4 border-warning/30 bg-warning/5">
             <h3 className="font-heading text-sm font-bold text-ink">{t("cfund.awaitingTitle")}</h3>
             <p className="mt-1 text-xs text-muted">{t("cfund.awaitingDesc")}</p>
@@ -305,7 +300,7 @@ export default function XaridorWorkroomPage() {
           </Card>
         )}
 
-        {contract.status === "faol" && !funded && paymentState === "disabled" && (
+        {!funded && paymentState === "disabled" && (
           <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-4 text-xs text-warning-deep">
             <p className="font-semibold text-ink text-sm mb-1">{t("cfund.paymentsDisabled")}</p>
             <p className="text-muted leading-relaxed">
@@ -314,7 +309,7 @@ export default function XaridorWorkroomPage() {
           </div>
         )}
 
-        {contract.status === "faol" && !funded && paymentState === "processing" && (
+        {!funded && paymentState === "processing" && (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-info/30 bg-info/10 p-4 text-xs text-info-deep">
             <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-info" />
             {t("payment.processing")}

@@ -44,10 +44,13 @@ async function bootstrap(): Promise<void> {
   // 400 Bad Request, preflight OPTIONS) to'liq CORS header'lari bilan qaytadi.
   app.enableCors(buildStaffAwareCorsDelegate(config, `/${API_GLOBAL_PREFIX}/staff`));
 
-  // Xavfsizlik header'lari (X-Frame-Options, HSTS va h.k.). HSTS faqat
-  // haqiqiy HTTPS deployment orqasida mazmunli — reverse proxy/CDN TLS
-  // terminatsiya qiladi (RUNBOOK production readiness bo'limi).
-  app.use(helmet());
+  // Xavfsizlik header'lari (X-Frame-Options, HSTS, X-Content-Type-Options va h.k.).
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   // Refresh token cookie'lari (`auth`/`staff-auth`) — httpOnly, `req.cookies`
   // orqali o'qiladi.
   app.use(cookieParser());

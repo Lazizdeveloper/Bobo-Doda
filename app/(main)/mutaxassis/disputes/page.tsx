@@ -1,5 +1,5 @@
-import { HelpCenter } from "@/components/shared/HelpCenter";
+import { DisputesManager } from "@/components/shared/DisputesManager";
 
 export default function Page() {
-  return <HelpCenter />;
+  return <DisputesManager role="mutaxassis" />;
 }

@@ -1,18 +1,16 @@
 import type { MetadataRoute } from "next";
 
 /**
- * Domen bo'linishi (2026-09) — bitta kod, ikki rol. Vercel'da (landing,
- * `process.env.VERCEL === "1"`) ochiq sahifalar qidiruvga ruxsat etiladi.
- * Railway'da (haqiqiy, autentifikatsiyalangan ilova — app.bobololadono.uz)
- * indekslashning hech qanday ma'nosi yo'q (kabinet sahifalari login talab
- * qiladi), shuning uchun butunlay yopiladi.
+ * Bobololadono qidiruv tizimlari (Google, Yandex va h.k.) uchun robots.txt.
+ * Ochiq sahifalar indekslanadi, sitemap havolasi beriladi.
  */
 export default function robots(): MetadataRoute.Robots {
-  if (process.env.VERCEL !== "1") {
-    return { rules: { userAgent: "*", disallow: "/" } };
-  }
   return {
-    rules: { userAgent: "*", allow: "/" },
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/admin/", "/rahbariyat/", "/api/"],
+    },
     sitemap: "https://bobololadono.uz/sitemap.xml",
   };
 }

@@ -77,14 +77,28 @@ export function PageFeedbackWidget() {
     }
   }
 
+  const isBottomActionPage =
+    pathname.includes("/my-jobs/yangi") ||
+    pathname.includes("/services/yangi") ||
+    pathname.includes("/settings/royxat") ||
+    pathname.includes("/taklif") ||
+    pathname.includes("/billing") ||
+    pathname.includes("/contracts/");
+
   return (
     <>
-      {/* SUZIB TURUVCHI TUGMA: Hamma sahifada bir xil, o'zining qulay joyida */}
-      <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+      {/* SUZIB TURUVCHI TUGMA: O'ng pastki burchakda (pastki-o'ngda "Keyingisi" kabi amallari bor sahifalarda esa chap burchakda) */}
+      <div
+        className={`fixed bottom-20 z-40 sm:bottom-6 transition-all duration-200 ${
+          isBottomActionPage
+            ? "left-4 sm:left-6"
+            : "right-4 sm:right-6"
+        }`}
+      >
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-2 rounded-full border border-primary/40 bg-card/95 px-4 py-2 text-xs font-semibold text-ink shadow-md backdrop-blur-md transition-all duration-200 hover:border-primary hover:bg-primary/5 hover:shadow-lg active:scale-95 sm:text-sm cursor-pointer"
+          className="group flex items-center gap-2 rounded-full border border-primary/40 bg-card/95 px-3 py-1.5 text-xs font-semibold text-ink shadow-md backdrop-blur-md transition-all duration-200 hover:border-primary hover:bg-primary/5 hover:shadow-lg active:scale-95 sm:px-4 sm:py-2 sm:text-sm cursor-pointer"
           aria-label={t("feedback.widgetButton")}
         >
           {/* Piktogramma: chat bubble + plus */}
@@ -110,7 +124,7 @@ export function PageFeedbackWidget() {
 
       {/* PASTKI DRAWER MODAL (Bottom Sheet Drawer — Rasm bilan 1:1) */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in">
           {/* Orqa fonni bosganda yopilish */}
           <div className="fixed inset-0" onClick={() => setIsOpen(false)} aria-hidden="true" />
 

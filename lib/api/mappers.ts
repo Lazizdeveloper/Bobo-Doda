@@ -99,10 +99,10 @@ const SEED_SPECIALIST_PROFILES: Record<string, Partial<Model.SellerProfile>> = {
       },
     ],
     responseTimeHours: 1,
-    rating: 5.0,
-    reviewCount: 12,
-    completedContracts: 15,
-    badge: "top_mutaxassis",
+    rating: 0,
+    reviewCount: 0,
+    completedContracts: 0,
+    badge: "yangi",
   },
   "+998901110005": {
     headline: "Diyora Dizayner (UI/UX Pro)",
@@ -125,10 +125,10 @@ const SEED_SPECIALIST_PROFILES: Record<string, Partial<Model.SellerProfile>> = {
       },
     ],
     responseTimeHours: 2,
-    rating: 4.9,
-    reviewCount: 18,
-    completedContracts: 22,
-    badge: "top_mutaxassis",
+    rating: 0,
+    reviewCount: 0,
+    completedContracts: 0,
+    badge: "yangi",
   },
   "+998901110006": {
     headline: "Sardor Marketolog (Target & SMM)",
@@ -150,10 +150,10 @@ const SEED_SPECIALIST_PROFILES: Record<string, Partial<Model.SellerProfile>> = {
       },
     ],
     responseTimeHours: 1,
-    rating: 4.8,
-    reviewCount: 14,
-    completedContracts: 19,
-    badge: "top_mutaxassis",
+    rating: 0,
+    reviewCount: 0,
+    completedContracts: 0,
+    badge: "yangi",
   },
 };
 
@@ -198,10 +198,10 @@ export function mapSellerProfile(me: RealMe, application?: RealSellerApplication
     languages: seed?.languages ?? [{ name: "O'zbek", level: "native" }],
     portfolio: seed?.portfolio ?? [],
     responseTimeHours: seed?.responseTimeHours ?? 1,
-    rating: seed?.rating ?? 5.0,
+    rating: seed?.rating ?? 0,
     reviewCount: seed?.reviewCount ?? 0,
     completedContracts: seed?.completedContracts ?? 0,
-    badge: seed?.badge ?? "ishonchli",
+    badge: seed?.badge ?? "yangi",
     memberSince: me.createdAt,
     available: true,
     identityVerified: me.verified,
@@ -287,6 +287,14 @@ export function mapContract(
   c: RealContract,
   opts: { funded: boolean; fundedAt?: string; sellerName?: string; buyerName?: string },
 ): Model.Contract {
+  /* Agar kontrakt ACTIVE bo'lsa-yu, lekin hali mablag'lanmagan (!opts.funded) bo'lsa:
+     Bobololadono mahsulot modelida bu to'lov kutilayotgan holat ("imzolangan").
+     To'langandan keyingina "faol" bo'ladi. */
+  const status: Model.ContractStatus =
+    c.status === "ACTIVE" && !opts.funded
+      ? "imzolangan"
+      : mapContractStatus(c.status);
+
   return {
     id: c.id,
     sourceType: "xizmat",
@@ -297,11 +305,13 @@ export function mapContract(
     sellerName: opts.sellerName ?? c.sellerDisplayNameSnapshot,
     title: c.serviceTitleSnapshot,
     totalAmount: c.agreedAmount,
-    status: mapContractStatus(c.status),
+    status,
     createdAt: c.createdAt,
     paymentMethod: "payme",
     fundedAt: opts.funded ? opts.fundedAt : undefined,
     cancelReason: c.status === "REJECTED" ? "Mutaxassis taklifni rad etdi" : undefined,
+    sellerAcceptedAt: c.status !== "PENDING_SELLER" ? c.updatedAt : undefined,
+    rawStatus: c.status,
   };
 }
 

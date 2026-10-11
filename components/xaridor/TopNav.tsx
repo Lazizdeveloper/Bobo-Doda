@@ -20,8 +20,8 @@ export function TopNav({ base }: TopNavProps) {
   const [name, setName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  function handleLogout() {
-    authService.logout();
+  async function handleLogout() {
+    await authService.logout();
     router.push("/kirish");
   }
 

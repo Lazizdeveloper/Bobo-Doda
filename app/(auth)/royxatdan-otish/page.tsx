@@ -21,9 +21,19 @@ export default function RoyxatdanOtishPage() {
 
   const [phone, setPhone] = useState("+998");
   const [phoneValid, setPhoneValid] = useState(false);
+  const [agreedTerms, setAgreedTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      uz: "Ro'yxatdan o'tish — Bobololadono",
+      ru: "Регистрация — Bobololadono",
+      en: "Sign Up — Bobololadono",
+    };
+    document.title = titles[t("common.lang") || "uz"] || titles.uz;
+  }, [t]);
 
   /* Sessiya tekshiruvi: allaqachon kirgan foydalanuvchi o'z kabinetiga qaytariladi */
   useEffect(() => {
@@ -68,8 +78,9 @@ export default function RoyxatdanOtishPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!phoneValid) {
-      setError(t("auth.errPhone"));
+    if (!phoneValid || !agreedTerms) {
+      if (!phoneValid) setError(t("auth.errPhone"));
+      else if (!agreedTerms) setError(t("auth.errTerms") || "Davom etish uchun shartlarga rozilik bildiring");
       return;
     }
     setLoading(true);
@@ -129,7 +140,42 @@ export default function RoyxatdanOtishPage() {
             if (error) setError("");
           }}
         />
-        <Button type="submit" size="lg" loading={loading} className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl">
+
+        <div className="flex items-start gap-3">
+          <input
+            id="agree-terms-checkbox"
+            type="checkbox"
+            checked={agreedTerms}
+            onChange={(e) => {
+              setAgreedTerms(e.target.checked);
+              if (error) setError("");
+            }}
+            className="mt-1 h-4 w-4 rounded border-line text-primary focus:ring-primary cursor-pointer"
+          />
+          <label htmlFor="agree-terms-checkbox" className="text-xs sm:text-sm text-muted leading-relaxed cursor-pointer select-none">
+            {t("auth.agreePrefix") || "Men"}{" "}
+            <Link href="/shartlar" target="_blank" className="font-semibold text-primary-deep hover:underline">
+              {t("f_terms") || "Foydalanish shartlari"}
+            </Link>
+            {", "}
+            <Link href="/maxfiylik" target="_blank" className="font-semibold text-primary-deep hover:underline">
+              {t("f_privacy") || "Maxfiylik siyosati"}
+            </Link>
+            {" va "}
+            <Link href="/oferta" target="_blank" className="font-semibold text-primary-deep hover:underline">
+              {t("f_offer") || "Ommaviy oferta"}
+            </Link>
+            {" "}{t("auth.agreeSuffix") || "shartlariga roziman"}
+          </label>
+        </div>
+
+        <Button
+          type="submit"
+          size="lg"
+          loading={loading}
+          disabled={loading || !phoneValid || !agreedTerms}
+          className="w-full !h-14 sm:!h-16 !text-base font-bold !rounded-2xl"
+        >
           {t("auth.sendCode")}
         </Button>
       </form>

@@ -7,8 +7,9 @@ import { LangSwitch } from "@/components/shared/LangSwitch";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Button } from "@/components/ui/Button";
 import { useSupportModal } from "@/components/shared/SupportModalProvider";
-import { useT } from "@/lib/i18n";
+import { useT, type Lang } from "@/lib/i18n";
 import { FAQ_CATEGORIES, FAQ_ITEMS, type FaqCategory } from "@/lib/faq-content";
+import { searchIncludes } from "@/lib/search-utils";
 
 function FaqPageContent() {
   const { t, lang } = useT();
@@ -17,6 +18,15 @@ function FaqPageContent() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<FaqCategory | "all">("all");
   const [openSlug, setOpenSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    const titles: Record<Lang, string> = {
+      uz: "Ko'p beriladigan savollar (FAQ) — Bobololadono",
+      ru: "Часто задаваемые вопросы (FAQ) — Bobololadono",
+      en: "Frequently Asked Questions (FAQ) — Bobololadono",
+    };
+    document.title = titles[lang] || titles.uz;
+  }, [lang]);
 
   /* Deep-link: ?q=slug orxatda ochilib, o'sha savolga scroll qilinadi */
   useEffect(() => {
@@ -33,12 +43,11 @@ function FaqPageContent() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return FAQ_ITEMS.filter((item) => {
       if (category !== "all" && item.category !== category) return false;
-      if (!q) return true;
-      const haystack = [item.q[lang], item.a[lang], ...item.keywords].join(" ").toLowerCase();
-      return haystack.includes(q);
+      if (!query.trim()) return true;
+      const haystack = [item.q[lang], item.a[lang], ...item.keywords].join(" ");
+      return searchIncludes(haystack, query);
     });
   }, [query, category, lang]);
 

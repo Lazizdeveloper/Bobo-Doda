@@ -17,7 +17,7 @@ export const HELP_CATEGORIES: { key: HelpCategory; label: Record<Lang, string> }
   { key: "profil", label: { uz: "Profil", ru: "Профиль", en: "Profile" } },
   { key: "mutaxassis", label: { uz: "Mutaxassis", ru: "Специалист", en: "Specialist" } },
   { key: "xavfsizlik", label: { uz: "Xavfsizlik", ru: "Безопасность", en: "Security" } },
-  { key: "account", label: { uz: "Account", ru: "Аккаунт", en: "Account" } },
+  { key: "account", label: { uz: "Hisob", ru: "Аккаунт", en: "Account" } },
 ];
 
 export interface HelpArticle {

@@ -31,9 +31,9 @@ export class CreateMilestoneInputDto {
   @MaxLength(2000)
   description?: string;
 
-  @ApiProperty({ description: 'Butun so‘m', minimum: 1, maximum: MAX_SOM })
+  @ApiProperty({ description: 'Butun so‘m', minimum: 50_000, maximum: MAX_SOM })
   @IsInt()
-  @Min(1)
+  @Min(50_000, { message: 'Bosqich summasi kamida 50 000 so‘m bo‘lishi kerak' })
   @Max(MAX_SOM)
   amount!: number;
 

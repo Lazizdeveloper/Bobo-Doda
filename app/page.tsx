@@ -6,9 +6,11 @@ import { useT, type Lang } from "@/lib/i18n";
 import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
 import { useSupportModal } from "@/components/shared/SupportModalProvider";
 
-/* ── Formatter ───────────────────────────────────────────────────────── */
+/* ── Formatter (Hydration mismatch #418 oldini olish uchun deterministik format) ── */
 function formatSum(num: number): string {
-  return num.toLocaleString("uz-UZ");
+  return Math.round(num)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 export default function LandingPage() {
@@ -17,17 +19,29 @@ export default function LandingPage() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [headlineIndex, setHeadlineIndex] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [calcBudget, setCalcBudget] = useState(4000000);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  /* Headline rotator (Yoshlar Ventures uslubi) */
+  /* Landing page title translations */
   useEffect(() => {
+    const titles: Record<Lang, string> = {
+      uz: "Bobololadono — Mutaxassislar bozori",
+      ru: "Bobololadono — Биржа специалистов",
+      en: "Bobololadono — Specialist Marketplace",
+    };
+    document.title = titles[lang] || titles.uz;
+  }, [lang]);
+
+  /* Headline rotator (To'xtatish / davom ettirish qo'llab-quvvatlanadi) */
+  useEffect(() => {
+    if (heroPaused) return;
     const timer = setInterval(() => {
       setHeadlineIndex((prev) => (prev + 1) % 4);
     }, 3600);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroPaused]);
 
   /* Scroll reveal */
   useEffect(() => {
@@ -176,48 +190,56 @@ export default function LandingPage() {
   const categoriesList = [
     {
       key: "dev",
+      icon: "💻",
       title: tr("Dasturlash & IT", "Разработка & IT", "Development & IT"),
       count: tr("1,420+ mutaxassis", "1 420+ специалистов", "1,420+ specialists"),
       price: tr("500,000 so'mdan", "от 500 000 сум", "from 500,000 UZS"),
     },
     {
       key: "des",
+      icon: "🎨",
       title: tr("Dizayn & Kreativ", "Дизайн & Креатив", "Design & Creative"),
       count: tr("980+ mutaxassis", "980+ специалистов", "980+ specialists"),
       price: tr("300,000 so'mdan", "от 300 000 сум", "from 300,000 UZS"),
     },
     {
       key: "mar",
+      icon: "📈",
       title: tr("Marketing & SMM", "Маркетинг & SMM", "Marketing & SMM"),
       count: tr("730+ mutaxassis", "730+ специалистов", "730+ specialists"),
       price: tr("400,000 so'mdan", "от 400 000 сум", "from 400,000 UZS"),
     },
     {
       key: "ai",
+      icon: "🤖",
       title: tr("Sun'iy Intellekt & Data", "ИИ & Аналитика данных", "AI & Data Science"),
       count: tr("310+ mutaxassis", "310+ специалистов", "310+ specialists"),
       price: tr("800,000 so'mdan", "от 800 000 сум", "from 800,000 UZS"),
     },
     {
       key: "vid",
+      icon: "🎬",
       title: tr("Video & Motion 3D", "Видео & 3D Моушн", "Video & 3D Motion"),
       count: tr("540+ mutaxassis", "540+ специалистов", "540+ specialists"),
       price: tr("350,000 so'mdan", "от 350 000 сум", "from 350,000 UZS"),
     },
     {
       key: "tra",
+      icon: "✍️",
       title: tr("Matn & Tarjima", "Тексты & Переводы", "Writing & Translation"),
       count: tr("460+ mutaxassis", "460+ специалистов", "460+ specialists"),
       price: tr("150,000 so'mdan", "от 150 000 сум", "from 150,000 UZS"),
     },
     {
       key: "biz",
+      icon: "💼",
       title: tr("Biznes & Konsalting", "Бизнес & Консалтинг", "Business & Consulting"),
       count: tr("390+ mutaxassis", "390+ специалистов", "390+ specialists"),
       price: tr("600,000 so'mdan", "от 600 000 сум", "from 600,000 UZS"),
     },
     {
       key: "cyb",
+      icon: "🛡️",
       title: tr("Kiberxavfsizlik & QA", "Кибербезопасность & QA", "Cybersecurity & QA"),
       count: tr("210+ mutaxassis", "210+ специалистов", "210+ specialists"),
       price: tr("700,000 so'mdan", "от 700 000 сум", "from 700,000 UZS"),
@@ -233,6 +255,7 @@ export default function LandingPage() {
     { q: t("q5"), a: t("a5") },
   ];
 
+  const platformFee = Math.round((calcBudget * PLATFORM_FEE_PERCENT) / 100);
   const specialistShare = Math.round(calcBudget * (1 - PLATFORM_FEE_PERCENT / 100));
 
   return (
@@ -1605,7 +1628,11 @@ export default function LandingPage() {
                     )}
                   </span>
 
-                  <h1 className="hero-title">
+                  <h1
+                    className="hero-title"
+                    onMouseEnter={() => setHeroPaused(true)}
+                    onMouseLeave={() => setHeroPaused(false)}
+                  >
                     <span>{headlines[headlineIndex].line1}</span>
                     <br />
                     <span className="accent-orange">{headlines[headlineIndex].line2}</span>
@@ -2016,6 +2043,10 @@ export default function LandingPage() {
                       <strong style={{ color: "var(--orange)" }}>
                         {tr("100% Kafolatlangan", "100% Гарантировано", "100% Guaranteed")}
                       </strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                      <span style={{ color: "var(--n500)" }}>{tr("Platforma xizmati:", "Комиссия платформы:", "Platform fee:")}</span>
+                      <span style={{ color: "var(--n700)", fontWeight: 600 }}>{formatSum(platformFee)} UZS</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800 }}>
                       <span>{tr("Mutaxassis oladi:", "Исполнитель получит:", "Specialist receives:")}</span>

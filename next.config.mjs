@@ -40,6 +40,8 @@ assertApiUrlSane(process.env.NEXT_PUBLIC_API_URL, {
 });
 
 const nextConfig = {
+  /* Production frontendda source-map (.map) fayllarni to'liq o'chirish (DevSecOps requirement). */
+  productionBrowserSourceMaps: false,
   /* Build papkasi. Odatda ".next". NEXT_DIST_DIR faqat ishlab turgan dev
      serverga tegmasdan alohida build qilish kerak bo'lganda ishlatiladi
      (masalan `NEXT_DIST_DIR=.next-check npm run build`) — aks holda build

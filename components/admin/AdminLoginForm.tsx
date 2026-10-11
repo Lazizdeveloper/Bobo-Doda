@@ -44,7 +44,7 @@ export function AdminLoginForm({
        panelga o'tkazamiz, aks holda (bekor qilingan/muddati o'tgan) forma. */
     void ensureStaffSession().then((state) => {
       if (cancelled) return;
-      if (state === "valid") router.replace(adminDashboardHref());
+      if (state === "valid" || state === "offline") router.replace(adminDashboardHref());
       else setReady(true);
     });
     return () => {
@@ -69,7 +69,22 @@ export function AdminLoginForm({
         setBusy(false);
         return;
       }
-      setError("Kirish ma’lumotlari noto‘g‘ri yoki bu portal uchun vakolat mavjud emas.");
+      if (err instanceof ApiError && (err.message === "INVALID_CODE" || needsTotp)) {
+        setError("Kiritilgan 2FA kodi noto‘g‘ri yoki muddati o‘tgan.");
+        setBusy(false);
+        return;
+      }
+      if (err instanceof ApiError && err.code === "NETWORK") {
+        setError("Tarmoq xatosi yoki serverga ulanib bo‘lmadi. Qayta urinib ko‘ring.");
+        setBusy(false);
+        return;
+      }
+      if (err instanceof Error && err.message === "FORBIDDEN") {
+        setError("Bu portal uchun sizda yetarli vakolat mavjud emas.");
+        setBusy(false);
+        return;
+      }
+      setError("Login yoki parol noto‘g‘ri.");
       setBusy(false);
     }
   }
@@ -92,8 +107,9 @@ export function AdminLoginForm({
             {!needsTotp ? (
               <>
                 <Input
-                  label="Korporativ email"
-                  type="email"
+                  label="Korporativ email yoki telefon"
+                  type="text"
+                  inputMode="email"
                   autoComplete="username"
                   value={email}
                   onChange={(event) => {

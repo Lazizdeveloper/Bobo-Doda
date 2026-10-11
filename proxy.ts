@@ -86,6 +86,28 @@ export function proxy(request: NextRequest): NextResponse {
   const hostname = (request.headers.get("host") || "").split(":")[0].toLowerCase();
   const { pathname, search } = request.nextUrl;
 
+  /* Til marshrutlari: /ru va /en (qidiruv tizimlari va foydalanuvchilar uchun)
+     Server tomonida tegishli til cookie va header'i bilan ichki yo'lga rewrite qilinadi. */
+  const langMatch = pathname.match(/^\/(ru|en)(\/.*)?$/);
+  if (langMatch) {
+    const lang = langMatch[1] as "ru" | "en";
+    const stripped = langMatch[2] || "/";
+    const url = request.nextUrl.clone();
+    url.pathname = stripped;
+    const reqHeaders = new Headers(request.headers);
+    reqHeaders.set("x-lang", lang);
+    const existingCookie = reqHeaders.get("cookie") || "";
+    reqHeaders.set("cookie", `${existingCookie}; sb_lang=${lang}`);
+    const res = NextResponse.rewrite(url, {
+      request: {
+        headers: reqHeaders,
+      },
+    });
+    res.cookies.set("sb_lang", lang, { path: "/", maxAge: 31536000, sameSite: "lax" });
+    res.headers.set("x-lang", lang);
+    return res;
+  }
+
   if (hostname === ADMIN_HOST) {
     if (isPassthroughOnAdminHost(pathname)) {
       return withNoIndex(NextResponse.next());

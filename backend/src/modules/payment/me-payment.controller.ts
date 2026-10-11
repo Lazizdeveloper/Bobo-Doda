@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Roles } from '@/modules/auth/decorators/roles.decorator';
@@ -38,5 +38,16 @@ export class MePaymentController {
   @ApiOkResponse({ type: PaymentResponseDto })
   async get(@CurrentUser() user: AccessTokenPayload, @Param('id') id: string): Promise<PaymentResponseDto> {
     return toPaymentResponseDto(await this.payments.getBuyerOwnedOrThrow(id, user.sub));
+  }
+
+  @Post(':id/simulate-success')
+  @HttpCode(200)
+  @ApiOkResponse({ type: PaymentResponseDto })
+  async simulateSuccess(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+  ): Promise<PaymentResponseDto> {
+    const payment = await this.payments.simulateSuccessForTest(id, user.sub);
+    return toPaymentResponseDto(payment);
   }
 }

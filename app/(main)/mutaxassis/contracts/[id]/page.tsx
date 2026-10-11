@@ -136,7 +136,9 @@ export default function ShartnomaWorkroomPage() {
   if (contract === undefined) return <SkeletonCard />;
   if (contract === null) return <EmptyState title={t("contract.notFound")} />;
 
-  const pendingDecision = contract.status === "imzolangan";
+  const pendingDecision =
+    contract.rawStatus === "PENDING_SELLER" ||
+    (!contract.sellerAcceptedAt && contract.status === "imzolangan" && !contract.rawStatus);
   const funded = !!contract.fundedAt;
   const disputeOpen = !!dispute && dispute.status !== "hal_qilindi";
 
@@ -157,7 +159,7 @@ export default function ShartnomaWorkroomPage() {
               <p className="text-xs text-muted">{contract.buyerName}</p>
               <h1 className="mt-0.5 font-heading text-xl font-bold text-ink">{contract.title}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <ContractStatusBadge status={contract.status} />
+                <ContractStatusBadge status={funded ? contract.status : "imzolangan"} />
                 <span suppressHydrationWarning className="text-2xs text-faint">{formatDate(contract.createdAt, lang)}</span>
               </div>
             </div>
@@ -201,8 +203,8 @@ export default function ShartnomaWorkroomPage() {
           </div>
         )}
 
-        {/* Faol, lekin hali to'lanmagan */}
-        {contract.status === "faol" && !funded && (
+        {/* Hali to'lanmagan (to'lov kutilmoqda) */}
+        {!funded && contract.status !== "bekor_qilingan" && contract.status !== "yakunlangan" && !pendingDecision && (
           <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-900">
             {t("cfund.awaitingSeller")}
           </div>

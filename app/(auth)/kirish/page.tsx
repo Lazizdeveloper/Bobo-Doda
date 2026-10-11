@@ -25,6 +25,15 @@ export default function KirishPage() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
 
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      uz: "Kirish — Bobololadono",
+      ru: "Вход — Bobololadono",
+      en: "Log in — Bobololadono",
+    };
+    document.title = titles[t("common.lang") || "uz"] || titles.uz;
+  }, [t]);
+
   /* Sessiya tekshiruvi: allaqachon kirgan foydalanuvchi o'z kabinetiga qaytariladi */
   useEffect(() => {
     let active = true;

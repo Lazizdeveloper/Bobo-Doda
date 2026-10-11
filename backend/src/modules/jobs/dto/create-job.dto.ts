@@ -29,15 +29,15 @@ export class CreateJobDto {
   @MaxLength(5000)
   description!: string;
 
-  @ApiProperty({ description: 'Minimal byudjet (butun so‘m)', minimum: 1, maximum: MAX_SOM })
+  @ApiProperty({ description: 'Minimal byudjet (butun so‘m, kamida 50 000)', minimum: 50_000, maximum: MAX_SOM })
   @IsInt()
-  @Min(1)
+  @Min(50_000)
   @Max(MAX_SOM)
   budgetMin!: number;
 
-  @ApiProperty({ description: 'Maksimal byudjet (butun so‘m)', minimum: 1, maximum: MAX_SOM })
+  @ApiProperty({ description: 'Maksimal byudjet (butun so‘m, kamida 50 000)', minimum: 50_000, maximum: MAX_SOM })
   @IsInt()
-  @Min(1)
+  @Min(50_000)
   @Max(MAX_SOM)
   budgetMax!: number;
 

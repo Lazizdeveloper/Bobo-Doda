@@ -46,6 +46,7 @@ export const ERROR_CODES = {
   CONTRACT_NOT_FUNDED: { httpStatus: 403, retryable: false }, // Bosqich 6 — bo'lim 18: seller ish topshirishdan oldin funded contract talab qilinadi
   REFUND_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // Bosqich 7 — faqat pre-settlement (ACTIVE + SUCCEEDED payment)
   DISPUTE_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // Bosqich 8 — Contract holati (ACTIVE/COMPLETED emas) nizo ochishga yaroqsiz
+  TEST_SIMULATION_NOT_ALLOWED: { httpStatus: 403, retryable: false }, // To'lov simulyatsiyasi faqat TEST muhitida ruxsat etiladi
 
   // ── Topilmadi (404) ──────────────────────────────────────────────────
   NOT_FOUND: { httpStatus: 404, retryable: false },
@@ -95,6 +96,7 @@ export const ERROR_CODES = {
   SELLER_APPLICATION_ALREADY_PENDING: { httpStatus: 409, retryable: false }, // Bosqich 3
   CATEGORY_SLUG_EXISTS: { httpStatus: 409, retryable: false }, // Bosqich 3
   PAYMENT_ALREADY_SUCCEEDED: { httpStatus: 409, retryable: false }, // Bosqich 5
+  PAYMENT_ALREADY_IN_PROGRESS: { httpStatus: 409, retryable: false }, // Yangi konkurentlik talabi: parallel to'lovni bloklash
   PAYMENT_INVALID_STATE: { httpStatus: 409, retryable: false }, // Bosqich 5
   PAYMENT_WEBHOOK_CONFLICT: { httpStatus: 409, retryable: false }, // Bosqich 5 — qarama-qarshi/kech kelgan hodisa
   REFUND_ALREADY_SUCCEEDED: { httpStatus: 409, retryable: false }, // Bosqich 7

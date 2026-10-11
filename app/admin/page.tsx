@@ -15,7 +15,7 @@ import { AdminPageHeader, MetricCard } from "@/components/admin/AdminUI";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { getAdminCounters, staffListAuditLogs, type AdminCounters, type StaffAuditLogRow } from "@/lib/api/admin";
+import { getAdminCounters, staffListAuditLogs, hasPermission, type AdminCounters, type StaffAuditLogRow } from "@/lib/api/admin";
 import { formatDate } from "@/lib/format";
 import { adminHref } from "@/lib/admin-routes";
 import { useT } from "@/lib/i18n";
@@ -30,10 +30,18 @@ export default function AdminDashboard() {
 
   const load = useCallback(() => {
     setLoadError(null);
-    Promise.all([getAdminCounters(), staffListAuditLogs({ page: 1, perPage: 8 })])
-      .then(([stats, audit]) => {
+    const canSeeAudit = hasPermission("audit");
+    Promise.all([
+      getAdminCounters(),
+      canSeeAudit
+        ? staffListAuditLogs({ page: 1, perPage: 8 })
+            .then((audit) => audit?.items ?? [])
+            .catch(() => [])
+        : Promise.resolve([]),
+    ])
+      .then(([stats, auditItems]) => {
         setCounters(stats);
-        setAuditLog(audit.items);
+        setAuditLog(auditItems);
       })
       .catch(setLoadError);
   }, []);
@@ -84,34 +92,36 @@ export default function AdminDashboard() {
         </Link>
       </section>
 
-      <Card padding="lg" className="min-w-0 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
-          <h2 className="font-heading text-sm font-bold text-ink">So'nggi Operator Harakatlari</h2>
-          <Link href={adminHref("/audit", pathname)} className="text-xs font-semibold text-primary hover:underline shrink-0">
-            To'liq jurnal →
-          </Link>
-        </div>
-        <div className="space-y-2.5 max-h-72 overflow-y-auto pt-1">
-          {auditLog.length === 0 ? (
-            <p className="py-8 text-center text-xs text-muted italic">Hozircha audit yozuvlari mavjud emas.</p>
-          ) : (
-            auditLog.map((event) => (
-              <div key={event.id} className="flex items-start justify-between rounded-xl border border-line bg-surface/40 p-2.5 text-xs hover:bg-surface transition">
-                <div className="min-w-0 pr-3">
-                  <p className="font-bold text-ink">{formatAuditAction(event.action, lang)}</p>
-                  <p className="text-2xs text-muted truncate mt-0.5">
-                    <span className="font-semibold text-ink/80">{formatAuditActorName(event.actorName, lang)}</span> · {formatAuditResource(event.resourceType, lang)}{" "}
-                    {event.resourceId && (
-                      <span className="font-mono text-primary font-medium">#{event.resourceId.slice(0, 8)}</span>
-                    )}
-                  </p>
+      {hasPermission("audit") && (
+        <Card padding="lg" className="min-w-0 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
+            <h2 className="font-heading text-sm font-bold text-ink">So'nggi Operator Harakatlari</h2>
+            <Link href={adminHref("/audit", pathname)} className="text-xs font-semibold text-primary hover:underline shrink-0">
+              To'liq jurnal →
+            </Link>
+          </div>
+          <div className="space-y-2.5 max-h-72 overflow-y-auto pt-1">
+            {auditLog.length === 0 ? (
+              <p className="py-8 text-center text-xs text-muted italic">Hozircha audit yozuvlari mavjud emas.</p>
+            ) : (
+              auditLog.map((event) => (
+                <div key={event.id} className="flex items-start justify-between rounded-xl border border-line bg-surface/40 p-2.5 text-xs hover:bg-surface transition">
+                  <div className="min-w-0 pr-3">
+                    <p className="font-bold text-ink">{formatAuditAction(event.action, lang)}</p>
+                    <p className="text-2xs text-muted truncate mt-0.5">
+                      <span className="font-semibold text-ink/80">{formatAuditActorName(event.actorName, lang)}</span> · {formatAuditResource(event.resourceType, lang)}{" "}
+                      {event.resourceId && (
+                        <span className="font-mono text-primary font-medium">#{event.resourceId.slice(0, 8)}</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="text-3xs text-muted whitespace-nowrap shrink-0">{formatDate(event.createdAt, lang)}</span>
                 </div>
-                <span className="text-3xs text-muted whitespace-nowrap shrink-0">{formatDate(event.createdAt, lang)}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
+              ))
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

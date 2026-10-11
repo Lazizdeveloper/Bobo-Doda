@@ -19,6 +19,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { useFormDraft } from "@/lib/hooks/useFormDraft";
 import { checkCircumvention, reportCircumventionViolation } from "@/lib/chat-filter";
+import { MIN_JOB_BUDGET } from "@/lib/validate";
 
 const MAX_QUESTIONS = 3;
 
@@ -133,7 +134,9 @@ export default function YangiElonPage() {
     if (current === 3) {
       const min = Number(budgetMin);
       const max = Number(budgetMax);
-      if (!min || !max || min <= 0 || max < min) {
+      if (!min || Number.isNaN(min) || min < MIN_JOB_BUDGET) {
+        next.budget = t("jwiz.errBudgetMin");
+      } else if (!max || Number.isNaN(max) || max < min) {
         next.budget = t("jwiz.errBudget");
       }
       if (deadline) {
@@ -185,7 +188,7 @@ export default function YangiElonPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pb-28 sm:pb-32">
       <div className="flex items-center justify-between">
         <BackButton href="/xaridor/my-jobs" label={t("nav.myJobs")} />
       </div>
@@ -235,14 +238,20 @@ export default function YangiElonPage() {
             <Input
               label={t("wizard.titleLabel")}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (errors.title) setErrors((prev) => ({ ...prev, title: "" }));
+              }}
               placeholder={t("jwiz.titlePh")}
               error={errors.title}
             />
             <Textarea
               label={t("wizard.descLabel")}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (errors.description) setErrors((prev) => ({ ...prev, description: "" }));
+              }}
               placeholder={t("jwiz.descPh")}
               rows={7}
               error={errors.description}
@@ -264,7 +273,10 @@ export default function YangiElonPage() {
             <TagInput
               label={t("onboard.skills")}
               value={skills}
-              onChange={setSkills}
+              onChange={(newSkills) => {
+                setSkills(newSkills);
+                if (errors.skills) setErrors((prev) => ({ ...prev, skills: "" }));
+              }}
               placeholder={t("onboard.skillsPh")}
               error={errors.skills}
             />
@@ -324,18 +336,25 @@ export default function YangiElonPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
                 type="number"
-                min={0}
+                min={MIN_JOB_BUDGET}
                 label={t("jwiz.budgetMin")}
                 value={budgetMin}
-                onChange={(e) => setBudgetMin(e.target.value)}
-                placeholder="1000000"
+                onChange={(e) => {
+                  setBudgetMin(e.target.value);
+                  if (errors.budget) setErrors((prev) => ({ ...prev, budget: "" }));
+                }}
+                placeholder="50000"
+                hint={`Kamida ${formatMoney(MIN_JOB_BUDGET, lang)}`}
               />
               <Input
                 type="number"
-                min={0}
+                min={MIN_JOB_BUDGET}
                 label={t("jwiz.budgetMax")}
                 value={budgetMax}
-                onChange={(e) => setBudgetMax(e.target.value)}
+                onChange={(e) => {
+                  setBudgetMax(e.target.value);
+                  if (errors.budget) setErrors((prev) => ({ ...prev, budget: "" }));
+                }}
                 placeholder="3000000"
               />
             </div>
@@ -349,7 +368,10 @@ export default function YangiElonPage() {
               type="date"
               label={t("jwiz.deadlineLabel")}
               value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              onChange={(e) => {
+                setDeadline(e.target.value);
+                if (errors.deadline) setErrors((prev) => ({ ...prev, deadline: "" }));
+              }}
               hint={t("jwiz.deadlineHint")}
               error={errors.deadline}
             />
@@ -403,7 +425,7 @@ export default function YangiElonPage() {
       </Card>
 
       {/* Boshqaruv tugmalari */}
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative z-10 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {step > 0 && (
             <Button variant="ghost" onClick={goBack} disabled={publishing}>

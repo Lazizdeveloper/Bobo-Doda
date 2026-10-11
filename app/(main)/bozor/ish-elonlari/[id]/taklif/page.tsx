@@ -78,7 +78,9 @@ export default function TaklifYuborishPage() {
     e.preventDefault();
     if (!job) return;
     const next: Record<string, string> = {};
-    if (!bid || Number(bid) <= 0) next.bid = t("prop.errBid");
+    if (!bid || Number(bid) < 50_000) {
+      next.bid = Number(bid) > 0 ? "Taklif summasi kamida 50 000 so‘m bo‘lishi kerak" : t("prop.errBid");
+    }
     if (!deliveryDays || Number(deliveryDays) < 1) {
       next.deliveryDays = t("prop.errDelivery");
     } else if (Number(deliveryDays) > 365) {
@@ -137,10 +139,13 @@ export default function TaklifYuborishPage() {
         <Card padding="lg" className="flex flex-col gap-4">
           <Input
             type="number"
-            min={0}
+            min={50000}
             label={t("prop.bid")}
             value={bid}
-            onChange={(e) => setBid(e.target.value)}
+            onChange={(e) => {
+              setBid(e.target.value);
+              if (errors.bid) setErrors((prev) => ({ ...prev, bid: "" }));
+            }}
             error={errors.bid}
             hint={`${t("prop.bidHint")}: ${formatMoney(job.budgetMin, lang)} – ${formatMoney(job.budgetMax, lang)}`}
           />
@@ -153,7 +158,7 @@ export default function TaklifYuborishPage() {
             value={deliveryDays}
             onChange={(e) => {
               setDeliveryDays(e.target.value);
-              setErrors((prev) => ({ ...prev, deliveryDays: "" }));
+              if (errors.deliveryDays) setErrors((prev) => ({ ...prev, deliveryDays: "" }));
             }}
             placeholder="7"
             hint={t("prop.deliveryDaysHint")}
@@ -162,7 +167,10 @@ export default function TaklifYuborishPage() {
           <Textarea
             label={t("prop.cover")}
             value={cover}
-            onChange={(e) => setCover(e.target.value)}
+            onChange={(e) => {
+              setCover(e.target.value);
+              if (errors.cover) setErrors((prev) => ({ ...prev, cover: "" }));
+            }}
             rows={7}
             placeholder={t("prop.coverHint")}
             error={errors.cover}
@@ -179,11 +187,14 @@ export default function TaklifYuborishPage() {
                 key={question}
                 label={`${i + 1}. ${question}`}
                 value={answers[i] ?? ""}
-                onChange={(e) =>
+                onChange={(e) => {
                   setAnswers((prev) =>
                     prev.map((a, idx) => (idx === i ? e.target.value : a))
-                  )
-                }
+                  );
+                  if (errors[`answer${i}`]) {
+                    setErrors((prev) => ({ ...prev, [`answer${i}`]: "" }));
+                  }
+                }}
                 rows={3}
                 error={errors[`answer${i}`]}
               />

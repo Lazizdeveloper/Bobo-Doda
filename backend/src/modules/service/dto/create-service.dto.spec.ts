@@ -70,6 +70,17 @@ describe('CreateServiceDto / UpdateServiceDto validation', () => {
     expect(errors[0]!.constraints?.max).toBe('Narx 10 mlrd so‘mdan oshmasligi kerak');
   });
 
+  it('narx 50 000 so‘mdan kam bo‘lganda rad etiladi', async () => {
+    const dto = plainToInstance(CreateServiceDto, {
+      ...validPayload,
+      price: 49_999,
+    });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]!.property).toBe('price');
+    expect(errors[0]!.constraints?.min).toBe('Narx kamida 50 000 so‘m bo‘lishi kerak');
+  });
+
   it('UpdateServiceDto ham 365 kundan ortiq muddatni rad etadi', async () => {
     const dto = plainToInstance(UpdateServiceDto, { deliveryDays: 500 });
     const errors = await validate(dto);

@@ -22,6 +22,7 @@ node_modules/
 # QACHON commit qilinmaydi (binary DB fayllari + jonli sessiya loglari).
 scratch/e2e-infra/
 scratch/*.log
+scratch/
 
 # next.js
 /.next/

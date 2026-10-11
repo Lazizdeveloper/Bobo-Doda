@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 import { LangSwitch } from "@/components/shared/LangSwitch";
@@ -8,8 +8,9 @@ import { BackButton } from "@/components/ui/BackButton";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Button } from "@/components/ui/Button";
 import { useSupportModal } from "@/components/shared/SupportModalProvider";
-import { useT } from "@/lib/i18n";
+import { useT, type Lang } from "@/lib/i18n";
 import { HELP_ARTICLES, HELP_CATEGORIES, type HelpCategory } from "@/lib/help-articles";
+import { searchIncludes } from "@/lib/search-utils";
 
 export default function HelpCenterPage() {
   const { t, lang } = useT();
@@ -17,15 +18,21 @@ export default function HelpCenterPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<HelpCategory | "all">("all");
 
+  useEffect(() => {
+    const titles: Record<Lang, string> = {
+      uz: "Yordam markazi — Bobololadono",
+      ru: "Центр помощи — Bobololadono",
+      en: "Help Center — Bobololadono",
+    };
+    document.title = titles[lang] || titles.uz;
+  }, [lang]);
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return HELP_ARTICLES.filter((a) => {
       if (category !== "all" && a.category !== category) return false;
-      if (!q) return true;
-      const haystack = [a.title[lang], a.summary[lang], ...a.content[lang], ...a.keywords]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
+      if (!query.trim()) return true;
+      const haystack = [a.title[lang], a.summary[lang], ...a.content[lang], ...a.keywords].join(" ");
+      return searchIncludes(haystack, query);
     });
   }, [query, category, lang]);
 

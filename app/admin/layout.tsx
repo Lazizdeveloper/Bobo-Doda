@@ -234,31 +234,44 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       ],
     },
     {
-      title: "Bozor",
+      title: "Bozor & Kontent",
       items: [
         { permission: "users", href: adminHref("/foydalanuvchilar", pathname), label: "Foydalanuvchilar", icon: "users" },
+        { permission: "services", href: adminHref("/xizmatlar", pathname), label: "Xizmatlar", icon: "services" },
+        { permission: "jobs", href: adminHref("/loyihalar", pathname), label: "Ish e'lonlari", icon: "jobs" },
         { permission: "orders", href: adminHref("/shartnomalar", pathname), label: "Shartnomalar", icon: "orders" },
+        { permission: "categories", href: adminHref("/kategoriyalar", pathname), label: "Kategoriyalar", icon: "categories" },
+      ],
+    },
+    {
+      title: "Moderatsiya & Ishonch",
+      items: [
+        { permission: "kyc", href: adminHref("/verifikatsiya", pathname), label: "Verifikatsiya (KYC)", icon: "kyc", badgeCount: counts.kyc },
+        { permission: "reports", href: adminHref("/shikoyatlar", pathname), label: "Shikoyatlar", icon: "reports", badgeCount: counts.reports },
+        { permission: "appeals", href: adminHref("/apellyatsiyalar", pathname), label: "Apellyatsiyalar", icon: "appeals", badgeCount: counts.appeals },
+        { permission: "reviews", href: adminHref("/sharhlar", pathname), label: "Sharhlar", icon: "reviews" },
       ],
     },
     {
       title: "Moliya & Nizolar",
       items: [
         { permission: "disputes", href: adminHref("/nizolar", pathname), label: "Nizolar & Arbitraj", icon: "disputes", badgeCount: counts.disputes },
-        { permission: "payments", href: adminHref("/tolovlar", pathname), label: "To‘lovlar, Qaytarish & Chiqarish", icon: "payments" },
+        { permission: "payments", href: adminHref("/tolovlar", pathname), label: "To‘lovlar & Chiqarish", icon: "payments", badgeCount: counts.payouts },
+      ],
+    },
+    {
+      title: "Qo‘llab-quvvatlash",
+      items: [
+        { permission: "support", href: adminHref("/yordam", pathname), label: "Yordam Chiptalari", icon: "support", badgeCount: counts.tickets },
+        { permission: "support", href: adminHref("/fikrlar", pathname), label: "Foydalanuvchi Fikrlari", icon: "feedback", badgeCount: counts.feedbacks },
       ],
     },
     {
       title: "Tizim",
       items: [
+        { permission: "settings", href: adminHref("/sozlamalar", pathname), label: "Sozlamalar", icon: "settings" },
         { permission: "audit", href: adminHref("/audit", pathname), label: "Audit Jurnali", icon: "audit" },
-        // Bosqich 24 — QA audit: staff-boshqaruv backend'i (`getAdminAccounts`/
-        // `addAdmin`/...) hali real emas (`disabledAsync`) — bu yagona
-        // sidebar-havola bo'lib, super_admin uni bosganda doim xato
-        // ko'rardi. Boshqa "hali ulanmagan" bo'limlar (buyer/seller
-        // TopNav'dagi Ish e'lonlari/Takliflar/Xabarlar) bilan bir xil
-        // konvensiya: marshrut o'zi qoladi (to'g'ridan-to'g'ri URL orqali
-        // ochilsa ErrorState ko'rsatadi), faqat navigatsiyadan olib
-        // tashlanadi — real ulanmaguncha qayta qo'shilmasin.
+        { permission: "admins", href: "/rahbariyat/kirish", label: "Adminlar & Xodimlar", icon: "admins" },
       ],
     },
   ];

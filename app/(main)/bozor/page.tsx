@@ -20,7 +20,7 @@ import { JobStatusBadge } from "@/components/shared/StatusBadge";
 import { OfferModal } from "@/components/shared/OfferModal";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { searchMatches } from "@/lib/search";
-import { catalogService, jobsService, savedService, servicesService } from "@/lib/api";
+import { authService, catalogService, jobsService, savedService, servicesService } from "@/lib/api";
 import type { Job, Service, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -41,6 +41,11 @@ export default function BozorPage() {
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [savedSpecialistIds, setSavedSpecialistIds] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserRole(authService.getSession()?.role ?? null);
+  }, []);
 
   // Common Filters
   const [search, setSearch] = useState("");
@@ -469,9 +474,11 @@ export default function BozorPage() {
                   <Button variant="secondary" size="sm" onClick={clearAllFilters}>
                     {t("market.clearFilters")}
                   </Button>
-                  <Link href="/mutaxassis/services/yangi">
-                    <Button size="sm">{t("market.createServiceCta")}</Button>
-                  </Link>
+                  {userRole === "mutaxassis" && (
+                    <Link href="/mutaxassis/services/yangi">
+                      <Button size="sm">{t("market.createServiceCta")}</Button>
+                    </Link>
+                  )}
                 </div>
               </Card>
             ) : (
@@ -631,8 +638,14 @@ export default function BozorPage() {
                               {spec.profile.headline}
                             </p>
                             <div className="flex items-center gap-2 text-2xs text-muted mt-1">
-                              <RatingStars value={spec.profile.rating} size="sm" />
-                              <span>({spec.profile.reviewCount})</span>
+                              {spec.profile.reviewCount > 0 ? (
+                                <>
+                                  <RatingStars value={spec.profile.rating} size="sm" />
+                                  <span>({spec.profile.reviewCount})</span>
+                                </>
+                              ) : (
+                                <span className="text-muted font-normal">Yangi mutaxassis</span>
+                              )}
                               <span>•</span>
                               <span>{spec.profile.completedContracts} ta ish</span>
                             </div>

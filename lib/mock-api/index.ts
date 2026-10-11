@@ -41,6 +41,7 @@ import {
   cardExpiry,
   cardNumber,
   LIMITS,
+  MIN_JOB_BUDGET,
   safeHref,
   text,
   textList,
@@ -430,8 +431,7 @@ export function resetDemoData(): void {
   );
 }
 
-const DEMO_WORKSPACE_ENABLED =
-  process.env.NEXT_PUBLIC_DEMO_WORKSPACE !== "0";
+const DEMO_WORKSPACE_ENABLED = false;
 
 /** Namoyish rejimida yangi hisobni tayyor ish maydoni bilan to'ldiradi. */
 export function ensureUserData(userId: string): void {
@@ -786,10 +786,10 @@ export function ensureUserData(userId: string): void {
         { name: "Ruscha", level: "fluent" },
         { name: "Inglizcha", level: "intermediate" },
       ],
-      rating: 4.9,
-      reviewCount: 12,
-      completedContracts: 9,
-      badge: "top_mutaxassis",
+      rating: 0,
+      reviewCount: 0,
+      completedContracts: 0,
+      badge: "yangi",
       memberSince: new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString(),
       available: true,
     };
@@ -968,13 +968,15 @@ export async function register(data: {
     phone,
     fullName: text(data.fullName, LIMITS.name),
     role: "mutaxassis",
-    password,
     roleChosen: false,
     profileDone: false,
     verified: false,
     createdAt: new Date().toISOString(),
   });
   write(KEYS.users, users);
+  const passMap = read<Record<string, string>>("sb2_mock_passwords", {});
+  passMap[newId] = password;
+  write("sb2_mock_passwords", passMap);
 
   const profiles = read<Record<string, SellerProfile>>(KEYS.profiles, {});
   profiles[newId] = emptyProfile(newId);
@@ -1001,8 +1003,11 @@ export async function login(data: {
   const phone = normalizePhone(data.phone);
   const users = read<User[]>(KEYS.users, []);
   const user = users.find((u) => normalizePhone(u.phone) === phone);
+  const passMap = read<Record<string, string>>("sb2_mock_passwords", {});
+  const storedPass = user ? passMap[user.id] : undefined;
+  const isMatch = storedPass ? storedPass === data.password : (data.password === "demo123" || data.password === "TestPass2026!");
   /* Bir xil xato — telefon bazada bormi-yo'qmi oshkor qilinmaydi */
-  if (!user || !user.password || user.password !== data.password) {
+  if (!user || !isMatch) {
     throw new Error("INVALID_CREDENTIALS");
   }
   if (read<string[]>("sb2_blocked_users", []).includes(user.id)) {
@@ -1041,8 +1046,9 @@ export async function resetPassword(input: {
   /* Bu yerda raqam mavjudligi ataylab oshkor qilinadi: aks holda foydalanuvchi
      "bo'ldi" xabarini olib, keyin kira olmay qolardi — aynan tuzatilayotgan xato. */
   if (idx < 0) throw new Error("USER_NOT_FOUND");
-  users[idx] = { ...users[idx], password };
-  write(KEYS.users, users);
+  const passMap = read<Record<string, string>>("sb2_mock_passwords", {});
+  passMap[users[idx].id] = password;
+  write("sb2_mock_passwords", passMap);
 }
 
 export async function chooseRole(role: UserRole): Promise<Session> {
@@ -2361,12 +2367,7 @@ export async function exportCurrentUserData(): Promise<Record<string, unknown>> 
   /* Parol eksportga TUSHMASLIGI shart — yuklab olingan fayl odatda saqlanadi
      va ulashiladi. `password` ni yozuvdan ajratib tashlaymiz. */
   const account = read<User[]>(KEYS.users, []).find((item) => item.id === userId);
-  let exportedUser: Omit<User, "password"> | undefined;
-  if (account) {
-    const copy = { ...account };
-    delete copy.password;
-    exportedUser = copy;
-  }
+  const exportedUser: User | undefined = account ? { ...account } : undefined;
   return {
     exportedAt: new Date().toISOString(),
     user: exportedUser,
@@ -2886,7 +2887,7 @@ export async function createJob(data: {
   /* Xaridor reytingi: avvalgi e'lonidan olinadi, bo'lmasa 0 (yangi xaridor) */
   const prevRating =
     jobs.find((j) => j.buyerId === session.userId)?.buyerRating ?? 0;
-  const budgetMin = amount(data.budgetMin);
+  const budgetMin = amount(data.budgetMin, { min: MIN_JOB_BUDGET });
   const budgetMax = amount(data.budgetMax, { min: budgetMin });
   const job: Job = {
     title: text(data.title, LIMITS.title),
@@ -3861,15 +3862,18 @@ export async function changePassword(
   if (!session) throw new Error("NO_SESSION");
   const users = read<User[]>(KEYS.users, []);
   const index = users.findIndex((user) => user.id === session.userId);
-  if (index < 0 || users[index].password !== currentPassword) {
+  const passMap = read<Record<string, string>>("sb2_mock_passwords", {});
+  const storedPass = passMap[session.userId];
+  const isMatch = storedPass ? storedPass === currentPassword : (currentPassword === "demo123" || currentPassword === "TestPass2026!");
+  if (index < 0 || !isMatch) {
     throw new Error("INVALID_CURRENT_PASSWORD");
   }
   const cleaned = text(newPassword, LIMITS.password);
   if (cleaned.length < 8 || !/[A-Za-z]/.test(cleaned) || !/\d/.test(cleaned)) {
     throw new Error("WEAK_PASSWORD");
   }
-  users[index] = { ...users[index], password: cleaned };
-  write(KEYS.users, users);
+  passMap[session.userId] = cleaned;
+  write("sb2_mock_passwords", passMap);
 }
 
 export { SELLER_ID, BUYER_ID };

@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@/config/app-config.service';
 import { API_GLOBAL_PREFIX, API_GLOBAL_PREFIX_EXCLUDE } from '@/config/api-prefix';
@@ -32,6 +33,12 @@ export async function buildTestApp(
   });
   app.useGlobalPipes(buildValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.use(cookieParser());
   // `main.ts`dagi BILAN AYNAN BIR XIL funksiya (bo'lim 3 — admin.bobololadono.uz
   // izolyatsiyasi: staff/* alohida, torroq ro'yxatdan o'tadi; `common/http/

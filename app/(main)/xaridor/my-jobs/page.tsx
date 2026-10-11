@@ -352,7 +352,11 @@ export default function ElonlarimPage() {
                               </div>
                               {spec && (
                                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted">
-                                  <RatingStars value={spec.profile.rating} size="sm" showValue />
+                                  {spec.profile.reviewCount > 0 ? (
+                                    <RatingStars value={spec.profile.rating} size="sm" showValue />
+                                  ) : (
+                                    <span className="text-muted font-normal">Yangi mutaxassis</span>
+                                  )}
                                   <span>
                                     {spec.profile.completedContracts} {t("profile.completedContracts")}
                                   </span>

@@ -93,7 +93,7 @@ export default function MutaxassisDashboardPage() {
 
   const loading = !contracts || !milestones || jobs === null || proposals === null;
 
-  const activeContracts = contracts?.filter((c) => c.status === "faol") || [];
+  const activeContracts = contracts?.filter((c) => c.status === "faol" && !!c.fundedAt) || [];
   const openJobs = (jobs ?? []).filter((j) => j.status === "ochiq");
   const matchingJobs = openJobs.filter((j) => matchesProfile(j, profile));
   const totalEarnings = (milestones ?? [])
@@ -354,7 +354,7 @@ export default function MutaxassisDashboardPage() {
                     </div>
                     <div className="flex items-center gap-2.5 shrink-0">
                       <span className="font-bold text-ink text-xs">{formatMoney(c.totalAmount, lang)}</span>
-                      <ContractStatusBadge status={c.status} />
+                      <ContractStatusBadge status={c.fundedAt ? c.status : "imzolangan"} />
                     </div>
                   </Card>
                 </Link>

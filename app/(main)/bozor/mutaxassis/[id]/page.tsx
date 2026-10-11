@@ -122,13 +122,14 @@ export default function MutaxassisProfiliPage() {
 
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
                   <div className="flex items-center gap-1.5 font-bold text-ink">
-                    <RatingStars value={profile.rating} showValue />
-                    {/* Yulduz yonidagi son — reytingni HOSIL QILGAN sharhlar
-                        soni (`profile.reviewCount`). Ilgari bu yerda shu
-                        ekranga yuklangan sharhlar soni (`reviews.length`)
-                        turardi va "4.9 (2)" kabi mos kelmaydigan juftlik
-                        chiqardi. */}
-                    <span className="font-normal text-muted">({profile.reviewCount})</span>
+                    {profile.reviewCount > 0 ? (
+                      <>
+                        <RatingStars value={profile.rating} showValue />
+                        <span className="font-normal text-muted">({profile.reviewCount})</span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted font-medium">Yangi mutaxassis (sharhlar yo&apos;q)</span>
+                    )}
                   </div>
                   <span className="flex items-center gap-1">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -433,7 +434,9 @@ export default function MutaxassisProfiliPage() {
               </div>
               <div className="flex items-center justify-between p-3">
                 <span className="text-muted">O&apos;rtacha reyting</span>
-                <span className="font-bold text-primary">★ {profile.rating.toFixed(1)}</span>
+                <span className="font-bold text-primary">
+                  {profile.reviewCount > 0 ? `★ ${profile.rating.toFixed(1)}` : "—"}
+                </span>
               </div>
               {profile.completionRate !== undefined && (
                 <div className="flex items-center justify-between p-3">

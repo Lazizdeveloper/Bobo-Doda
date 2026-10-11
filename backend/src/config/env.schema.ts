@@ -433,7 +433,12 @@ export type Env = z.infer<typeof envSchema>;
  * xabar bilan `Error` tashlaydi (barcha muammoli kalitlar sanab).
  */
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const parsed = envSchema.safeParse(raw);
+  // Productionda SWAGGER_ENABLED ochiq ko'rsatilmagan bo'lsa xavfsizlik uchun sukut bo'yicha 'false' (yopiq)
+  const normalizedRaw = { ...raw };
+  if (normalizedRaw.NODE_ENV === 'production' && normalizedRaw.SWAGGER_ENABLED === undefined) {
+    normalizedRaw.SWAGGER_ENABLED = 'false';
+  }
+  const parsed = envSchema.safeParse(normalizedRaw);
   if (!parsed.success) {
     const details = parsed.error.issues
       .map((issue) => `  • ${issue.path.join('.') || '(root)'}: ${issue.message}`)

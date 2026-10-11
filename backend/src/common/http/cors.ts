@@ -38,10 +38,26 @@ export function buildStaffAwareCorsDelegate(
   return (req, callback) => {
     const path = typeof req.url === 'string' ? req.url.toLowerCase() : '';
     const isStaffRoute = path === normalizedPrefix || path.startsWith(`${normalizedPrefix}/`);
+    let origins = isStaffRoute ? config.staffCorsOrigins : config.corsOrigins;
+    if (isStaffRoute) {
+      // Admin paneli yagona bobololadono.uz/bobododa.uz apex domenida xizmat qilinganda
+      // CORS preflight bloklanmasligi uchun apex domenlar ham ruxsat etiladi.
+      // E2E testlardagi 'app.bobololadono.uz' marketplace subdomeni bu ro'yxatga kirmaydi (izolyatsiya saqlanadi).
+      origins = Array.from(
+        new Set([
+          ...origins,
+          'https://bobololadono.uz',
+          'https://www.bobololadono.uz',
+          'https://bobododa.uz',
+          'https://www.bobododa.uz',
+        ]),
+      );
+    }
     callback(null, {
-      origin: isStaffRoute ? config.staffCorsOrigins : config.corsOrigins,
+      origin: origins,
       credentials: true,
       exposedHeaders: ['x-request-id'],
     });
   };
 }
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Logo } from "@/components/shared/Logo";
@@ -22,6 +22,13 @@ export default function HelpArticlePage() {
     () => HELP_ARTICLES.find((a) => a.slug === params.slug) ?? null,
     [params.slug]
   );
+
+  useEffect(() => {
+    if (article) {
+      document.title = `${article.title[lang]} — Bobololadono`;
+    }
+  }, [article, lang]);
+
   const related = useMemo(() => {
     if (!article) return [];
     return article.related

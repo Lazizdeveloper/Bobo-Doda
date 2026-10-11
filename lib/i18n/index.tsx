@@ -30,23 +30,55 @@ const LanguageContext = createContext<LanguageContextValue>({
   t: (key) => dictionary[key]?.uz ?? key,
 });
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("uz");
+export function LanguageProvider({
+  children,
+  initialLang = "uz",
+}: {
+  children: ReactNode;
+  initialLang?: Lang;
+}) {
+  const [lang, setLangState] = useState<Lang>(initialLang);
 
   useEffect(() => {
+    // Agar URL'da /ru yoki /en prefiksi bo'lsa, u ustun bo'ladi
+    const pathname = window.location.pathname;
+    if (pathname.startsWith("/ru/") || pathname === "/ru") {
+      setLangState("ru");
+      return;
+    }
+    if (pathname.startsWith("/en/") || pathname === "/en") {
+      setLangState("en");
+      return;
+    }
     const storedLang = window.localStorage.getItem("sb_lang");
     if (storedLang === "uz" || storedLang === "ru" || storedLang === "en") {
       setLangState(storedLang);
+      document.cookie = `sb_lang=${storedLang}; path=/; max-age=31536000; SameSite=Lax`;
     }
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = lang;
+    // Bosh sahifa sarlavhasi (document.title) tilga qarab moslashadi
+    if (typeof document !== "undefined") {
+      const p = window.location.pathname;
+      if (p === "/" || p === "/ru" || p === "/en") {
+        const titles: Record<Lang, string> = {
+          uz: "Bobololadono — Mutaxassislar bozori",
+          ru: "Bobololadono — Биржа специалистов",
+          en: "Bobololadono — Specialist Marketplace",
+        };
+        document.title = titles[lang] || titles.uz;
+      }
+    }
   }, [lang]);
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
-    window.localStorage.setItem("sb_lang", next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("sb_lang", next);
+      document.cookie = `sb_lang=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    }
   }, []);
 
   const t = useCallback((key: string) => translate(lang, key), [lang]);

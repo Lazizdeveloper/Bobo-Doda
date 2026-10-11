@@ -8,6 +8,7 @@ import { OutboxService } from '@/common/outbox/outbox.service';
 import { assertSupportedCurrency } from '@/common/money/currency.constant';
 import { buildPage, type Page } from '@/common/pagination/page-query.dto';
 import { LedgerService } from '@/modules/ledger/ledger.service';
+import { AppConfigService } from '@/config/app-config.service';
 import { PAYMENT_PROVIDER, type PaymentProvider, type VerifiedPaymentWebhookEvent } from './providers/payment-provider.interface';
 import { PAYMENT_TERMINAL_STATUSES } from './payment.constants';
 
@@ -37,6 +38,7 @@ export class PaymentService {
     private readonly audit: AuditService,
     private readonly outbox: OutboxService,
     private readonly ledger: LedgerService,
+    private readonly config: AppConfigService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
   ) {}
 
@@ -59,21 +61,41 @@ export class PaymentService {
     }
     assertSupportedCurrency(contract.currency);
 
-    // Bo'lim 5/59 — tezkor, aniqroq xato xabari uchun ilova darajasidagi
-    // tekshiruv. HAQIQIY himoya — DB partial unique index
-    // (`UNIQUE(contractId) WHERE status='SUCCEEDED'`, `migration.sql`).
-    const existingSucceeded = await this.prisma.payment.findFirst({
-      where: { contractId, status: 'SUCCEEDED' },
-      select: { id: true },
+    // Konkurentlik tekshiruvi (Yakuniy raund talabi 1): bitta shartnomaga bir nechta
+    // parallel to'lov yaratilishini bloklash. Shartnomada allaqachon PENDING yoki
+    // PROCESSING holatidagi to'lov bo'lsa yangi so'rov rad etiladi.
+    const existingActive = await this.prisma.payment.findFirst({
+      where: { contractId, status: { in: ['PENDING', 'PROCESSING', 'SUCCEEDED'] } },
+      select: { id: true, status: true },
     });
-    if (existingSucceeded) {
-      throw new DomainError('PAYMENT_ALREADY_SUCCEEDED', 'Bu shartnoma allaqachon to‘langan');
+    if (existingActive) {
+      if (existingActive.status === 'SUCCEEDED') {
+        throw new DomainError('PAYMENT_ALREADY_SUCCEEDED', 'Bu shartnoma allaqachon to‘langan');
+      }
+      throw new DomainError(
+        'PAYMENT_ALREADY_IN_PROGRESS',
+        'Ushbu shartnoma uchun to‘lov allaqachon jarayonda (PENDING yoki PROCESSING)',
+      );
     }
 
     const paymentId = this.ids.next();
     let payment: Payment;
     try {
       payment = await this.prisma.$transaction(async (tx) => {
+        const existingTx = await tx.payment.findFirst({
+          where: { contractId, status: { in: ['PENDING', 'PROCESSING', 'SUCCEEDED'] } },
+          select: { id: true, status: true },
+        });
+        if (existingTx) {
+          if (existingTx.status === 'SUCCEEDED') {
+            throw new DomainError('PAYMENT_ALREADY_SUCCEEDED', 'Bu shartnoma allaqachon to‘langan');
+          }
+          throw new DomainError(
+            'PAYMENT_ALREADY_IN_PROGRESS',
+            'Ushbu shartnoma uchun to‘lov allaqachon jarayonda (PENDING yoki PROCESSING)',
+          );
+        }
+
         const created = await tx.payment.create({
           data: {
             id: paymentId,
@@ -131,7 +153,16 @@ export class PaymentService {
     // Bo'lim 13 — provider HTTP chaqiruvi DB tranzaksiyasi TASHQARISIDA:
     // `Payment` allaqachon COMMIT bo'lgan, lock/connection uzoq ushlab
     // turilmaydi.
-    return { payment: await this.callProviderAndAdvance(payment, this.provider.createPayment.bind(this.provider)) };
+    const advancedPayment = await this.callProviderAndAdvance(payment, this.provider.createPayment.bind(this.provider));
+    // Local TEST provayderida to'lov settlement (tasdiqlash) simulyatsiyasi (Yakuniy raund talabi 3)
+    if (
+      !this.config.isProduction &&
+      this.provider.name === 'TEST' &&
+      (process.env.AUTO_CONFIRM_TEST_PAYMENTS === 'true' || process.env.TEST_PAYMENT_AUTO_CONFIRM === 'true')
+    ) {
+      return { payment: await this.simulateSuccessForTest(advancedPayment.id) };
+    }
+    return { payment: advancedPayment };
   }
 
   private async callProviderAndAdvance(
@@ -511,5 +542,44 @@ export class PaymentService {
     if (status === 'SUCCEEDED') return 'PAYMENT_SUCCEEDED';
     if (status === 'FAILED') return 'PAYMENT_FAILED';
     return 'PAYMENT_CANCELLED';
+  }
+
+  /**
+   * FAQAT TEST/DEV: To'lov settlement (tasdiqlash) simulyatsiyasi.
+   * Haqiqiy Payme/Click webhook'i bo'lmagan lokal muhitda to'lovni
+   * avtomatik yoki qo'lda SUCCEEDED holatiga o'tkazib, escrow ledger'ini
+   * moliyalashtirish imkonini beradi. Production'da FAIL-FAST rad etiladi.
+   */
+  async simulateSuccessForTest(paymentId: string, buyerId?: string): Promise<Payment> {
+    if (this.config.isProduction || this.provider.name !== 'TEST') {
+      throw new DomainError('TEST_SIMULATION_NOT_ALLOWED', 'To‘lov simulyatsiyasi faqat TEST muhitida ruxsat etilgan');
+    }
+    const payment = buyerId
+      ? await this.getBuyerOwnedOrThrow(paymentId, buyerId)
+      : await this.getByIdOrThrow(paymentId);
+
+    if (payment.status === 'SUCCEEDED') {
+      return payment;
+    }
+
+    const providerPaymentId = payment.providerPaymentId ?? `test_${payment.id}`;
+    if (!payment.providerPaymentId) {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { providerPaymentId, status: 'PROCESSING' },
+      });
+    }
+
+    await this.handlePaymentEvent({
+      kind: 'PAYMENT',
+      providerEventId: `sim_${payment.id}_${Date.now()}`,
+      providerPaymentId,
+      eventType: 'PAYMENT_SUCCEEDED',
+      status: 'SUCCEEDED',
+      amountTiyin: payment.amount,
+      currency: payment.currency,
+    });
+
+    return this.getByIdOrThrow(paymentId);
   }
 }

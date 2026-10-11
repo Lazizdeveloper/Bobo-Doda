@@ -18,7 +18,7 @@ export function normalizeForSearch(text: string): string {
     .split("")
     .map((ch) => CYRILLIC_TO_LATIN[ch] ?? ch)
     .join("")
-    .replace(/['’ʻʼ`-]/g, "")
+    .replace(/['’‘ʻʼ`´\u02BB\u02BC\u2018\u2019\u0027-]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -326,8 +326,8 @@ const DEFAULT_PREFERENCES: AccountPreferences = {
     }
   }
 
-  function handleLogout() {
-    authService.logout();
+  async function handleLogout() {
+    await authService.logout();
     router.push("/kirish");
   }
 
