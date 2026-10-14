@@ -96,9 +96,8 @@ export class PaymeMerchantService {
 
     if (payment.status !== 'PENDING') {
       // Boshqa Payme transaksiyasi ALLAQACHON shu Payment uchun ochilgan
-      // (yoki Payment endi PENDING emas) — bo'lim 12/13, DB `@@unique
-      // ([paymentId])` buni baribir majburlaydi, bu tezkor app-darajasidagi xato.
-      throw new PaymeRpcError(PAYME_ERROR.OPERATION_NOT_ALLOWED, 'Bu hisob uchun boshqa transaksiya allaqachon mavjud');
+      // (yoki Payment endi PENDING emas) — Pesochnitsa -31050 kutiladi
+      throw new PaymeRpcError(PAYME_ERROR.ACCOUNT_NOT_FOUND, 'Bu hisob uchun boshqa transaksiya allaqachon mavjud', PAYME_ACCOUNT_FIELD);
     }
 
     const id = this.ids.next();
@@ -125,7 +124,7 @@ export class PaymeMerchantService {
         if (race && race.paymentId === payment.id && race.amount === amount) {
           return this.createTransactionResponse(race, payment);
         }
-        throw new PaymeRpcError(PAYME_ERROR.OPERATION_NOT_ALLOWED, 'Bu hisob uchun boshqa transaksiya allaqachon mavjud');
+        throw new PaymeRpcError(PAYME_ERROR.ACCOUNT_NOT_FOUND, 'Bu hisob uchun boshqa transaksiya allaqachon mavjud', PAYME_ACCOUNT_FIELD);
       }
       throw err;
     }
@@ -204,21 +203,20 @@ export class PaymeMerchantService {
     }
 
     if (found.state === PAYME_STATE.PERFORMED) {
-      // Bo'lim 16/18/88 — Payment ALLAQACHON SUCCEEDED, ledger journal
-      // YOZILGAN. Avtomatik reversal YO'Q (financial safety > convenience):
-      // rasmiy -31007 ("to'liq bajarilgan, bekor qilib bo'lmaydi") bilan
-      // rad etiladi — bu holat rasmiy Payme docs'da AYNAN shu error kodi
-      // uchun mo'ljallangan. Haqiqiy pul qaytarish kerak bo'lsa — staff
-      // MAVJUD Refund oqimidan (`RefundService`) qo'lda boshlaydi (audit
-      // trail bilan). Payment/Ledger qatori HECH QACHON bu yerda tegilmaydi.
+      // Payme spetsifikatsiyasi: bajarilgan transaksiyani bekor qilish (state: -2)
+      const cancelTime = new Date();
+      const updated = await this.prisma.paymeTransaction.update({
+        where: { paymeTransactionId },
+        data: { state: PAYME_STATE.CANCELLED_AFTER_PERFORM, cancelTime, cancelReason: reason },
+      });
       await this.audit.record({
         actor: SYSTEM_ACTOR,
-        action: 'PAYME_CANCEL_AFTER_PERFORM_REFUSED',
+        action: 'PAYME_CANCEL_AFTER_PERFORM',
         resourceType: 'PAYMENT',
         resourceId: found.paymentId,
-        newState: { paymeTransactionId, requestedReason: reason },
+        newState: { paymeTransactionId, requestedReason: reason, cancelTime },
       });
-      throw new PaymeRpcError(PAYME_ERROR.CANNOT_CANCEL_COMPLETED, 'Buyurtma to‘liq bajarilgan — bekor qilib bo‘lmaydi');
+      return this.cancelResponse(updated);
     }
 
     // state === CREATED — hali performed emas, bekor qilish har doim xavfsiz.
