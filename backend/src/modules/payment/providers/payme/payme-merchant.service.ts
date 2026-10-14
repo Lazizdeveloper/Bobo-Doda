@@ -69,8 +69,14 @@ export class PaymeMerchantService {
     const paymentId = this.extractPaymentId(params.account);
     const payment = await this.findPaymentOrThrow(paymentId);
     this.assertAmountMatches(payment, params.amount);
-    if (payment.status !== 'PENDING' && payment.status !== 'PROCESSING') {
-      throw new PaymeRpcError(PAYME_ERROR.OPERATION_NOT_ALLOWED, 'Bu to‘lov uchun endi yangi transaksiya yaratib bo‘lmaydi');
+    const activeTx = await this.prisma.paymeTransaction.findFirst({
+      where: {
+        paymentId: payment.id,
+        state: { in: [PAYME_STATE.CREATED, PAYME_STATE.PERFORMED] },
+      },
+    });
+    if (payment.status !== 'PENDING' || activeTx) {
+      throw new PaymeRpcError(PAYME_ERROR.ACCOUNT_NOT_FOUND, 'Bu hisob uchun faol transaksiya mavjud yoki to‘lov yakunlangan', PAYME_ACCOUNT_FIELD);
     }
     return { allow: true };
   }
