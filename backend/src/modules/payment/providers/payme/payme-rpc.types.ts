@@ -68,6 +68,36 @@ export const PAYME_STATE = {
   CANCELLED_AFTER_PERFORM: -2,
 } as const;
 
+/** Payme protokoli bekor qilish sabablari (reason kodlari). */
+export const PAYME_REASON = {
+  CANCELLED_BEFORE_PERFORM: 3,
+  CANCELLED_AFTER_PERFORM: 5,
+} as const;
+
+export type PaymeReasonCode = (typeof PAYME_REASON)[keyof typeof PAYME_REASON];
+
+/**
+ * Payme protokoli bo'yicha tranzaksiya holatiga mos reason kodini aniqlash.
+ * - CREATED (1) -> null
+ * - PERFORMED (2) -> null
+ * - CANCELLED_BEFORE_PERFORM (-1) -> cancelReason ?? 3
+ * - CANCELLED_AFTER_PERFORM (-2) -> 5 (har doim 5, refund/ijrodan keyin bekor qilish)
+ */
+export function resolvePaymeReason(
+  state: number,
+  cancelReason: number | null | undefined,
+): number | null {
+  if (state === PAYME_STATE.CANCELLED_AFTER_PERFORM) {
+    return PAYME_REASON.CANCELLED_AFTER_PERFORM;
+  }
+  if (state === PAYME_STATE.CANCELLED_BEFORE_PERFORM) {
+    return typeof cancelReason === 'number' && cancelReason > 0
+      ? cancelReason
+      : PAYME_REASON.CANCELLED_BEFORE_PERFORM;
+  }
+  return null;
+}
+
 /** Bizning `account` obyektidagi yagona identifikator maydoni (bo'lim 11 — stabil, taxmin qilib bo'lmaydigan UUIDv7 `Payment.id`). */
 export const PAYME_ACCOUNT_FIELD = 'payment_id';
 
