@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type Contract, type Milestone } from '@prisma/client';
+import { Prisma, type Contract, type Milestone, type PaymentStatus } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
 import { IdFactory } from '@/common/id/id.factory';
 import { DomainError, InvariantViolationError, NotFoundError } from '@/common/errors/domain-error';
@@ -19,9 +19,18 @@ import {
   assertNotSelfPurchase,
 } from './contract-validation.util';
 
-type ContractWithMilestones = Contract & { milestones: Milestone[] };
+type ContractWithMilestones = Contract & {
+  milestones: Milestone[];
+  payments?: Array<{ id: string; status: PaymentStatus; succeededAt: Date | null; createdAt: Date }>;
+};
 
-const MILESTONE_INCLUDE = { milestones: { orderBy: { position: 'asc' as const } } };
+const MILESTONE_INCLUDE = {
+  milestones: { orderBy: { position: 'asc' as const } },
+  payments: {
+    where: { status: 'SUCCEEDED' as const },
+    select: { id: true, status: true, succeededAt: true, createdAt: true },
+  },
+};
 const SERIALIZATION_CONFLICT = 'P2034';
 
 /**

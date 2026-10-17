@@ -37,6 +37,7 @@ export class PaymeProvider implements PaymentProvider {
         merchantId: this.config.merchantId,
         paymentId: params.paymentId,
         amountTiyin: params.amountTiyin,
+        returnUrl: `https://bobololadono.uz/xaridor/contracts/${params.contractId}`,
       }),
     };
   }

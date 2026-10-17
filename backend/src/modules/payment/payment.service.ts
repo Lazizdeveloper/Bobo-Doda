@@ -95,6 +95,18 @@ export class PaymentService {
           if (existingTx.status === 'SUCCEEDED') {
             throw new DomainError('PAYMENT_ALREADY_SUCCEEDED', 'Bu shartnoma allaqachon to‘langan');
           }
+          // Agar to'lov PENDING bo'lsa va checkout URL provayderi (Payme) bo'lsa:
+          // Agar xaridor Payme oynasini yopib, tranzaksiya yaratmasdan chiqib ketgan bo'lsa (yoki bekor bo'lgan bo'lsa),
+          // mavjud PENDING to'lovni qayta ishlatamiz, shunda xaridor qayta to'lay oladi (deadlock bo'lmaydi).
+          if (existingTx.status === 'PENDING' && this.provider.buildCheckoutUrl) {
+            const activePayme = await tx.paymeTransaction.findFirst({
+              where: { paymentId: existingTx.id, state: { in: [1, 2] } },
+              select: { id: true },
+            });
+            if (!activePayme) {
+              return tx.payment.findUniqueOrThrow({ where: { id: existingTx.id } });
+            }
+          }
           throw new DomainError(
             'PAYMENT_ALREADY_IN_PROGRESS',
             'Ushbu shartnoma uchun to‘lov allaqachon jarayonda (PENDING yoki PROCESSING)',

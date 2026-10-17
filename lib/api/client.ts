@@ -154,8 +154,10 @@ async function hydrateContract(c: RealContract, role: Model.UserRole | null): Pr
       }
     } catch {}
   }
-
-  if (role === "mutaxassis") {
+  if (typeof (c as any).isFunded === "boolean") {
+    funded = Boolean((c as any).isFunded);
+    fundedAt = (c as any).fundedAt ? asStr((c as any).fundedAt) : undefined;
+  } else if (role === "mutaxassis") {
     if (typeof window !== "undefined") {
       try {
         const customContracts = JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]");

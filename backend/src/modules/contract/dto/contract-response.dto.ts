@@ -28,6 +28,12 @@ export class ContractResponseDto {
   @ApiProperty() deadline!: Date;
   @ApiProperty({ enum: ContractStatus }) status!: ContractStatus;
 
+  @ApiProperty({ description: 'To‘lov (escrow) muvaffaqiyatli moliyalashtirilganmi' })
+  isFunded!: boolean;
+
+  @ApiProperty({ required: false, nullable: true })
+  fundedAt?: Date | null;
+
   @ApiProperty({ type: [MilestoneResponseDto] }) milestones!: MilestoneResponseDto[];
 
   @ApiProperty() createdAt!: Date;
@@ -35,8 +41,15 @@ export class ContractResponseDto {
 }
 
 export function toContractResponseDto(
-  contract: Contract & { milestones?: Milestone[] },
+  contract: Contract & {
+    milestones?: Milestone[];
+    payments?: Array<{ id: string; status: string; succeededAt?: Date | null; createdAt: Date }>;
+  },
 ): ContractResponseDto {
+  const succeededPayment = contract.payments?.find((p) => p.status === 'SUCCEEDED');
+  const isFunded = Boolean(succeededPayment);
+  const fundedAt = succeededPayment ? (succeededPayment.succeededAt ?? succeededPayment.createdAt) : null;
+
   return {
     id: contract.id,
     buyerId: contract.buyerId,
@@ -52,6 +65,8 @@ export function toContractResponseDto(
     platformFeeAmount: tiyinToSom(contract.platformFeeAmountSnapshot),
     deadline: contract.deadline,
     status: contract.status,
+    isFunded,
+    fundedAt,
     milestones: (contract.milestones ?? [])
       .slice()
       .sort((a, b) => a.position - b.position)
