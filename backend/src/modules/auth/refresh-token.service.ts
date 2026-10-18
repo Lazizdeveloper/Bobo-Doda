@@ -138,9 +138,16 @@ export class RefreshTokenService {
   }
 
   /** Logout — joriy cookie'dagi tokenning oilasini (shu qurilma) bekor qiladi. */
-  async revokeByRawToken(rawToken: string, userId: string): Promise<void> {
+  async revokeByRawToken(rawToken: string, userId?: string): Promise<void> {
+    const where: { tokenHash: string; revokedAt: null; userId?: string } = {
+      tokenHash: hashOpaqueToken(rawToken),
+      revokedAt: null,
+    };
+    if (userId) {
+      where.userId = userId;
+    }
     await this.prisma.refreshToken.updateMany({
-      where: { tokenHash: hashOpaqueToken(rawToken), userId, revokedAt: null },
+      where,
       data: { revokedAt: new Date() },
     });
   }

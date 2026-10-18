@@ -528,7 +528,20 @@ export default function BozorPage() {
                 </div>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-4">
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">💼</span>
+                      <span className="font-semibold text-ink">Ish e&apos;lonlari (Beta)</span>
+                      <span className="text-2xs text-muted">— To&apos;liq Escrow himoyasi uchun xizmatlar (giglar) orqali buyurtma berishingiz mumkin</span>
+                    </div>
+                    <Link href="/bozor?tab=services" className="text-2xs font-semibold text-primary hover:underline">
+                      Xizmatlarni ko&apos;rish →
+                    </Link>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
                 {pagedJobs.map((job) => (
                   <Card key={job.id} padding="lg" hoverable className="flex flex-col justify-between gap-4">
                     <div className="flex flex-col gap-2.5">
@@ -599,6 +612,7 @@ export default function BozorPage() {
                     </div>
                   </Card>
                 ))}
+                </div>
               </div>
             )
           )}

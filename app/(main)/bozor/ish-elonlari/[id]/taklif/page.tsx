@@ -135,6 +135,18 @@ export default function TaklifYuborishPage() {
         </h1>
       </div>
 
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs text-muted">
+        <div className="flex items-start gap-2.5">
+          <span className="text-base">💡</span>
+          <div>
+            <p className="font-semibold text-ink">Taklif topshirish haqida ma&apos;lumot</p>
+            <p className="mt-0.5 leading-relaxed text-muted">
+              Yuborilgan taklifingiz muvaffaqiyatli saqlanadi. Xaridor sizni ishga tanlaganda, to&apos;lovlar xavfsizligi va Escrow himoyasi ta&apos;minlanishi uchun profilingizdagi faol xizmat asosida shartnoma shakllantiriladi.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
         <Card padding="lg" className="flex flex-col gap-4">
           <Input

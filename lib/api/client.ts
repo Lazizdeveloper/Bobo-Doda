@@ -154,9 +154,9 @@ async function hydrateContract(c: RealContract, role: Model.UserRole | null): Pr
       }
     } catch {}
   }
-  if (typeof (c as any).isFunded === "boolean") {
-    funded = Boolean((c as any).isFunded);
-    fundedAt = (c as any).fundedAt ? asStr((c as any).fundedAt) : undefined;
+  if (typeof c.isFunded === "boolean") {
+    funded = Boolean(c.isFunded);
+    fundedAt = c.fundedAt ? asStr(c.fundedAt) : undefined;
   } else if (role === "mutaxassis") {
     if (typeof window !== "undefined") {
       try {
@@ -209,6 +209,11 @@ function writeSession(res: RealAuthSession): Model.Session {
     verified: true,
   };
   sessionStore.write(session);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(DATA_CHANGED_EVENT, { detail: { key: "session", session } })
+    );
+  }
   return session;
 }
 
@@ -296,6 +301,11 @@ export const authService: AuthService = {
     } catch {}
     setAccessToken(null);
     sessionStore.clear();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent(DATA_CHANGED_EVENT, { detail: { key: "session", session: null } })
+      );
+    }
   },
 };
 
@@ -2034,11 +2044,201 @@ export const paymentsService: PaymentsService = {
         } catch {}
       }
     }),
-  withdrawEarnings: () => disabled(),
-  withdrawBalance: () => disabled(),
-  getWithdrawnTotal: () => disabled(),
-  getPendingWithdrawalTotal: () => disabled(),
-  listMyWithdrawalRequests: () => disabled(),
+  withdrawEarnings: (destination, amount) =>
+    call(async () => {
+      let cardDetails = "Plastik karta";
+      let cardId = "";
+      if (typeof destination === "string") {
+        cardDetails = destination;
+        cardId = destination;
+      } else if (typeof destination === "object" && destination.type === "card") {
+        cardId = destination.cardId;
+        cardDetails = destination.cardId;
+      } else if (typeof destination === "object" && destination.type === "bank_account") {
+        cardDetails = `Bank: ${destination.bankAccount.accountNumber} (MFO: ${destination.bankAccount.mfo})`;
+      }
+
+      let uid = "me";
+      let userName = "Mutaxassis";
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          if (me) {
+            uid = me.id;
+            const name = typeof me.fullName === "string" ? me.fullName : "";
+            const phone = typeof me.phone === "string" ? me.phone : "";
+            userName = name || phone || "Mutaxassis";
+          }
+        } catch {
+          const s = sessionStore.read();
+          if (s?.userId) uid = s.userId;
+        }
+      }
+
+      const reqAmount = Number(amount) || 0;
+      if (reqAmount <= 0) {
+        throw new ApiError({
+          code: "VALIDATION",
+          status: 400,
+          message: "Summa 0 dan katta bo'lishi kerak",
+          retryable: false,
+        });
+      }
+
+      const req: Model.WithdrawalRequest = {
+        id: `wd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        userId: uid,
+        userName,
+        userRole: "mutaxassis",
+        source: "earnings",
+        amount: reqAmount,
+        currency: "UZS",
+        payoutMethod: "card",
+        cardDetails,
+        cardId,
+        status: "kutilmoqda",
+        payoutStatus: "payout_pending",
+        payoutReference: `PAYOUT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
+          localStorage.setItem("sb2_withdrawal_requests", JSON.stringify([req, ...all]));
+
+          const myKey = `bbd_my_withdrawals_${uid}`;
+          const myWithdrawals: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          localStorage.setItem(myKey, JSON.stringify([req, ...myWithdrawals]));
+        } catch {}
+      }
+      return req;
+    }),
+  withdrawBalance: (destination, amount) =>
+    call(async () => {
+      let cardDetails = "Plastik karta";
+      let cardId = "";
+      if (typeof destination === "string") {
+        cardDetails = destination;
+        cardId = destination;
+      } else if (typeof destination === "object" && destination.type === "card") {
+        cardId = destination.cardId;
+        cardDetails = destination.cardId;
+      }
+      let uid = "me";
+      let userName = "Xaridor";
+      if (typeof window !== "undefined") {
+        try {
+          const me = await http<RealMe>("/me").catch(() => null);
+          if (me) {
+            uid = me.id;
+            const name = typeof me.fullName === "string" ? me.fullName : "";
+            const phone = typeof me.phone === "string" ? me.phone : "";
+            userName = name || phone || "Xaridor";
+          }
+        } catch {
+          const s = sessionStore.read();
+          if (s?.userId) uid = s.userId;
+        }
+      }
+      const reqAmount = Number(amount) || 0;
+      const req: Model.WithdrawalRequest = {
+        id: `wd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        userId: uid,
+        userName,
+        userRole: "xaridor",
+        source: "balance",
+        amount: reqAmount,
+        currency: "UZS",
+        payoutMethod: "card",
+        cardDetails,
+        cardId,
+        status: "kutilmoqda",
+        payoutStatus: "payout_pending",
+        payoutReference: `PAYOUT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+        createdAt: new Date().toISOString(),
+      };
+      if (typeof window !== "undefined") {
+        try {
+          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
+          localStorage.setItem("sb2_withdrawal_requests", JSON.stringify([req, ...all]));
+          const myKey = `bbd_my_withdrawals_${uid}`;
+          const myWithdrawals: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          localStorage.setItem(myKey, JSON.stringify([req, ...myWithdrawals]));
+        } catch {}
+      }
+      return req;
+    }),
+  getWithdrawnTotal: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          let uid = "me";
+          const me = await http<RealMe>("/me").catch(() => null);
+          if (me) uid = me.id;
+          else {
+            const s = sessionStore.read();
+            if (s?.userId) uid = s.userId;
+          }
+          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
+          return all
+            .filter((r) => (r.userId === uid || r.userId === "me") && r.status === "tasdiqlangan")
+            .reduce((sum, r) => sum + r.amount, 0);
+        } catch {}
+      }
+      return 0;
+    }),
+  getPendingWithdrawalTotal: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          let uid = "me";
+          const me = await http<RealMe>("/me").catch(() => null);
+          if (me) uid = me.id;
+          else {
+            const s = sessionStore.read();
+            if (s?.userId) uid = s.userId;
+          }
+          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
+          return all
+            .filter(
+              (r) =>
+                (r.userId === uid || r.userId === "me") &&
+                (r.status === "kutilmoqda" || r.status === "korib_chiqilmoqda")
+            )
+            .reduce((sum, r) => sum + r.amount, 0);
+        } catch {}
+      }
+      return 0;
+    }),
+  listMyWithdrawalRequests: () =>
+    call(async () => {
+      if (typeof window !== "undefined") {
+        try {
+          let uid = "me";
+          const me = await http<RealMe>("/me").catch(() => null);
+          if (me) uid = me.id;
+          else {
+            const s = sessionStore.read();
+            if (s?.userId) uid = s.userId;
+          }
+
+          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
+          const myKey = `bbd_my_withdrawals_${uid}`;
+          const myOnly: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+
+          const map = new Map<string, Model.WithdrawalRequest>();
+          for (const r of myOnly) {
+            map.set(r.id, r);
+          }
+          for (const r of all) {
+            if (r.userId === uid || r.userId === "me") map.set(r.id, r);
+          }
+          return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        } catch {}
+      }
+      return [];
+    }),
   createContractPayment: (contractId, idempotencyKey) =>
     call(async () => {
       try {

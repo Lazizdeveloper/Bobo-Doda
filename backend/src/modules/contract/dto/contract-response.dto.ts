@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ContractStatus, type Contract, type Milestone } from '@prisma/client';
 import { tiyinToSom } from '@/common/money/money.util';
 import { MilestoneResponseDto, toMilestoneResponseDto } from './milestone-response.dto';
@@ -31,7 +31,7 @@ export class ContractResponseDto {
   @ApiProperty({ description: 'To‘lov (escrow) muvaffaqiyatli moliyalashtirilganmi' })
   isFunded!: boolean;
 
-  @ApiProperty({ required: false, nullable: true })
+  @ApiPropertyOptional({ type: () => Date, nullable: true })
   fundedAt?: Date | null;
 
   @ApiProperty({ type: [MilestoneResponseDto] }) milestones!: MilestoneResponseDto[];

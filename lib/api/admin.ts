@@ -34,7 +34,8 @@ import {
   STAFF_SESSION_EXPIRED_EVENT,
   takeExpiredStaffRole,
 } from "./staff-http";
-import type { AdminAccount, AdminPermission, AdminRole, AdminSession } from "@/lib/admin-types";
+import type { AdminAccount, AdminPage, AdminPermission, AdminQueueQuery, AdminRole, AdminSession, TransactionRecord } from "@/lib/admin-types";
+import type { Service, WithdrawalRequest } from "@/lib/types";
 
 bootstrapStaffSession();
 
@@ -316,12 +317,58 @@ export const getTicketConversation: Asyncified<typeof adminMock.getTicketConvers
 export const adminGlobalSearch: Asyncified<typeof adminMock.adminGlobalSearch> = mockAsync(adminMock.adminGlobalSearch);
 
 export const listUsersQueue: Asyncified<typeof adminMock.listUsersQueue> = mockAsync(adminMock.listUsersQueue);
-export const listServicesQueue: Asyncified<typeof adminMock.listServicesQueue> = mockAsync(adminMock.listServicesQueue);
 export const listJobsQueue: Asyncified<typeof adminMock.listJobsQueue> = mockAsync(adminMock.listJobsQueue);
 export const listContractsQueue: Asyncified<typeof adminMock.listContractsQueue> = mockAsync(adminMock.listContractsQueue);
-export const listVerificationsQueue: Asyncified<typeof adminMock.listVerificationsQueue> = mockAsync(adminMock.listVerificationsQueue);
 export const listDisputesQueue: Asyncified<typeof adminMock.listDisputesQueue> = mockAsync(adminMock.listDisputesQueue);
-export const listWithdrawalsQueue: Asyncified<typeof adminMock.listWithdrawalsQueue> = mockAsync(adminMock.listWithdrawalsQueue);
+export async function listWithdrawalsQueue(
+  query: AdminQueueQuery = {}
+): Promise<AdminPage<WithdrawalRequest>> {
+  try {
+    return adminMock.listWithdrawalsQueue(query);
+  } catch {
+    const raw: WithdrawalRequest[] =
+      typeof window !== "undefined"
+        ? JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]")
+        : [];
+    let items = [...raw];
+    if (query.search) {
+      const s = query.search.toLowerCase();
+      items = items.filter(
+        (w) =>
+          w.id.toLowerCase().includes(s) ||
+          w.userName.toLowerCase().includes(s) ||
+          w.userId.toLowerCase().includes(s) ||
+          (w.cardDetails && w.cardDetails.toLowerCase().includes(s))
+      );
+    }
+    if (query.status && query.status !== "all" && query.status !== "_all") {
+      items = items.filter((w) => w.status === query.status);
+    }
+    items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const page = query.page ?? 1;
+    const perPage = query.perPage ?? 10;
+    const total = items.length;
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
+    const pagedItems = items.slice((page - 1) * perPage, page * perPage);
+
+    const facets: Record<string, number> = {
+      _all: raw.length,
+      kutilmoqda: raw.filter((w) => w.status === "kutilmoqda").length,
+      korib_chiqilmoqda: raw.filter((w) => w.status === "korib_chiqilmoqda").length,
+      tasdiqlangan: raw.filter((w) => w.status === "tasdiqlangan").length,
+      rad_etilgan: raw.filter((w) => w.status === "rad_etilgan").length,
+    };
+
+    return {
+      items: pagedItems,
+      page,
+      perPage,
+      total,
+      totalPages,
+      facets,
+    };
+  }
+}
 export const listTransactionsQueue: Asyncified<typeof adminMock.listTransactionsQueue> = mockAsync(adminMock.listTransactionsQueue);
 export const listTicketsQueue: Asyncified<typeof adminMock.listTicketsQueue> = mockAsync(adminMock.listTicketsQueue);
 export const listReportsQueue: Asyncified<typeof adminMock.listReportsQueue> = mockAsync(adminMock.listReportsQueue);
@@ -336,18 +383,27 @@ export async function getAdminCounters(): Promise<adminMock.AdminCounters> {
       .catch(() => 0);
 
   try {
-    const [users, services, contracts, disputesOpen, disputesReview, audit] = await Promise.all([
+    let pendingWithdrawals = 0;
+    if (typeof window !== "undefined") {
+      try {
+        const list = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
+        pendingWithdrawals = list.filter((w: { status?: string }) => w.status === "kutilmoqda" || w.status === "korib_chiqilmoqda").length;
+      } catch {}
+    }
+
+    const [users, services, contracts, disputesOpen, disputesReview, audit, pendingKyc] = await Promise.all([
       safeTotal("/staff/users?perPage=1"),
       safeTotal("/staff/services?perPage=1"),
       safeTotal("/staff/contracts?perPage=1"),
       safeTotal("/staff/disputes?status=OPEN&perPage=1"),
       safeTotal("/staff/disputes?status=UNDER_REVIEW&perPage=1"),
       safeTotal("/staff/audit-logs?perPage=1"),
+      safeTotal("/staff/seller-applications?status=PENDING&perPage=1"),
     ]);
     return {
-      pendingKyc: 0,
+      pendingKyc,
       openDisputes: disputesOpen + disputesReview,
-      pendingWithdrawals: 0,
+      pendingWithdrawals,
       openReports: 0,
       openTickets: 0,
       pendingAppeals: 0,
@@ -781,10 +837,8 @@ export const getDisputeContext: Asyncified<typeof adminMock.getDisputeContext> =
 export const getUserDetail: Asyncified<typeof adminMock.getUserDetail> = mockAsync(adminMock.getUserDetail);
 
 export const findUserById: Asyncified<typeof adminMock.findUserById> = mockAsync(adminMock.findUserById);
-export const findServiceById: Asyncified<typeof adminMock.findServiceById> = mockAsync(adminMock.findServiceById);
 export const findContractById: Asyncified<typeof adminMock.findContractById> = mockAsync(adminMock.findContractById);
 export const findJobById: Asyncified<typeof adminMock.findJobById> = mockAsync(adminMock.findJobById);
-export const findVerificationByUserId: Asyncified<typeof adminMock.findVerificationByUserId> = mockAsync(adminMock.findVerificationByUserId);
 export const findTicketById: Asyncified<typeof adminMock.findTicketById> = mockAsync(adminMock.findTicketById);
 export const findDisputeById: Asyncified<typeof adminMock.findDisputeById> = mockAsync(adminMock.findDisputeById);
 
@@ -803,11 +857,353 @@ export const unsuspendUser: Asyncified<typeof adminMock.unsuspendUser> = mockAsy
 export const blockUser: Asyncified<typeof adminMock.blockUser> = mockAsync(adminMock.blockUser);
 export const deactivateUser: Asyncified<typeof adminMock.deactivateUser> = mockAsync(adminMock.deactivateUser);
 export const softDeleteUser: Asyncified<typeof adminMock.softDeleteUser> = mockAsync(adminMock.softDeleteUser);
-export const adminModerateKYC: Asyncified<typeof adminMock.adminModerateKYC> = mockAsync(adminMock.adminModerateKYC);
-export const adminModerate: Asyncified<typeof adminMock.adminModerate> = mockAsync(adminMock.adminModerate);
-
 export const closeJobAsAdmin: Asyncified<typeof adminMock.closeJobAsAdmin> = mockAsync(adminMock.closeJobAsAdmin);
-export const setServiceStatus: Asyncified<typeof adminMock.setServiceStatus> = mockAsync(adminMock.setServiceStatus);
+
+interface SellerAppDto {
+  id: string;
+  userId: string;
+  legalName: string;
+  displayName: string;
+  description: string | null;
+  passportNumber?: string | null;
+  inn?: string | null;
+  companyDetails?: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  submittedAt: string;
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+  createdAt: string;
+}
+
+function mapSellerAppStatus(status: string): "korib_chiqilmoqda" | "tasdiqlangan" | "rad_etilgan" | "boshlanmagan" {
+  switch (status) {
+    case "PENDING":
+      return "korib_chiqilmoqda";
+    case "APPROVED":
+      return "tasdiqlangan";
+    case "REJECTED":
+      return "rad_etilgan";
+    default:
+      return "boshlanmagan";
+  }
+}
+
+function mapSellerAppToVerificationRow(app: SellerAppDto): adminMock.AdminVerificationRow {
+  return {
+    id: app.id,
+    userId: app.userId,
+    userName: app.displayName || app.legalName || "Noma'lum",
+    userPhone: "",
+    legalName: app.legalName || app.displayName || "Noma'lum",
+    country: "UZ",
+    documentType: "passport",
+    birthDate: "-",
+    documents: [],
+    status: mapSellerAppStatus(app.status),
+    submittedAt: asStr(app.submittedAt) || asStr(app.createdAt),
+    reviewedAt: asStr(app.reviewedAt),
+    rejectionReason: asStr(app.rejectionReason),
+    passportNumber: asStr(app.passportNumber),
+    inn: asStr(app.inn),
+    companyDetails: asStr(app.companyDetails),
+  };
+}
+
+export async function listVerificationsQueue(
+  query: AdminQueueQuery = {}
+): Promise<AdminPage<adminMock.AdminVerificationRow>> {
+  try {
+    let backendStatus: string | undefined;
+    if (query.status === "korib_chiqilmoqda") backendStatus = "PENDING";
+    else if (query.status === "tasdiqlangan") backendStatus = "APPROVED";
+    else if (query.status === "rad_etilgan") backendStatus = "REJECTED";
+
+    const pageNum = query.page ?? 1;
+    const perPageNum = query.perPage ?? 10;
+
+    const res = await staffHttp<Page<SellerAppDto>>(
+      `/staff/seller-applications${staffToQuery({
+        page: pageNum,
+        perPage: perPageNum,
+        status: backendStatus,
+      })}`
+    );
+
+    const safeTotal = (status?: string) =>
+      staffHttp<{ total: number }>(`/staff/seller-applications${staffToQuery({ perPage: 1, status })}`)
+        .then((r) => (typeof r?.total === "number" ? r.total : 0))
+        .catch(() => 0);
+
+    const [allCount, pendingCount, approvedCount, rejectedCount] = await Promise.all([
+      safeTotal(),
+      safeTotal("PENDING"),
+      safeTotal("APPROVED"),
+      safeTotal("REJECTED"),
+    ]);
+
+    let items = res.items.map(mapSellerAppToVerificationRow);
+    if (query.search?.trim()) {
+      const s = query.search.toLowerCase();
+      items = items.filter(
+        (v) =>
+          v.legalName.toLowerCase().includes(s) ||
+          v.userName.toLowerCase().includes(s) ||
+          v.userId.toLowerCase().includes(s) ||
+          Boolean(v.passportNumber && v.passportNumber.toLowerCase().includes(s)) ||
+          Boolean(v.inn && v.inn.toLowerCase().includes(s))
+      );
+    }
+
+    return {
+      items,
+      page: res.page,
+      perPage: res.perPage,
+      total: res.total,
+      totalPages: res.totalPages,
+      facets: {
+        _all: allCount || res.total,
+        korib_chiqilmoqda: pendingCount,
+        tasdiqlangan: approvedCount,
+        rad_etilgan: rejectedCount,
+      },
+    };
+  } catch (error) {
+    try {
+      return adminMock.listVerificationsQueue(query);
+    } catch {
+      throw normalizeApiError(error);
+    }
+  }
+}
+
+export async function findVerificationByUserId(userId: string): Promise<adminMock.AdminVerificationRow | null> {
+  try {
+    const res = await staffHttp<Page<SellerAppDto>>(`/staff/seller-applications?perPage=50`);
+    const found = res.items.find((a) => a.userId === userId || a.id === userId);
+    if (found) return mapSellerAppToVerificationRow(found);
+  } catch {}
+  return adminMock.findVerificationByUserId(userId);
+}
+
+export async function adminModerateKYC(
+  id: string,
+  outcome: "approve" | "reject",
+  reason?: string
+): Promise<void> {
+  try {
+    let appId = id;
+    try {
+      if (outcome === "approve") {
+        await staffHttp(`/staff/seller-applications/${appId}/approve`, { method: "POST" });
+      } else {
+        await staffHttp(`/staff/seller-applications/${appId}/reject`, {
+          method: "POST",
+          body: { reason: reason || "Talablarga mos kelmadi" },
+        });
+      }
+      return;
+    } catch {
+      const list = await staffHttp<Page<SellerAppDto>>(`/staff/seller-applications?status=PENDING&perPage=50`).catch(() => null);
+      const match = list?.items.find((a) => a.userId === id || a.id === id);
+      if (match) {
+        appId = match.id;
+        if (outcome === "approve") {
+          await staffHttp(`/staff/seller-applications/${appId}/approve`, { method: "POST" });
+        } else {
+          await staffHttp(`/staff/seller-applications/${appId}/reject`, {
+            method: "POST",
+            body: { reason: reason || "Talablarga mos kelmadi" },
+          });
+        }
+        return;
+      }
+      throw new Error("APPLICATION_NOT_FOUND");
+    }
+  } catch (error) {
+    try {
+      adminMock.adminModerateKYC(id, outcome, reason);
+      return;
+    } catch {
+      throw normalizeApiError(error);
+    }
+  }
+}
+
+export async function adminModerate(
+  kind: "users" | "kyc" | "disputes" | "support",
+  id: string,
+  options: { outcome?: "approve" | "reject"; note?: string } = {}
+): Promise<void> {
+  if (kind === "kyc") {
+    return adminModerateKYC(id, options.outcome ?? "approve", options.note);
+  } else if (kind === "users") {
+    if (options.outcome === "reject") {
+      return blockUser(id, options.note ?? "Admin qarori bilan");
+    } else {
+      return unsuspendUser(id);
+    }
+  } else if (kind === "disputes") {
+    return forceCloseContract(id, "refund", options.note ?? "Admin arbitraji");
+  } else if (kind === "support") {
+    return closeTicket(id, options.note);
+  }
+}
+
+interface RealServiceDto {
+  id: string;
+  sellerId: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  lang: string;
+  price: number;
+  currency: string;
+  deliveryDays: number;
+  status: "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "PAUSED" | "REJECTED" | "ARCHIVED";
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function mapRealServiceToFrontend(s: RealServiceDto): Service {
+  let frontendStatus: Service["status"] = "active";
+  if (s.status === "ACTIVE") frontendStatus = "active";
+  else if (s.status === "PAUSED") frontendStatus = "paused";
+  else if (s.status === "DRAFT") frontendStatus = "draft";
+  else if (s.status === "ARCHIVED") frontendStatus = "archived";
+  else if (s.status === "PENDING_REVIEW") frontendStatus = "pending_review";
+  else if (s.status === "REJECTED") frontendStatus = "rejected";
+
+  return {
+    id: s.id,
+    sellerId: s.sellerId,
+    category: s.categoryId as Service["category"],
+    title: s.title,
+    description: s.description,
+    fields: {},
+    price: s.price,
+    currency: "UZS",
+    deliveryDays: s.deliveryDays,
+    images: [],
+    status: frontendStatus,
+    createdAt: s.createdAt,
+  };
+}
+
+export async function listServicesQueue(
+  query: AdminQueueQuery = {}
+): Promise<AdminPage<Service>> {
+  try {
+    let backendStatus: string | undefined;
+    if (query.status === "active") backendStatus = "ACTIVE";
+    else if (query.status === "paused") backendStatus = "PAUSED";
+    else if (query.status === "draft") backendStatus = "DRAFT";
+    else if (query.status === "archived") backendStatus = "ARCHIVED";
+    else if (query.status === "pending_review" || query.status === "korib_chiqilmoqda") backendStatus = "PENDING_REVIEW";
+    else if (query.status === "rejected" || query.status === "rad_etilgan") backendStatus = "REJECTED";
+
+    const pageNum = query.page ?? 1;
+    const perPageNum = query.perPage ?? 10;
+
+    const res = await staffHttp<Page<RealServiceDto>>(
+      `/staff/services${staffToQuery({
+        page: pageNum,
+        perPage: perPageNum,
+        status: backendStatus,
+      })}`
+    );
+
+    const safeTotal = (status?: string) =>
+      staffHttp<{ total: number }>(`/staff/services${staffToQuery({ perPage: 1, status })}`)
+        .then((r) => (typeof r?.total === "number" ? r.total : 0))
+        .catch(() => 0);
+
+    const [allCount, activeCount, pausedCount, draftCount, pendingReviewCount, rejectedCount] = await Promise.all([
+      safeTotal(),
+      safeTotal("ACTIVE"),
+      safeTotal("PAUSED"),
+      safeTotal("DRAFT"),
+      safeTotal("PENDING_REVIEW"),
+      safeTotal("REJECTED"),
+    ]);
+
+    let items = res.items.map(mapRealServiceToFrontend);
+    if (query.search?.trim()) {
+      const s = query.search.toLowerCase();
+      items = items.filter(
+        (x) =>
+          x.title.toLowerCase().includes(s) ||
+          x.description.toLowerCase().includes(s) ||
+          x.id.toLowerCase().includes(s) ||
+          x.sellerId.toLowerCase().includes(s)
+      );
+    }
+
+    return {
+      items,
+      page: res.page,
+      perPage: res.perPage,
+      total: res.total,
+      totalPages: res.totalPages,
+      facets: {
+        _all: allCount || res.total,
+        active: activeCount,
+        paused: pausedCount,
+        draft: draftCount,
+        pending_review: pendingReviewCount,
+        korib_chiqilmoqda: pendingReviewCount,
+        rejected: rejectedCount,
+      },
+    };
+  } catch (error) {
+    try {
+      return adminMock.listServicesQueue(query);
+    } catch {
+      throw normalizeApiError(error);
+    }
+  }
+}
+
+export async function findServiceById(id: string): Promise<Service | null> {
+  try {
+    const res = await staffHttp<RealServiceDto>(`/staff/services/${id}`);
+    if (res) return mapRealServiceToFrontend(res);
+  } catch {}
+  return adminMock.findServiceById(id);
+}
+
+export async function setServiceStatus(
+  serviceId: string,
+  status: Service["status"],
+  reason?: string
+): Promise<void> {
+  try {
+    if (status === "active") {
+      await staffHttp(`/staff/services/${serviceId}/approve`, { method: "POST" });
+    } else if (status === "paused") {
+      await staffHttp(`/staff/services/${serviceId}/force-pause`, {
+        method: "POST",
+        body: { reason: reason || "Admin tomonidan to'xtatildi" },
+      });
+    } else if (status === "archived" || status === "rejected") {
+      await staffHttp(`/staff/services/${serviceId}/reject`, {
+        method: "POST",
+        body: { reason: reason || "Admin tomonidan rad etildi" },
+      });
+    }
+    return;
+  } catch (error) {
+    try {
+      adminMock.setServiceStatus(serviceId, status, reason);
+      return;
+    } catch {
+      throw normalizeApiError(error);
+    }
+  }
+}
 export const deleteReview: Asyncified<typeof adminMock.deleteReview> = mockAsync(adminMock.deleteReview);
 export const updateTrustReport: Asyncified<typeof adminMock.updateTrustReport> = mockAsync(adminMock.updateTrustReport);
 export const handleUserAppeal: Asyncified<typeof adminMock.handleUserAppeal> = mockAsync(adminMock.handleUserAppeal);
@@ -817,8 +1213,135 @@ export const forceCloseContract: Asyncified<typeof adminMock.forceCloseContract>
 export const replyToTicket: Asyncified<typeof adminMock.replyToTicket> = mockAsync(adminMock.replyToTicket);
 export const closeTicket: Asyncified<typeof adminMock.closeTicket> = mockAsync(adminMock.closeTicket);
 
-export const approveWithdrawal: Asyncified<typeof adminMock.approveWithdrawal> = mockAsync(adminMock.approveWithdrawal);
-export const rejectWithdrawal: Asyncified<typeof adminMock.rejectWithdrawal> = mockAsync(adminMock.rejectWithdrawal);
+export async function approveWithdrawal(requestId: string): Promise<void> {
+  const actor = getCurrentAdmin() ?? adminMock.getCurrentAdmin() ?? {
+    id: "admin-system",
+    fullName: "Boshqaruvchi",
+    email: "admin@bobododa.uz",
+    role: "super_admin",
+    title: "Boshqaruvchi",
+    active: true,
+    permissions: ["payments" as AdminPermission],
+    createdAt: "",
+    mustChangePassword: false,
+    mfaEnabled: false,
+  };
+
+  if (typeof window !== "undefined") {
+    try {
+      const withdrawals: WithdrawalRequest[] = JSON.parse(
+        localStorage.getItem("sb2_withdrawal_requests") || "[]"
+      );
+      const reqIndex = withdrawals.findIndex((w) => w.id === requestId);
+      if (reqIndex !== -1) {
+        const req = withdrawals[reqIndex];
+        if (req.status !== "tasdiqlangan" && req.status !== "rad_etilgan") {
+          if (req.source === "earnings") {
+            const withdrawn: Record<string, number> = JSON.parse(
+              localStorage.getItem("sb2_withdrawn") || "{}"
+            );
+            withdrawn[req.userId] = (withdrawn[req.userId] ?? 0) + req.amount;
+            localStorage.setItem("sb2_withdrawn", JSON.stringify(withdrawn));
+          }
+          withdrawals[reqIndex] = {
+            ...req,
+            status: "tasdiqlangan",
+            payoutStatus: "paid",
+            processedAt: new Date().toISOString(),
+            processedBy: actor.fullName,
+          };
+          localStorage.setItem("sb2_withdrawal_requests", JSON.stringify(withdrawals));
+
+          const myKey = `bbd_my_withdrawals_${req.userId}`;
+          const myOnly: WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          const myIdx = myOnly.findIndex((w) => w.id === requestId);
+          if (myIdx !== -1) {
+            myOnly[myIdx] = {
+              ...myOnly[myIdx],
+              status: "tasdiqlangan",
+              payoutStatus: "paid",
+              processedAt: new Date().toISOString(),
+              processedBy: actor.fullName,
+            };
+            localStorage.setItem(myKey, JSON.stringify(myOnly));
+          }
+
+          const txs: TransactionRecord[] = JSON.parse(localStorage.getItem("sb2_transactions") || "[]");
+          const tx: TransactionRecord = {
+            id: `tx-${Date.now().toString(36)}`,
+            type: "yechish",
+            userId: req.userId,
+            userName: req.userName,
+            amount: req.amount,
+            currency: "UZS",
+            referenceId: req.id,
+            description: `${req.cardDetails || "Plastik karta"}ga mablag' yechib olindi (Admin tasdiqladi)`,
+            status: "muvaffaqiyatli",
+            createdAt: new Date().toISOString(),
+          };
+          localStorage.setItem("sb2_transactions", JSON.stringify([tx, ...txs]));
+          return;
+        }
+      }
+    } catch {}
+  }
+  return mockAsync(adminMock.approveWithdrawal)(requestId);
+}
+
+export async function rejectWithdrawal(requestId: string, reason?: string): Promise<void> {
+  const actor = getCurrentAdmin() ?? adminMock.getCurrentAdmin() ?? {
+    id: "admin-system",
+    fullName: "Boshqaruvchi",
+    email: "admin@bobododa.uz",
+    role: "super_admin",
+    title: "Boshqaruvchi",
+    active: true,
+    permissions: ["payments" as AdminPermission],
+    createdAt: "",
+    mustChangePassword: false,
+    mfaEnabled: false,
+  };
+
+  if (typeof window !== "undefined") {
+    try {
+      const withdrawals: WithdrawalRequest[] = JSON.parse(
+        localStorage.getItem("sb2_withdrawal_requests") || "[]"
+      );
+      const reqIndex = withdrawals.findIndex((w) => w.id === requestId);
+      if (reqIndex !== -1) {
+        const req = withdrawals[reqIndex];
+        if (req.status !== "tasdiqlangan" && req.status !== "rad_etilgan") {
+          withdrawals[reqIndex] = {
+            ...req,
+            status: "rad_etilgan",
+            payoutStatus: "payout_failed",
+            rejectionReason: reason || "Ma'muriyat tomonidan rad etildi",
+            processedAt: new Date().toISOString(),
+            processedBy: actor.fullName,
+          };
+          localStorage.setItem("sb2_withdrawal_requests", JSON.stringify(withdrawals));
+
+          const myKey = `bbd_my_withdrawals_${req.userId}`;
+          const myOnly: WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
+          const myIdx = myOnly.findIndex((w) => w.id === requestId);
+          if (myIdx !== -1) {
+            myOnly[myIdx] = {
+              ...myOnly[myIdx],
+              status: "rad_etilgan",
+              payoutStatus: "payout_failed",
+              rejectionReason: reason || "Ma'muriyat tomonidan rad etildi",
+              processedAt: new Date().toISOString(),
+              processedBy: actor.fullName,
+            };
+            localStorage.setItem(myKey, JSON.stringify(myOnly));
+          }
+          return;
+        }
+      }
+    } catch {}
+  }
+  return mockAsync(adminMock.rejectWithdrawal)(requestId, reason || "Rad etildi");
+}
 export const reviewWithdrawal: Asyncified<typeof adminMock.reviewWithdrawal> = mockAsync(adminMock.reviewWithdrawal);
 export const listB2bPendingContracts: Asyncified<typeof adminMock.listB2bPendingContracts> = mockAsync(adminMock.listB2bPendingContracts);
 export const approveB2bPayment: Asyncified<typeof adminMock.approveB2bPayment> = mockAsync(adminMock.approveB2bPayment);

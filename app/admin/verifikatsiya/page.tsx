@@ -91,7 +91,7 @@ export default function VerificationQueuePage() {
     setActionLoading(true);
     setActionError("");
     try {
-      await adminModerate("kyc", selectedRecord.userId, { outcome: "approve", note: note.trim() });
+      await adminModerate("kyc", selectedRecord.id || selectedRecord.userId, { outcome: "approve", note: note.trim() });
       setSelectedRecord(null);
       setNote("");
       load();
@@ -111,7 +111,7 @@ export default function VerificationQueuePage() {
     setActionLoading(true);
     setActionError("");
     try {
-      await adminModerate("kyc", selectedRecord.userId, { outcome: "reject", note: note.trim() });
+      await adminModerate("kyc", selectedRecord.id || selectedRecord.userId, { outcome: "reject", note: note.trim() });
       setSelectedRecord(null);
       setNote("");
       load();

@@ -91,7 +91,7 @@ export function ServiceWizard({ initial }: ServiceWizardProps) {
     }
     if (current === 2) {
       const priceNum = Number(price);
-      if (!price || isNaN(priceNum) || priceNum <= 0) {
+      if (!price || isNaN(priceNum) || priceNum < 1000) {
         next.price = t("wizard.errPrice");
       } else if (priceNum > MAX_AMOUNT) {
         next.price = t("wizard.errPriceMax");

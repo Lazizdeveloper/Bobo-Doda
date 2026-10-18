@@ -13,6 +13,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { OfflineSupport } from "@/components/shared/OfflineSupport";
 import { SupportModalProvider } from "@/components/shared/SupportModalProvider";
 import { PageFeedbackWidget } from "@/components/shared/PageFeedbackWidget";
+import { InactivityTimeout } from "@/components/shared/InactivityTimeout";
 
 const SITE_URL = "https://bobololadono.uz";
 const TITLE = "Bobololadono — Mutaxassislar bozori";
@@ -81,6 +82,7 @@ export default async function RootLayout({
           <ToastProvider>
             <SupportModalProvider>
               <OfflineSupport />
+              <InactivityTimeout />
               {children}
               <PageFeedbackWidget />
             </SupportModalProvider>

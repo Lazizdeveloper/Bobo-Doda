@@ -954,6 +954,23 @@ describe('Auth (e2e, real Postgres + Redis + BullMQ)', () => {
       .expect(401);
   });
 
+  t('Logout — access token eskirgan yoki yo‘q bo‘lsa ham 200 qaytaradi, cookieni tozalaydi va refresh tokenni bekor qiladi', async () => {
+    const { refreshCookie } = await registerFresh();
+    const res = await request(app!.getHttpServer())
+      .post('/api/v1/auth/logout')
+      .set('Authorization', 'Bearer invalid-or-expired-token')
+      .set('Cookie', refreshCookie)
+      .expect(200);
+
+    const setCookie = res.headers['set-cookie'];
+    expect(setCookie).toBeDefined();
+
+    await request(app!.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', refreshCookie)
+      .expect(401);
+  });
+
   t('Token yo‘q → NO_SESSION, yaroqsiz token → UNAUTHENTICATED', async () => {
     await request(app!.getHttpServer())
       .get('/api/v1/me')

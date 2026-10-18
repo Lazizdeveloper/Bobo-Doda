@@ -342,6 +342,8 @@ export const en: Record<string, string> = {
   "auth.errAccountBlocked": "This account is blocked — please contact support",
   "auth.errPhoneExists": "This number is already registered — log in instead",
   "auth.forgotPassword": "Forgot password?",
+  "auth.inactivityLogoutTitle": "Session ended",
+  "auth.inactivityLogout": "For your security, your session ended due to 30 minutes of inactivity",
   "auth.resetTitle": "Reset password",
   "auth.resetSubtitle": "Enter your phone number — we'll send a verification code",
   "auth.resetSendCode": "Send recovery code",
@@ -527,7 +529,7 @@ export const en: Record<string, string> = {
   "wizard.errCategory": "Select a category",
   "wizard.errTitle": "Title must be at least 10 characters",
   "wizard.errDesc": "Description must be at least 30 characters",
-  "wizard.errPrice": "Price must be greater than 0",
+  "wizard.errPrice": "Price must be at least 1,000 UZS",
   "wizard.errPriceMax": "Price cannot exceed 10 billion UZS",
   "wizard.errPriceInt": "Price must be a whole number",
   "wizard.priceHint": "Service price in UZS (e.g. 500,000)",
@@ -1188,6 +1190,7 @@ export const en: Record<string, string> = {
   "purchase.created": "Contract created — waiting for the seller's response",
   "purchase.errSumMismatch": "Milestone amounts must add up to the service price",
   "purchase.errSellerNotApproved": "This seller isn't available right now",
+  "purchase.errMilestoneMin": "Milestone amount must be at least 1,000 UZS",
 
   /* Client contracts */
   "contracts.colSeller": "Specialist",

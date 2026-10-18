@@ -110,6 +110,18 @@ export default function IshEloniPage() {
         </h1>
       </div>
 
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs text-muted">
+        <div className="flex items-start gap-2.5">
+          <span className="text-base">ℹ️</span>
+          <div>
+            <p className="font-semibold text-ink">MVP Sinov Rejimi — Ish e&apos;lonlariga takliflar</p>
+            <p className="mt-0.5 leading-relaxed text-muted">
+              Ushbu bosqichda ish e&apos;lonlariga taklif yuborish sinov (Beta) rejimida ishlaydi. To&apos;liq kafolatlangan xavfsiz to&apos;lov va rasmiy Escrow kafolati uchun xizmatlar (giglar) orqali buyurtma berish yoki qabul qilish tavsiya etiladi.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-2">
           <Card padding="lg">

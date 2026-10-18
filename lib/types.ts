@@ -472,6 +472,7 @@ export type VerificationDocumentType =
   | (string & {});
 
 export interface VerificationRecord {
+  id?: string;
   userId: string;
   status: VerificationStatus;
   country: VerificationCountry;

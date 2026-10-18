@@ -6510,7 +6510,7 @@
           "price": {
             "type": "number",
             "description": "Butun so‘m",
-            "minimum": 50000,
+            "minimum": 1000,
             "maximum": 10000000000
           },
           "deliveryDays": {
@@ -6627,7 +6627,7 @@
           },
           "price": {
             "type": "number",
-            "minimum": 50000,
+            "minimum": 1000,
             "maximum": 10000000000
           },
           "deliveryDays": {
@@ -6777,7 +6777,7 @@
           "amount": {
             "type": "number",
             "description": "Butun so‘m",
-            "minimum": 50000,
+            "minimum": 1000,
             "maximum": 10000000000
           },
           "dueAt": {
@@ -6933,6 +6933,15 @@
               "REJECTED"
             ]
           },
+          "isFunded": {
+            "type": "boolean",
+            "description": "To‘lov (escrow) muvaffaqiyatli moliyalashtirilganmi"
+          },
+          "fundedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
           "milestones": {
             "type": "array",
             "items": {
@@ -6963,6 +6972,7 @@
           "platformFeeAmount",
           "deadline",
           "status",
+          "isFunded",
           "milestones",
           "createdAt",
           "updatedAt"

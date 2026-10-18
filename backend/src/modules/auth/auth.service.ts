@@ -318,7 +318,7 @@ export class AuthService {
     };
   }
 
-  async logout(rawRefreshToken: string, userId: string): Promise<void> {
+  async logout(rawRefreshToken: string, userId?: string): Promise<void> {
     await this.refreshTokens.revokeByRawToken(rawRefreshToken, userId);
   }
 

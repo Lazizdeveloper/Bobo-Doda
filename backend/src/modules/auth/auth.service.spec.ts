@@ -305,4 +305,22 @@ describe('AuthService — parol bilan login (Bosqich 21)', () => {
       expect(grants.consume).not.toHaveBeenCalled();
     });
   });
+
+  describe('logout', () => {
+    it('logout — rawRefreshToken bilan refreshTokens.revokeByRawToken chaqiriladi (userIdsiz)', async () => {
+      const { service } = buildService();
+      const revokeSpy = jest.fn(async () => undefined);
+      (service as unknown as { refreshTokens: { revokeByRawToken: typeof revokeSpy } }).refreshTokens.revokeByRawToken = revokeSpy;
+      await service.logout('raw-token-123');
+      expect(revokeSpy).toHaveBeenCalledWith('raw-token-123', undefined);
+    });
+
+    it('logout — userId berilganda ham refreshTokens.revokeByRawToken ga uzatiladi', async () => {
+      const { service } = buildService();
+      const revokeSpy = jest.fn(async () => undefined);
+      (service as unknown as { refreshTokens: { revokeByRawToken: typeof revokeSpy } }).refreshTokens.revokeByRawToken = revokeSpy;
+      await service.logout('raw-token-123', 'user-456');
+      expect(revokeSpy).toHaveBeenCalledWith('raw-token-123', 'user-456');
+    });
+  });
 });

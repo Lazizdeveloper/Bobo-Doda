@@ -104,8 +104,12 @@ export default function XizmatTafsilotiPage() {
 
   async function handleBuy() {
     if (!service) return;
-    if (rows.some((r) => !r.title.trim() || Number(r.amount) <= 0)) {
+    if (rows.some((r) => !r.title.trim())) {
       setFormError(t("hire.errTitle"));
+      return;
+    }
+    if (rows.some((r) => Number(r.amount) < 1000)) {
+      setFormError(t("purchase.errMilestoneMin"));
       return;
     }
     if (!sumMatches) {
@@ -282,6 +286,8 @@ export default function XizmatTafsilotiPage() {
                 />
                 <Input
                   type="number"
+                  min={1000}
+                  step={1000}
                   value={row.amount}
                   onChange={(e) => updateRow(i, { amount: e.target.value })}
                   className="w-32 font-mono"

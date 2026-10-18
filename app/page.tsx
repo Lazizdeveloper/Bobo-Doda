@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useT, type Lang } from "@/lib/i18n";
 import { PLATFORM_FEE_PERCENT } from "@/lib/fees";
 import { useSupportModal } from "@/components/shared/SupportModalProvider";
+import { authService, DATA_CHANGED_EVENT } from "@/lib/api";
+import type * as Model from "@/lib/types";
 
 /* ── Formatter (Hydration mismatch #418 oldini olish uchun deterministik format) ── */
 function formatSum(num: number): string {
@@ -22,7 +24,30 @@ export default function LandingPage() {
   const [heroPaused, setHeroPaused] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [calcBudget, setCalcBudget] = useState(4000000);
+  const [session, setSession] = useState<Model.Session | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  /* Foydalanuvchi sessiyasi — navigatsiya panelida Kirish o'rniga Kabinet ko'rsatish */
+  useEffect(() => {
+    setSession(authService.getSession());
+    const onSessionChange = () => setSession(authService.getSession());
+    window.addEventListener(DATA_CHANGED_EVENT, onSessionChange);
+    window.addEventListener("storage", onSessionChange);
+    return () => {
+      window.removeEventListener(DATA_CHANGED_EVENT, onSessionChange);
+      window.removeEventListener("storage", onSessionChange);
+    };
+  }, []);
+
+  const cabinetHref = !session
+    ? "/kirish?tab=kirish"
+    : session.role === "mutaxassis"
+      ? session.profileDone
+        ? "/mutaxassis"
+        : "/mutaxassis/settings/royxat"
+      : session.role === "xaridor"
+        ? "/xaridor"
+        : "/rol-tanlash";
 
   /* Landing page title translations */
   useEffect(() => {
@@ -1513,9 +1538,9 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                <Link href="/kirish?tab=kirish" className="nav-btn-login">
+                <Link href={cabinetHref} className="nav-btn-login">
                   <span className="login-icon" aria-hidden="true">👤</span>
-                  <span>{tr("Kirish", "Войти", "Log in")}</span>
+                  <span>{session ? tr("Kabinetga o'tish", "В кабинет", "Dashboard") : tr("Kirish", "Войти", "Log in")}</span>
                 </Link>
 
                 {/* Bosqich 24 — QA audit: ilgari `/bozor/ish-elonlari`ga
@@ -1580,33 +1605,47 @@ export default function LandingPage() {
                   </a>
                 ))}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-                  <div style={{ display: "flex", gap: 10 }}>
+                  {session ? (
                     <Link
-                      href="/kirish?tab=kirish"
-                      className="btn-outline"
-                      style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46 }}
+                      href={cabinetHref}
+                      className="btn-primary"
+                      style={{ width: "100%", textAlign: "center", justifyContent: "center", minHeight: 48, padding: "0 20px" }}
                       onClick={() => setMenuOpen(false)}
                     >
-                      👤 {tr("Kirish", "Войти", "Log in")}
+                      <span>👤 {tr("Kabinetga o'tish", "В кабинет", "Dashboard")}</span>
+                      <span className="badge" aria-hidden="true">→</span>
                     </Link>
-                    <Link
-                      href="/kirish?tab=register&role=mutaxassis"
-                      className="btn-outline"
-                      style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46, borderColor: "rgba(20,20,20,0.15)", background: "#ffffff", fontWeight: 700 }}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      💼 {tr("Ish topish", "Найти работу", "Find jobs")}
-                    </Link>
-                  </div>
-                  <Link
-                    href="/kirish?tab=register&role=xaridor"
-                    className="btn-primary"
-                    style={{ width: "100%", textAlign: "center", justifyContent: "center", minHeight: 48, padding: "0 20px" }}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <span>{tr("E'lon berish", "Разместить заказ", "Post a job")}</span>
-                    <span className="badge" aria-hidden="true">↗</span>
-                  </Link>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <Link
+                          href={cabinetHref}
+                          className="btn-outline"
+                          style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46 }}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          👤 {tr("Kirish", "Войти", "Log in")}
+                        </Link>
+                        <Link
+                          href="/kirish?tab=register&role=mutaxassis"
+                          className="btn-outline"
+                          style={{ flex: 1, textAlign: "center", justifyContent: "center", minHeight: 46, borderColor: "rgba(20,20,20,0.15)", background: "#ffffff", fontWeight: 700 }}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          💼 {tr("Ish topish", "Найти работу", "Find jobs")}
+                        </Link>
+                      </div>
+                      <Link
+                        href="/kirish?tab=register&role=xaridor"
+                        className="btn-primary"
+                        style={{ width: "100%", textAlign: "center", justifyContent: "center", minHeight: 48, padding: "0 20px" }}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <span>{tr("E'lon berish", "Разместить заказ", "Post a job")}</span>
+                        <span className="badge" aria-hidden="true">↗</span>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             )}

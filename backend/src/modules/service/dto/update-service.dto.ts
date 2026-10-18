@@ -22,10 +22,10 @@ export class UpdateServiceDto {
   @MaxLength(5000, { message: 'Tavsif ko‘pi bilan 5000 ta belgidan oshmasligi kerak' })
   description?: string;
 
-  @ApiPropertyOptional({ minimum: 50_000, maximum: MAX_SOM })
+  @ApiPropertyOptional({ minimum: 1_000, maximum: MAX_SOM })
   @IsOptional()
   @IsInt({ message: 'Narx butun son bo‘lishi kerak' })
-  @Min(50_000, { message: 'Narx kamida 50 000 so‘m bo‘lishi kerak' })
+  @Min(1_000, { message: 'Narx kamida 1 000 so‘m bo‘lishi kerak' })
   @Max(MAX_SOM, { message: 'Narx 10 mlrd so‘mdan oshmasligi kerak' })
   price?: number;
 

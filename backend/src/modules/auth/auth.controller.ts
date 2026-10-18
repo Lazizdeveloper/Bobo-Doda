@@ -12,8 +12,6 @@ import { CompleteRegistrationDto } from './dto/complete-registration.dto';
 import { CompletePasswordResetDto } from './dto/complete-password-reset.dto';
 import { AuthSessionDto } from './dto/auth-session.dto';
 import { Public } from './decorators/public.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
-import type { AccessTokenPayload } from './types/token-payload';
 import { REFRESH_COOKIE_NAME, clearRefreshCookie, setRefreshCookie } from './cookie.util';
 import type { RequestMeta } from './refresh-token.service';
 
@@ -157,16 +155,21 @@ export class AuthController {
     return toSessionDto(result);
   }
 
-  /** Joriy qurilma/sessiyadan chiqish. Boshqa sessiyalarga tegmaydi. */
+  /**
+   * Joriy qurilma/sessiyadan chiqish. Boshqa sessiyalarga tegmaydi.
+   * `@Public()` — access token eskirgan (15 daqiqadan oshgan) bo'lsa ham
+   * foydalanuvchi logout qila olishi, cookie tozalanishi va DB'dagi
+   * refresh token bekor qilinishi shart.
+   */
+  @Public()
   @Post('logout')
   @HttpCode(200)
   async logout(
-    @CurrentUser() user: AccessTokenPayload,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ ok: true }> {
     const raw = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
-    if (raw) await this.auth.logout(raw, user.sub);
+    if (raw) await this.auth.logout(raw);
     clearRefreshCookie(res, this.config.isProduction);
     return { ok: true };
   }

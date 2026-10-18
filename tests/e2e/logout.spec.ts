@@ -86,4 +86,39 @@ test.describe("Chiqish (logout) — barcha panellar", () => {
 
     await context.close();
   });
+
+  test("Harakatsizlik (inactivity timeout) — 30 daqiqa harakatsizlikdan so'ng sessiya avtomatik yakunlanadi", async ({ browser }) => {
+    const { context, page } = await loginBuyer(browser);
+    await page.goto("/xaridor", { waitUntil: "networkidle" });
+
+    const sessionBefore = await page.evaluate(() => window.localStorage.getItem("bd_session"));
+    expect(sessionBefore).not.toBeNull();
+
+    // 31 daqiqa oldingi vaqtni o'rnatamiz (harakatsizlik vaqti o'tgan)
+    await page.evaluate(() => {
+      window.localStorage.setItem("bd_last_activity", String(Date.now() - 31 * 60 * 1000));
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    // Avtomatik /kirish sahifasiga yo'naltirilishini kutamiz
+    await page.waitForURL((url) => url.pathname === "/kirish", { timeout: 10_000 });
+
+    const sessionAfter = await page.evaluate(() => window.localStorage.getItem("bd_session"));
+    expect(sessionAfter).toBeNull();
+
+    // Xabarnoma mavjudligini tekshiramiz
+    await expect(page.getByText(/30 daqiqalik harakatsizlik/i)).toBeVisible({ timeout: 5_000 });
+
+    // Orqaga (Back) tugmasi himoyalangan kabinetni qaytarmaydi
+    await page.goBack();
+    await page.waitForURL((url) => url.pathname === "/kirish", { timeout: 10_000 });
+
+    // Sahifa yangilanganda ham sessiya qayta tiklanmaydi va /kirish da qoladi
+    await page.reload({ waitUntil: "networkidle" });
+    expect(page.url()).toContain("/kirish");
+    const sessionAfterReload = await page.evaluate(() => window.localStorage.getItem("bd_session"));
+    expect(sessionAfterReload).toBeNull();
+
+    await context.close();
+  });
 });

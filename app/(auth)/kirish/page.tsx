@@ -24,6 +24,7 @@ export default function KirishPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [inactivityNotice, setInactivityNotice] = useState(false);
 
   useEffect(() => {
     const titles: Record<string, string> = {
@@ -39,28 +40,24 @@ export default function KirishPage() {
     let active = true;
 
     async function checkAuth() {
-      try {
-        const session = await authService.refresh();
-        if (!active) return;
-
-        if (session) {
-          let dest = "/rol-tanlash";
-          if (session.role === "xaridor") dest = "/xaridor";
-          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/settings/royxat";
-          if (pathname !== dest) router.replace(dest);
-          return;
-        }
-      } catch {
-        // Tarmoq xatosi bo'lsa ham pastga tushadi
-      }
-
-      if (!active) return;
-
-      // Sessiya yo'q bo'lsa (anonim foydalanuvchi yoki muddati o'tgan)
+      // 1. Agar foydalanuvchi harakatsizlik sababli chiqarilgan bo'lsa,
+      // darhol ogohlantirishni ko'rsatamiz va avtomatik refresh bilan qayta kiritib yubormaymiz.
       if (typeof window !== "undefined") {
-        // Landing'dan "?tab=register" bilan kelgan bo'lsa ro'yxatdan o'tishga yo'naltirish
         const search = window.location.search;
         const params = new URLSearchParams(search);
+        const isInactive =
+          params.get("reason") === "inactivity" ||
+          window.sessionStorage.getItem("bd_inactivity_logout") === "1";
+        if (isInactive) {
+          setInactivityNotice(true);
+          try {
+            window.sessionStorage.removeItem("bd_inactivity_logout");
+          } catch {}
+          setChecking(false);
+          return;
+        }
+
+        // Landing'dan "?tab=register" bilan kelgan bo'lsa ro'yxatdan o'tishga yo'naltirish
         if (params.get("tab") === "register") {
           const role = params.get("role");
           const cat = params.get("cat");
@@ -81,6 +78,23 @@ export default function KirishPage() {
         }
       }
 
+      // 2. Oddiy holatda avtorizatsiyani tekshirish
+      try {
+        const session = await authService.refresh();
+        if (!active) return;
+
+        if (session) {
+          let dest = "/rol-tanlash";
+          if (session.role === "xaridor") dest = "/xaridor";
+          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/settings/royxat";
+          if (pathname !== dest) router.replace(dest);
+          return;
+        }
+      } catch {
+        // Tarmoq xatosi bo'lsa ham pastga tushadi
+      }
+
+      if (!active) return;
       setChecking(false);
     }
 
@@ -157,6 +171,34 @@ export default function KirishPage() {
         {t("auth.loginTitle")}
       </h1>
       <p className="mt-2.5 text-sm sm:text-base text-muted leading-relaxed">{t("auth.loginSubtitle")}</p>
+
+      {inactivityNotice && (
+        <div
+          role="alert"
+          className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-ink"
+        >
+          <svg
+            className="h-5 w-5 shrink-0 text-amber-600 mt-0.5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900">
+              {t("auth.inactivityLogoutTitle")}
+            </p>
+            <p className="mt-0.5 text-xs sm:text-sm text-amber-800">
+              {t("auth.inactivityLogout")}
+            </p>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5" noValidate>
         <CountryPhoneInput

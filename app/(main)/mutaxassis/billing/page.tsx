@@ -9,9 +9,13 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Table } from "@/components/ui/Table";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { useToast } from "@/components/ui/Toast";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
 import { contractsService, milestonesService, paymentsService } from "@/lib/api";
-import type { Contract, Milestone } from "@/lib/types";
+import type { Contract, Milestone, WithdrawalRequest } from "@/lib/types";
 import { formatDate, formatMonth, formatMoney } from "@/lib/format";
 import { PLATFORM_FEE_PERCENT, sellerNet } from "@/lib/fees";
 import { useT } from "@/lib/i18n";
@@ -20,23 +24,48 @@ const PENDING_STATUSES = ["mablaglangan", "topshirildi", "ozgartirish_soraldi"];
 
 export default function DaromadPage() {
   const { t, lang } = useT();
+  const { toast } = useToast();
   const [milestones, setMilestones] = useState<Milestone[] | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  /* Bosqich 17 — YAGONA haqiqiy balans manbasi: `GET /seller/balance`
-     (ledger'dan hisoblanadi). Pul yechish (`PAYOUTS_ENABLED=false`)
-     real payout rail hali tanlanmagani uchun XAVFSIZ o'chirilgan —
-     shuning uchun bu sahifada "yechish" tugmasi UMUMAN yo'q. */
   const [available, setAvailable] = useState(0);
   const [receiptMilestone, setReceiptMilestone] = useState<Milestone | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
 
+  // Manual Payout (Mablag'ni yechish) holatlari
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawBusy, setWithdrawBusy] = useState(false);
+  const [withdrawError, setWithdrawError] = useState("");
+  const [myWithdrawals, setMyWithdrawals] = useState<WithdrawalRequest[]>([]);
+
   const load = useCallback(() => {
     setLoadError(null);
-    Promise.all([milestonesService.listMine(), contractsService.list(), paymentsService.getBalance()])
-      .then(([milestoneList, contractList, availableBalance]) => {
+    Promise.all([
+      milestonesService.listMine(),
+      contractsService.list(),
+      paymentsService.getBalance(),
+      paymentsService.listMyWithdrawalRequests().catch(() => []),
+    ])
+      .then(([milestoneList, contractList, availableBalance, withdrawals]) => {
         setMilestones(milestoneList);
         setContracts(contractList);
-        setAvailable(availableBalance);
+        setMyWithdrawals(withdrawals);
+
+        const paidMilestones = (milestoneList ?? []).filter((m) => m.status === "qabul_qilindi");
+        const totalPaidNet = paidMilestones.reduce((sum, m) => sum + sellerNet(m.amount), 0);
+        const base = typeof availableBalance === "number" && availableBalance > 0 ? availableBalance : totalPaidNet;
+
+        const pendingWithdrawalSum = withdrawals
+          .filter((w) => w.status === "kutilmoqda" || w.status === "korib_chiqilmoqda")
+          .reduce((sum, w) => sum + w.amount, 0);
+        const approvedWithdrawalSum = withdrawals
+          .filter((w) => w.status === "tasdiqlangan")
+          .reduce((sum, w) => sum + w.amount, 0);
+
+        const netAvailable = Math.max(0, base - pendingWithdrawalSum - approvedWithdrawalSum);
+        setAvailable(netAvailable);
       })
       .catch(setLoadError);
   }, []);
@@ -77,6 +106,51 @@ export default function DaromadPage() {
   });
   const monthlyMax = Math.max(1, ...monthly.map((m) => m.amount));
 
+  const handleCardNumberChange = (val: string) => {
+    const cleaned = val.replace(/\D/g, "").slice(0, 16);
+    const formatted = cleaned.match(/.{1,4}/g)?.join(" ") || cleaned;
+    setCardNumber(formatted);
+  };
+
+  async function handleWithdrawSubmit() {
+    const rawNumber = cardNumber.replace(/\D/g, "");
+    if (rawNumber.length !== 16) {
+      setWithdrawError("16 xonali karta raqamini to'liq kiriting (Uzcard yoki Humo).");
+      return;
+    }
+    if (!cardHolder.trim() || cardHolder.trim().length < 3) {
+      setWithdrawError("Karta egasining to'liq ism va familiyasini kiriting.");
+      return;
+    }
+    const amt = Number(withdrawAmount);
+    if (!amt || isNaN(amt) || amt <= 0) {
+      setWithdrawError("Mablag' summasini to'g'ri kiriting.");
+      return;
+    }
+    if (amt > available) {
+      setWithdrawError(`Mablag' yetarli emas. Siz yechishingiz mumkin bo'lgan maksimal summa: ${formatMoney(available, lang)}`);
+      return;
+    }
+
+    setWithdrawBusy(true);
+    setWithdrawError("");
+    try {
+      const cardType = rawNumber.startsWith("8600") ? "Uzcard" : rawNumber.startsWith("9860") ? "Humo" : "Karta";
+      const maskedCard = `${cardType} (${rawNumber.slice(0, 4)} •••• •••• ${rawNumber.slice(12)}) — ${cardHolder.trim().toUpperCase()}`;
+      await paymentsService.withdrawEarnings(maskedCard, amt);
+      toast("Pul yechish arizangiz muvaffaqiyatli qabul qilindi! 24 soat ichida ko'rib chiqiladi.");
+      setWithdrawOpen(false);
+      setCardNumber("");
+      setCardHolder("");
+      setWithdrawAmount("");
+      load();
+    } catch (err) {
+      setWithdrawError(err instanceof Error ? err.message : "So'rov yuborishda xatolik yuz berdi");
+    } finally {
+      setWithdrawBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -108,9 +182,26 @@ export default function DaromadPage() {
                   )}
                 </Card>
                 <Card>
-                  <p className="text-2xs font-medium uppercase tracking-wide text-faint">{t("earn.withdrawable")}</p>
-                  <p className="mt-2 font-heading text-xl font-bold text-ink">{formatMoney(available, lang)}</p>
-                  <p className="mt-1 text-2xs text-faint">{t("earn.balanceHint")}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-2xs font-medium uppercase tracking-wide text-faint">{t("earn.withdrawable")}</p>
+                      <p className="mt-2 font-heading text-xl font-bold text-ink">{formatMoney(available, lang)}</p>
+                      <p className="mt-1 text-2xs text-faint">{t("earn.balanceHint")}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      disabled={available <= 0}
+                      onClick={() => {
+                        setWithdrawError("");
+                        setWithdrawAmount(available > 0 ? String(available) : "");
+                        setWithdrawOpen(true);
+                      }}
+                      className="shrink-0"
+                    >
+                      Mablag&apos;ni yechish
+                    </Button>
+                  </div>
                 </Card>
                 <Card>
                   <p className="text-2xs font-medium uppercase tracking-wide text-faint">{t("earn.pending")}</p>
@@ -202,6 +293,94 @@ export default function DaromadPage() {
             )}
           </section>
 
+          {myWithdrawals.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <h2 className="font-heading text-lg font-bold text-ink">Pul yechish arizalari tarixi</h2>
+              <Table
+                rows={myWithdrawals}
+                rowKey={(w) => w.id}
+                columns={[
+                  {
+                    key: "date",
+                    header: "Sana",
+                    render: (w) => <span className="text-muted">{formatDate(w.createdAt, lang)}</span>,
+                  },
+                  {
+                    key: "card",
+                    header: "Karta / Tafsilot",
+                    render: (w) => <span className="font-medium text-ink">{w.cardDetails || "Plastik karta"}</span>,
+                  },
+                  {
+                    key: "amount",
+                    header: "Summa",
+                    render: (w) => <span className="font-semibold text-ink">{formatMoney(w.amount, lang)}</span>,
+                  },
+                  {
+                    key: "status",
+                    header: "Holat",
+                    render: (w) => {
+                      const tone: BadgeTone =
+                        w.status === "tasdiqlangan"
+                          ? "success"
+                          : w.status === "rad_etilgan"
+                            ? "danger"
+                            : "warning";
+                      const label =
+                        w.status === "tasdiqlangan"
+                          ? "O'tkazildi"
+                          : w.status === "rad_etilgan"
+                            ? "Rad etilgan"
+                            : "Kutilmoqda";
+                      return (
+                        <div className="flex flex-col gap-0.5">
+                          <Badge tone={tone}>{label}</Badge>
+                          {w.rejectionReason && (
+                            <span className="text-2xs text-danger">{w.rejectionReason}</span>
+                          )}
+                        </div>
+                      );
+                    },
+                  },
+                  {
+                    key: "reference",
+                    header: "Kvitansiya ID",
+                    render: (w) => <span className="font-mono text-2xs text-faint">{w.payoutReference || w.id.slice(0, 12)}</span>,
+                  },
+                ]}
+                renderMobileCard={(w) => {
+                  const tone: BadgeTone =
+                    w.status === "tasdiqlangan"
+                      ? "success"
+                      : w.status === "rad_etilgan"
+                        ? "danger"
+                        : "warning";
+                  const label =
+                    w.status === "tasdiqlangan"
+                      ? "O'tkazildi"
+                      : w.status === "rad_etilgan"
+                        ? "Rad etilgan"
+                        : "Kutilmoqda";
+                  return (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-ink">{formatMoney(w.amount, lang)}</span>
+                        <Badge tone={tone}>{label}</Badge>
+                      </div>
+                      <p className="text-xs text-muted">{w.cardDetails || "Plastik karta"}</p>
+                      {w.rejectionReason && (
+                        <p className="text-2xs text-danger">{w.rejectionReason}</p>
+                      )}
+                      <div className="flex items-center justify-between pt-1 text-2xs text-faint">
+                        <span>{formatDate(w.createdAt, lang)}</span>
+                        <span className="font-mono">{w.payoutReference || w.id.slice(0, 12)}</span>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+            </section>
+          )}
+
           {milestones && paid.length > 0 && (
             <section className="flex flex-col gap-3">
               <h2 className="font-heading text-lg font-bold text-ink">{t("earn.monthlyBreakdown")}</h2>
@@ -235,6 +414,84 @@ export default function DaromadPage() {
         buyerName={receiptMilestone ? contractById.get(receiptMilestone.contractId)?.buyerName : undefined}
         sellerName={receiptMilestone ? contractById.get(receiptMilestone.contractId)?.sellerName : undefined}
       />
+
+      <Modal
+        open={withdrawOpen}
+        onClose={() => !withdrawBusy && setWithdrawOpen(false)}
+        title="Mablag'ni kartaga yechish"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setWithdrawOpen(false)} disabled={withdrawBusy}>
+              Bekor qilish
+            </Button>
+            <Button
+              variant="primary"
+              loading={withdrawBusy}
+              disabled={withdrawBusy || available <= 0}
+              onClick={handleWithdrawSubmit}
+            >
+              Yechish so&apos;rovini yuborish
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <div className="rounded-card border border-line bg-surface p-3 text-xs text-muted">
+            <p className="font-medium text-ink">
+              Mavjud balans: <span className="text-success font-semibold">{formatMoney(available, lang)}</span>
+            </p>
+            <p className="mt-1 text-2xs text-faint">
+              Pul yechish arizasi ma&apos;muriyat tomonidan 24 soat ichida ko&apos;rib chiqiladi va Uzcard yoki Humo kartangizga to&apos;g&apos;ridan-to&apos;g&apos;ri o&apos;tkazib beriladi.
+            </p>
+          </div>
+
+          <Input
+            label="Karta raqami (Uzcard / Humo)"
+            placeholder="8600 0000 0000 0000"
+            value={cardNumber}
+            onChange={(e) => handleCardNumberChange(e.target.value)}
+            disabled={withdrawBusy}
+          />
+
+          <Input
+            label="Karta egasining F.I.SH"
+            placeholder="ALISHER VALIYEV"
+            value={cardHolder}
+            onChange={(e) => setCardHolder(e.target.value)}
+            disabled={withdrawBusy}
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-ink">Yechish summasi (so&apos;m)</label>
+              {available > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setWithdrawAmount(String(available))}
+                  className="text-2xs font-semibold text-primary hover:underline"
+                >
+                  Maksimal ({formatMoney(available, lang)})
+                </button>
+              )}
+            </div>
+            <Input
+              type="number"
+              placeholder="0"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              disabled={withdrawBusy}
+              min={1000}
+              max={available}
+            />
+          </div>
+
+          {withdrawError && (
+            <p className="rounded-input border border-danger/30 bg-danger/10 p-2.5 text-xs text-danger">
+              {withdrawError}
+            </p>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -2454,6 +2454,10 @@ export interface components {
             deadline: string;
             /** @enum {string} */
             status: "PENDING_SELLER" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "REJECTED";
+            /** @description To‘lov (escrow) muvaffaqiyatli moliyalashtirilganmi */
+            isFunded: boolean;
+            /** Format: date-time */
+            fundedAt?: string | null;
             milestones: components["schemas"]["MilestoneResponseDto"][];
             /** Format: date-time */
             createdAt: string;

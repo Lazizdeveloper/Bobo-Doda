@@ -30,11 +30,15 @@ import {
   staffCreateRefund,
   staffListPayouts,
   staffListLedgerTransactions,
+  listWithdrawalsQueue,
+  approveWithdrawal,
+  rejectWithdrawal,
   type StaffPayment,
   type StaffRefund,
   type StaffPayout,
   type StaffLedgerTransaction,
 } from "@/lib/api/admin";
+import type { WithdrawalRequest } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 
 type Tab = "payments" | "refunds" | "payouts" | "ledger";
@@ -55,6 +59,12 @@ export default function PaymentsPage() {
   const [paymentPage, setPaymentPage] = useState<PageResult<StaffPayment> | null>(null);
   const [refundPage, setRefundPage] = useState<PageResult<StaffRefund> | null>(null);
   const [payoutPage, setPayoutPage] = useState<PageResult<StaffPayout> | null>(null);
+  const [withdrawalPage, setWithdrawalPage] = useState<PageResult<WithdrawalRequest> | null>(null);
+  const [withdrawalActionBusy, setWithdrawalActionBusy] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState("");
   const [ledgerPage, setLedgerPage] = useState<PageResult<StaffLedgerTransaction> | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,7 +85,13 @@ export default function PaymentsPage() {
         : tab === "refunds"
           ? staffListRefunds(query).then(setRefundPage)
           : tab === "payouts"
-            ? staffListPayouts(query).then(setPayoutPage)
+            ? Promise.all([
+                listWithdrawalsQueue(query),
+                staffListPayouts(query).catch(() => ({ items: [], page: 1, perPage: rowsPerPage, total: 0, totalPages: 1 })),
+              ]).then(([wPage, pPage]) => {
+                setWithdrawalPage(wPage);
+                setPayoutPage(pPage);
+              })
             : staffListLedgerTransactions(query).then(setLedgerPage);
     req.catch(setLoadError);
   }, [tab, currentPage, rowsPerPage]);
@@ -84,6 +100,44 @@ export default function PaymentsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [tab, rowsPerPage]);
+
+  async function handleApproveWithdrawal(req: WithdrawalRequest) {
+    if (!confirm(`${req.userName} uchun ${formatMoney(req.amount)} mablag' Uzcard/Humo kartasiga o'tkazilganligini tasdiqlaysizmi?`)) {
+      return;
+    }
+    setWithdrawalActionBusy(true);
+    try {
+      await approveWithdrawal(req.id);
+      toast("Mablag' o'tkazilganligi tasdiqlandi!");
+      load();
+    } catch {
+      toast("Tasdiqlashda xatolik yuz berdi");
+    } finally {
+      setWithdrawalActionBusy(false);
+    }
+  }
+
+  async function handleRejectWithdrawal() {
+    if (!selectedWithdrawal) return;
+    if (!rejectReason.trim() || rejectReason.trim().length < 5) {
+      setRejectError("Rad etish sababini kamida 5 ta belgidan iborat qilib yozing.");
+      return;
+    }
+    setWithdrawalActionBusy(true);
+    setRejectError("");
+    try {
+      await rejectWithdrawal(selectedWithdrawal.id, rejectReason.trim());
+      toast("Mablag' yechish so'rovi rad etildi.");
+      setRejectModalOpen(false);
+      setSelectedWithdrawal(null);
+      setRejectReason("");
+      load();
+    } catch {
+      setRejectError("Rad etishda xatolik yuz berdi.");
+    } finally {
+      setWithdrawalActionBusy(false);
+    }
+  }
 
   async function handleCreateRefund() {
     if (!refundContractId.trim()) {
@@ -153,7 +207,91 @@ export default function PaymentsPage() {
     { key: "createdAt", header: "Sana", render: (t) => <span className="text-xs text-muted">{formatDate(t.createdAt)}</span> },
   ];
 
-  const header = <AdminPageHeader title="To'lovlar, Qaytarish & Chiqarish" description="Real to'lov/refund/payout va append-only ledger monitoringi — qo'lda o'zgartirish tugmalari yo'q." />;
+  const withdrawalColumns: TableColumn<WithdrawalRequest>[] = [
+    { key: "id", header: "Ariza ID", render: (w) => <span className="font-mono text-2xs text-ink">{w.id.slice(0, 10)}</span> },
+    {
+      key: "user",
+      header: "Mutaxassis",
+      render: (w) => (
+        <div className="flex flex-col">
+          <span className="text-xs font-medium text-ink">{w.userName}</span>
+          <span className="font-mono text-2xs text-muted">{w.userId.slice(0, 8)}</span>
+        </div>
+      ),
+    },
+    {
+      key: "card",
+      header: "Karta / Tafsilot",
+      render: (w) => <span className="text-xs text-ink">{w.cardDetails || "Plastik karta"}</span>,
+    },
+    { key: "amount", header: "Summa", render: (w) => <span className="font-mono font-semibold text-ink">{formatMoney(w.amount)}</span> },
+    {
+      key: "status",
+      header: "Holat",
+      render: (w) => {
+        const tone: BadgeTone =
+          w.status === "tasdiqlangan"
+            ? "success"
+            : w.status === "rad_etilgan"
+              ? "danger"
+              : "warning";
+        const label =
+          w.status === "tasdiqlangan"
+            ? "O'tkazildi"
+            : w.status === "rad_etilgan"
+              ? "Rad etilgan"
+              : "Kutilmoqda";
+        return (
+          <div className="flex flex-col gap-0.5">
+            <Badge tone={tone}>{label}</Badge>
+            {w.rejectionReason && <span className="text-2xs text-danger max-w-[150px] truncate" title={w.rejectionReason}>{w.rejectionReason}</span>}
+          </div>
+        );
+      },
+    },
+    { key: "createdAt", header: "Sana", render: (w) => <span className="text-xs text-muted">{formatDate(w.createdAt)}</span> },
+    {
+      key: "actions",
+      header: "Amal",
+      render: (w) =>
+        w.status === "kutilmoqda" || w.status === "korib_chiqilmoqda" ? (
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={withdrawalActionBusy}
+              onClick={() => handleApproveWithdrawal(w)}
+              className="px-2.5 py-1 text-2xs"
+            >
+              O&apos;tkazildi
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={withdrawalActionBusy}
+              onClick={() => {
+                setSelectedWithdrawal(w);
+                setRejectReason("");
+                setRejectError("");
+                setRejectModalOpen(true);
+              }}
+              className="px-2.5 py-1 text-2xs text-danger hover:bg-danger/10"
+            >
+              Rad etish
+            </Button>
+          </div>
+        ) : (
+          <span className="text-2xs text-muted">{w.processedBy ? `${w.processedBy}` : "Yakunlangan"}</span>
+        ),
+    },
+  ];
+
+  const header = (
+    <AdminPageHeader
+      title="To'lovlar, Qaytarish & Chiqarish"
+      description="Real to'lov/refund/payout monitoringi va mutaxassislarning Uzcard/Humo pul yechish arizalarini boshqarish."
+    />
+  );
 
   if (loadError) {
     return (
@@ -164,7 +302,7 @@ export default function PaymentsPage() {
     );
   }
 
-  const activePage = tab === "payments" ? paymentPage : tab === "refunds" ? refundPage : tab === "payouts" ? payoutPage : ledgerPage;
+  const activePage = tab === "payments" ? paymentPage : tab === "refunds" ? refundPage : tab === "payouts" ? (withdrawalPage ?? payoutPage) : ledgerPage;
   if (!activePage) {
     return (
       <>
@@ -189,7 +327,7 @@ export default function PaymentsPage() {
               [
                 { id: "payments", label: "To'lovlar" },
                 { id: "refunds", label: "Qaytarishlar" },
-                { id: "payouts", label: "Chiqarishlar (payout)" },
+                { id: "payouts", label: "Pul yechish arizalari (Payout)" },
                 { id: "ledger", label: "Ledger (buxgalteriya)" },
               ] as { id: Tab; label: string }[]
             ).map((t) => (
@@ -212,13 +350,6 @@ export default function PaymentsPage() {
         </div>
       </Card>
 
-      {tab === "payouts" && (
-        <p className="mt-3 text-2xs text-muted rounded-input border border-line bg-surface p-3">
-          Real pul chiqarish yo'nalishi (bank/karta) hali tanlanmagan — funksiya xavfsiz o'chirilgan
-          (<code className="font-mono">PAYOUTS_ENABLED=false</code>). Bu yerda faqat mavjud yozuvlar ko'rsatiladi.
-        </p>
-      )}
-
       <div className="mt-4">
         {tab === "payments" &&
           (paymentPage && paymentPage.items.length ? (
@@ -238,15 +369,45 @@ export default function PaymentsPage() {
           ) : (
             <Card className="py-12 text-center text-muted">Qaytarishlar topilmadi.</Card>
           ))}
-        {tab === "payouts" &&
-          (payoutPage && payoutPage.items.length ? (
-            <>
-              <Table columns={payoutColumns} rows={payoutPage.items} rowKey={(p) => p.id} />
-              <Pagination currentPage={payoutPage.page} totalPages={payoutPage.totalPages} onPageChange={setCurrentPage} totalRows={payoutPage.total} rowsPerPage={payoutPage.perPage} onRowsPerPageChange={setRowsPerPage} />
-            </>
-          ) : (
-            <Card className="py-12 text-center text-muted">Chiqarish yozuvlari topilmadi.</Card>
-          ))}
+        {tab === "payouts" && (
+          <div className="flex flex-col gap-6">
+            <div className="rounded-input border border-line bg-surface p-4">
+              <h3 className="text-sm font-semibold text-ink">Mutaxassislarning pul yechish arizalari (Uzcard / Humo)</h3>
+              <p className="mt-1 text-xs text-muted">
+                Mutaxassislar tomonidan Uzcard yoki Humo kartalariga yechish uchun yuborilgan arizalar.
+                Bank orqali ko&apos;rsatilgan kartaga pul o&apos;tkazilgach, &ldquo;O&apos;tkazildi&rdquo; tugmasini bosing.
+              </p>
+            </div>
+
+            {withdrawalPage && withdrawalPage.items.length ? (
+              <>
+                <Table columns={withdrawalColumns} rows={withdrawalPage.items} rowKey={(w) => w.id} />
+                <Pagination
+                  currentPage={withdrawalPage.page}
+                  totalPages={withdrawalPage.totalPages}
+                  onPageChange={setCurrentPage}
+                  totalRows={withdrawalPage.total}
+                  rowsPerPage={withdrawalPage.perPage}
+                  onRowsPerPageChange={setRowsPerPage}
+                />
+              </>
+            ) : (
+              <Card className="py-12 text-center text-muted">Kutilayotgan pul yechish arizalari mavjud emas.</Card>
+            )}
+
+            <div className="border-t border-line pt-6">
+              <h4 className="text-xs font-semibold text-muted mb-1">Avtomatik Payout tizimi (Backend monitoring)</h4>
+              <p className="mb-3 text-2xs text-muted">
+                Real bank avtomatik payout rail integratsiyasi tanlangunga qadar funksiya xavfsiz o&apos;chirilgan (<code className="font-mono">PAYOUTS_ENABLED=false</code>).
+              </p>
+              {payoutPage && payoutPage.items.length ? (
+                <Table columns={payoutColumns} rows={payoutPage.items} rowKey={(p) => p.id} />
+              ) : (
+                <p className="text-2xs text-faint italic">Avtomatik payout yozuvlari mavjud emas.</p>
+              )}
+            </div>
+          </div>
+        )}
         {tab === "ledger" &&
           (ledgerPage && ledgerPage.items.length ? (
             <>
@@ -279,6 +440,36 @@ export default function PaymentsPage() {
           </p>
           <Input label="Shartnoma ID" value={refundContractId} onChange={(e) => setRefundContractId(e.target.value)} />
           <Textarea label="Sabab" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} rows={4} error={refundError} />
+        </div>
+      </Modal>
+
+      <Modal
+        open={rejectModalOpen}
+        onClose={() => !withdrawalActionBusy && setRejectModalOpen(false)}
+        title="Mablag' yechish so'rovini rad etish"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRejectModalOpen(false)} disabled={withdrawalActionBusy}>
+              Bekor qilish
+            </Button>
+            <Button variant="danger" loading={withdrawalActionBusy} onClick={handleRejectWithdrawal}>
+              Rad etish
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-xs text-muted">
+            {selectedWithdrawal?.userName} foydalanuvchisining {selectedWithdrawal && formatMoney(selectedWithdrawal.amount)} so&apos;m yechish arizasini rad etish sababini yozing. Ushbu sabab mutaxassisga ko&apos;rsatiladi.
+          </p>
+          <Textarea
+            label="Rad etish sababi"
+            placeholder="Masalan: Karta raqami noto'g'ri yoki karta bloklangan"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={3}
+            error={rejectError}
+          />
         </div>
       </Modal>
     </>

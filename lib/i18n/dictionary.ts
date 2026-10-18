@@ -558,6 +558,14 @@ export const dictionary: Record<string, Entry> = {
     ru: "Этот аккаунт заблокирован — обратитесь в поддержку",
   },
   "auth.forgotPassword": { uz: "Parolni unutdingizmi?", ru: "Забыли пароль?" },
+  "auth.inactivityLogoutTitle": {
+    uz: "Sessiya yakunlandi",
+    ru: "Сессия завершена",
+  },
+  "auth.inactivityLogout": {
+    uz: "Xavfsizlik yuzasidan 30 daqiqalik harakatsizlik sababli sessiyangiz yakunlandi",
+    ru: "В целях безопасности ваша сессия завершена из-за 30 минут бездействия",
+  },
   "auth.resetTitle": { uz: "Parolni tiklash", ru: "Восстановление пароля" },
   "auth.resetSubtitle": {
     uz: "Telefon raqamingizni kiriting — tasdiqlash kodi yuboramiz",
@@ -883,7 +891,7 @@ export const dictionary: Record<string, Entry> = {
     uz: "Tavsif kamida 30 ta belgidan iborat bo'lishi kerak",
     ru: "Описание должно содержать минимум 30 символов",
   },
-  "wizard.errPrice": { uz: "Narx 0 dan katta bo'lishi kerak", ru: "Цена должна быть больше 0" },
+  "wizard.errPrice": { uz: "Narx kamida 1 000 so'm bo'lishi kerak", ru: "Цена должна быть не менее 1 000 сум" },
   "wizard.errPriceMax": {
     uz: "Narx 10 mlrd so'mdan oshmasligi kerak",
     ru: "Цена не может превышать 10 млрд сум",
@@ -2097,6 +2105,10 @@ export const dictionary: Record<string, Entry> = {
   "purchase.errSellerNotApproved": {
     uz: "Bu sotuvchi hozir mavjud emas",
     ru: "Этот продавец сейчас недоступен",
+  },
+  "purchase.errMilestoneMin": {
+    uz: "Bosqich summasi kamida 1 000 so'm bo'lishi kerak",
+    ru: "Сумма этапа должна быть не менее 1 000 сум",
   },
 
   /* Xaridor shartnomalari */

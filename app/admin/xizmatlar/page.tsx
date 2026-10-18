@@ -150,10 +150,29 @@ export default function ServicesModerationPage() {
       key: "status",
       header: "Holat",
       render: (s) => {
-        const tone: BadgeTone = s.status === "active" ? "success" : s.status === "paused" ? "warning" : "neutral";
+        const tone: BadgeTone =
+          s.status === "active"
+            ? "success"
+            : s.status === "pending_review"
+              ? "warning"
+              : s.status === "rejected"
+                ? "danger"
+                : s.status === "paused"
+                  ? "warning"
+                  : "neutral";
+        const label =
+          s.status === "active"
+            ? "Faol"
+            : s.status === "pending_review"
+              ? "Ko'rib chiqilmoqda"
+              : s.status === "rejected"
+                ? "Rad etilgan"
+                : s.status === "paused"
+                  ? "To'xtatilgan"
+                  : "Qoralama";
         return (
           <Badge tone={tone} size="sm">
-            {s.status === "active" ? "Faol" : s.status === "paused" ? "To'xtatilgan" : "Qoralama"}
+            {label}
           </Badge>
         );
       },
@@ -214,9 +233,9 @@ export default function ServicesModerationPage() {
       {/* KPI Cards */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Jami Xizmatlar" value={stats.total} detail="Katalogdagi barcha xizmatlar" />
+        <MetricCard label="Kutilayotganlar" value={facets.pending_review ?? 0} detail="Ko'rib chiqish navbatida" tone="warning" />
         <MetricCard label="Faol Xizmatlar" value={stats.active} detail="Xaridorlar ko'ra oladi" tone="success" />
-        <MetricCard label="Muzlatilgan" value={stats.paused} detail="Moderator yoki muallif to'xtatgan" tone="warning" />
-        <MetricCard label="Qoralamalar" value={stats.draft} detail="Chiqarilmagan xizmatlar" tone="primary" />
+        <MetricCard label="Muzlatilgan" value={stats.paused} detail="Moderator yoki muallif to'xtatgan" />
       </section>
 
       {/* Filter and Search */}
@@ -245,8 +264,10 @@ export default function ServicesModerationPage() {
               className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs text-ink outline-none focus:border-primary"
             >
               <option value="all">Barcha holatlar</option>
+              <option value="pending_review">Ko‘rib chiqilmoqda (Navbatda)</option>
               <option value="active">Faol</option>
               <option value="paused">To‘xtatilgan</option>
+              <option value="rejected">Rad etilgan</option>
               <option value="draft">Qoralama</option>
             </select>
           </div>
@@ -317,7 +338,27 @@ export default function ServicesModerationPage() {
               )}
               <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-2">
-                {selectedService.status === "paused" ? (
+                {selectedService.status === "pending_review" ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      tone="success"
+                      onClick={() => toggleStatusSafely(selectedService.id, "active")}
+                    >
+                      Tasdiqlash (Approve)
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      tone="danger"
+                      onClick={() => setFlagModalOpen(true)}
+                    >
+                      Rad etish (Reject)
+                    </Button>
+                  </>
+                ) : selectedService.status === "paused" ? (
                   <Button
                     type="button"
                     size="sm"
@@ -327,25 +368,27 @@ export default function ServicesModerationPage() {
                     Faollashtirish (Approve)
                   </Button>
                 ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    tone="warning"
-                    onClick={() => toggleStatusSafely(selectedService.id, "paused")}
-                  >
-                    Vaqtincha to‘xtatish
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      tone="warning"
+                      onClick={() => toggleStatusSafely(selectedService.id, "paused")}
+                    >
+                      Vaqtincha to‘xtatish
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      tone="danger"
+                      onClick={() => setFlagModalOpen(true)}
+                    >
+                      Qoidabuzarlik belgilash
+                    </Button>
+                  </>
                 )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  tone="danger"
-                  onClick={() => setFlagModalOpen(true)}
-                >
-                  Qoidabuzarlik belgilash
-                </Button>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setSelectedService(null)}>
                 Yopish
@@ -400,18 +443,38 @@ export default function ServicesModerationPage() {
         <DangerousActionModal
           open={flagModalOpen}
           onClose={() => setFlagModalOpen(false)}
-          title="Xizmatni qoidabuzarlik tufayli to‘xtatish"
-          description={`"${selectedService.title}" xizmatini katalogdan olib tashlash va muallifga ogohlantirish yuborish.`}
-          impactDetails={[
-            "Xizmat qidiruv va kategoriyadan olib tashlanadi",
-            "Mavjud buyurtmalar yakunlanguncha davom etadi, yangilari qabul qilinmaydi",
-          ]}
-          confirmLabel="Qoidabuzarlikni qayd etish"
+          title={
+            selectedService.status === "pending_review"
+              ? "Xizmatni rad etish"
+              : "Xizmatni qoidabuzarlik tufayli to‘xtatish"
+          }
+          description={
+            selectedService.status === "pending_review"
+              ? `"${selectedService.title}" xizmatini rad etish va sababini muallifga yuborish.`
+              : `"${selectedService.title}" xizmatini katalogdan olib tashlash va muallifga ogohlantirish yuborish.`
+          }
+          impactDetails={
+            selectedService.status === "pending_review"
+              ? [
+                  "Xizmat katalogda e'lon qilinmaydi",
+                  "Muallif ko'rsatilgan sababni ko'radi va tuzatib qayta topshirishi mumkin",
+                ]
+              : [
+                  "Xizmat qidiruv va kategoriyadan olib tashlanadi",
+                  "Mavjud buyurtmalar yakunlanguncha davom etadi, yangilari qabul qilinmaydi",
+                ]
+          }
+          confirmLabel={
+            selectedService.status === "pending_review"
+              ? "Rad etish"
+              : "Qoidabuzarlikni qayd etish"
+          }
           confirmTone="danger"
           /* Audit izi endi `setServiceStatus` ichida yoziladi (sabab bilan) —
              sahifa ikkinchi, alohida yozuv qo'shmaydi. */
           onConfirm={async (reason) => {
-            await handleToggleStatus(selectedService.id, "paused", reason);
+            const nextStatus = selectedService.status === "pending_review" ? "rejected" : "paused";
+            await handleToggleStatus(selectedService.id, nextStatus, reason);
             setFlagModalOpen(false);
           }}
         />
