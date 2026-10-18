@@ -289,8 +289,23 @@ export default function XaridorWorkroomPage() {
           </div>
         </div>
 
-        {/* To'lov kerak (hali mablag'lanmagan) */}
-        {!funded && contract.status !== "bekor_qilingan" && contract.status !== "yakunlangan" && contract.status !== "nizo" && paymentState === "idle" && (
+        {/* Sotuvchi hali qabul qilmagan bo'lsa (PENDING_SELLER) */}
+        {!funded && contract.rawStatus === "PENDING_SELLER" && (
+          <Card padding="lg" className="mt-4 border-info/30 bg-info/5">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-info/10 text-info text-base">⏳</span>
+              <div>
+                <h3 className="font-heading text-sm font-bold text-ink">Mutaxassis tasdig'i kutilmoqda</h3>
+                <p className="mt-1 text-xs text-muted leading-relaxed">
+                  Mutaxassis buyurtmani ko'rib chiqib, o'z roziligini bergach, shartnomani xavfsiz to'lov (Escrow) orqali to'lash imkoniyati ochiladi.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* To'lov kerak (sotuvchi qabul qilgan, lekin hali mablag'lanmagan) */}
+        {!funded && contract.rawStatus !== "PENDING_SELLER" && contract.status !== "bekor_qilingan" && contract.status !== "yakunlangan" && contract.status !== "nizo" && paymentState === "idle" && (
           <Card padding="lg" className="mt-4 border-warning/30 bg-warning/5">
             <h3 className="font-heading text-sm font-bold text-ink">{t("cfund.awaitingTitle")}</h3>
             <p className="mt-1 text-xs text-muted">{t("cfund.awaitingDesc")}</p>
