@@ -217,7 +217,7 @@ export default function ElonTafsilotiPage() {
             title={t("bjob.noProposals")}
             description="Bu e'longa hali arizalar kelib tushmadi. Mutaxassislarni o'zingiz qidirib, to'g'ridan-to'g'ri taklif yuborishingiz mumkin."
             action={
-              <Link href="/bozor?tab=specialists">
+              <Link href="/xaridor/mutaxassislar">
                 <Button size="sm">Mutaxassislarni ko'rish</Button>
               </Link>
             }

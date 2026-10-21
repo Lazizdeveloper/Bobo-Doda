@@ -148,8 +148,8 @@ export default function XarajatlarPage() {
             title={t("spend.empty")}
             description="Sizda hali to'lovlar tarixi mavjud emas. Shartnoma tuzib, bosqichma-bosqich xavfsiz to'lovlarni amalga oshiring."
             action={
-              <Link href="/bozor">
-                <Button size="sm">Bozorni ko'rish</Button>
+              <Link href="/xaridor/mutaxassislar">
+                <Button size="sm">Mutaxassislarni ko'rish</Button>
               </Link>
             }
           />

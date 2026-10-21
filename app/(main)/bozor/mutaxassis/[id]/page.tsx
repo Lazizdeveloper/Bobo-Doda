@@ -16,7 +16,7 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import { TrustBadge } from "@/components/ui/TrustBadge";
 import { IdentityVerifiedBadge } from "@/components/ui/IdentityVerifiedBadge";
 import { OfferModal } from "@/components/shared/OfferModal";
-import { catalogService, servicesService } from "@/lib/api";
+import { authService, catalogService, servicesService } from "@/lib/api";
 import type { PortfolioItem, Review, Service, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -34,6 +34,11 @@ export default function MutaxassisProfiliPage() {
   const [viewingPortfolio, setViewingPortfolio] = useState<PortfolioItem | null>(null);
   const [selectedRatingFilter, setSelectedRatingFilter] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [isBuyer, setIsBuyer] = useState(false);
+
+  useEffect(() => {
+    setIsBuyer(authService.getSession()?.role === "xaridor");
+  }, []);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -65,7 +70,7 @@ export default function MutaxassisProfiliPage() {
         title={t("spec.notFound")}
         description="Ushbu mutaxassis profili mavjud emas yoki o'chirilgan bo'lishi mumkin."
         action={
-          <Link href="/bozor?tab=specialists">
+          <Link href={isBuyer ? "/xaridor/mutaxassislar" : "/bozor?tab=specialists"}>
             <Button size="sm">Barcha mutaxassislarni ko'rish</Button>
           </Link>
         }
@@ -88,11 +93,18 @@ export default function MutaxassisProfiliPage() {
     <div className="flex flex-col gap-8 pb-12">
       {/* Top Breadcrumb Navigation with Back Button */}
       <Breadcrumb
-        items={[
-          { label: t("nav.market"), href: "/bozor" },
-          { label: t("market.tabSpecialists"), href: "/bozor?tab=specialists" },
-          { label: user.fullName },
-        ]}
+        items={
+          isBuyer
+            ? [
+                { label: t("nav.specialists") || "Mutaxassislar", href: "/xaridor/mutaxassislar" },
+                { label: user.fullName },
+              ]
+            : [
+                { label: t("nav.market"), href: "/bozor" },
+                { label: t("market.tabSpecialists"), href: "/bozor?tab=specialists" },
+                { label: user.fullName },
+              ]
+        }
       />
 
       {/* Main Grid: Left Details + Right Sticky Conversion Sidebar */}

@@ -968,6 +968,7 @@ export const en: Record<string, string> = {
 
   /* Navigation (client) */
   "nav.market": "Marketplace",
+  "nav.specialists": "Specialists",
   "nav.myJobs": "My posts",
   "nav.myOffers": "My offers",
   "nav.spending": "Spending",

@@ -87,14 +87,14 @@ export default function XaridorShartnomalarPage() {
           }
           description={
             contracts.length === 0
-              ? "Sizda hali tuzilgan shartnomalar yo'q. Bozor orqali mutaxassis toping yoki yangi ish e'lonini joylashtiring."
+              ? "Sizda hali tuzilgan shartnomalar yo'q. Mutaxassislar bo'limi orqali mutaxassis toping yoki yangi ish e'lonini joylashtiring."
               : "Tanlangan holat bo'yicha shartnomalar topilmadi."
           }
           action={
             contracts.length === 0 ? (
               <div className="flex flex-wrap items-center justify-center gap-2">
-                <Link href="/bozor">
-                  <Button size="sm">Bozordan xizmat topish</Button>
+                <Link href="/xaridor/mutaxassislar">
+                  <Button size="sm">Mutaxassis topish</Button>
                 </Link>
                 <Link href="/xaridor/my-jobs/yangi">
                   <Button variant="secondary" size="sm">Ish e'loni berish</Button>

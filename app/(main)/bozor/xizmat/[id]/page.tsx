@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-import { contractsService, servicesService } from "@/lib/api";
+import { authService, contractsService, servicesService } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Service } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
@@ -39,6 +39,11 @@ export default function XizmatTafsilotiPage() {
   const [service, setService] = useState<Service | null | undefined>(undefined);
   const [otherServices, setOtherServices] = useState<Service[]>([]);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [isBuyer, setIsBuyer] = useState(false);
+
+  useEffect(() => {
+    setIsBuyer(authService.getSession()?.role === "xaridor");
+  }, []);
 
   const [buyOpen, setBuyOpen] = useState(false);
   const [deadline, setDeadline] = useState(defaultDeadline());
@@ -74,7 +79,7 @@ export default function XizmatTafsilotiPage() {
         title={t("svc.notFound")}
         description="Ushbu xizmat mavjud emas yoki muallif tomonidan to'xtatilgan bo'lishi mumkin."
         action={
-          <Link href="/bozor?tab=services">
+          <Link href={isBuyer ? "/xaridor/mutaxassislar?tab=services" : "/bozor?tab=services"}>
             <Button size="sm">Barcha xizmatlarni ko'rish</Button>
           </Link>
         }
@@ -144,11 +149,19 @@ export default function XizmatTafsilotiPage() {
   return (
     <div className="flex flex-col gap-6 pb-12">
       <Breadcrumb
-        items={[
-          { label: t("nav.market"), href: "/bozor" },
-          { label: t(`cat.${service.category}`), href: `/bozor` },
-          { label: service.title },
-        ]}
+        items={
+          isBuyer
+            ? [
+                { label: t("nav.specialists") || "Mutaxassislar", href: "/xaridor/mutaxassislar" },
+                { label: t("nav.bozorServices") || "Xizmatlar", href: "/xaridor/mutaxassislar?tab=services" },
+                { label: service.title },
+              ]
+            : [
+                { label: t("nav.market"), href: "/bozor" },
+                { label: t(`cat.${service.category}`), href: "/bozor" },
+                { label: service.title },
+              ]
+        }
       />
 
       <div className="grid items-start gap-8 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">

@@ -299,12 +299,12 @@ export default function ElonlarimPage() {
                   }
                   description={
                     allProposalsWithJobs.length === 0
-                      ? "E'lonlaringizga mutaxassislar ariza topshirishi bilan bu yerda ko'rinadi yoki bozordan to'g'ridan-to'g'ri mutaxassis topishingiz mumkin."
+                      ? "E'lonlaringizga mutaxassislar ariza topshirishi bilan bu yerda ko'rinadi yoki mutaxassislar bo'limidan to'g'ridan-to'g'ri mutaxassis topishingiz mumkin."
                       : "Tanlangan filtr bo'yicha takliflar mavjud emas."
                   }
                   action={
                     allProposalsWithJobs.length === 0 ? (
-                      <Link href="/bozor?tab=specialists">
+                      <Link href="/xaridor/mutaxassislar">
                         <Button size="sm">Mutaxassislarni ko'rish</Button>
                       </Link>
                     ) : (

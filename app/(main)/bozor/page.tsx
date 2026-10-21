@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -41,11 +42,17 @@ export default function BozorPage() {
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [savedSpecialistIds, setSavedSpecialistIds] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    setUserRole(authService.getSession()?.role ?? null);
-  }, []);
+    const session = authService.getSession();
+    const role = session?.role ?? null;
+    setUserRole(role);
+    if (role === "xaridor") {
+      router.replace("/xaridor/mutaxassislar");
+    }
+  }, [router]);
 
   // Common Filters
   const [search, setSearch] = useState("");

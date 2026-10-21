@@ -118,7 +118,7 @@ export default function XaridorXabarlarPage() {
           title={t("messages.empty")}
           description="Sizda hali faol yozishmalar yo'q. Mutaxassislar bilan suhbatlashish uchun e'lon berishingiz yoki to'g'ridan-to'g'ri bog'lanishingiz mumkin."
           action={
-            <Link href="/bozor?tab=specialists">
+            <Link href="/xaridor/mutaxassislar">
               <Button size="sm">Mutaxassislarni ko'rish</Button>
             </Link>
           }

@@ -52,7 +52,7 @@ export function TopNav({ base }: TopNavProps) {
   const navItems = [
     { href: "/xaridor", label: t("nav.dashboard") || "Dashboard" },
     { href: "/xaridor/my-jobs", label: "E'lonlarim" },
-    { href: "/bozor", label: t("nav.market") || "Bozor" },
+    { href: "/xaridor/mutaxassislar", label: t("nav.specialists") || "Mutaxassislar" },
     { href: "/xaridor/contracts", label: t("nav.contracts") || "Shartnomalar" },
     { href: "/xaridor/messages", label: t("nav.messages") || "Xabarlar" },
     { href: "/xaridor/billing", label: t("nav.spending") || "Moliya" },

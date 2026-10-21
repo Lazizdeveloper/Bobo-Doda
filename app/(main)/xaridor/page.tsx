@@ -230,7 +230,7 @@ export default function XaridorDashboardPage() {
                   <Link href="/xaridor/my-jobs/yangi">
                     <Button size="sm">{t("bdash.postJob")}</Button>
                   </Link>
-                  <Link href="/bozor?tab=specialists">
+                  <Link href="/xaridor/mutaxassislar">
                     <Button variant="secondary" size="sm">{t("bdash.findSpecialist")}</Button>
                   </Link>
                 </div>
@@ -293,8 +293,8 @@ export default function XaridorDashboardPage() {
               <Card className="text-center py-8">
                 <p className="font-heading text-sm font-bold text-ink">{t("dash.emptyContractsCta")}</p>
                 <p className="text-xs text-muted mt-1">Tayyor xizmat buyurtma qiling yoki ish e'loni bering.</p>
-                <Link href="/bozor" className="mt-3 inline-block">
-                  <Button size="sm" variant="secondary">{t("dash.exploreMarket")}</Button>
+                <Link href="/xaridor/mutaxassislar" className="mt-3 inline-block">
+                  <Button size="sm" variant="secondary">{t("bdash.findSpecialist") || "Mutaxassislarni ko'rish"}</Button>
                 </Link>
               </Card>
             ) : (
@@ -322,7 +322,7 @@ export default function XaridorDashboardPage() {
             <h3 className="font-bold text-primary text-sm mb-1.5">{t("bdash.helpTeaserTitle")}</h3>
             <p className="text-xs text-muted mb-4 leading-relaxed">{t("bdash.helpTeaserBody")}</p>
             <div className="flex flex-col gap-2">
-              <Link href="/bozor?tab=specialists">
+              <Link href="/xaridor/mutaxassislar">
                 <Button size="sm" className="w-full">
                   {t("bdash.findSpecialist")}
                 </Button>

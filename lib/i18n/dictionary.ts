@@ -1664,6 +1664,7 @@ export const dictionary: Record<string, Entry> = {
 
   /* Navigatsiya (xaridor) */
   "nav.market": { uz: "Bozor", ru: "Маркет" },
+  "nav.specialists": { uz: "Mutaxassislar", ru: "Специалисты" },
   "nav.myJobs": { uz: "E'lonlarim", ru: "Мои объявления" },
   "nav.myOffers": { uz: "Takliflarim", ru: "Мои предложения" },
   "nav.spending": { uz: "Xarajatlar", ru: "Расходы" },
