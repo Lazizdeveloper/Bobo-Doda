@@ -94,6 +94,11 @@ export default function BozorPage() {
     const cat = sp.get("cat");
     if (urlTab && ["services", "jobs", "specialists"].includes(urlTab)) {
       setTab(urlTab as TabKey);
+    } else {
+      const session = authService.getSession();
+      if (session?.role === "mutaxassis") {
+        setTab("jobs");
+      }
     }
     if (q) setSearch(q);
     if (cat) setCategory(cat);
@@ -731,7 +736,7 @@ export default function BozorPage() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className={`grid grid-cols-1 ${userRole !== "mutaxassis" ? "sm:grid-cols-3" : "sm:grid-cols-2"} gap-2`}>
                         <Link href={`/bozor/mutaxassis/${spec.user.id}`} className="w-full">
                           <Button variant="secondary" size="sm" className="w-full text-xs">
                             {t("market.viewProfile")}
@@ -745,13 +750,15 @@ export default function BozorPage() {
                         >
                           💬 {t("market.sendMessageBtn")}
                         </Button>
-                        <Button
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={() => setOfferSpecialist(spec)}
-                        >
-                          {t("market.sendOfferBtn")}
-                        </Button>
+                        {userRole !== "mutaxassis" && (
+                          <Button
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => setOfferSpecialist(spec)}
+                          >
+                            {t("market.sendOfferBtn")}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </Card>

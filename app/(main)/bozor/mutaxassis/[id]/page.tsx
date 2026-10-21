@@ -35,10 +35,15 @@ export default function MutaxassisProfiliPage() {
   const [selectedRatingFilter, setSelectedRatingFilter] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [isBuyer, setIsBuyer] = useState(false);
+  const [isSpecialist, setIsSpecialist] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
   useEffect(() => {
-    setIsBuyer(authService.getSession()?.role === "xaridor");
-  }, []);
+    const session = authService.getSession();
+    setIsBuyer(session?.role === "xaridor");
+    setIsSpecialist(session?.role === "mutaxassis");
+    setIsOwnProfile(session?.userId === params.id);
+  }, [params.id]);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -406,32 +411,46 @@ export default function MutaxassisProfiliPage() {
           <Card padding="lg" className="flex flex-col gap-4 border-2 border-primary/20 bg-card shadow-card">
             <div>
               <span className="text-2xs font-bold uppercase tracking-wider text-primary-deep">
-                To&apos;g&apos;ridan-to&apos;g&apos;ri hamkorlik
+                {isOwnProfile ? "Sizning profilingiz" : "To'g'ridan-to'g'ri hamkorlik"}
               </span>
               <h3 className="mt-1 font-heading text-lg font-extrabold text-ink">
-                Loyiha taklif qiling
+                {isOwnProfile ? "Profil boshqaruvi" : "Loyiha taklif qiling"}
               </h3>
               <p className="mt-1 text-xs text-muted leading-relaxed">
-                Maxsus talablaringiz va byudjetingizni kiritib mutaxassisga to&apos;g&apos;ridan-to&apos;g&apos;ri taklif yuboring.
+                {isOwnProfile
+                  ? "Xizmatlaringiz va portfoliongizni sozlamalar orqali tahrirlashingiz mumkin."
+                  : "Maxsus talablaringiz va byudjetingizni kiritib mutaxassisga to'g'ridan-to'g'ri taklif yuboring."}
               </p>
             </div>
 
             <div className="flex flex-col gap-2">
-              <Button
-                size="lg"
-                onClick={() => setOfferOpen(true)}
-                className="w-full justify-center shadow-btn"
-              >
-                {t("offer.send")} →
-              </Button>
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={() => setMessageOpen(true)}
-                className="w-full justify-center text-xs"
-              >
-                💬 {t("market.sendMessageBtn")}
-              </Button>
+              {isOwnProfile ? (
+                <Link href="/mutaxassis/settings" className="w-full">
+                  <Button size="md" className="w-full justify-center shadow-btn">
+                    ⚙️ Profilni tahrirlash
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  {!isSpecialist && (
+                    <Button
+                      size="lg"
+                      onClick={() => setOfferOpen(true)}
+                      className="w-full justify-center shadow-btn"
+                    >
+                      {t("offer.send")} →
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setMessageOpen(true)}
+                    className="w-full justify-center text-xs"
+                  >
+                    💬 {t("market.sendMessageBtn")}
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Quick Metrics */}

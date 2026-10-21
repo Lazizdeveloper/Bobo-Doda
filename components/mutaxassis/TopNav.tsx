@@ -52,7 +52,7 @@ export function TopNav({ base }: TopNavProps) {
   const navLinks = [
     { href: "/mutaxassis", label: t("nav.dashboard") },
     { href: "/mutaxassis/applications", label: t("nav.applications") },
-    { href: "/bozor", label: t("nav.market") },
+    { href: "/bozor?tab=jobs", label: t("nav.market"), matchPrefix: "/bozor" },
     { href: "/mutaxassis/contracts", label: t("nav.contracts") },
     { href: "/mutaxassis/messages", label: t("nav.messages") },
     { href: "/mutaxassis/billing", label: t("nav.billing") },
@@ -70,7 +70,8 @@ export function TopNav({ base }: TopNavProps) {
           {/* Desktop Nav */}
           <nav className="hidden xl:flex items-center gap-0.5 2xl:gap-1 shrink-0">
             {navLinks.map((link) => {
-              const isActive = link.href === "/mutaxassis" ? pathname === "/mutaxassis" : pathname.startsWith(link.href);
+              const check = link.matchPrefix || link.href;
+              const isActive = check === "/mutaxassis" ? pathname === "/mutaxassis" : pathname.startsWith(check);
               return (
                 <Link
                   key={link.href}
