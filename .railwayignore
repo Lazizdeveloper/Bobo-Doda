@@ -1,0 +1,17 @@
+# Railway Ignore
+node_modules
+.next
+.next-*
+.git
+.agents
+.vscode
+.claude
+scratch
+coverage
+test-results
+playwright-report
+backend/dist
+backend/node_modules
+*.log
+*.zip
+*.pem
