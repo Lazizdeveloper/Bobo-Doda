@@ -25,6 +25,7 @@ import type { PortfolioItem, Service, Specialist } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { CATEGORIES } from "@/lib/category-fields";
+import { isTestService } from "@/lib/validate";
 
 type TabKey = "specialists" | "services";
 type SpecialistSort = "rating" | "contracts" | "reviews";
@@ -153,7 +154,7 @@ export default function XaridorMutaxassislarPage() {
   // Map services by sellerId for instant lookup
   const servicesBySeller = useMemo(() => {
     const map = new Map<string, Service[]>();
-    (services ?? []).forEach((s) => {
+    (services ?? []).filter((s) => !isTestService(s)).forEach((s) => {
       const list = map.get(s.sellerId) || [];
       list.push(s);
       map.set(s.sellerId, list);
@@ -203,6 +204,7 @@ export default function XaridorMutaxassislarPage() {
   const delDays = deliveryFilter === "all" ? null : Number(deliveryFilter);
   const filteredServices = useMemo(() => {
     return (services ?? [])
+      .filter((s) => !isTestService(s))
       .filter((s) => category === "all" || s.category === category)
       .filter((s) => minP === null || s.price >= minP)
       .filter((s) => maxP === null || s.price <= maxP)

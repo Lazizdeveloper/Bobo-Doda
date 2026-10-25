@@ -40,7 +40,7 @@ import {
   roleToUz,
 } from "./mappers";
 import type * as Model from "@/lib/types";
-import { detectCardType, cardExpiry, MIN_JOB_BUDGET } from "@/lib/validate";
+import { detectCardType, cardExpiry, MIN_JOB_BUDGET, isTestService } from "@/lib/validate";
 import { seedJobs, seedProfiles, seedReviews, seedServices, seedUsers } from "@/lib/mock-api/seed";
 import {
   getMessages,
@@ -892,10 +892,12 @@ export const servicesService: ServicesService = {
       let remoteItems: Model.Service[] = [];
       try {
         const page = await http<Page<RealPublicService>>(`/services${toQuery({ perPage: 100 })}`);
-        remoteItems = page.items.map((s) => mapPublicService(s, slugById(categories, s.categoryId)));
+        remoteItems = page.items
+          .map((s) => mapPublicService(s, slugById(categories, s.categoryId)))
+          .filter((s) => !isTestService(s));
       } catch {}
       if (remoteItems.length === 0) {
-        remoteItems = seedServices;
+        remoteItems = seedServices.filter((s) => !isTestService(s));
       }
       return remoteItems;
     }),

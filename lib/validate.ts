@@ -108,3 +108,34 @@ export function cardExpiry(raw: unknown): string {
   if (end.getTime() < Date.now()) throw new Error("INVALID_EXPIRY");
   return s;
 }
+
+/**
+ * Test xizmatlarini (masalan, "Payme Test Xizmati — 1 000 so'm", test buyurtmalar)
+ * umumiy vitrina va qidiruv natijalaridan yashirish uchun filtr.
+ */
+export function isTestService(service?: { id?: string; title?: string; description?: string; price?: number } | null): boolean {
+  if (!service) return false;
+  if (service.id === "01a14e25-700d-72de-ac13-1117147e475f") return true;
+  const norm = (s?: string) => (s || "").toLowerCase().replace(/['`ʻ’‘]/g, "'");
+  const t = norm(service.title);
+  const d = norm(service.description);
+  const testPhrases = [
+    "payme test",
+    "test xizmat",
+    "test service",
+    "test buyurtma",
+    "test to'lov",
+    "test qilish uchun maxsus xizmat",
+    "1 000 so'mlik kichik mablag' bilan xavfsiz test",
+  ];
+  if (testPhrases.some((phrase) => t.includes(phrase) || d.includes(phrase))) {
+    return true;
+  }
+  if (/^test\b/i.test(t)) {
+    return true;
+  }
+  if (service.price === 1000 && t.includes("test")) {
+    return true;
+  }
+  return false;
+}
