@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { Milestone } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
+import { platformFee, sellerNet, PLATFORM_FEE_PERCENT } from "@/lib/fees";
 import { useT } from "@/lib/i18n";
 
 interface ReceiptModalProps {
@@ -29,6 +30,9 @@ export function ReceiptModal({
   const { t, lang } = useT();
 
   if (!milestone) return null;
+
+  const feeAmount = platformFee(milestone.amount);
+  const netAmount = sellerNet(milestone.amount);
 
   const receiptNo = `RCP-${(milestone.id || "100").replace(/[^a-zA-Z0-9]/g, "").toUpperCase()}`;
   const paidDate = milestone.approvedAt ? formatDate(milestone.approvedAt, lang) : formatDate(new Date().toISOString(), lang);
@@ -134,12 +138,21 @@ export function ReceiptModal({
                   {formatMoney(milestone.amount, lang)}
                 </td>
               </tr>
+              <tr>
+                <td className="p-3">
+                  <p className="font-medium text-muted">Platforma xizmat haqi ({PLATFORM_FEE_PERCENT}%)</p>
+                  <p className="text-2xs text-faint">Xavfsiz Escrow kafolati va tranzaksiya infratuzilmasi</p>
+                </td>
+                <td className="p-3 text-right font-heading text-xs font-semibold text-muted">
+                  -{formatMoney(feeAmount, lang)}
+                </td>
+              </tr>
             </tbody>
             <tfoot className="bg-surface/50 border-t border-line">
               <tr>
-                <td className="p-3 font-semibold text-ink text-right">Jami to&apos;landi:</td>
+                <td className="p-3 font-semibold text-ink text-right">Mutaxassisga o&apos;tadigan sof summa:</td>
                 <td className="p-3 text-right font-heading text-base font-extrabold text-success">
-                  {formatMoney(milestone.amount, lang)}
+                  {formatMoney(netAmount, lang)}
                 </td>
               </tr>
             </tfoot>
@@ -150,8 +163,9 @@ export function ReceiptModal({
         <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
           <div className="max-w-xs text-2xs text-faint">
             <p>
-              Ushbu to&apos;lov Bobololadono Escrow kafolat tizimi orqali to&apos;liq himoyalangan va
-              tasdiqlangan. Qog&apos;oz nusxada ham, elektron shaklda ham yuridik kuchga ega.
+              Ushbu to&apos;lov Bobololadono Escrow kafolat tizimi orqali tasdiqlangan va
+              elektron kvitansiya hisoblanadi. Barcha hisob-kitoblar platforma qoidalariga
+              muvofiq shakllantirilgan. Platforma: &quot;Bobololadono&quot; MCHJ.
             </p>
           </div>
 

@@ -27,6 +27,8 @@ export const dictionary: Record<string, Entry> = {
   "common.retry": { uz: "Qayta urinish", ru: "Повторить" },
   "common.clear": { uz: "Tozalash", ru: "Очистить" },
   "common.loading": { uz: "Yuklanmoqda…", ru: "Загрузка…" },
+  "common.all": { uz: "Barchasi", ru: "Все" },
+  "common.and": { uz: "va", ru: "и" },
   "a11y.skipToContent": {
     uz: "Asosiy qismga o'tish",
     ru: "Перейти к содержимому",
@@ -523,6 +525,9 @@ export const dictionary: Record<string, Entry> = {
   "auth.errPhone": { uz: "To'g'ri telefon raqamini kiriting", ru: "Введите корректный номер телефона" },
   "auth.tabLogin": { uz: "Kirish", ru: "Вход" },
   "auth.tabRegister": { uz: "Ro'yxatdan o'tish", ru: "Регистрация" },
+  "auth.agreePrefix": { uz: "Men", ru: "Я согласен с" },
+  "auth.agreeSuffix": { uz: "shartlariga roziman", ru: "" },
+  "auth.errTerms": { uz: "Davom etish uchun shartlarga rozilik bildiring", ru: "Подтвердите согласие с условиями" },
   "auth.secureBadge": {
     uz: "Kafolatlangan xavfsiz to'lov va shartnoma tizimi",
     ru: "Гарантированная безопасная оплата и система контрактов",
@@ -2020,6 +2025,10 @@ export const dictionary: Record<string, Entry> = {
   "jwiz.published": {
     uz: "E'lon joylandi — takliflar kela boshlaydi",
     ru: "Объявление размещено — скоро придут предложения",
+  },
+  "jwiz.reviewHint": {
+    uz: "Ma'lumotlarni tekshiring. E'lon joylangach, mutaxassislar o'z takliflarini yuborishi mumkin bo'ladi.",
+    ru: "Проверьте данные. После публикации объявления специалисты смогут отправлять свои предложения.",
   },
   "jwiz.errBudget": {
     uz: "Maksimal byudjet minimal byudjetdan kam bo'lishi mumkin emas",

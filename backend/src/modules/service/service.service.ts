@@ -154,7 +154,7 @@ export class ServiceService {
     page: number,
     perPage: number,
     status?: Service['status'],
-  ): Promise<Page<Service>> {
+  ): Promise<Page<Service & { category?: { slug?: string; nameUz?: string } | null }>> {
     const where = status ? { status } : {};
     const [items, total] = await this.prisma.$transaction([
       this.prisma.service.findMany({
@@ -162,14 +162,22 @@ export class ServiceService {
         orderBy: { createdAt: 'asc' },
         skip: (page - 1) * perPage,
         take: perPage,
+        include: {
+          category: { select: { slug: true, nameUz: true } },
+        },
       }),
       this.prisma.service.count({ where }),
     ]);
     return buildPage(items, total, page, perPage);
   }
 
-  async getByIdOrThrow(id: string): Promise<Service> {
-    const service = await this.prisma.service.findUnique({ where: { id } });
+  async getByIdOrThrow(id: string): Promise<Service & { category?: { slug?: string; nameUz?: string } | null }> {
+    const service = await this.prisma.service.findUnique({
+      where: { id },
+      include: {
+        category: { select: { slug: true, nameUz: true } },
+      },
+    });
     if (!service) throw new NotFoundError('Xizmat topilmadi', 'SERVICE_NOT_FOUND');
     return service;
   }

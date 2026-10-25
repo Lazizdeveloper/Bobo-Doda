@@ -115,9 +115,34 @@ const nextConfig = {
       ...adminRedirects,
     ];
   },
+  async rewrites() {
+    return [
+      { source: "/xaridor/xarajatlar", destination: "/xaridor/billing" },
+      { source: "/xaridor/shartnomalar", destination: "/xaridor/contracts" },
+      { source: "/xaridor/shartnomalar/:id", destination: "/xaridor/contracts/:id" },
+      { source: "/mutaxassis/shartnomalar", destination: "/mutaxassis/contracts" },
+      { source: "/mutaxassis/shartnomalar/:id", destination: "/mutaxassis/contracts/:id" },
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders() },
+      {
+        source: "/admin/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, proxy-revalidate" },
+          { key: "Pragma", value: "no-cache" },
+          { key: "Expires", value: "0" },
+        ],
+      },
+      {
+        source: "/rahbariyat/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, proxy-revalidate" },
+          { key: "Pragma", value: "no-cache" },
+          { key: "Expires", value: "0" },
+        ],
+      },
       {
         source: "/sw.js",
         headers: [

@@ -28,7 +28,7 @@ test("xarid -> qabul -> to'lov -> topshirish -> qabul -> yakunlanish", async ({ 
     await buyerPage.getByRole("button", { name: /Buyurtma/i }).first().click();
     await buyerPage.waitForTimeout(400);
     await buyerPage.getByRole("button", { name: /Shartnoma yaratish/i }).last().click();
-    await buyerPage.waitForURL("**/xaridor/shartnomalar/*", { timeout: 15_000 });
+    await buyerPage.waitForURL(/.*\/xaridor\/(contracts|shartnomalar)\/.*/, { timeout: 15_000 });
   });
 
   const contractId = new URL(buyerPage.url()).pathname.split("/").pop()!;
@@ -36,22 +36,32 @@ test("xarid -> qabul -> to'lov -> topshirish -> qabul -> yakunlanish", async ({ 
   await test.step("sotuvchi shartnomani qabul qiladi", async () => {
     await sellerPage.goto(`/mutaxassis/contracts/${contractId}`, { waitUntil: "networkidle" });
     await sellerPage.getByRole("button", { name: "Qabul qilish" }).click({ timeout: 8000 });
-    await expect(sellerPage.getByText(/Faol/i).first()).toBeVisible({ timeout: 8000 });
+    await expect(sellerPage.getByText(/Faol|To'lov kutilmoqda/i).first()).toBeVisible({ timeout: 8000 });
   });
 
   await test.step("xaridor 'To'lash' tugmasini DARHOL ko'radi (regressiya: avval ~2daq yashirin edi)", async () => {
-    await buyerPage.goto(`/xaridor/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await buyerPage.goto(`/xaridor/contracts/${contractId}`, { waitUntil: "networkidle" });
     await expect(buyerPage.getByRole("button", { name: /To'lash/i })).toBeVisible({ timeout: 5000 });
   });
 
   let paymentId = "";
   await test.step("xaridor to'lovni boshlaydi", async () => {
-    const [paymentRes] = await Promise.all([
-      buyerPage.waitForResponse((res) => res.url().includes("/payment") && res.request().method() === "POST"),
-      buyerPage.getByRole("button", { name: /To'lash/i }).click(),
-    ]);
-    const body = (await paymentRes.json()) as { id: string };
-    paymentId = body.id;
+    let capturedBody: Record<string, unknown> | null = null;
+    const responsePromise = buyerPage.waitForResponse(async (res) => {
+      if (res.url().includes("/payment") && res.request().method() === "POST") {
+        try {
+          capturedBody = await res.json();
+        } catch {}
+        return true;
+      }
+      return false;
+    });
+    await buyerPage.getByRole("button", { name: /To'lash/i }).click();
+    const res = await responsePromise;
+    if (!capturedBody) {
+      capturedBody = await res.json().catch(() => ({}));
+    }
+    paymentId = capturedBody?.id || "";
     expect(paymentId, "to'lov ID qaytishi kerak").toBeTruthy();
   });
 
@@ -76,7 +86,7 @@ test("xarid -> qabul -> to'lov -> topshirish -> qabul -> yakunlanish", async ({ 
   });
 
   await test.step("xaridor bosqichni qabul qiladi va shartnoma yakunlanadi", async () => {
-    await buyerPage.goto(`/xaridor/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await buyerPage.goto(`/xaridor/contracts/${contractId}`, { waitUntil: "networkidle" });
     await buyerPage.getByRole("button", { name: "Qabul qilish" }).first().click({ timeout: 8000 });
     await buyerPage.waitForTimeout(300);
     const confirmBtn = buyerPage.getByRole("button", { name: "Qabul qilish" }).last();

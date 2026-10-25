@@ -58,6 +58,13 @@ export class CreateContractDto {
   @IsUUID()
   serviceId!: string;
 
+  @ApiPropertyOptional({ description: 'Kelishilgan summa (butun so‘m)', minimum: 1_000, maximum: MAX_SOM })
+  @IsOptional()
+  @IsInt()
+  @Min(1_000, { message: 'Kelishilgan summa kamida 1 000 so‘m bo‘lishi kerak' })
+  @Max(MAX_SOM)
+  agreedAmount?: number;
+
   @ApiProperty({ description: 'ISO 8601 — kelajakda bo‘lishi shart' })
   @IsDateString()
   deadline!: string;

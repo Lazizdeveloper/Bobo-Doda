@@ -52,7 +52,19 @@ export default function ElonTafsilotiPage() {
     ])
       .then(async ([foundJob, specialistList, allContracts, list]) => {
         setJob(foundJob);
-        setSpecialists(new Map(specialistList.map((s) => [s.user.id, s])));
+        const specMap = new Map(specialistList.map((s) => [s.user.id, s]));
+        for (const s of specialistList) {
+          if (s.user.phone) specMap.set(s.user.phone, s);
+        }
+        for (const p of list) {
+          if (!specMap.has(p.sellerId)) {
+            try {
+              const fetched = await catalogService.getSpecialist(p.sellerId);
+              if (fetched) specMap.set(p.sellerId, fetched);
+            } catch {}
+          }
+        }
+        setSpecialists(specMap);
         setContract(allContracts.find((c) => c.jobId === params.id) ?? null);
         /* Ochilganda yangi takliflar "ko'rib chiqilmoqda"ga o'tadi (Upwork: viewed) */
         const fresh = list.filter((p) => p.status === "yuborilgan");
@@ -226,8 +238,21 @@ export default function ElonTafsilotiPage() {
           <div className="flex flex-col gap-4">
             {visible.map((proposal) => {
               const spec = specialists.get(proposal.sellerId);
+              const specialistName =
+                spec?.user?.fullName && spec.user.fullName !== "—"
+                  ? spec.user.fullName
+                  : "Mutaxassis";
               const actionable =
                 job.status === "ochiq" && ACTIONABLE.includes(proposal.status);
+              const daysLeft = job.deadline
+                ? Math.ceil((new Date(job.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                : null;
+              const isLate =
+                daysLeft !== null &&
+                daysLeft > 0 &&
+                proposal.estimatedDeliveryDays !== undefined &&
+                proposal.estimatedDeliveryDays > daysLeft;
+
               return (
                 <Card key={proposal.id} padding="lg" className="flex flex-col gap-4">
                   {/* Mutaxassis sarlavhasi */}
@@ -236,27 +261,25 @@ export default function ElonTafsilotiPage() {
                       href={`/bozor/mutaxassis/${proposal.sellerId}`}
                       className="group flex items-center gap-3"
                     >
-                      <Avatar name={spec?.user.fullName ?? "?"} />
+                      <Avatar name={specialistName} />
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-medium text-ink transition-colors duration-150 group-hover:text-primary">
-                            {spec?.user.fullName ?? "—"}
+                            {specialistName}
                           </span>
                           {spec && <TrustBadge badge={spec.profile.badge} />}
                         </div>
-                        {spec && (
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted">
-                            {spec.profile.reviewCount > 0 ? (
-                              <RatingStars value={spec.profile.rating} showValue />
-                            ) : (
-                              <span className="text-muted font-normal">Yangi mutaxassis</span>
-                            )}
-                            <span>
-                              {spec.profile.completedContracts}{" "}
-                              {t("profile.completedContracts")}
-                            </span>
-                          </div>
-                        )}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted">
+                          {spec && spec.profile.reviewCount > 0 ? (
+                            <RatingStars value={spec.profile.rating} showValue />
+                          ) : (
+                            <span className="text-muted font-normal">Yangi mutaxassis</span>
+                          )}
+                          <span>
+                            {spec ? spec.profile.completedContracts : 0}{" "}
+                            {t("profile.completedContracts")}
+                          </span>
+                        </div>
                       </div>
                     </Link>
                     <div className="flex flex-col items-end gap-1">
@@ -268,19 +291,33 @@ export default function ElonTafsilotiPage() {
                   </div>
 
                   {/* Narx va muddat */}
-                  <div className="flex items-center justify-between gap-3 rounded-input border border-line bg-surface p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-input border border-line bg-surface p-3">
                     <div>
                       <span className="text-xs text-muted">{t("props.bid")}</span>
-                      <p className="font-heading text-base font-bold text-ink">
-                        {formatMoney(proposal.bidAmount, lang)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-heading text-base font-bold text-ink">
+                          {formatMoney(proposal.bidAmount, lang)}
+                        </p>
+                        {proposal.bidAmount > job.budgetMax && (
+                          <Badge tone="warning" className="text-2xs">
+                            Byudjetdan yuqori
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     {proposal.estimatedDeliveryDays !== undefined && (
                       <div className="text-right">
                         <span className="text-xs text-muted">{t("prop.deliveryDays")}</span>
-                        <p className="font-heading text-base font-bold text-ink">
-                          {proposal.estimatedDeliveryDays} {t("common.days")}
-                        </p>
+                        <div className="flex items-center justify-end gap-2">
+                          {isLate && (
+                            <Badge tone="danger" className="text-2xs">
+                              Muddatdan kech
+                            </Badge>
+                          )}
+                          <p className="font-heading text-base font-bold text-ink">
+                            {proposal.estimatedDeliveryDays} {t("common.days")}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

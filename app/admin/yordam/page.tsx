@@ -123,8 +123,13 @@ export default function SupportTicketsPage() {
 
   const handleCloseTicket = async () => {
     if (!selectedTicket) return;
-    if (closeNote.trim().length < 3) {
-      setActionError("Yopish sababi kamida 3 ta belgidan iborat bo'lishi shart.");
+    const trimmed = closeNote.trim();
+    if (trimmed.length < 5) {
+      setActionError("Yopish sababi kamida 5 ta belgidan iborat bo'lishi shart.");
+      return;
+    }
+    if (closeNote.length > 500) {
+      setActionError("Yopish sababi 500 ta belgidan oshmasligi shart.");
       return;
     }
     setActionLoading(true);
@@ -446,27 +451,57 @@ export default function SupportTicketsPage() {
         onClose={() => setCloseModalOpen(false)}
         title="Yordam so'rovini yopish"
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 [overflow-wrap:anywhere] [word-break:break-word]">
           <p className="text-sm text-muted">
             {"Murojaat chiptasini yopish sababini kiriting. Ushbu chipta faol bo'lmagan holatga o'tkaziladi."}
           </p>
 
-          <Textarea
-            label="Yopish sababi / Yakuniy xulosa"
-            placeholder="Muammo hal qilindi yoki takroriy murojaat..."
-            value={closeNote}
-            onChange={(e) => {
-              setCloseNote(e.target.value);
-              setActionError("");
-            }}
-            error={actionError}
-            required
-            maxLength={500}
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-ink">
+                Yopish sababi / Yakuniy xulosa <span className="text-danger">*</span>
+              </label>
+              <span
+                className={`text-2xs font-mono font-medium ${
+                  closeNote.length > 500
+                    ? "text-danger font-bold"
+                    : closeNote.trim().length >= 5
+                    ? "text-success"
+                    : "text-muted"
+                }`}
+                aria-live="polite"
+              >
+                {closeNote.length}/500
+              </span>
+            </div>
+            <Textarea
+              placeholder="Muammo hal qilindi yoki takroriy murojaat (5–500 belgi)..."
+              value={closeNote}
+              onChange={(e) => {
+                setCloseNote(e.target.value);
+                if (actionError) setActionError("");
+              }}
+              error={
+                actionError ||
+                (closeNote.length > 0 && closeNote.trim().length < 5
+                  ? "Sabab kamida 5 ta belgidan iborat bo‘lishi shart"
+                  : closeNote.length > 500
+                  ? "Sabab 500 ta belgidan oshmasligi shart"
+                  : undefined)
+              }
+              required
+              maxLength={500}
+              className="[overflow-wrap:anywhere] [word-break:break-word]"
+            />
+          </div>
 
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="ghost" onClick={() => setCloseModalOpen(false)}>Bekor qilish</Button>
-            <Button variant="danger" onClick={handleCloseTicket} disabled={closeNote.trim().length < 3 || actionLoading}>
+            <Button
+              variant="danger"
+              onClick={handleCloseTicket}
+              disabled={closeNote.trim().length < 5 || closeNote.length > 500 || actionLoading}
+            >
               Chiptani yopish
             </Button>
           </div>

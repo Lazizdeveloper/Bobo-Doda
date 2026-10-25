@@ -347,8 +347,23 @@ export default function XaridorWorkroomPage() {
           </div>
         )}
 
-        {/* Escrow kafolati */}
-        {funded && (
+        {/* Shartnoma yakunlangan holati */}
+        {contract.status === "yakunlangan" && (
+          <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-emerald-500">
+            <div className="flex items-start gap-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 text-lg shadow-2xs">🎉</span>
+              <div className="flex-1">
+                <h3 className="font-heading text-sm font-black text-ink tracking-tight">Shartnoma muvaffaqiyatli yakunlandi</h3>
+                <p className="mt-2 text-xs sm:text-sm text-ink/90 leading-relaxed">
+                  Barcha ishlar qabul qilindi va to&apos;lovlar mutaxassisga to&apos;liq o&apos;tkazib berildi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Escrow kafolati — faqat faol shartnomada */}
+        {funded && contract.status !== "yakunlangan" && contract.status !== "bekor_qilingan" && (
           <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-emerald-500">
             <div className="flex items-start gap-3.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 text-lg shadow-2xs">🛡️</span>

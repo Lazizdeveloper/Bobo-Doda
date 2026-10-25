@@ -47,7 +47,7 @@ test.describe.serial("xaridor: bozor va sozlamalar", () => {
    * o'chirilgan chaqiruvlar butunlay olib tashlandi.
    */
   test("Xarajatlar: haqiqiy ma'lumot yuklanadi, doimiy ErrorState YO'Q (regressiya)", async () => {
-    await page.goto("/xaridor/xarajatlar", { waitUntil: "networkidle" });
+    await page.goto("/xaridor/billing", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Xarajatlar" })).toBeVisible({ timeout: 8000 });
     // ErrorState o'rniga real statistika kartalari ko'rinishi kerak
     await expect(page.getByText("Jami to'langan")).toBeVisible();

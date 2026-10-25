@@ -119,6 +119,13 @@ export default function TaklifYuborishPage() {
     }
   }
 
+  const daysLeft = job.deadline
+    ? Math.ceil((new Date(job.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+  const isOverBudget = Number(bid) > job.budgetMax;
+  const isOverDeadline =
+    daysLeft !== null && daysLeft > 0 && Number(deliveryDays) > daysLeft;
+
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <Breadcrumb
@@ -141,11 +148,32 @@ export default function TaklifYuborishPage() {
           <div>
             <p className="font-semibold text-ink">Taklif topshirish haqida ma&apos;lumot</p>
             <p className="mt-0.5 leading-relaxed text-muted">
-              Yuborilgan taklifingiz muvaffaqiyatli saqlanadi. Xaridor sizni ishga tanlaganda, to&apos;lovlar xavfsizligi va Escrow himoyasi ta&apos;minlanishi uchun profilingizdagi faol xizmat asosida shartnoma shakllantiriladi.
+              Yuborilgan taklifingiz muvaffaqiyatli saqlanadi. Shartnoma siz taklif qilgan narx va bosqichlar asosida tuziladi hamda Escrow orqali to&apos;liq himoyalanadi.
             </p>
           </div>
         </div>
       </div>
+
+      {(isOverBudget || isOverDeadline) && (
+        <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-xs text-warning-deep flex flex-col gap-1.5">
+          {isOverBudget && (
+            <p className="flex items-center gap-2">
+              <span>⚠️</span>
+              <span>
+                <strong>Byudjetdan yuqori:</strong> Taklif qilayotgan narxingiz ({formatMoney(Number(bid), lang)}) buyurtmachi belgilagan maksimal byudjetdan ({formatMoney(job.budgetMax, lang)}) yuqori.
+              </span>
+            </p>
+          )}
+          {isOverDeadline && (
+            <p className="flex items-center gap-2">
+              <span>⏳</span>
+              <span>
+                <strong>Muddatdan kech:</strong> Yetkazib berish muddati ({deliveryDays} kun) e&apos;lon muddatidan ({daysLeft} kun) ko&apos;proq.
+              </span>
+            </p>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
         <Card padding="lg" className="flex flex-col gap-4">

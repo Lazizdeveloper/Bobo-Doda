@@ -719,10 +719,10 @@ export default function XaridorMutaxassislarPage() {
                     >
                       <Link
                         href={`/bozor/xizmat/${service.id}`}
-                        className="absolute inset-0 z-0 rounded-card"
+                        className="absolute inset-0 z-10 rounded-card"
                         aria-label={service.title}
                       />
-                      <div className="relative z-10 flex flex-1 flex-col gap-2.5 p-5">
+                      <div className="relative z-0 flex flex-1 flex-col gap-2.5 p-5 pointer-events-none">
                         <div className="flex items-center justify-between gap-2">
                           <Badge tone="primary">{t(`cat.${service.category}`) || service.category}</Badge>
                           <span className="text-2xs text-muted">
@@ -740,18 +740,20 @@ export default function XaridorMutaxassislarPage() {
 
                         {/* Specialist Info */}
                         {spec && (
-                          <div className="flex items-center gap-2 pt-2 border-t border-line/60 mt-1">
-                            <Avatar name={spec.user.fullName} size="sm" />
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-ink truncate">
-                                {spec.user.fullName}
-                              </p>
-                              <div className="flex items-center gap-1 text-2xs text-muted">
-                                <span>★ {spec.profile.rating.toFixed(1)}</span>
-                                <span>•</span>
-                                <span>{spec.profile.completedContracts} ta ish</span>
+                          <div className="flex items-center gap-2 pt-2 border-t border-line/60 mt-1 pointer-events-auto relative z-20">
+                            <Link href={`/bozor/mutaxassis/${spec.user.id}`} className="flex items-center gap-2 group/spec">
+                              <Avatar name={spec.user.fullName} size="sm" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-ink group-hover/spec:text-primary transition-colors truncate">
+                                  {spec.user.fullName}
+                                </p>
+                                <div className="flex items-center gap-1 text-2xs text-muted">
+                                  <span>★ {spec.profile.rating.toFixed(1)}</span>
+                                  <span>•</span>
+                                  <span>{spec.profile.completedContracts} ta ish</span>
+                                </div>
                               </div>
-                            </div>
+                            </Link>
                           </div>
                         )}
 
@@ -762,9 +764,9 @@ export default function XaridorMutaxassislarPage() {
                               {formatMoney(service.price, lang)}
                             </span>
                           </div>
-                          <Button size="sm" variant="secondary" className="text-xs pointer-events-none">
+                          <span className="inline-flex items-center justify-center rounded-btn bg-surface-raised px-3 py-1.5 text-xs font-semibold text-ink border border-line group-hover:bg-primary group-hover:text-white transition-colors">
                             Ko&apos;rish →
-                          </Button>
+                          </span>
                         </div>
                       </div>
                     </Card>

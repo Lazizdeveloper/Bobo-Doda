@@ -140,8 +140,15 @@ export default function YangiElonPage() {
         next.budget = t("jwiz.errBudget");
       }
       if (deadline) {
-        const d = new Date(deadline);
-        if (Number.isNaN(d.getTime()) || d.getTime() < Date.now()) {
+        const parts = deadline.split("-").map(Number);
+        if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+          const selectedDate = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+          if (Number.isNaN(selectedDate.getTime()) || selectedDate.getTime() < todayStart.getTime()) {
+            next.deadline = t("jwiz.errDeadline");
+          }
+        } else {
           next.deadline = t("jwiz.errDeadline");
         }
       }
@@ -384,7 +391,7 @@ export default function YangiElonPage() {
         {/* 5-qadam: ko'rib chiqish */}
         {step === 4 && category && (
           <div className="flex flex-col gap-4">
-            <p className="text-sm text-muted">{t("wizard.reviewHint")}</p>
+            <p className="text-sm text-muted">{t("jwiz.reviewHint")}</p>
             <dl className="flex flex-col divide-y divide-line">
               <ReviewRow label={t("wizard.step1")} value={t(`cat.${category}`)} />
               <ReviewRow label={t("wizard.titleLabel")} value={title} />

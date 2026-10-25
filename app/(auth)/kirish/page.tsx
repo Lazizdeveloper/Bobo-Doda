@@ -56,8 +56,30 @@ export default function KirishPage() {
           setChecking(false);
           return;
         }
+      }
 
-        // Landing'dan "?tab=register" bilan kelgan bo'lsa ro'yxatdan o'tishga yo'naltirish
+      // 2. Oddiy holatda avtorizatsiyani tekshirish (allaqachon kirgan bo'lsa darhol kabinetga)
+      try {
+        const session = await authService.refresh();
+        if (!active) return;
+
+        if (session) {
+          let dest = "/rol-tanlash";
+          if (session.role === "xaridor") dest = "/xaridor";
+          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/settings/royxat";
+          if (pathname !== dest) router.replace(dest);
+          return;
+        }
+      } catch {
+        // Tarmoq xatosi bo'lsa ham pastga tushadi
+      }
+
+      if (!active) return;
+
+      // 3. Faqat anonim foydalanuvchilar uchun qo'shimcha parametrlar tekshiruvi
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        // Landing'dan "?tab=register" bilan kelgan anonim foydalanuvchini ro'yxatdan o'tishga yo'naltirish
         if (params.get("tab") === "register") {
           const role = params.get("role");
           const cat = params.get("cat");
@@ -78,23 +100,6 @@ export default function KirishPage() {
         }
       }
 
-      // 2. Oddiy holatda avtorizatsiyani tekshirish
-      try {
-        const session = await authService.refresh();
-        if (!active) return;
-
-        if (session) {
-          let dest = "/rol-tanlash";
-          if (session.role === "xaridor") dest = "/xaridor";
-          else if (session.role === "mutaxassis") dest = session.profileDone ? "/mutaxassis" : "/mutaxassis/settings/royxat";
-          if (pathname !== dest) router.replace(dest);
-          return;
-        }
-      } catch {
-        // Tarmoq xatosi bo'lsa ham pastga tushadi
-      }
-
-      if (!active) return;
       setChecking(false);
     }
 

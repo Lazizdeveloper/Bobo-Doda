@@ -18,6 +18,7 @@ type RealPublicService = components["schemas"]["PublicServiceResponseDto"];
 type RealContract = components["schemas"]["ContractResponseDto"];
 type RealMilestone = components["schemas"]["MilestoneResponseDto"];
 type RealPayment = components["schemas"]["PaymentResponseDto"];
+type RealPayout = components["schemas"]["PayoutResponseDto"];
 type RealDispute = components["schemas"]["DisputeResponseDto"];
 type RealMe = components["schemas"]["MeResponseDto"];
 type RealSellerApplication = components["schemas"]["SellerApplicationResponseDto"];
@@ -335,6 +336,10 @@ export function mapMilestone(m: RealMilestone, funded: boolean): Model.Milestone
       status = "qabul_qilindi";
       break;
   }
+  const submittedAtStr = asStr(m.submittedAt);
+  const reviewDeadline = submittedAtStr
+    ? new Date(new Date(submittedAtStr).getTime() + 3 * 86400000).toISOString()
+    : undefined;
   return {
     id: m.id,
     contractId: m.contractId,
@@ -343,7 +348,8 @@ export function mapMilestone(m: RealMilestone, funded: boolean): Model.Milestone
     amount: m.amount,
     status,
     dueDate: asStr(m.dueAt) ?? m.createdAt,
-    submittedAt: asStr(m.submittedAt),
+    submittedAt: submittedAtStr,
+    reviewDeadline,
     approvedAt: asStr(m.approvedAt),
   };
 }
@@ -394,3 +400,40 @@ export function mapDispute(d: RealDispute): Model.Dispute {
     resolution: asStr(d.resolutionReason),
   };
 }
+
+export function mapPayout(p: RealPayout, userName?: string): Model.WithdrawalRequest {
+  let status: Model.WithdrawalStatus = "kutilmoqda";
+  let payoutStatus: Model.PayoutStatus = "payout_pending";
+  if (p.status === "SUCCEEDED") {
+    status = "tasdiqlangan";
+    payoutStatus = "paid";
+  } else if (p.status === "FAILED") {
+    status = "rad_etilgan";
+    payoutStatus = "payout_failed";
+  } else if (p.status === "PROCESSING") {
+    status = "korib_chiqilmoqda";
+    payoutStatus = "payout_processing";
+  }
+
+  const createdAt = asStr(p.createdAt) ?? new Date().toISOString();
+  const processedAt = asStr(p.succeededAt);
+
+  return {
+    id: p.id,
+    userId: "me",
+    userName: userName || "Mutaxassis",
+    userRole: "mutaxassis",
+    source: "earnings",
+    amount: p.amount,
+    currency: "UZS",
+    payoutMethod: "card",
+    cardDetails: p.destinationReference,
+    status,
+    payoutStatus,
+    payoutReference: p.destinationReference,
+    createdAt,
+    processedAt,
+    rejectionReason: asStr(p.failureReason),
+  };
+}
+

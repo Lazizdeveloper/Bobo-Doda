@@ -20,30 +20,38 @@ test("xaridor nizo ochadi, sotuvchi ko'radi, xaridor qaytarib oladi", async ({ b
     await buyerPage.getByRole("button", { name: /Buyurtma/i }).first().click();
     await buyerPage.waitForTimeout(400);
     await buyerPage.getByRole("button", { name: /Shartnoma yaratish/i }).last().click();
-    await buyerPage.waitForURL("**/xaridor/shartnomalar/*", { timeout: 15_000 });
+    await buyerPage.waitForURL(/.*\/xaridor\/(contracts|shartnomalar)\/.*/, { timeout: 15_000 });
     contractId = new URL(buyerPage.url()).pathname.split("/").pop()!;
 
     await sellerPage.goto(`/mutaxassis/contracts/${contractId}`, { waitUntil: "networkidle" });
     await sellerPage.getByRole("button", { name: "Qabul qilish" }).click({ timeout: 8000 });
 
-    await buyerPage.goto(`/xaridor/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
-    const [paymentRes] = await Promise.all([
-      buyerPage.waitForResponse((res) => res.url().includes("/payment") && res.request().method() === "POST"),
-      buyerPage.getByRole("button", { name: /To'lash/i }).click(),
-    ]);
-    const { id: paymentId } = (await paymentRes.json()) as { id: string };
+    await buyerPage.goto(`/xaridor/contracts/${contractId}`, { waitUntil: "networkidle" });
+    let paymentId = "";
+    const paymentPromise = buyerPage.waitForResponse(async (res) => {
+      if (res.url().includes("/payment") && res.request().method() === "POST") {
+        try {
+          const body = (await res.json()) as { id?: string };
+          if (body?.id) paymentId = body.id;
+        } catch {}
+        return true;
+      }
+      return false;
+    });
+    await buyerPage.getByRole("button", { name: /To'lash/i }).click();
+    await paymentPromise;
     await signAndSendTestWebhook({ paymentId, amountTiyin: 90_000_000 });
   });
 
   await test.step("xaridor nizo ochadi", async () => {
-    await buyerPage.goto(`/xaridor/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await buyerPage.goto(`/xaridor/contracts/${contractId}`, { waitUntil: "networkidle" });
     await buyerPage.getByRole("button", { name: "Nizo ochish" }).click({ timeout: 8000 });
     await buyerPage.waitForTimeout(300);
-    await buyerPage
+    const dialog = buyerPage.getByRole("dialog");
+    await dialog
       .locator("textarea")
-      .first()
       .fill("Ish muddatida topshirilmadi va spetsifikatsiyaga mos kelmadi, aniqlashtirish kerak.");
-    await buyerPage.getByRole("button", { name: "Nizoni ochish" }).click();
+    await dialog.getByRole("button", { name: "Nizoni ochish" }).click();
     await expect(buyerPage.getByText("Nizo tafsilotlari")).toBeVisible({ timeout: 5000 });
   });
 
@@ -53,7 +61,7 @@ test("xaridor nizo ochadi, sotuvchi ko'radi, xaridor qaytarib oladi", async ({ b
   });
 
   await test.step("xaridor nizoni qaytarib oladi", async () => {
-    await buyerPage.goto(`/xaridor/shartnomalar/${contractId}`, { waitUntil: "networkidle" });
+    await buyerPage.goto(`/xaridor/contracts/${contractId}`, { waitUntil: "networkidle" });
     await buyerPage.getByRole("button", { name: /Nizoni qaytarib olish/i }).click({ timeout: 8000 });
     await buyerPage.waitForTimeout(300);
     const confirmBtn = buyerPage.getByRole("button", { name: /Nizoni qaytarib olish/i }).last();

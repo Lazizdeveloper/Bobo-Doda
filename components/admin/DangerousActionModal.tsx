@@ -16,6 +16,7 @@ interface DangerousActionModalProps {
   confirmTone?: "danger" | "warning" | "primary";
   requireReason?: boolean;
   minReasonLength?: number;
+  maxReasonLength?: number;
   reasonPlaceholder?: string;
   onConfirm: (reason: string) => Promise<void> | void;
 }
@@ -30,18 +31,26 @@ export function DangerousActionModal({
   confirmTone = "danger",
   requireReason = true,
   minReasonLength = 5,
-  reasonPlaceholder = "Amaliyot sababini batafsil yozing...",
+  maxReasonLength = 500,
+  reasonPlaceholder = "Amaliyot sababini batafsil yozing (5–500 belgi)...",
   onConfirm,
 }: DangerousActionModalProps) {
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const isReasonValid = !requireReason || reason.trim().length >= minReasonLength;
+  const trimmedLen = reason.trim().length;
+  const isReasonTooShort = requireReason && reason.length > 0 && trimmedLen < minReasonLength;
+  const isReasonTooLong = reason.length > maxReasonLength;
+  const isReasonValid = !requireReason || (trimmedLen >= minReasonLength && !isReasonTooLong);
 
   async function handleConfirm() {
-    if (!isReasonValid) {
+    if (requireReason && trimmedLen < minReasonLength) {
       setError(`Sabab kamida ${minReasonLength} ta belgidan iborat bo‘lishi shart.`);
+      return;
+    }
+    if (isReasonTooLong) {
+      setError(`Sabab ${maxReasonLength} ta belgidan oshmasligi shart (hozirda ${reason.length} ta belgi).`);
       return;
     }
     setError("");
@@ -79,19 +88,19 @@ export function DangerousActionModal({
             tone={confirmTone}
             onClick={handleConfirm}
             loading={loading}
-            disabled={!isReasonValid || loading}
+            disabled={!isReasonValid || loading || isReasonTooLong}
           >
             {confirmLabel}
           </Button>
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4 [overflow-wrap:anywhere] [word-break:break-word]">
         <p className="text-sm text-ink">{description}</p>
 
         {/* Impact Warning Card */}
         {impactDetails.length > 0 && (
-          <div className="rounded-xl border border-danger/30 bg-danger/5 p-3.5 text-xs text-ink">
+          <div className="rounded-xl border border-danger/30 bg-danger/5 p-3.5 text-xs text-ink [overflow-wrap:anywhere] [word-break:break-word]">
             <p className="font-bold text-danger flex items-center gap-1.5 mb-1.5">
               <span>⚠️</span> Ushbu amalning oqibatlari:
             </p>
@@ -106,21 +115,44 @@ export function DangerousActionModal({
         {/* Reason Textarea */}
         {requireReason && (
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-ink">
-              Amaliyot sababi va audit izohi <span className="text-danger">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-ink">
+                Amaliyot sababi va audit izohi <span className="text-danger">*</span>
+              </label>
+              <span
+                className={`text-2xs font-mono font-medium ${
+                  isReasonTooLong
+                    ? "text-danger font-bold"
+                    : trimmedLen >= minReasonLength
+                    ? "text-success"
+                    : "text-muted"
+                }`}
+                aria-live="polite"
+              >
+                {reason.length}/{maxReasonLength}
+              </span>
+            </div>
             <Textarea
               rows={3}
+              maxLength={maxReasonLength}
               placeholder={reasonPlaceholder}
               value={reason}
               onChange={(e) => {
                 setReason(e.target.value);
                 if (error) setError("");
               }}
-              error={error}
+              error={
+                error ||
+                (isReasonTooShort
+                  ? `Sabab kamida ${minReasonLength} ta belgidan iborat bo‘lishi shart`
+                  : isReasonTooLong
+                  ? `Sabab ${maxReasonLength} ta belgidan oshmasligi shart`
+                  : undefined)
+              }
+              className="[overflow-wrap:anywhere] [word-break:break-word]"
             />
             <p className="text-3xs text-muted">
-              Ushbu izoh tizim audit jurnalida saqlanadi va operatorlar uchun ko‘rinadi.
+              Sabab {minReasonLength}–{maxReasonLength} belgi oralig‘ida bo‘lishi kerak. Ushbu izoh tizim audit jurnalida saqlanadi.
             </p>
           </div>
         )}

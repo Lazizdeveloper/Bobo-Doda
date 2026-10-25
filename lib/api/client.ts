@@ -30,6 +30,7 @@ import {
   mapDispute,
   mapMilestone,
   mapPayment,
+  mapPayout,
   mapPublicService,
   mapSellerApplicationStatus,
   mapSellerProfile,
@@ -64,6 +65,7 @@ type RealPublicService = components["schemas"]["PublicServiceResponseDto"];
 type RealContract = components["schemas"]["ContractResponseDto"];
 type RealMilestone = components["schemas"]["MilestoneResponseDto"];
 type RealPayment = components["schemas"]["PaymentResponseDto"];
+type RealPayout = components["schemas"]["PayoutResponseDto"];
 type RealDispute = components["schemas"]["DisputeResponseDto"];
 type RealMe = components["schemas"]["MeResponseDto"];
 type RealSellerApplication = components["schemas"]["SellerApplicationResponseDto"];
@@ -682,6 +684,32 @@ export const catalogService: CatalogService = {
           profile: fallbackSellerProfile(userId),
         };
       }
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem(`bbd_seller_profile_${userId}`);
+          if (stored) {
+            const p = JSON.parse(stored);
+            const fallback = fallbackSellerProfile(userId);
+            return {
+              user: {
+                id: userId,
+                fullName: p.fullName || p.displayName || "Mutaxassis",
+                phone: p.phone || "+998901110004",
+                role: "mutaxassis",
+                createdAt: new Date().toISOString(),
+                roleChosen: true,
+                profileDone: true,
+                verified: true,
+              },
+              profile: {
+                ...fallback,
+                ...p,
+                userId,
+              },
+            };
+          }
+        } catch {}
+      }
       return {
         user: {
           id: userId,
@@ -847,24 +875,10 @@ export const servicesService: ServicesService = {
       let remoteItems: Model.Service[] = [];
       try {
         const page = await http<Page<RealService>>(`/seller/services${toQuery({ perPage: 100 })}`);
-        remoteItems = page.items.map((s) => {
-          const mapped = mapService(s, slugById(categories, s.categoryId));
-          // Mutaxassis yaratgan xizmatlar avto-tasdiqlanadi (pending_review yoki draft -> active)
-          if (mapped.status === "pending_review" || mapped.status === "draft") {
-            return { ...mapped, status: "active" as const };
-          }
-          return mapped;
-        });
+        remoteItems = page.items.map((s) => mapService(s, slugById(categories, s.categoryId)));
       } catch {}
       const myId = sessionStore.read()?.userId;
-      const localItems = getLocalCustomServices()
-        .filter((s) => !myId || s.sellerId === myId || s.sellerId === "me")
-        .map((s) => {
-          if (s.status === "pending_review" || s.status === "draft") {
-            return { ...s, status: "active" as const };
-          }
-          return s;
-        });
+      const localItems = getLocalCustomServices().filter((s) => !myId || s.sellerId === myId || s.sellerId === "me");
       const map = new Map<string, Model.Service>();
       for (const s of remoteItems) map.set(s.id, s);
       for (const s of localItems) {
@@ -883,16 +897,7 @@ export const servicesService: ServicesService = {
       if (remoteItems.length === 0) {
         remoteItems = seedServices;
       }
-      const localCustom = getLocalCustomServices().filter(
-        (s) => s.status !== "archived" && s.status !== "rejected",
-      );
-      const map = new Map<string, Model.Service>();
-      for (const s of remoteItems) map.set(s.id, s);
-      for (const s of localCustom) {
-        // Xaridor bozorida ko'rinishi va buyurtma berilishi uchun faol qilib uzatiladi
-        map.set(s.id, { ...s, status: "active" });
-      }
-      return Array.from(map.values());
+      return remoteItems;
     }),
   get: (id) =>
     call(async () => {
@@ -901,12 +906,8 @@ export const servicesService: ServicesService = {
         try {
           const dto = await http<RealService>(`/seller/services/${id}`);
           const mapped = mapService(dto, slugById(categories, dto.categoryId));
-          const activeMapped =
-            mapped.status === "pending_review" || mapped.status === "draft"
-              ? { ...mapped, status: "active" as const }
-              : mapped;
-          saveLocalCustomService(activeMapped);
-          return activeMapped;
+          saveLocalCustomService(mapped);
+          return mapped;
         } catch (e) {
           if (!(e instanceof ApiError && e.code === "NOT_FOUND")) {
             const local = getLocalCustomServices().find((s) => s.id === id);
@@ -997,9 +998,8 @@ export const servicesService: ServicesService = {
         };
       }
       if (created) {
-        const activeCreated = { ...created, sellerId: myId, status: "active" as const };
-        saveLocalCustomService(activeCreated);
-        return activeCreated;
+        saveLocalCustomService(created);
+        return created;
       }
       throw new Error("SERVICE_CREATE_FAILED");
     }),
@@ -1182,25 +1182,14 @@ export const jobsService: JobsService = {
       try {
         const res = await http<Page<RealJob> | RealJob[]>("/jobs");
         const items = Array.isArray(res) ? res : res?.items;
-        if (Array.isArray(items) && items.length > 0) {
-          const remote = items.map(mapJob);
-          const local = getLocalJobs();
-          const map = new Map<string, Model.Job>();
-          for (const j of remote) map.set(j.id, j);
-          for (const j of local) {
-            if (!map.has(j.id)) map.set(j.id, j);
-          }
-          return Array.from(map.values());
+        if (Array.isArray(items)) {
+          return items.map(mapJob);
         }
       } catch {}
       return getLocalJobs();
     }),
   get: (id: string) =>
     call(async () => {
-      if (id.startsWith("job_")) {
-        const all = getLocalJobs();
-        return all.find((j) => j.id === id) ?? null;
-      }
       try {
         const dto = await http<RealJob>(`/jobs/${id}`);
         if (dto) {
@@ -1208,18 +1197,19 @@ export const jobsService: JobsService = {
           saveLocalJob(mapped);
           return mapped;
         }
-      } catch {}
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
+      }
       const all = getLocalJobs();
       return all.find((j) => j.id === id) ?? null;
     }),
   listMine: () =>
     call(async () => {
-      let remote: Model.Job[] = [];
       try {
         const res = await http<Page<RealJob> | RealJob[]>("/jobs/mine");
         const items = Array.isArray(res) ? res : res?.items;
         if (Array.isArray(items)) {
-          remote = items.map(mapJob);
+          return items.map(mapJob);
         }
       } catch {}
 
@@ -1234,13 +1224,7 @@ export const jobsService: JobsService = {
         }
       }
 
-      const localMine = local.filter((j) => !uid || j.buyerId === uid || j.buyerId === "me");
-      const map = new Map<string, Model.Job>();
-      for (const j of remote) map.set(j.id, j);
-      for (const j of localMine) {
-        if (!map.has(j.id)) map.set(j.id, j);
-      }
-      return Array.from(map.values());
+      return local.filter((j) => !uid || j.buyerId === uid || j.buyerId === "me");
     }),
   create: (input) =>
     call(async () => {
@@ -1478,99 +1462,47 @@ export const proposalsService: ProposalsService = {
           }
         } catch {}
       }
-      const allJobs = getLocalJobs();
-      const job = allJobs.find((j) => j.id === foundProp?.jobId);
-      const totalAmount = milestones.reduce((sum, m) => sum + m.amount, 0);
-      const me = sessionStore.read();
+      // Real backend orqali shartnoma yaratish
+      const servicesPage = await http<Page<RealService>>(`/services${toQuery({ perPage: 50 })}`).catch(() => null);
+      const activeService =
+        servicesPage?.items?.find((s) => s.sellerId === foundProp?.sellerId && s.status === "ACTIVE") ||
+        servicesPage?.items?.find((s) => s.status === "ACTIVE");
 
-      // Real backend orqali shartnoma yaratishga urinish (agar faol xizmat mavjud bo'lsa)
-      if (foundProp?.sellerId) {
-        try {
-          const servicesPage = await http<Page<RealService>>(`/services${toQuery({ perPage: 50 })}`).catch(() => null);
-          const activeService =
-            servicesPage?.items?.find((s) => s.sellerId === foundProp?.sellerId && s.status === "ACTIVE") ||
-            servicesPage?.items?.find((s) => s.status === "ACTIVE");
+      if (activeService) {
+        const sumMilestones = milestones.reduce((sum, m) => sum + m.amount, 0);
+        const adaptedMilestones = milestones.map((m) => ({
+          title: m.title,
+          description: "",
+          amount: m.amount,
+          dueAt: m.dueDate ? new Date(m.dueDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString(),
+        }));
 
-          if (activeService) {
-            const sumMilestones = milestones.reduce((sum, m) => sum + m.amount, 0);
-            const targetTotal = activeService.price;
-            const adaptedMilestones = milestones.map((m) => ({
-              title: m.title,
-              description: "",
-              amount: m.amount,
-              dueAt: m.dueDate ? new Date(m.dueDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString(),
-            }));
-
-            if (sumMilestones !== targetTotal && adaptedMilestones.length > 0) {
-              const diff = targetTotal - sumMilestones;
-              adaptedMilestones[adaptedMilestones.length - 1]!.amount += diff;
-            }
-
-            const deadline = new Date(Date.now() + 14 * 86400000).toISOString();
-            const realContract = await contractsService.create(
-              {
-                serviceId: activeService.id,
-                deadline,
-                milestones: adaptedMilestones,
-              },
-              `hire_${proposalId}`
-            );
-            if (realContract) {
-              return realContract;
-            }
+        const deadline = new Date(Date.now() + 14 * 86400000).toISOString();
+        const realContract = await contractsService.create(
+          {
+            serviceId: activeService.id,
+            agreedAmount: sumMilestones,
+            deadline,
+            milestones: adaptedMilestones,
+          },
+          `hire_${proposalId}`
+        );
+        if (realContract) {
+          if (foundProp?.jobId) {
+            try {
+              await jobsService.close(foundProp.jobId);
+            } catch {}
           }
-        } catch {}
+          return realContract;
+        }
       }
 
-      const contractId = `cnt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-
-      let buyerName = "Alisher Xaridor (Tech Corp)";
-      try {
-        const remoteMe = await http<RealMe>("/me").catch(() => null);
-        const fn = asStr(remoteMe?.fullName);
-        if (fn) buyerName = fn;
-      } catch {}
-
-      let sellerName = "Jasur Dasturchi (Full-stack Dev)";
-      if (foundProp?.sellerId) {
-        const spec = await catalogService.getSpecialist(foundProp.sellerId).catch(() => null);
-        if (spec?.user.fullName) sellerName = spec.user.fullName;
-      }
-
-      const contract: Model.Contract = {
-        id: contractId,
-        sourceType: "taklif",
-        title: job?.title ?? "Shartnoma",
-        buyerId: me?.userId ?? "me",
-        buyerName,
-        sellerId: foundProp?.sellerId ?? "u-1",
-        sellerName,
-        totalAmount,
-        status: "imzolangan",
-        createdAt: new Date().toISOString(),
-        jobId: job?.id,
-      };
-      if (typeof window !== "undefined") {
-        try {
-          const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
-          const allCnt = JSON.parse(stored);
-          localStorage.setItem("bbd_custom_contracts", JSON.stringify([contract, ...allCnt]));
-
-          const msKey = "sb2_milestones";
-          const existingMs: Model.Milestone[] = JSON.parse(localStorage.getItem(msKey) || "[]");
-          const createdMilestones: Model.Milestone[] = milestones.map((m, idx) => ({
-            id: `ms_${Date.now().toString(36)}_${idx}`,
-            contractId,
-            title: m.title,
-            description: "",
-            amount: m.amount,
-            status: "kutilmoqda",
-            dueDate: m.dueDate || new Date(Date.now() + 7 * 86400000).toISOString(),
-          }));
-          localStorage.setItem(msKey, JSON.stringify([...existingMs, ...createdMilestones]));
-        } catch {}
-      }
-      return contract;
+      throw new ApiError({
+        code: "VALIDATION",
+        status: 400,
+        message: "Xizmat topilmadi yoki shartnoma tuzib bo'lmadi",
+        retryable: false,
+      });
     }),
   withdraw: (id) =>
     call(async () => {
@@ -1636,27 +1568,8 @@ export const contractsService: ContractsService = {
     call(async () => {
       const role = currentRole();
       const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
-      let remote: Model.Contract[] = [];
-      try {
-        const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
-        remote = await Promise.all(page.items.map((c) => hydrateContract(c, role)));
-      } catch {}
-      const local: Model.Contract[] =
-        typeof window !== "undefined"
-          ? JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]")
-          : [];
-      const rawMs = typeof window !== "undefined" ? localStorage.getItem("sb2_milestones") : null;
-      const allMs: Model.Milestone[] = rawMs ? JSON.parse(rawMs) : [];
-      const map = new Map<string, Model.Contract>();
-      for (const c of remote) map.set(c.id, c);
-      for (const c of local) {
-        const cMilestones = allMs.filter((m) => m.contractId === c.id);
-        if (cMilestones.length > 0 && cMilestones.every((m) => m.status === "qabul_qilindi")) {
-          c.status = "yakunlangan";
-        }
-        if (!map.has(c.id)) map.set(c.id, c);
-      }
-      return Array.from(map.values());
+      const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
+      return Promise.all(page.items.map((c) => hydrateContract(c, role)));
     }),
   get: (id) =>
     call(async () => {
@@ -1666,23 +1579,6 @@ export const contractsService: ContractsService = {
         const c = await http<RealContract>(`${base}/${id}`);
         return await hydrateContract(c, role);
       } catch (e) {
-        if (typeof window !== "undefined") {
-          try {
-            const local: Model.Contract[] = JSON.parse(localStorage.getItem("bbd_custom_contracts") || "[]");
-            const found = local.find((c) => c.id === id);
-            if (found) {
-              const rawMs = localStorage.getItem("sb2_milestones");
-              if (rawMs) {
-                const allMs: Model.Milestone[] = JSON.parse(rawMs);
-                const cMilestones = allMs.filter((m) => m.contractId === id);
-                if (cMilestones.length > 0 && cMilestones.every((m) => m.status === "qabul_qilindi")) {
-                  found.status = "yakunlangan";
-                }
-              }
-              return found;
-            }
-          } catch {}
-        }
         if (e instanceof ApiError && e.code === "NOT_FOUND") return null;
         throw e;
       }
@@ -1694,66 +1590,18 @@ export const contractsService: ContractsService = {
     }),
   accept: (id) =>
     call(async () => {
-      try {
-        const c = await http<RealContract>(`/seller/contracts/${id}/accept`, { method: "POST" });
-        return hydrateContract(c, "mutaxassis");
-      } catch (err) {
-        if (typeof window !== "undefined") {
-          try {
-            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
-            const all: Model.Contract[] = JSON.parse(stored);
-            const found = all.find((c) => c.id === id);
-            if (found) {
-              found.status = "faol";
-              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
-              return found;
-            }
-          } catch {}
-        }
-        throw err;
-      }
+      const c = await http<RealContract>(`/seller/contracts/${id}/accept`, { method: "POST" });
+      return hydrateContract(c, "mutaxassis");
     }),
   reject: (id) =>
     call(async () => {
-      try {
-        const c = await http<RealContract>(`/seller/contracts/${id}/reject`, { method: "POST" });
-        return hydrateContract(c, "mutaxassis");
-      } catch (err) {
-        if (typeof window !== "undefined") {
-          try {
-            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
-            const all: Model.Contract[] = JSON.parse(stored);
-            const found = all.find((c) => c.id === id);
-            if (found) {
-              found.status = "bekor_qilingan";
-              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
-              return found;
-            }
-          } catch {}
-        }
-        throw err;
-      }
+      const c = await http<RealContract>(`/seller/contracts/${id}/reject`, { method: "POST" });
+      return hydrateContract(c, "mutaxassis");
     }),
   cancel: (id) =>
     call(async () => {
-      try {
-        const c = await http<RealContract>(`/me/contracts/${id}/cancel`, { method: "POST" });
-        return hydrateContract(c, "xaridor");
-      } catch (err) {
-        if (typeof window !== "undefined") {
-          try {
-            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
-            const all: Model.Contract[] = JSON.parse(stored);
-            const found = all.find((c) => c.id === id);
-            if (found) {
-              found.status = "bekor_qilingan";
-              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
-              return found;
-            }
-          } catch {}
-        }
-        throw err;
-      }
+      const c = await http<RealContract>(`/me/contracts/${id}/cancel`, { method: "POST" });
+      return hydrateContract(c, "xaridor");
     }),
   /* Ikki tomonlama "yopish so'rovi" oqimi real backendda yo'q — yakunlanish
      FAQAT oxirgi bosqich tasdiqlanganda avtomatik sodir bo'ladi. */
@@ -1767,186 +1615,50 @@ export const milestonesService: MilestonesService = {
     call(async () => {
       const role = currentRole();
       const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
-      try {
-        const c = await http<RealContract>(`${base}/${contractId}`);
-        const hydrated = await hydrateContract(c, role);
-        return c.milestones
-          .slice()
-          .sort((a, b) => a.position - b.position)
-          .map((m) => mapMilestone(m, !!hydrated.fundedAt));
-      } catch {
-        if (typeof window !== "undefined") {
-          try {
-            const raw = localStorage.getItem("sb2_milestones");
-            if (raw) {
-              const all: Model.Milestone[] = JSON.parse(raw);
-              const found = all.filter((m) => m.contractId === contractId);
-              if (found.length > 0) {
-                const storedCnt = localStorage.getItem("bbd_custom_contracts");
-                const customContracts: Model.Contract[] = storedCnt ? JSON.parse(storedCnt) : [];
-                const parent = customContracts.find((c) => c.id === contractId);
-                const isFunded = Boolean(parent?.fundedAt);
-                return found.map((m) => {
-                  if (isFunded && m.status === "kutilmoqda") {
-                    return { ...m, status: "mablaglangan" as const };
-                  }
-                  return m;
-                });
-              }
-            }
-          } catch {}
-        }
-        return [];
-      }
+      const c = await http<RealContract>(`${base}/${contractId}`);
+      const hydrated = await hydrateContract(c, role);
+      return c.milestones
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map((m) => mapMilestone(m, !!hydrated.fundedAt));
     }),
   listMine: () =>
     call(async () => {
       const role = currentRole();
       const base = role === "mutaxassis" ? "/seller/contracts" : "/me/contracts";
       const results: Model.Milestone[] = [];
-      try {
-        const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
-        for (const c of page.items) {
-          const hydrated = await hydrateContract(c, role);
-          for (const m of c.milestones) results.push(mapMilestone(m, !!hydrated.fundedAt));
-        }
-      } catch {}
-      if (typeof window !== "undefined") {
-        try {
-          const raw = localStorage.getItem("sb2_milestones");
-          if (raw) {
-            const all: Model.Milestone[] = JSON.parse(raw);
-            const myContracts = await contractsService.list();
-            const myContractIds = new Set(myContracts.map((c) => c.id));
-            const fundedContractIds = new Set(
-              myContracts.filter((c) => Boolean(c.fundedAt)).map((c) => c.id)
-            );
-            for (const m of all) {
-              if (myContractIds.has(m.contractId) && !results.some((r) => r.id === m.id)) {
-                if (fundedContractIds.has(m.contractId) && m.status === "kutilmoqda") {
-                  results.push({ ...m, status: "mablaglangan" as const });
-                } else {
-                  results.push(m);
-                }
-              }
-            }
-          }
-        } catch {}
+      const page = await http<Page<RealContract>>(`${base}${toQuery({ perPage: 100 })}`);
+      for (const c of page.items) {
+        const hydrated = await hydrateContract(c, role);
+        for (const m of c.milestones) results.push(mapMilestone(m, !!hydrated.fundedAt));
       }
       return results;
     }),
   submit: (contractId, milestoneId, deliverable) =>
     call(async () => {
-      try {
-        const m = await http<RealMilestone>(`/seller/contracts/${contractId}/milestones/${milestoneId}/submit`, {
-          method: "POST",
-          body: {
-            message: deliverable?.note,
-            deliverableUrls: deliverable?.link ? [deliverable.link] : undefined,
-          },
-        });
-        return mapMilestone(m, true);
-      } catch (err) {
-        if (typeof window !== "undefined") {
-          try {
-            const raw = localStorage.getItem("sb2_milestones");
-            if (raw) {
-              const all: Model.Milestone[] = JSON.parse(raw);
-              const found = all.find((m) => m.id === milestoneId || (m.contractId === contractId && m.id === milestoneId));
-              if (found) {
-                found.status = "topshirildi";
-                found.deliverableLink = deliverable?.link;
-                found.deliverableNote = deliverable?.note;
-                found.deliverableFiles = deliverable?.files;
-                found.submittedAt = new Date().toISOString();
-                localStorage.setItem("sb2_milestones", JSON.stringify(all));
-                return found;
-              }
-            }
-          } catch {}
-        }
-        throw err;
-      }
+      const m = await http<RealMilestone>(`/seller/contracts/${contractId}/milestones/${milestoneId}/submit`, {
+        method: "POST",
+        body: {
+          message: deliverable?.note,
+          deliverableUrls: deliverable?.link ? [deliverable.link] : undefined,
+        },
+      });
+      return mapMilestone(m, true);
     }),
   accept: (contractId, milestoneId) =>
     call(async () => {
-      try {
-        const m = await http<RealMilestone>(`/me/contracts/${contractId}/milestones/${milestoneId}/approve`, {
-          method: "POST",
-        });
-        return mapMilestone(m, true);
-      } catch (err) {
-        if (typeof window !== "undefined") {
-          try {
-            const raw = localStorage.getItem("sb2_milestones");
-            if (raw) {
-              const all: Model.Milestone[] = JSON.parse(raw);
-              const found = all.find((m) => m.id === milestoneId || (m.contractId === contractId && m.id === milestoneId));
-              if (found) {
-                found.status = "qabul_qilindi";
-                found.approvedAt = new Date().toISOString();
-                localStorage.setItem("sb2_milestones", JSON.stringify(all));
-
-                // If all milestones for this contract are accepted, complete contract
-                const contractMilestones = all.filter((m) => m.contractId === contractId);
-                const allDone = contractMilestones.length > 0 && contractMilestones.every((m) => m.status === "qabul_qilindi");
-                if (allDone) {
-                  const storedCnt = localStorage.getItem("bbd_custom_contracts");
-                  if (storedCnt) {
-                    const contracts: Model.Contract[] = JSON.parse(storedCnt);
-                    const cIdx = contracts.findIndex((c) => c.id === contractId);
-                    if (cIdx !== -1) {
-                      contracts[cIdx].status = "yakunlangan";
-                      localStorage.setItem("bbd_custom_contracts", JSON.stringify(contracts));
-
-                      if (contracts[cIdx].jobId) {
-                        try {
-                          const allJobs = getLocalJobs();
-                          const foundJob = allJobs.find((j) => j.id === contracts[cIdx].jobId);
-                          if (foundJob) {
-                            foundJob.status = "yopilgan";
-                            saveLocalJob(foundJob);
-                          }
-                        } catch {}
-                      }
-                    }
-                  }
-                }
-                return found;
-              }
-            }
-          } catch {}
-        }
-        throw err;
-      }
+      const m = await http<RealMilestone>(`/me/contracts/${contractId}/milestones/${milestoneId}/approve`, {
+        method: "POST",
+      });
+      return mapMilestone(m, true);
     }),
   requestRevision: (contractId, milestoneId, comment) =>
     call(async () => {
-      try {
-        const m = await http<RealMilestone>(
-          `/me/contracts/${contractId}/milestones/${milestoneId}/request-revision`,
-          { method: "POST", body: { reason: comment } },
-        );
-        return mapMilestone(m, true);
-      } catch (err) {
-        if (typeof window !== "undefined") {
-          try {
-            const raw = localStorage.getItem("sb2_milestones");
-            if (raw) {
-              const all: Model.Milestone[] = JSON.parse(raw);
-              const found = all.find((m) => m.id === milestoneId || (m.contractId === contractId && m.id === milestoneId));
-              if (found) {
-                found.status = "ozgartirish_soraldi";
-                found.revisionComment = comment;
-                found.revisionCount = (found.revisionCount || 0) + 1;
-                localStorage.setItem("sb2_milestones", JSON.stringify(all));
-                return found;
-              }
-            }
-          } catch {}
-        }
-        throw err;
-      }
+      const m = await http<RealMilestone>(
+        `/me/contracts/${contractId}/milestones/${milestoneId}/request-revision`,
+        { method: "POST", body: { reason: comment } },
+      );
+      return mapMilestone(m, true);
     }),
 };
 
@@ -2047,35 +1759,21 @@ export const paymentsService: PaymentsService = {
   withdrawEarnings: (destination, amount) =>
     call(async () => {
       let cardDetails = "Plastik karta";
-      let cardId = "";
       if (typeof destination === "string") {
         cardDetails = destination;
-        cardId = destination;
       } else if (typeof destination === "object" && destination.type === "card") {
-        cardId = destination.cardId;
         cardDetails = destination.cardId;
       } else if (typeof destination === "object" && destination.type === "bank_account") {
         cardDetails = `Bank: ${destination.bankAccount.accountNumber} (MFO: ${destination.bankAccount.mfo})`;
       }
 
-      let uid = "me";
       let userName = "Mutaxassis";
-      if (typeof window !== "undefined") {
-        try {
-          const me = await http<RealMe>("/me").catch(() => null);
-          if (me) {
-            uid = me.id;
-            const name = typeof me.fullName === "string" ? me.fullName : "";
-            const phone = typeof me.phone === "string" ? me.phone : "";
-            userName = name || phone || "Mutaxassis";
-          }
-        } catch {
-          const s = sessionStore.read();
-          if (s?.userId) uid = s.userId;
-        }
-      }
+      try {
+        const me = await http<RealMe>("/me");
+        if (me && typeof me.fullName === "string") userName = me.fullName;
+      } catch {}
 
-      const reqAmount = Number(amount) || 0;
+      const reqAmount = Math.round(Number(amount)) || 0;
       if (reqAmount <= 0) {
         throw new ApiError({
           code: "VALIDATION",
@@ -2085,210 +1783,65 @@ export const paymentsService: PaymentsService = {
         });
       }
 
-      const req: Model.WithdrawalRequest = {
-        id: `wd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        userId: uid,
-        userName,
-        userRole: "mutaxassis",
-        source: "earnings",
-        amount: reqAmount,
-        currency: "UZS",
-        payoutMethod: "card",
-        cardDetails,
-        cardId,
-        status: "kutilmoqda",
-        payoutStatus: "payout_pending",
-        payoutReference: `PAYOUT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
-        createdAt: new Date().toISOString(),
-      };
+      const idempotencyKey =
+        typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `wd_${Date.now()}`;
 
-      if (typeof window !== "undefined") {
-        try {
-          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
-          localStorage.setItem("sb2_withdrawal_requests", JSON.stringify([req, ...all]));
+      const res = await http<RealPayout>("/seller/payouts", {
+        method: "POST",
+        body: {
+          amount: reqAmount,
+          destinationReference: cardDetails,
+        },
+        idempotencyKey,
+      });
 
-          const myKey = `bbd_my_withdrawals_${uid}`;
-          const myWithdrawals: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
-          localStorage.setItem(myKey, JSON.stringify([req, ...myWithdrawals]));
-        } catch {}
-      }
-      return req;
+      return mapPayout(res, userName);
     }),
-  withdrawBalance: (destination, amount) =>
-    call(async () => {
-      let cardDetails = "Plastik karta";
-      let cardId = "";
-      if (typeof destination === "string") {
-        cardDetails = destination;
-        cardId = destination;
-      } else if (typeof destination === "object" && destination.type === "card") {
-        cardId = destination.cardId;
-        cardDetails = destination.cardId;
-      }
-      let uid = "me";
-      let userName = "Xaridor";
-      if (typeof window !== "undefined") {
-        try {
-          const me = await http<RealMe>("/me").catch(() => null);
-          if (me) {
-            uid = me.id;
-            const name = typeof me.fullName === "string" ? me.fullName : "";
-            const phone = typeof me.phone === "string" ? me.phone : "";
-            userName = name || phone || "Xaridor";
-          }
-        } catch {
-          const s = sessionStore.read();
-          if (s?.userId) uid = s.userId;
-        }
-      }
-      const reqAmount = Number(amount) || 0;
-      const req: Model.WithdrawalRequest = {
-        id: `wd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        userId: uid,
-        userName,
-        userRole: "xaridor",
-        source: "balance",
-        amount: reqAmount,
-        currency: "UZS",
-        payoutMethod: "card",
-        cardDetails,
-        cardId,
-        status: "kutilmoqda",
-        payoutStatus: "payout_pending",
-        payoutReference: `PAYOUT-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
-        createdAt: new Date().toISOString(),
-      };
-      if (typeof window !== "undefined") {
-        try {
-          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
-          localStorage.setItem("sb2_withdrawal_requests", JSON.stringify([req, ...all]));
-          const myKey = `bbd_my_withdrawals_${uid}`;
-          const myWithdrawals: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
-          localStorage.setItem(myKey, JSON.stringify([req, ...myWithdrawals]));
-        } catch {}
-      }
-      return req;
-    }),
+  withdrawBalance: () => disabled(),
   getWithdrawnTotal: () =>
     call(async () => {
-      if (typeof window !== "undefined") {
+      if (currentRole() === "mutaxassis") {
         try {
-          let uid = "me";
-          const me = await http<RealMe>("/me").catch(() => null);
-          if (me) uid = me.id;
-          else {
-            const s = sessionStore.read();
-            if (s?.userId) uid = s.userId;
-          }
-          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
-          return all
-            .filter((r) => (r.userId === uid || r.userId === "me") && r.status === "tasdiqlangan")
-            .reduce((sum, r) => sum + r.amount, 0);
+          const page = await http<Page<RealPayout>>("/seller/payouts?page=1&perPage=100");
+          return page.items
+            .filter((p) => p.status === "SUCCEEDED")
+            .reduce((sum, p) => sum + p.amount, 0);
         } catch {}
       }
       return 0;
     }),
   getPendingWithdrawalTotal: () =>
     call(async () => {
-      if (typeof window !== "undefined") {
+      if (currentRole() === "mutaxassis") {
         try {
-          let uid = "me";
-          const me = await http<RealMe>("/me").catch(() => null);
-          if (me) uid = me.id;
-          else {
-            const s = sessionStore.read();
-            if (s?.userId) uid = s.userId;
-          }
-          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
-          return all
-            .filter(
-              (r) =>
-                (r.userId === uid || r.userId === "me") &&
-                (r.status === "kutilmoqda" || r.status === "korib_chiqilmoqda")
-            )
-            .reduce((sum, r) => sum + r.amount, 0);
+          const page = await http<Page<RealPayout>>("/seller/payouts?page=1&perPage=100");
+          return page.items
+            .filter((p) => p.status === "PENDING" || p.status === "PROCESSING")
+            .reduce((sum, p) => sum + p.amount, 0);
         } catch {}
       }
       return 0;
     }),
   listMyWithdrawalRequests: () =>
     call(async () => {
-      if (typeof window !== "undefined") {
+      if (currentRole() === "mutaxassis") {
         try {
-          let uid = "me";
-          const me = await http<RealMe>("/me").catch(() => null);
-          if (me) uid = me.id;
-          else {
-            const s = sessionStore.read();
-            if (s?.userId) uid = s.userId;
-          }
-
-          const all: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem("sb2_withdrawal_requests") || "[]");
-          const myKey = `bbd_my_withdrawals_${uid}`;
-          const myOnly: Model.WithdrawalRequest[] = JSON.parse(localStorage.getItem(myKey) || "[]");
-
-          const map = new Map<string, Model.WithdrawalRequest>();
-          for (const r of myOnly) {
-            map.set(r.id, r);
-          }
-          for (const r of all) {
-            if (r.userId === uid || r.userId === "me") map.set(r.id, r);
-          }
-          return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          let userName = "Mutaxassis";
+          try {
+            const me = await http<RealMe>("/me");
+            if (me && typeof me.fullName === "string") userName = me.fullName;
+          } catch {}
+          const page = await http<Page<RealPayout>>("/seller/payouts?page=1&perPage=100");
+          return page.items.map((p) => mapPayout(p, userName));
         } catch {}
       }
       return [];
     }),
   createContractPayment: (contractId, idempotencyKey) =>
     call(async () => {
-      try {
-        return mapPayment(
-          await http<RealPayment>(`/me/contracts/${contractId}/payment`, { method: "POST", idempotencyKey })
-        );
-      } catch (err) {
-        if (typeof window !== "undefined") {
-          try {
-            const stored = localStorage.getItem("bbd_custom_contracts") || "[]";
-            const all: Model.Contract[] = JSON.parse(stored);
-            const found = all.find((c) => c.id === contractId);
-            if (found) {
-              found.fundedAt = new Date().toISOString();
-              found.status = "faol";
-              localStorage.setItem("bbd_custom_contracts", JSON.stringify(all));
-
-              const rawMs = localStorage.getItem("sb2_milestones");
-              if (rawMs) {
-                const allMs: Model.Milestone[] = JSON.parse(rawMs);
-                let changed = false;
-                for (const m of allMs) {
-                  if (m.contractId === contractId && m.status === "kutilmoqda") {
-                    m.status = "mablaglangan";
-                    changed = true;
-                  }
-                }
-                if (changed) {
-                  localStorage.setItem("sb2_milestones", JSON.stringify(allMs));
-                }
-              }
-
-              const paymentDTO: PaymentDTO = {
-                id: `pay_${Date.now().toString(36)}`,
-                contractId,
-                provider: "CLICK",
-                status: "SUCCEEDED",
-                amount: found.totalAmount,
-                currency: "UZS",
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
-              const existingPayments: PaymentDTO[] = JSON.parse(localStorage.getItem("bbd_custom_payments") || "[]");
-              localStorage.setItem("bbd_custom_payments", JSON.stringify([paymentDTO, ...existingPayments]));
-              return paymentDTO;
-            }
-          } catch {}
-        }
-        throw err;
-      }
+      return mapPayment(
+        await http<RealPayment>(`/me/contracts/${contractId}/payment`, { method: "POST", idempotencyKey })
+      );
     }),
   getContractPayment: (contractId) =>
     call(async () => {
@@ -2297,13 +1850,6 @@ export const paymentsService: PaymentsService = {
         const latest = page.items[0];
         if (latest) return mapPayment(latest);
       } catch {}
-      if (typeof window !== "undefined") {
-        try {
-          const payments: PaymentDTO[] = JSON.parse(localStorage.getItem("bbd_custom_payments") || "[]");
-          const found = payments.find((p) => p.contractId === contractId);
-          if (found) return found;
-        } catch {}
-      }
       return null;
     }),
 };

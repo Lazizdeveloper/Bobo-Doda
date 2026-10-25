@@ -281,6 +281,7 @@ export interface ContractsService {
       serviceId: string;
       deadline: string;
       milestones: { title: string; description?: string; amount: number; dueAt?: string }[];
+      agreedAmount?: number;
     },
     idempotencyKey: string
   ): Promise<Model.Contract>;

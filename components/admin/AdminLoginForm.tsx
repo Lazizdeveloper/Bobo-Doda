@@ -79,6 +79,11 @@ export function AdminLoginForm({
         setBusy(false);
         return;
       }
+      if (err instanceof ApiError && err.code === "RATE_LIMITED") {
+        setError("Urinishlar soni oshib ketdi. 15 daqiqadan so‘ng qayta urinib ko‘ring.");
+        setBusy(false);
+        return;
+      }
       if (err instanceof Error && err.message === "FORBIDDEN") {
         setError("Bu portal uchun sizda yetarli vakolat mavjud emas.");
         setBusy(false);

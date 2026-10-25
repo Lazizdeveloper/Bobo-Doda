@@ -70,27 +70,93 @@ export default function AdminDashboard() {
     );
   }
 
+  const metricCards = [
+    hasPermission("users") && (
+      <MetricCard key="users" label="Foydalanuvchilar" value={counters.totalUsers} detail="Jami ro'yxatdan o'tganlar" tone="primary" />
+    ),
+    hasPermission("services") && (
+      <MetricCard key="services" label="Xizmatlar" value={counters.totalServices} detail="Jami e'lon qilingan" />
+    ),
+    hasPermission("jobs") && (
+      <MetricCard key="jobs" label="Ish E'lonlari" value={counters.totalJobs} detail="Ochiq loyihalar" />
+    ),
+    hasPermission("orders") && (
+      <MetricCard key="orders" label="Shartnomalar" value={counters.totalContracts} detail="Jami tuzilgan" />
+    ),
+    hasPermission("kyc") && (
+      <MetricCard key="kyc" label="Verifikatsiya (KYC)" value={counters.pendingKyc} detail="Kutilayotgan arizalar" tone={counters.pendingKyc > 0 ? "warning" : "primary"} />
+    ),
+    hasPermission("disputes") && (
+      <MetricCard key="disputes" label="Ochiq Nizolar" value={counters.openDisputes} detail="Arbitraj kutmoqda" tone={counters.openDisputes > 0 ? "danger" : "success"} />
+    ),
+    hasPermission("payments") && (
+      <MetricCard key="payments" label="Pul Chiqarish" value={counters.pendingWithdrawals} detail="Kutilayotgan so'rovlar" tone={counters.pendingWithdrawals > 0 ? "warning" : "primary"} />
+    ),
+  ].filter(Boolean);
+
+  const quickLinks = [
+    hasPermission("disputes") && {
+      key: "disputes",
+      href: adminHref("/nizolar", pathname),
+      title: "Nizolar markazi",
+      desc: `${counters.openDisputes} ta ochiq nizo ko'rib chiqilishi kerak`,
+    },
+    hasPermission("payments") && {
+      key: "payments",
+      href: adminHref("/tolovlar", pathname),
+      title: "To'lovlar & Ledger",
+      desc: "To'lovlar, qaytarishlar va buxgalteriya yozuvlari",
+    },
+    hasPermission("kyc") && {
+      key: "kyc",
+      href: adminHref("/verifikatsiya", pathname),
+      title: "Verifikatsiya Navbati",
+      desc: `${counters.pendingKyc} ta ariza ko'rib chiqish kutmoqda`,
+    },
+    hasPermission("jobs") && {
+      key: "jobs",
+      href: adminHref("/loyihalar", pathname),
+      title: "Ish E'lonlari",
+      desc: `${counters.totalJobs} ta ochiq loyiha navbatda`,
+    },
+    hasPermission("services") && {
+      key: "services",
+      href: adminHref("/xizmatlar", pathname),
+      title: "Xizmatlar Moderatsiyasi",
+      desc: `${counters.totalServices} ta e'lon qilingan xizmat`,
+    },
+    hasPermission("users") && {
+      key: "users",
+      href: adminHref("/foydalanuvchilar", pathname),
+      title: "Foydalanuvchilar Boshqaruvi",
+      desc: `${counters.totalUsers} ta ro'yxatdan o'tgan foydalanuvchi`,
+    },
+  ].filter(Boolean) as { key: string; href: string; title: string; desc: string }[];
+
   return (
     <div className="space-y-6">
       <AdminPageHeader title="Operatsion Boshqaruv Markazi" description="Bobololadono bozorining jonli faoliyati va xavfsizlik navbatlari." />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Foydalanuvchilar" value={counters.totalUsers} detail="Jami ro'yxatdan o'tganlar" tone="primary" />
-        <MetricCard label="Xizmatlar" value={counters.totalServices} detail="Jami e'lon qilingan" />
-        <MetricCard label="Shartnomalar" value={counters.totalContracts} detail="Jami tuzilgan" />
-        <MetricCard label="Ochiq Nizolar" value={counters.openDisputes} detail="Arbitraj kutmoqda" tone={counters.openDisputes > 0 ? "danger" : "success"} />
-      </section>
+      {metricCards.length > 0 && (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {metricCards}
+        </section>
+      )}
 
-      <section className="grid gap-3.5 sm:grid-cols-2">
-        <Link href={adminHref("/nizolar", pathname)} className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
-          <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">Nizolar markazi</h3>
-          <p className="text-3xs text-muted mt-0.5">{counters.openDisputes} ta ochiq nizo ko'rib chiqilishi kerak</p>
-        </Link>
-        <Link href={adminHref("/tolovlar", pathname)} className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md">
-          <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">To'lovlar & Ledger</h3>
-          <p className="text-3xs text-muted mt-0.5">To'lovlar, qaytarishlar va buxgalteriya yozuvlari</p>
-        </Link>
-      </section>
+      {quickLinks.length > 0 && (
+        <section className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          {quickLinks.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              className="group flex flex-col justify-between rounded-2xl border border-line bg-card p-4 transition-all duration-150 hover:border-primary hover:shadow-md"
+            >
+              <h3 className="text-xs font-bold text-ink group-hover:text-primary transition-colors">{item.title}</h3>
+              <p className="text-3xs text-muted mt-0.5">{item.desc}</p>
+            </Link>
+          ))}
+        </section>
+      )}
 
       {hasPermission("audit") && (
         <Card padding="lg" className="min-w-0 space-y-3">

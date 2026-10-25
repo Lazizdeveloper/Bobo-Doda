@@ -14,6 +14,7 @@ import {
   listJobsQueue,
   closeJobAsAdmin,
   findJobById,
+  DEFAULT_CATEGORY_MAP,
   type AdminPage,
 } from "@/lib/api/admin";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
@@ -58,9 +59,11 @@ export default function JobsModerationPage() {
 
   useEffect(load, [load]);
 
-  /* Filtr o'zgarganda birinchi sahifaga qaytamiz */
+  /* Filtr o'zgarganda birinchi sahifaga qaytamiz va ochiq modalni tozalaymiz */
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedJob(null);
+    setCloseModalOpen(false);
   }, [debouncedSearch, statusFilter, categoryFilter, rowsPerPage]);
 
   /* KPI — faset sanoqlaridan (status filtridan mustaqil) */
@@ -104,7 +107,7 @@ export default function JobsModerationPage() {
       header: "Kategoriya",
       render: (j) => (
         <Badge tone="neutral" size="sm" className="capitalize">
-          {j.category}
+          {DEFAULT_CATEGORY_MAP[j.category] || j.category}
         </Badge>
       ),
     },
@@ -316,7 +319,7 @@ export default function JobsModerationPage() {
               </div>
               <div>
                 <span className="text-3xs uppercase font-bold text-muted">Kategoriya:</span>
-                <p className="font-semibold text-ink mt-0.5 capitalize">{selectedJob.category}</p>
+                <p className="font-semibold text-ink mt-0.5 capitalize">{DEFAULT_CATEGORY_MAP[selectedJob.category] || selectedJob.category}</p>
               </div>
               <div>
                 <span className="text-3xs uppercase font-bold text-muted">Takliflar:</span>

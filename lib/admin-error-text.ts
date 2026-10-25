@@ -54,6 +54,8 @@ export function adminErrorText(err: unknown): string {
       return "Kiritilgan ma'lumot noto'g'ri.";
     case "STORAGE_FULL":
       return "Xotira to'ldi — o'zgarish saqlanmadi.";
+    case "RATE_LIMITED":
+      return "So‘rovlar chegarasiga yetdingiz. Birozdan so‘ng qayta urinib ko‘ring.";
     case "NETWORK":
       return "Tarmoq bilan aloqa yo'q.";
   }

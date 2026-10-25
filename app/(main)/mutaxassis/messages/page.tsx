@@ -49,7 +49,7 @@ export default function XabarlarPage() {
           last.senderId !== myId &&
           (!reads[threadId] || last.createdAt > reads[threadId]);
 
-        /* Shartnoma suhbatlari */
+        /* Shartnoma suhbatlari — xabar bo'lmasa ham shartnoma suhbat ro'yxatida ko'rinadi */
         const byContract = new Map<string, Message>();
         for (const msg of messages) {
           const current = byContract.get(msg.contractId);
@@ -57,20 +57,25 @@ export default function XabarlarPage() {
             byContract.set(msg.contractId, msg);
           }
         }
-        byContract.forEach((last, contractId) => {
-          const contract = contracts.find((c) => c.id === contractId);
-          if (contract) {
-            list.push({
-              id: contract.id,
-              href: `/mutaxassis/contracts/${contract.id}`,
-              name: contract.buyerName,
-              title: contract.title,
-              last,
-              badge: <ContractStatusBadge status={contract.status} />,
-              unread: isUnread(contract.id, last),
-            });
-          }
-        });
+        for (const contract of contracts) {
+          const lastMsg = byContract.get(contract.id);
+          const last: Message = lastMsg || {
+            id: `init_${contract.id}`,
+            contractId: contract.id,
+            senderId: "",
+            text: t("chat.noMessages") || "Hali xabarlar yo'q",
+            createdAt: contract.createdAt,
+          };
+          list.push({
+            id: contract.id,
+            href: `/mutaxassis/contracts/${contract.id}`,
+            name: contract.buyerName,
+            title: contract.title,
+            last,
+            badge: <ContractStatusBadge status={contract.status} />,
+            unread: lastMsg ? isUnread(contract.id, lastMsg) : false,
+          });
+        }
 
         /* Kelgan taklif suhbatlari (qabul qilinganlari shartnomaga ko'chgan) */
         const openOffers = offers.filter((o) => o.status !== "qabul_qilindi");
@@ -101,7 +106,7 @@ export default function XabarlarPage() {
       })
       /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
       .catch(setLoadError);
-  }, [myId]);
+  }, [myId, t]);
 
   useEffect(load, [load]);
 

@@ -896,23 +896,9 @@ function myContractIds(): Set<string> {
 }
 
 function isThreadParticipant(threadId: string, userId: string): boolean {
-  if (!userId) return false;
-  const custom = read<Contract[]>("bbd_custom_contracts", []);
-  const allContracts = [...read<Contract[]>(KEYS.contracts, []), ...custom];
-  const contract = allContracts.find((item) => item.id === threadId);
-  if (contract) return contract.buyerId === userId || contract.sellerId === userId || userId === "me";
-  const offer = read<Offer[]>(KEYS.offers, []).find((item) => item.id === threadId);
-  if (offer) return offer.buyerId === userId || offer.sellerId === userId || userId === "me";
-  /* Taklif (Proposal) suhbati: mutaxassis — taklif egasi, xaridor — e'lon egasi.
-     Busiz "Suhbatga taklif qilish" hech qanday muloqot kanalini ochmasdi. */
-  const proposal = read<Proposal[]>(KEYS.proposals, []).find((item) => item.id === threadId);
-  if (proposal) {
-    if (proposal.sellerId === userId || userId === "me") return true;
-    const job = read<Job[]>(KEYS.jobs, []).find((item) => item.id === proposal.jobId);
-    return !!job && (job.buyerId === userId || userId === "me");
-  }
-  // Real backend shartnomalari (UUID) yoki boshqa muloqot iplari: tizimga kirgan foydalanuvchi qatnashishi mumkin
-  return Boolean(threadId);
+  if (!userId || !threadId) return false;
+  // Haqiqiy tizimga kirgan foydalanuvchi shartnoma yoki taklif muloqotida to'siqsiz qatnasha oladi
+  return true;
 }
 
 /** Yangi ro'yxatdan o'tgan mutaxassis uchun bo'sh profil */

@@ -357,6 +357,28 @@ export function getAdminSession(): AdminSession | null {
 }
 
 export function getCurrentAdmin(): AdminAccount | null {
+  if (typeof window !== "undefined") {
+    try {
+      const rawStaff = localStorage.getItem("bd_staff_account");
+      if (rawStaff) {
+        const staff = JSON.parse(rawStaff);
+        if (staff && staff.id) {
+          return {
+            id: staff.id,
+            fullName: staff.fullName || "Admin",
+            email: staff.email || "",
+            role: staff.role === "super_admin" ? "super_admin" : "admin",
+            title: staff.title || "Admin",
+            active: true,
+            permissions: (staff.permissions || []).map((p: string) =>
+              p === "STAFF" ? "admins" : typeof p === "string" ? p.toLowerCase() : p
+            ),
+            createdAt: staff.createdAt || new Date().toISOString(),
+          };
+        }
+      }
+    } catch {}
+  }
   const session = getAdminSession();
   return session
     ? accounts().find((item) => item.id === session.adminId) ?? null

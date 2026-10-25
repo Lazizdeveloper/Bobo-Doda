@@ -49,7 +49,7 @@ export default function XaridorXabarlarPage() {
           last.senderId !== myId &&
           (!reads[threadId] || last.createdAt > reads[threadId]);
 
-        /* Shartnoma suhbatlari */
+        /* Shartnoma suhbatlari — xabar bo'lmasa ham shartnoma suhbat ro'yxatida ko'rinadi */
         const byContract = new Map<string, Message>();
         for (const msg of messages) {
           const current = byContract.get(msg.contractId);
@@ -57,20 +57,25 @@ export default function XaridorXabarlarPage() {
             byContract.set(msg.contractId, msg);
           }
         }
-        byContract.forEach((last, contractId) => {
-          const contract = contracts.find((c) => c.id === contractId);
-          if (contract) {
-            list.push({
-              id: contract.id,
-              href: `/xaridor/contracts/${contract.id}`,
-              name: contract.sellerName,
-              title: contract.title,
-              last,
-              badge: <ContractStatusBadge status={contract.status} />,
-              unread: isUnread(contract.id, last),
-            });
-          }
-        });
+        for (const contract of contracts) {
+          const lastMsg = byContract.get(contract.id);
+          const last: Message = lastMsg || {
+            id: `init_${contract.id}`,
+            contractId: contract.id,
+            senderId: "",
+            text: t("chat.noMessages") || "Hali xabarlar yo'q",
+            createdAt: contract.createdAt,
+          };
+          list.push({
+            id: contract.id,
+            href: `/xaridor/contracts/${contract.id}`,
+            name: contract.sellerName,
+            title: contract.title,
+            last,
+            badge: <ContractStatusBadge status={contract.status} />,
+            unread: lastMsg ? isUnread(contract.id, lastMsg) : false,
+          });
+        }
 
         /* Taklif suhbatlari (qabul qilinganlari shartnomaga ko'chgan) */
         const openOffers = offers.filter((o) => o.status !== "qabul_qilindi");
@@ -99,7 +104,7 @@ export default function XaridorXabarlarPage() {
       })
       /* Yuklash xatosi bo'sh ro'yxat EMAS — alohida holat ko'rsatiladi */
       .catch(setLoadError);
-  }, [myId]);
+  }, [myId, t]);
 
   useEffect(load, [load]);
 
@@ -116,7 +121,7 @@ export default function XaridorXabarlarPage() {
       ) : threads.length === 0 ? (
         <EmptyState
           title={t("messages.empty")}
-          description="Sizda hali faol yozishmalar yo'q. Mutaxassislar bilan suhbatlashish uchun e'lon berishingiz yoki to'g'ridan-to'g'ri bog'lanishingiz mumkin."
+          description="Hali xabarlar yo'q. Shartnoma tuzganingizdan so'ng mutaxassis bilan shu yerda yozishasiz."
           action={
             <Link href="/xaridor/mutaxassislar">
               <Button size="sm">Mutaxassislarni ko'rish</Button>

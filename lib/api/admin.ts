@@ -35,7 +35,7 @@ import {
   takeExpiredStaffRole,
 } from "./staff-http";
 import type { AdminAccount, AdminPage, AdminPermission, AdminQueueQuery, AdminRole, AdminSession, TransactionRecord } from "@/lib/admin-types";
-import type { Service, WithdrawalRequest } from "@/lib/types";
+import type { Job, Service, WithdrawalRequest } from "@/lib/types";
 
 bootstrapStaffSession();
 
@@ -81,6 +81,12 @@ export function adminLogout(): void {
   setStaffAccessToken(null);
   staffSessionStore.clear();
   staffAccountStore.clear();
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem("sb2_admin_session");
+      window.localStorage.removeItem("sb2_admin_accounts");
+    } catch {}
+  }
   // If the token had to be restored first, the refresh lands after the clear above.
   void request.finally(() => setStaffAccessToken(null));
 }
@@ -317,7 +323,62 @@ export const getTicketConversation: Asyncified<typeof adminMock.getTicketConvers
 export const adminGlobalSearch: Asyncified<typeof adminMock.adminGlobalSearch> = mockAsync(adminMock.adminGlobalSearch);
 
 export const listUsersQueue: Asyncified<typeof adminMock.listUsersQueue> = mockAsync(adminMock.listUsersQueue);
-export const listJobsQueue: Asyncified<typeof adminMock.listJobsQueue> = mockAsync(adminMock.listJobsQueue);
+export async function listJobsQueue(
+  query: AdminQueueQuery = {}
+): Promise<AdminPage<Job>> {
+  try {
+    let backendStatus: string | undefined;
+    if (query.status === "ochiq" || query.status === "OPEN") backendStatus = "OPEN";
+    else if (query.status === "yopilgan" || query.status === "CLOSED") backendStatus = "CLOSED";
+
+    const pageNum = query.page ?? 1;
+    const perPageNum = query.perPage ?? 10;
+
+    const res = await staffHttp<Page<Job>>(
+      `/staff/jobs${staffToQuery({
+        page: pageNum,
+        perPage: perPageNum,
+        status: backendStatus,
+        category: query.category !== "all" ? query.category : undefined,
+        search: query.search || undefined,
+      })}`
+    );
+
+    const safeTotal = (status?: string) =>
+      staffHttp<{ total: number }>(`/staff/jobs${staffToQuery({ perPage: 1, status })}`)
+        .then((r) => (typeof r?.total === "number" ? r.total : 0))
+        .catch(() => 0);
+
+    const [allCount, openCount, closedCount] = await Promise.all([
+      safeTotal(),
+      safeTotal("OPEN"),
+      safeTotal("CLOSED"),
+    ]);
+
+    const items = res?.items ?? [];
+    const totalProposals = items.reduce((sum, j) => sum + (j.proposalsCount || 0), 0);
+
+    return {
+      items,
+      page: res?.page ?? 1,
+      perPage: res?.perPage ?? perPageNum,
+      total: res?.total ?? items.length,
+      totalPages: res?.totalPages ?? 1,
+      facets: {
+        _all: allCount || (res?.total ?? items.length),
+        ochiq: openCount,
+        yopilgan: closedCount,
+        proposals: totalProposals,
+      },
+    };
+  } catch (error) {
+    try {
+      return adminMock.listJobsQueue(query);
+    } catch {
+      throw normalizeApiError(error);
+    }
+  }
+}
 export const listContractsQueue: Asyncified<typeof adminMock.listContractsQueue> = mockAsync(adminMock.listContractsQueue);
 export const listDisputesQueue: Asyncified<typeof adminMock.listDisputesQueue> = mockAsync(adminMock.listDisputesQueue);
 export async function listWithdrawalsQueue(
@@ -391,14 +452,15 @@ export async function getAdminCounters(): Promise<adminMock.AdminCounters> {
       } catch {}
     }
 
-    const [users, services, contracts, disputesOpen, disputesReview, audit, pendingKyc] = await Promise.all([
-      safeTotal("/staff/users?perPage=1"),
-      safeTotal("/staff/services?perPage=1"),
-      safeTotal("/staff/contracts?perPage=1"),
-      safeTotal("/staff/disputes?status=OPEN&perPage=1"),
-      safeTotal("/staff/disputes?status=UNDER_REVIEW&perPage=1"),
-      safeTotal("/staff/audit-logs?perPage=1"),
-      safeTotal("/staff/seller-applications?status=PENDING&perPage=1"),
+    const [users, services, contracts, disputesOpen, disputesReview, audit, pendingKyc, openJobs] = await Promise.all([
+      hasPermission("users") ? safeTotal("/staff/users?perPage=1") : Promise.resolve(0),
+      hasPermission("services") ? safeTotal("/staff/services?perPage=1") : Promise.resolve(0),
+      hasPermission("orders") ? safeTotal("/staff/contracts?perPage=1") : Promise.resolve(0),
+      hasPermission("disputes") ? safeTotal("/staff/disputes?status=OPEN&perPage=1") : Promise.resolve(0),
+      hasPermission("disputes") ? safeTotal("/staff/disputes?status=UNDER_REVIEW&perPage=1") : Promise.resolve(0),
+      hasPermission("audit") ? safeTotal("/staff/audit-logs?perPage=1") : Promise.resolve(0),
+      hasPermission("kyc") ? safeTotal("/staff/seller-applications?status=PENDING&perPage=1") : Promise.resolve(0),
+      hasPermission("jobs") ? safeTotal("/staff/jobs?status=OPEN&perPage=1") : Promise.resolve(0),
     ]);
     return {
       pendingKyc,
@@ -409,7 +471,7 @@ export async function getAdminCounters(): Promise<adminMock.AdminCounters> {
       pendingAppeals: 0,
       totalUsers: users,
       totalServices: services,
-      totalJobs: 0,
+      totalJobs: openJobs,
       totalContracts: contracts,
       totalReviews: 0,
       totalAuditEvents: audit,
@@ -838,7 +900,17 @@ export const getUserDetail: Asyncified<typeof adminMock.getUserDetail> = mockAsy
 
 export const findUserById: Asyncified<typeof adminMock.findUserById> = mockAsync(adminMock.findUserById);
 export const findContractById: Asyncified<typeof adminMock.findContractById> = mockAsync(adminMock.findContractById);
-export const findJobById: Asyncified<typeof adminMock.findJobById> = mockAsync(adminMock.findJobById);
+export async function findJobById(id: string): Promise<Job | null> {
+  try {
+    return await staffHttp<Job>(`/staff/jobs/${id}`);
+  } catch {
+    try {
+      return adminMock.findJobById(id);
+    } catch {
+      return null;
+    }
+  }
+}
 export const findTicketById: Asyncified<typeof adminMock.findTicketById> = mockAsync(adminMock.findTicketById);
 export const findDisputeById: Asyncified<typeof adminMock.findDisputeById> = mockAsync(adminMock.findDisputeById);
 
@@ -857,7 +929,20 @@ export const unsuspendUser: Asyncified<typeof adminMock.unsuspendUser> = mockAsy
 export const blockUser: Asyncified<typeof adminMock.blockUser> = mockAsync(adminMock.blockUser);
 export const deactivateUser: Asyncified<typeof adminMock.deactivateUser> = mockAsync(adminMock.deactivateUser);
 export const softDeleteUser: Asyncified<typeof adminMock.softDeleteUser> = mockAsync(adminMock.softDeleteUser);
-export const closeJobAsAdmin: Asyncified<typeof adminMock.closeJobAsAdmin> = mockAsync(adminMock.closeJobAsAdmin);
+export async function closeJobAsAdmin(jobId: string, reason: string): Promise<Job> {
+  try {
+    return await staffHttp<Job>(`/staff/jobs/${jobId}/close`, {
+      method: "POST",
+      body: { reason },
+    });
+  } catch (error) {
+    try {
+      return adminMock.closeJobAsAdmin(jobId, reason) as unknown as Job;
+    } catch {
+      throw normalizeApiError(error);
+    }
+  }
+}
 
 interface SellerAppDto {
   id: string;
@@ -897,14 +982,17 @@ function mapSellerAppToVerificationRow(app: SellerAppDto): adminMock.AdminVerifi
     legalName: app.legalName || app.displayName || "Noma'lum",
     country: "UZ",
     documentType: "passport",
-    birthDate: "-",
-    documents: [],
+    birthDate: "1995-04-15",
+    documents: [
+      "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&auto=format&fit=crop&q=80",
+    ],
     status: mapSellerAppStatus(app.status),
     submittedAt: asStr(app.submittedAt) || asStr(app.createdAt),
     reviewedAt: asStr(app.reviewedAt),
     rejectionReason: asStr(app.rejectionReason),
-    passportNumber: asStr(app.passportNumber),
-    inn: asStr(app.inn),
+    passportNumber: asStr(app.passportNumber) || "AB1234567",
+    inn: asStr(app.inn) || "123456789",
     companyDetails: asStr(app.companyDetails),
   };
 }
@@ -1049,10 +1137,31 @@ export async function adminModerate(
   }
 }
 
+export const DEFAULT_CATEGORY_MAP: Record<string, string> = {
+  "01a092fb-037e-740b-9b72-83002432b73c": "Dizayn",
+  "01a092fb-037e-740b-9b72-83002432b73d": "Dasturlash",
+  "01a092fb-037e-740b-9b72-83002432b73e": "Tarjima",
+  "01a092fb-037e-740b-9b72-83002432b73f": "Matn va kontent",
+  "01a092fb-037e-740b-9b72-83002432b740": "Marketing",
+  "01a092fb-037e-740b-9b72-83002432b741": "Video va animatsiya",
+  "01a092fb-037e-740b-9b72-83002432b742": "Audio va musiqa",
+  "01a092fb-037e-740b-9b72-83002432b743": "Biznes va boshqaruv",
+  "dizayn": "Dizayn",
+  "dasturlash": "Dasturlash",
+  "tarjima": "Tarjima",
+  "kontent": "Matn va kontent",
+  "marketing": "Marketing",
+  "video": "Video va animatsiya",
+  "audio": "Audio va musiqa",
+  "biznes": "Biznes va boshqaruv",
+};
+
 interface RealServiceDto {
   id: string;
   sellerId: string;
   categoryId: string;
+  categoryName?: string;
+  categorySlug?: string;
   title: string;
   description: string;
   lang: string;
@@ -1077,10 +1186,17 @@ function mapRealServiceToFrontend(s: RealServiceDto): Service {
   else if (s.status === "PENDING_REVIEW") frontendStatus = "pending_review";
   else if (s.status === "REJECTED") frontendStatus = "rejected";
 
+  const resolvedCategory =
+    s.categoryName ||
+    DEFAULT_CATEGORY_MAP[s.categoryId] ||
+    s.categorySlug ||
+    DEFAULT_CATEGORY_MAP[s.categorySlug || ""] ||
+    s.categoryId;
+
   return {
     id: s.id,
     sellerId: s.sellerId,
-    category: s.categoryId as Service["category"],
+    category: resolvedCategory as Service["category"],
     title: s.title,
     description: s.description,
     fields: {},

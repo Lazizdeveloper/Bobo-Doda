@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { freshPhone, latestOtpFor, flushOtpCooldown, E2E_PASSWORD } from "./helpers";
+import { freshPhone, latestOtpFor, flushOtpCooldown, E2E_PASSWORD, startRegistration } from "./helpers";
 
 /* Bosqich 21 — parol bilan login. SMS FAQAT ro'yxatdan o'tish va parolni
    tiklashda (telefon egaligini isbotlash) — oddiy login uchun SMS UMUMAN
@@ -112,11 +112,7 @@ test.describe("OTP tasdiqlash xato xaritalash (OTP_INVALID/format ajratilgan)", 
     page,
   }) => {
     const phone = freshPhone();
-    await page.goto("/royxatdan-otish");
-    await page.locator("input").first().fill(phone.replace("+998", ""));
-    await page.getByRole("button", { name: /Kod yuborish/i }).click();
-    await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-    await page.waitForTimeout(700);
+    await startRegistration(page, phone);
 
     const realCode = latestOtpFor(phone);
     const wrongCode = realCode === "000000" ? "111111" : "000000";
@@ -132,11 +128,7 @@ test.describe("OTP tasdiqlash xato xaritalash (OTP_INVALID/format ajratilgan)", 
 
 test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanlash → dashboard @blocking", async ({ page }) => {
   const phone = freshPhone();
-  await page.goto("/royxatdan-otish");
-  await page.locator("input").first().fill(phone.replace("+998", ""));
-  await page.getByRole("button", { name: /Kod yuborish/i }).click();
-  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-  await page.waitForTimeout(700);
+  await startRegistration(page, phone);
 
   const code = latestOtpFor(phone);
   await page.locator("input").first().fill(code);
@@ -161,11 +153,7 @@ test("REGISTER: telefon → SMS OTP → parol → hisob yaratiladi → rol tanla
 test("LOGIN: mavjud telefon+parol → dashboard, OTP sahifasiga UMUMAN o'tilmaydi @blocking", async ({ page }) => {
   // 1-so'rov: to'liq REGISTER (fixture sifatida).
   const phone = freshPhone();
-  await page.goto("/royxatdan-otish");
-  await page.locator("input").first().fill(phone.replace("+998", ""));
-  await page.getByRole("button", { name: /Kod yuborish/i }).click();
-  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-  await page.waitForTimeout(700);
+  await startRegistration(page, phone);
   await page.locator("input").first().fill(latestOtpFor(phone));
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
   await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
@@ -216,11 +204,7 @@ test("LOGIN: noto'g'ri parol/mavjud bo'lmagan telefon → generic xato, OTP sahi
 test("REGISTER: allaqachon mavjud telefon → parol bosqichida 'hisob allaqachon mavjud' CTA, Kirish tugmasi bor", async ({ page }) => {
   // 1-so'rov: REGISTER — hisob yaratiladi.
   const phone = freshPhone();
-  await page.goto("/royxatdan-otish");
-  await page.locator("input").first().fill(phone.replace("+998", ""));
-  await page.getByRole("button", { name: /Kod yuborish/i }).click();
-  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-  await page.waitForTimeout(700);
+  await startRegistration(page, phone);
   await page.locator("input").first().fill(latestOtpFor(phone));
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
   await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
@@ -239,11 +223,7 @@ test("REGISTER: allaqachon mavjud telefon → parol bosqichida 'hisob allaqachon
   // 2-so'rov: REGISTER — bir xil (endi MAVJUD) telefon; OTP bosqichining
   // o'zi hali muvaffaqiyatli o'tadi (telefon egaligi tasdiqlanadi), lekin
   // parol bosqichida (`complete`) PHONE_EXISTS oshkor bo'ladi.
-  await page.goto("/royxatdan-otish");
-  await page.locator("input").first().fill(phone.replace("+998", ""));
-  await page.getByRole("button", { name: /Kod yuborish/i }).click();
-  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-  await page.waitForTimeout(700);
+  await startRegistration(page, phone);
   await page.locator("input").first().fill(latestOtpFor(phone));
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
   await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
@@ -262,11 +242,7 @@ test("REGISTER: allaqachon mavjud telefon → parol bosqichida 'hisob allaqachon
 test("FORGOT PASSWORD: /kirish → Parolni unutdim → SMS OTP → yangi parol → eski parol ishlamaydi, yangisi ishlaydi @blocking", async ({ page }) => {
   // 1-so'rov: REGISTER — hisob yaratiladi (eski parol bilan).
   const phone = freshPhone();
-  await page.goto("/royxatdan-otish");
-  await page.locator("input").first().fill(phone.replace("+998", ""));
-  await page.getByRole("button", { name: /Kod yuborish/i }).click();
-  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-  await page.waitForTimeout(700);
+  await startRegistration(page, phone);
   await page.locator("input").first().fill(latestOtpFor(phone));
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
   await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });
@@ -327,11 +303,7 @@ test.describe("DEV-only OTP ko'rsatish (DEV_EXPOSE_OTP=true)", () => {
     page,
   }) => {
     const phone = freshPhone();
-    await page.goto("/royxatdan-otish");
-    await page.locator("input").first().fill(phone.replace("+998", ""));
-    await page.getByRole("button", { name: /Kod yuborish/i }).click();
-    await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-    await page.waitForTimeout(700);
+    await startRegistration(page, phone);
 
     const realCode = latestOtpFor(phone);
     await expect(page.getByText("DEV rejim")).toBeVisible();
@@ -351,11 +323,7 @@ test.describe("DEV-only OTP ko'rsatish (DEV_EXPOSE_OTP=true)", () => {
   }) => {
     // Avval haqiqiy hisob kerak — parolni tiklash mavjud User talab qiladi.
     const phone = freshPhone();
-    await page.goto("/royxatdan-otish");
-    await page.locator("input").first().fill(phone.replace("+998", ""));
-    await page.getByRole("button", { name: /Kod yuborish/i }).click();
-    await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-    await page.waitForTimeout(700);
+    await startRegistration(page, phone);
     await page.locator("input").first().fill(latestOtpFor(phone));
     await page.getByRole("button", { name: /Tasdiqlash/i }).click();
     await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });

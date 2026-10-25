@@ -106,6 +106,16 @@ describe('AllExceptionsFilter', () => {
     expect(body.code).toBe('UNKNOWN');
   });
 
+  it('Postgres 22P02 / Prisma P2023 (noto‘g‘ri UUID) → 404 NOT_FOUND', () => {
+    const res1 = run({ code: '22P02' });
+    expect(res1.status).toBe(404);
+    expect(res1.body.code).toBe('NOT_FOUND');
+
+    const res2 = run({ code: 'P2023' });
+    expect(res2.status).toBe(404);
+    expect(res2.body.code).toBe('NOT_FOUND');
+  });
+
   it('har javobda requestId bor', () => {
     expect(run(new DomainError('NOT_FOUND')).body.requestId).toBe('req-123');
   });

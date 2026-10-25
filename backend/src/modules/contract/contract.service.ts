@@ -100,9 +100,10 @@ export class ContractService {
     });
     const sellerDisplayName = sellerApp?.displayName ?? seller.fullName ?? seller.phone;
 
-    assertMilestonesSumMatches(dto.milestones, service.price);
+    const targetAmount = dto.agreedAmount ? somToTiyin(dto.agreedAmount) : service.price;
+    assertMilestonesSumMatches(dto.milestones, targetAmount);
 
-    const feeAmount = computePlatformFee(service.price, PLATFORM_FEE_RATE_BPS);
+    const feeAmount = computePlatformFee(targetAmount, PLATFORM_FEE_RATE_BPS);
     const contractId = this.ids.next();
 
     await tx.contract.create({
@@ -115,7 +116,7 @@ export class ContractService {
         serviceDescriptionSnapshot: service.description,
         categoryNameSnapshot: category.nameUz,
         sellerDisplayNameSnapshot: sellerDisplayName,
-        agreedAmount: service.price,
+        agreedAmount: targetAmount,
         currency: service.currency,
         platformFeeRateBpsSnapshot: PLATFORM_FEE_RATE_BPS,
         platformFeeAmountSnapshot: feeAmount,

@@ -78,6 +78,30 @@ export class RefreshTokenService {
       throw new UnauthenticatedError('Sessiya topilmadi', 'NO_SESSION');
     }
     if (existing.revokedAt) {
+      const timeSinceRevocation = Date.now() - existing.revokedAt.getTime();
+      if (timeSinceRevocation < 15_000 && existing.replacedById) {
+        const replaced = await this.prisma.refreshToken.findUnique({
+          where: { id: existing.replacedById },
+        });
+        if (replaced && !replaced.revokedAt && replaced.expiresAt.getTime() > Date.now()) {
+          const nextId = this.ids.next();
+          const nextRaw = generateOpaqueToken();
+          const record = await this.prisma.refreshToken.create({
+            data: {
+              id: nextId,
+              userId: existing.userId,
+              tokenHash: hashOpaqueToken(nextRaw),
+              familyId: existing.familyId,
+              activeRole: existing.activeRole,
+              userAgent: meta?.userAgent,
+              ip: meta?.ip,
+              expiresAt: this.newExpiry(),
+            },
+          });
+          return { raw: nextRaw, record };
+        }
+      }
+
       await this.revokeFamily(existing.familyId);
       throw new UnauthenticatedError(
         'Token qayta ishlatildi — barcha sessiyalar tugatildi',

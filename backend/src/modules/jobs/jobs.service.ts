@@ -8,6 +8,7 @@ import type { Page } from '@/common/pagination/page-query.dto';
 import { CreateJobDto } from './dto/create-job.dto';
 import { ListJobsQueryDto } from './dto/list-jobs-query.dto';
 import type { JobWithRelations } from './dto/job-response.dto';
+import type { AuditActor } from '@/common/audit/audit.service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -194,4 +195,97 @@ export class JobsService {
 
     return updated;
   }
+
+  async listForStaff(query: {
+    page?: number;
+    perPage?: number;
+    status?: string;
+    category?: string;
+    search?: string;
+  }): Promise<Page<JobWithRelations>> {
+    const page = Math.max(1, query.page ?? 1);
+    const perPage = Math.min(100, Math.max(1, query.perPage ?? 20));
+    const skip = (page - 1) * perPage;
+
+    const where: Prisma.JobWhereInput = {};
+
+    if (query.status && query.status !== "all") {
+      const s = query.status.toUpperCase();
+      if (s === "OPEN" || s === "OCHIQ") {
+        where.status = JobStatus.OPEN;
+      } else if (s === "CLOSED" || s === "YOPILGAN") {
+        where.status = JobStatus.CLOSED;
+      }
+    }
+
+    if (query.category && query.category !== "all") {
+      const isUuid = UUID_REGEX.test(query.category);
+      where.category = isUuid
+        ? { OR: [{ id: query.category }, { slug: query.category }] }
+        : { slug: query.category };
+    }
+
+    if (query.search && query.search.trim()) {
+      const search = query.search.trim();
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { buyer: { fullName: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.job.count({ where }),
+      this.prisma.job.findMany({
+        where,
+        skip,
+        take: perPage,
+        orderBy: { createdAt: "desc" },
+        include: {
+          buyer: { select: { id: true, fullName: true } },
+          category: { select: { id: true, slug: true } },
+        },
+      }),
+    ]);
+
+    return {
+      items,
+      page,
+      perPage,
+      total,
+      totalPages: Math.ceil(total / perPage) || 1,
+    };
+  }
+
+  async closeAsAdmin(id: string, reason: string, actor: AuditActor): Promise<JobWithRelations> {
+    await this.getByIdOrThrow(id);
+    const updated = await this.prisma.job.update({
+      where: { id },
+      data: { status: JobStatus.CLOSED },
+      include: {
+        buyer: { select: { id: true, fullName: true } },
+        category: { select: { id: true, slug: true } },
+      },
+    });
+
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          id: this.ids.next(),
+          actorType: actor.type,
+          actorId: actor.id,
+          actorName: actor.name || 'Admin',
+          action: "JOB_CLOSED_BY_ADMIN",
+          resourceType: "JOB",
+          resourceId: id,
+          newState: { status: "CLOSED", reason },
+        },
+      });
+    } catch {
+      // Audit log creation shouldn't fail the operation
+    }
+
+    return updated;
+  }
 }
+

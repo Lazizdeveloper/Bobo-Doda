@@ -102,7 +102,7 @@ test.describe("Password Visibility Toggle Suite", () => {
     await page.goto("/rahbariyat/kirish");
     await page.waitForLoadState("networkidle");
 
-    const emailInput = page.locator('input[type="email"]');
+    const emailInput = page.locator('input').first();
     const passwordInput = page.locator('input[autocomplete="current-password"]');
 
     await emailInput.fill("admin@bobololadono.uz");

@@ -15,6 +15,7 @@ import {
   listServicesQueue,
   findServiceById,
   setServiceStatus,
+  DEFAULT_CATEGORY_MAP,
   type AdminPage,
 } from "@/lib/api/admin";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
@@ -59,9 +60,10 @@ export default function ServicesModerationPage() {
 
   useEffect(load, [load]);
 
-  /* Filtr o'zgarganda birinchi sahifaga qaytamiz */
+  /* Filtr o'zgarganda birinchi sahifaga qaytamiz va ochiq modalni tozalaymiz */
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedService(null);
   }, [debouncedSearch, statusFilter, categoryFilter, rowsPerPage]);
 
   /* Global qidiruvdan kelgan deep-link — yozuvni joriy sahifadan topadi */
@@ -132,7 +134,7 @@ export default function ServicesModerationPage() {
       header: "Kategoriya",
       render: (s) => (
         <Badge tone="neutral" size="sm" className="capitalize">
-          {s.category}
+          {DEFAULT_CATEGORY_MAP[s.category] || s.category}
         </Badge>
       ),
     },
@@ -420,7 +422,7 @@ export default function ServicesModerationPage() {
               </div>
               <div>
                 <span className="text-3xs uppercase font-bold text-muted">Kategoriya:</span>
-                <p className="font-semibold text-ink mt-0.5 capitalize">{selectedService.category}</p>
+                <p className="font-semibold text-ink mt-0.5 capitalize">{DEFAULT_CATEGORY_MAP[selectedService.category] || selectedService.category}</p>
               </div>
               <div>
                 <span className="text-3xs uppercase font-bold text-muted">Holat:</span>

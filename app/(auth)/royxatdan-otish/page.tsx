@@ -161,7 +161,9 @@ export default function RoyxatdanOtishPage() {
             <Link href="/maxfiylik" target="_blank" className="font-semibold text-primary-deep hover:underline">
               {t("f_privacy") || "Maxfiylik siyosati"}
             </Link>
-            {" va "}
+            {" "}
+            {t("common.and") || "va"}
+            {" "}
             <Link href="/oferta" target="_blank" className="font-semibold text-primary-deep hover:underline">
               {t("f_offer") || "Ommaviy oferta"}
             </Link>

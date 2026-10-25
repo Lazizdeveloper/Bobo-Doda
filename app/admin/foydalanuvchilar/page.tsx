@@ -32,6 +32,7 @@ import {
 } from "@/lib/api/admin";
 import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { formatDate } from "@/lib/format";
+import { adminErrorText } from "@/lib/admin-error-text";
 
 const STATUS_LABEL: Record<string, { label: string; tone: BadgeTone }> = {
   ACTIVE: { label: "Faol", tone: "success" },
@@ -53,6 +54,7 @@ export default function UserManagementPage() {
   const [detail, setDetail] = useState<StaffUserDetail | null>(null);
   const [actionOpen, setActionOpen] = useState<"suspend" | "block" | null>(null);
   const [reason, setReason] = useState("");
+  const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const debouncedPhone = useDebouncedValue(phone, 300);
@@ -74,6 +76,10 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     setCurrentPage(1);
+    setSelected(null);
+    setDetail(null);
+    setActionOpen(null);
+    setReason("");
   }, [debouncedPhone, statusFilter, roleFilter, rowsPerPage]);
 
   useEffect(() => {
@@ -118,21 +124,32 @@ export default function UserManagementPage() {
 
   async function handleAction() {
     if (!selected || !actionOpen) return;
-    if (reason.trim().length < 5) {
+    const trimmed = reason.trim();
+    if (trimmed.length < 5) {
+      setActionError("Sabab kamida 5 ta belgidan iborat bo‘lishi shart.");
       toast("Sababni kamida 5 belgi bilan kiriting", "error");
       return;
     }
+    if (reason.length > 500) {
+      setActionError("Sabab 500 ta belgidan oshmasligi shart.");
+      toast("Sabab 500 ta belgidan oshmasligi kerak", "error");
+      return;
+    }
     setBusy(true);
+    setActionError("");
     try {
-      if (actionOpen === "suspend") await staffSuspendUser(selected.id, reason.trim());
-      else await staffBlockUser(selected.id, reason.trim());
+      if (actionOpen === "suspend") await staffSuspendUser(selected.id, trimmed);
+      else await staffBlockUser(selected.id, trimmed);
       toast("Amal bajarildi");
       setActionOpen(null);
       setReason("");
+      setActionError("");
       load();
       refreshDetail();
-    } catch {
-      toast("Xatolik yuz berdi", "error");
+    } catch (err) {
+      const msg = adminErrorText(err);
+      setActionError(msg);
+      toast(msg, "error");
     } finally {
       setBusy(false);
     }
@@ -298,9 +315,9 @@ export default function UserManagementPage() {
               </div>
             </div>
             {detail.statusReason && (
-              <div className="rounded-input border border-line bg-surface p-3 text-xs">
+              <div className="rounded-input border border-line bg-surface p-3 text-xs [overflow-wrap:anywhere] [word-break:break-word]">
                 <p className="text-muted">Sabab</p>
-                <p className="text-ink mt-1">{detail.statusReason}</p>
+                <p className="text-ink mt-1 break-words">{detail.statusReason}</p>
               </div>
             )}
             <div className="flex flex-wrap gap-2 border-t border-line pt-3">
@@ -328,20 +345,84 @@ export default function UserManagementPage() {
 
       <Modal
         open={!!actionOpen}
-        onClose={() => setActionOpen(null)}
+        onClose={() => {
+          if (!busy) {
+            setActionOpen(null);
+            setActionError("");
+          }
+        }}
         title={actionOpen === "suspend" ? "Foydalanuvchini to'xtatish" : "Foydalanuvchini bloklash"}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setActionOpen(null)} disabled={busy}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setActionOpen(null);
+                setActionError("");
+              }}
+              disabled={busy}
+            >
               Bekor qilish
             </Button>
-            <Button variant="danger" loading={busy} onClick={handleAction}>
+            <Button
+              variant="danger"
+              loading={busy}
+              onClick={handleAction}
+              disabled={busy || reason.trim().length < 5 || reason.length > 500}
+            >
               Tasdiqlash
             </Button>
           </>
         }
       >
-        <Textarea label="Sabab" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} placeholder="Kamida 5 belgi" />
+        <div className="space-y-3 [overflow-wrap:anywhere] [word-break:break-word]">
+          <p className="text-xs text-muted">
+            {actionOpen === "suspend"
+              ? "Foydalanuvchi hisobi vaqtincha to'xtatiladi. Kirish va barcha faoliyatlar cheklanadi."
+              : "Foydalanuvchi hisobi butunlay bloklanadi. Bu jiddiy xavfsizlik amaliyotidir."}
+          </p>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-ink">
+                Sabab <span className="text-danger">*</span>
+              </label>
+              <span
+                className={`text-2xs font-mono font-medium ${
+                  reason.length > 500
+                    ? "text-danger font-bold"
+                    : reason.trim().length >= 5
+                    ? "text-success"
+                    : "text-muted"
+                }`}
+                aria-live="polite"
+              >
+                {reason.length}/500
+              </span>
+            </div>
+            <Textarea
+              value={reason}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (actionError) setActionError("");
+              }}
+              rows={4}
+              maxLength={500}
+              placeholder="Sabab 5–500 belgi oralig'ida bo'lishi kerak..."
+              error={
+                actionError ||
+                (reason.length > 0 && reason.trim().length < 5
+                  ? "Sabab kamida 5 ta belgidan iborat bo‘lishi shart"
+                  : reason.length > 500
+                  ? "Sabab 500 ta belgidan oshmasligi shart"
+                  : undefined)
+              }
+              className="[overflow-wrap:anywhere] [word-break:break-word]"
+            />
+            <p className="text-3xs text-muted">
+              Sabab 5–500 belgi oralig‘ida bo‘lishi shart. Ushbu izoh tizim audit jurnalida saqlanadi.
+            </p>
+          </div>
+        </div>
       </Modal>
     </div>
   );

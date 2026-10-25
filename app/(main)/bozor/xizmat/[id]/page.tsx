@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
@@ -12,10 +13,11 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import { TrustBadge } from "@/components/ui/TrustBadge";
 import { useToast } from "@/components/ui/Toast";
-import { authService, contractsService, servicesService } from "@/lib/api";
+import { authService, catalogService, contractsService, servicesService } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
-import type { Service } from "@/lib/types";
+import type { Service, Specialist } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 
@@ -27,7 +29,10 @@ interface MilestoneRow {
 function defaultDeadline(): string {
   const d = new Date();
   d.setDate(d.getDate() + 14);
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function XizmatTafsilotiPage() {
@@ -37,6 +42,7 @@ export default function XizmatTafsilotiPage() {
   const { toast } = useToast();
 
   const [service, setService] = useState<Service | null | undefined>(undefined);
+  const [specialist, setSpecialist] = useState<Specialist | null>(null);
   const [otherServices, setOtherServices] = useState<Service[]>([]);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [isBuyer, setIsBuyer] = useState(false);
@@ -59,10 +65,15 @@ export default function XizmatTafsilotiPage() {
       .then(async (found) => {
         if (found && (found.status === "active" || found.status === "pending_review" || found.status === "draft")) {
           setService(found);
-          const allServices = await servicesService.listPublic();
+          const [allServices, spec] = await Promise.all([
+            servicesService.listPublic().catch(() => []),
+            catalogService.getSpecialist(found.sellerId).catch(() => null),
+          ]);
           setOtherServices(allServices.filter((s) => s.sellerId === found.sellerId && s.id !== found.id));
+          setSpecialist(spec);
         } else {
           setService(null);
+          setSpecialist(null);
         }
       })
       .catch(setLoadError);
@@ -243,6 +254,33 @@ export default function XizmatTafsilotiPage() {
               {t("svc.orderCta")} →
             </Button>
           </Card>
+
+          {/* Mutaxassis (Sotuvchi) kartasi */}
+          {specialist && (
+            <Card padding="md" className="flex flex-col gap-3">
+              <p className="text-2xs font-bold uppercase tracking-wider text-muted">Mutaxassis</p>
+              <Link
+                href={`/bozor/mutaxassis/${specialist.user.id}`}
+                className="group flex items-center gap-3"
+              >
+                <Avatar name={specialist.user.fullName} size="md" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-sm text-ink group-hover:text-primary transition-colors truncate">
+                      {specialist.user.fullName}
+                    </p>
+                    <TrustBadge badge={specialist.profile.badge} />
+                  </div>
+                  <p className="text-xs text-muted truncate">{specialist.profile.headline}</p>
+                  <div className="mt-1 flex items-center gap-2 text-2xs text-muted">
+                    <span className="font-bold text-amber-500">★ {specialist.profile.rating > 0 ? specialist.profile.rating.toFixed(1) : "—"}</span>
+                    <span>•</span>
+                    <span>{specialist.profile.completedContracts} ta ish</span>
+                  </div>
+                </div>
+              </Link>
+            </Card>
+          )}
 
           <Card padding="md" className="border-primary/20 bg-primary/5">
             <div className="flex items-start gap-3">

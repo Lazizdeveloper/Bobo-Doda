@@ -50,6 +50,9 @@ describe('JobsService', () => {
         count: jest.fn().mockResolvedValue(1),
         update: jest.fn().mockResolvedValue({ ...mockJob, status: JobStatus.CLOSED }),
       } as unknown,
+      auditLog: {
+        create: jest.fn().mockResolvedValue({ id: 'audit-1' }),
+      } as unknown,
     } as unknown as PrismaService;
 
     service = new JobsService(prisma as PrismaService, ids as IdFactory);
@@ -156,6 +159,27 @@ describe('JobsService', () => {
       await expect(
         service.close('01925b6a-9999-7000-8000-000000000001', 'other-user-uuid'),
       ).rejects.toThrow(ForbiddenError);
+    });
+  });
+
+  describe('listForStaff', () => {
+    it('returns paginated jobs for staff', async () => {
+      const res = await service.listForStaff({ page: 1, perPage: 10, status: 'OPEN' });
+      expect(res.items).toHaveLength(1);
+      expect(res.total).toBe(1);
+      expect(res.page).toBe(1);
+    });
+  });
+
+  describe('closeAsAdmin', () => {
+    it('allows staff to close job and creates audit log', async () => {
+      const res = await service.closeAsAdmin(
+        '01925b6a-9999-7000-8000-000000000001',
+        'Moderatsiya sababi',
+        { id: 'staff-1', type: 'STAFF', name: 'Admin Ali' },
+      );
+      expect(res.status).toBe(JobStatus.CLOSED);
+      expect(prisma.job?.update).toHaveBeenCalled();
     });
   });
 });

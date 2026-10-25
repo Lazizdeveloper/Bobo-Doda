@@ -45,6 +45,10 @@ const {
   StaffRole,
   StaffPermission,
   StaffStatus,
+  ContractStatus,
+  DisputeStatus,
+  DisputeReason,
+  JobStatus,
 } = require("@prisma/client");
 const argon2 = require("argon2");
 const { uuidv7 } = require("uuidv7");
@@ -133,6 +137,25 @@ const SPECIALIST_ACCOUNTS = [
       deliveryDays: 10,
     },
   },
+  {
+    code: "SPECIALIST-04",
+    phone: "+998901110010",
+    fullName: "Sardor Karimov (UI/UX Designer)",
+    location: "Toshkent shahri",
+    bio: "Grafik dizayner va UI/UX mutaxassisi. Mobil ilovalar va veb-saytlar dizaynini chizaman.",
+    sellerStatus: SellerStatus.PENDING_VERIFICATION,
+    appLegalName: "Sardor Karimov",
+    appDisplayName: "Sardor Karimov (Design Lead)",
+    appDescription: "Platformada o'z dizayn xizmatlarimni taqdim etish uchun KYC arizasi va sertifikatlarim.",
+    appStatus: SellerApplicationStatus.PENDING,
+    service: {
+      categorySlug: "dizayn",
+      title: "Zamonaviy UI/UX Dizayn va Prototip tayyorlash",
+      description: "Figma'da professional veb va mobil ilova dizaynlari, interaktiv prototiplar.",
+      priceTiyin: BigInt(250000000), // 2 500 000 UZS
+      deliveryDays: 5,
+    },
+  },
 ];
 
 const ALL_STAFF_PERMISSIONS = Object.values(StaffPermission);
@@ -147,6 +170,16 @@ const ADMIN_ACCOUNTS = [
     permissions: ALL_STAFF_PERMISSIONS,
     portal: "/rahbariyat/kirish",
     note: "To'liq vakolatli Superadmin (barcha 16 huquq, /super/adminlar boshqaruvi)",
+  },
+  {
+    code: "ADMIN-01B",
+    email: "superadmin@bobololadono.uz",
+    fullName: "Boshqaruvchi Superadmin",
+    title: "Chief Platform Super Administrator",
+    role: StaffRole.SUPER_ADMIN,
+    permissions: ALL_STAFF_PERMISSIONS,
+    portal: "/rahbariyat/kirish",
+    note: "To'liq vakolatli Superadmin (bobololadono.uz)",
   },
   {
     code: "ADMIN-02",
@@ -171,6 +204,28 @@ const ADMIN_ACCOUNTS = [
     note: "Foydalanuvchilar, xizmatlar, e'lonlar va shikoyatlar moderatsiyasi",
   },
   {
+    code: "ADMIN-02B",
+    email: "moderator@bobololadono.uz",
+    fullName: "Moderator Nazoratchi",
+    title: "Bosh Kontent va Foydalanuvchilar Moderatori",
+    role: StaffRole.ADMIN,
+    permissions: [
+      StaffPermission.DASHBOARD,
+      StaffPermission.USERS,
+      StaffPermission.SERVICES,
+      StaffPermission.JOBS,
+      StaffPermission.KYC,
+      StaffPermission.REPORTS,
+      StaffPermission.APPEALS,
+      StaffPermission.REVIEWS,
+      StaffPermission.SUPPORT,
+      StaffPermission.CATEGORIES,
+      StaffPermission.AUDIT,
+    ],
+    portal: "/admin/kirish",
+    note: "Moderator (bobololadono.uz)",
+  },
+  {
     code: "ADMIN-03",
     email: "moliya@bobododa.uz",
     fullName: "Moliyaviy Nazoratchi",
@@ -186,6 +241,23 @@ const ADMIN_ACCOUNTS = [
     ],
     portal: "/admin/kirish",
     note: "Buyurtmalar, to'lovlar, escrow mablag'lari, nizolar va hisobotlar nazorati",
+  },
+  {
+    code: "ADMIN-03B",
+    email: "finance@bobololadono.uz",
+    fullName: "Moliyaviy Nazoratchi",
+    title: "Moliya va To'lovlar Nazoratchisi",
+    role: StaffRole.ADMIN,
+    permissions: [
+      StaffPermission.DASHBOARD,
+      StaffPermission.ORDERS,
+      StaffPermission.DISPUTES,
+      StaffPermission.PAYMENTS,
+      StaffPermission.REPORTS,
+      StaffPermission.AUDIT,
+    ],
+    portal: "/admin/kirish",
+    note: "Moliya (finance@bobololadono.uz)",
   },
 ];
 
@@ -266,6 +338,10 @@ async function main() {
         include: { sellerApplications: true },
       });
 
+      const appStatus = s.appStatus || SellerApplicationStatus.APPROVED;
+      const sellerStatus = s.sellerStatus || SellerStatus.APPROVED;
+      const reviewedAt = appStatus === SellerApplicationStatus.PENDING ? null : new Date();
+
       if (existing) {
         userId = existing.id;
         await prisma.user.update({
@@ -277,9 +353,9 @@ async function main() {
             roleChosen: true,
             lastActiveRole: Role.SELLER,
             profileDone: true,
-            verified: true,
+            verified: appStatus === SellerApplicationStatus.APPROVED,
             status: UserStatus.ACTIVE,
-            sellerStatus: SellerStatus.APPROVED,
+            sellerStatus,
             location: s.location,
             bio: s.bio,
           },
@@ -293,13 +369,24 @@ async function main() {
               legalName: s.appLegalName,
               displayName: s.appDisplayName,
               description: s.appDescription,
-              status: SellerApplicationStatus.APPROVED,
+              status: appStatus,
               submittedAt: new Date(),
-              reviewedAt: new Date(),
+              reviewedAt,
+            },
+          });
+        } else {
+          await prisma.sellerApplication.update({
+            where: { id: existing.sellerApplications[0].id },
+            data: {
+              legalName: s.appLegalName,
+              displayName: s.appDisplayName,
+              description: s.appDescription,
+              status: appStatus,
+              reviewedAt,
             },
           });
         }
-        console.log(`  ✓ [MUTAXASSIS] ${s.code} (${s.phone}): yangilandi (APPROVED).`);
+        console.log(`  ✓ [MUTAXASSIS] ${s.code} (${s.phone}): yangilandi (${appStatus}).`);
       } else {
         userId = uuidv7();
         await prisma.user.create({
@@ -312,9 +399,9 @@ async function main() {
             roleChosen: true,
             lastActiveRole: Role.SELLER,
             profileDone: true,
-            verified: true,
+            verified: appStatus === SellerApplicationStatus.APPROVED,
             status: UserStatus.ACTIVE,
-            sellerStatus: SellerStatus.APPROVED,
+            sellerStatus,
             location: s.location,
             bio: s.bio,
           },
@@ -326,12 +413,12 @@ async function main() {
             legalName: s.appLegalName,
             displayName: s.appDisplayName,
             description: s.appDescription,
-            status: SellerApplicationStatus.APPROVED,
+            status: appStatus,
             submittedAt: new Date(),
-            reviewedAt: new Date(),
+            reviewedAt,
           },
         });
-        console.log(`  ✓ [MUTAXASSIS] ${s.code} (${s.phone}): yaratildi (APPROVED).`);
+        console.log(`  ✓ [MUTAXASSIS] ${s.code} (${s.phone}): yaratildi (${appStatus}).`);
       }
 
       // Pre-seed faol xizmat (Service)
@@ -359,6 +446,200 @@ async function main() {
             },
           });
           console.log(`    ↳ Faol xizmat yaratildi: "${s.service.title}"`);
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // [3.5] ISH E'LONLARI (JOBS), SHARTNOMALAR VA NIZOLAR
+    // ─────────────────────────────────────────────────────────────
+    console.log("\n[3.5] Ish e'lonlari (Jobs), shartnomalar va nizolarni yaratish...");
+    const buyer1 = await prisma.user.findUnique({ where: { phone: "+998901110001" } });
+    const buyer2 = await prisma.user.findUnique({ where: { phone: "+998901110002" } });
+    const specialist1 = await prisma.user.findUnique({ where: { phone: "+998901110004" } });
+    const specialist2 = await prisma.user.findUnique({ where: { phone: "+998901110005" } });
+
+    const dasturlashCat = categoryMap.get("dasturlash");
+    const dizaynCat = categoryMap.get("dizayn");
+    const marketingCat = categoryMap.get("marketing");
+
+    if (buyer1 && dasturlashCat) {
+      const existingJob1 = await prisma.job.findFirst({
+        where: { buyerId: buyer1.id, title: "E-commerce platformasi uchun Telegram bot ishlab chiqish" },
+      });
+      if (!existingJob1) {
+        await prisma.job.create({
+          data: {
+            id: uuidv7(),
+            buyerId: buyer1.id,
+            categoryId: dasturlashCat,
+            title: "E-commerce platformasi uchun Telegram bot ishlab chiqish",
+            description: "Mavjud internet do'kon uchun buyurtmalarni qabul qiluvchi va to'lov tizimiga ulangan bot kerak. Tezkor va sifatli bo'lishi shart.",
+            budgetMin: BigInt(300000000),
+            budgetMax: BigInt(600000000),
+            currency: "UZS",
+            skillsRequired: ["Node.js", "Telegram Bot API", "PostgreSQL"],
+            screeningQuestions: ["Avval bot yaratganmisiz?", "Portfolio ko'rsata olasizmi?"],
+            proposalsCount: 3,
+            status: JobStatus.OPEN,
+          },
+        });
+        console.log(`  ✓ [JOB] Ochiq ish e'loni yaratildi (OPEN).`);
+      }
+    }
+
+    if (buyer2 && dizaynCat) {
+      const existingJob2 = await prisma.job.findFirst({
+        where: { buyerId: buyer2.id, title: "Brending va Korporativ Stil yaratish" },
+      });
+      if (!existingJob2) {
+        await prisma.job.create({
+          data: {
+            id: uuidv7(),
+            buyerId: buyer2.id,
+            categoryId: dizaynCat,
+            title: "Brending va Korporativ Stil yaratish",
+            description: "Yangi IT kompaniya uchun logo, brandbook va taqdimot shablonlari kerak. Zamonaviy minimalizm uslubida.",
+            budgetMin: BigInt(200000000),
+            budgetMax: BigInt(400000000),
+            currency: "UZS",
+            skillsRequired: ["Figma", "Logo", "Brandbook"],
+            screeningQuestions: ["Brandbook portfoliongiz bormi?"],
+            proposalsCount: 5,
+            status: JobStatus.OPEN,
+          },
+        });
+        console.log(`  ✓ [JOB] Ochiq ish e'loni yaratildi (OPEN).`);
+      }
+    }
+
+    if (buyer1 && marketingCat) {
+      const existingJob3 = await prisma.job.findFirst({
+        where: { buyerId: buyer1.id, title: "SMM va Target reklama yuritish" },
+      });
+      if (!existingJob3) {
+        await prisma.job.create({
+          data: {
+            id: uuidv7(),
+            buyerId: buyer1.id,
+            categoryId: marketingCat,
+            title: "SMM va Target reklama yuritish",
+            description: "Instagram va Facebook sahifalarni 1 oy davomida to'liq yuritish.",
+            budgetMin: BigInt(150000000),
+            budgetMax: BigInt(300000000),
+            currency: "UZS",
+            skillsRequired: ["Target", "SMM", "Copywriting"],
+            screeningQuestions: [],
+            proposalsCount: 2,
+            status: JobStatus.CLOSED,
+          },
+        });
+        console.log(`  ✓ [JOB] Yopilgan ish e'loni yaratildi (CLOSED).`);
+      }
+    }
+
+    // Contracts & Disputes
+    if (buyer1 && specialist1) {
+      const service1 = await prisma.service.findFirst({ where: { sellerId: specialist1.id } });
+      if (service1) {
+        let contract1 = await prisma.contract.findFirst({
+          where: { buyerId: buyer1.id, sellerId: specialist1.id, serviceId: service1.id },
+        });
+        if (!contract1) {
+          contract1 = await prisma.contract.create({
+            data: {
+              id: uuidv7(),
+              buyerId: buyer1.id,
+              sellerId: specialist1.id,
+              serviceId: service1.id,
+              serviceTitleSnapshot: service1.title,
+              serviceDescriptionSnapshot: service1.description,
+              categoryNameSnapshot: "Dasturlash",
+              sellerDisplayNameSnapshot: "Jasur Dasturchi",
+              agreedAmount: service1.price,
+              currency: "UZS",
+              platformFeeRateBpsSnapshot: 1000,
+              platformFeeAmountSnapshot: (service1.price * BigInt(10)) / BigInt(100),
+              deadline: new Date(Date.now() + 7 * 86400000),
+              status: ContractStatus.ACTIVE,
+            },
+          });
+          console.log(`  ✓ [CONTRACT] Contract 1 yaratildi: ${contract1.id}`);
+        }
+
+        const existingDispute1 = await prisma.dispute.findFirst({
+          where: { contractId: contract1.id },
+        });
+        if (!existingDispute1) {
+          await prisma.dispute.create({
+            data: {
+              id: uuidv7(),
+              contractId: contract1.id,
+              openedByUserId: buyer1.id,
+              reason: DisputeReason.QUALITY,
+              description: "Dasturchi topshirgan ish texnik topshiriqqa umuman to'g'ri kelmaydi va tuzatishdan bosh tortmoqda.",
+              status: DisputeStatus.OPEN,
+              preSettlement: true,
+              disputedAmount: contract1.agreedAmount,
+              heldAmount: contract1.agreedAmount,
+              currency: "UZS",
+              openedAt: new Date(),
+            },
+          });
+          console.log(`  ✓ [DISPUTE] Ochiq nizo (OPEN) yaratildi contract uchun: ${contract1.id}`);
+        }
+      }
+    }
+
+    if (buyer2 && specialist2) {
+      const service2 = await prisma.service.findFirst({ where: { sellerId: specialist2.id } });
+      if (service2) {
+        let contract2 = await prisma.contract.findFirst({
+          where: { buyerId: buyer2.id, sellerId: specialist2.id, serviceId: service2.id },
+        });
+        if (!contract2) {
+          contract2 = await prisma.contract.create({
+            data: {
+              id: uuidv7(),
+              buyerId: buyer2.id,
+              sellerId: specialist2.id,
+              serviceId: service2.id,
+              serviceTitleSnapshot: service2.title,
+              serviceDescriptionSnapshot: service2.description,
+              categoryNameSnapshot: "Dizayn",
+              sellerDisplayNameSnapshot: "Diyora Dizayner",
+              agreedAmount: service2.price,
+              currency: "UZS",
+              platformFeeRateBpsSnapshot: 1000,
+              platformFeeAmountSnapshot: (service2.price * BigInt(10)) / BigInt(100),
+              deadline: new Date(Date.now() + 5 * 86400000),
+              status: ContractStatus.ACTIVE,
+            },
+          });
+          console.log(`  ✓ [CONTRACT] Contract 2 yaratildi: ${contract2.id}`);
+        }
+
+        const existingDispute2 = await prisma.dispute.findFirst({
+          where: { contractId: contract2.id },
+        });
+        if (!existingDispute2) {
+          await prisma.dispute.create({
+            data: {
+              id: uuidv7(),
+              contractId: contract2.id,
+              openedByUserId: buyer2.id,
+              reason: DisputeReason.DEADLINE,
+              description: "Dizayn loyihasining muddati 5 kunga kechikdi, aloqa uzilgan.",
+              status: DisputeStatus.UNDER_REVIEW,
+              preSettlement: true,
+              disputedAmount: contract2.agreedAmount,
+              heldAmount: contract2.agreedAmount,
+              currency: "UZS",
+              openedAt: new Date(Date.now() - 86400000),
+              reviewStartedAt: new Date(),
+            },
+          });
+          console.log(`  ✓ [DISPUTE] Ko'rib chiqilayotgan nizo (UNDER_REVIEW) yaratildi contract uchun: ${contract2.id}`);
         }
       }
     }

@@ -7,6 +7,8 @@ export class ServiceResponseDto {
   @ApiProperty() id!: string;
   @ApiProperty() sellerId!: string;
   @ApiProperty() categoryId!: string;
+  @ApiPropertyOptional({ description: 'Kategoriya nomi' }) categoryName?: string;
+  @ApiPropertyOptional({ description: 'Kategoriya slug' }) categorySlug?: string;
   @ApiProperty() title!: string;
   @ApiProperty() description!: string;
   @ApiProperty() lang!: string;
@@ -23,11 +25,13 @@ export class ServiceResponseDto {
 }
 
 /** Prisma model → DTO — `price` BigInt→so'm chegara konvertatsiyasi shu YAGONA joyda. */
-export function toServiceResponseDto(service: Service): ServiceResponseDto {
+export function toServiceResponseDto(service: Service & { category?: { slug?: string; nameUz?: string } | null }): ServiceResponseDto {
   return {
     id: service.id,
     sellerId: service.sellerId,
     categoryId: service.categoryId,
+    categoryName: service.category?.nameUz,
+    categorySlug: service.category?.slug,
     title: service.title,
     description: service.description,
     lang: service.lang,

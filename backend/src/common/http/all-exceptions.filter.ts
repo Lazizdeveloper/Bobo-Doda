@@ -97,6 +97,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
+    if (exception && typeof exception === 'object') {
+      const err = exception as { code?: string; message?: string };
+      if (err.code === '22P02' || err.code === 'P2023' || err.code === 'P2025') {
+        return {
+          status: 404,
+          body: { code: 'NOT_FOUND', message: 'Resurs topilmadi' },
+        };
+      }
+    }
+
     return {
       status: 500,
       body: { code: 'UNKNOWN', message: 'Ichki server xatosi' },

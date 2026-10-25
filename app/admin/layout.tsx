@@ -7,6 +7,7 @@ import { Logo } from "@/components/shared/Logo";
 import { SkipLink } from "@/components/shared/SkipLink";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { LoadingState } from "@/components/ui/LoadingState";
 import { AdminGlobalSearch } from "@/components/admin/AdminGlobalSearch";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
 import {
@@ -67,6 +68,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
      uchun UI ham shu holatda faqat shu sahifaga ruxsat beradi. */
   const isChangePassword = logicalPath === "/parolni-almashtirish";
 
+  const [isOnline, setIsOnline] = useState(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsOnline(navigator.onLine);
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const current = getCurrentAdmin();
@@ -100,9 +115,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
     /* Panel server sessiyasi tasdiqlanmaguncha ko'rsatilmaydi: ilgari eski
        `bd_staff_account` bo'yicha to'liq "kirgan" qobiq chizilar, har so'rov
-       401 qaytarsa ham yo'naltirish bo'lmasdi. `offline` (tarmoq/5xx) —
+       401 qaytarsa ham yo'naltirish bo'lmasdi. `offline` (tarmoq/5xx) yoki timeout —
        sessiya haqida hukm yo'q, sahifa o'z xatosini ko'rsatadi. */
-    void ensureStaffSession().then((state) => {
+    const timeoutPromise = new Promise<"offline">((resolve) =>
+      setTimeout(() => resolve("offline"), 5000)
+    );
+    void Promise.race([ensureStaffSession(), timeoutPromise]).then((state) => {
       if (cancelled) return;
       if (state === "expired") {
         router.replace(loginHrefFor(current.role, pathname));
@@ -147,6 +165,55 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [isLogin, isChangePassword, logicalPath, pathname, router]);
+
+  /* Bfcache va brauzer Back tugmasi himoyasi:
+     Chiqishdan keyin Back bosilganda keshlangan dashboard ko'rinmasligi uchun
+     pageshow, popstate va visibilitychange hodisalarida sessiyani qayta tekshiramiz. */
+  useEffect(() => {
+    if (isLogin) return;
+
+    const enforceActiveSession = (event?: PageTransitionEvent) => {
+      const current = getCurrentAdmin();
+      if (!current) {
+        setAdmin(null);
+        setReady(false);
+        const expired = takeExpiredStaffRole();
+        const dest = expired
+          ? loginHrefFor(expired, pathname)
+          : logicalPath.startsWith("/super")
+            ? "/rahbariyat/kirish"
+            : adminHref("/kirish", pathname);
+        window.location.replace(dest);
+        return;
+      }
+      // Agar sahifa bfcache'dan tiklangan bo'lsa yoki tab faollashsa, sessiyaning server holatini tekshiramiz
+      if (event?.persisted || document.visibilityState === "visible") {
+        void ensureStaffSession().then((state) => {
+          if (state === "expired") {
+            setAdmin(null);
+            setReady(false);
+            window.location.replace(loginHrefFor(current.role, pathname));
+          }
+        });
+      }
+    };
+
+    const handlePageShow = (e: PageTransitionEvent) => enforceActiveSession(e);
+    const handlePopState = () => enforceActiveSession();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") enforceActiveSession();
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("popstate", handlePopState);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("popstate", handlePopState);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isLogin, logicalPath, pathname]);
 
   /* Sessiya sahifa ochiq turganda o'lsa (bekor qilingan, muddati tugagan,
      refresh rad etilgan) — eski qobiqni darhol yopib, rolga mos login
@@ -217,7 +284,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     };
   }, [pathname, dataVersion, ready, isLogin, isChangePassword]);
 
-  if (!ready) return null;
+  if (!ready) {
+    if (isLogin || isChangePassword) return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg">
+        <LoadingState message="Admin markazi yuklanmoqda..." />
+      </div>
+    );
+  }
   if (isLogin || isChangePassword) return children;
 
   /* Bosqich 17 — nav FAQAT real backend'da mavjud bo'lgan bo'limlarga
@@ -271,7 +345,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       items: [
         { permission: "settings", href: adminHref("/sozlamalar", pathname), label: "Sozlamalar", icon: "settings" },
         { permission: "audit", href: adminHref("/audit", pathname), label: "Audit Jurnali", icon: "audit" },
-        { permission: "admins", href: "/rahbariyat/kirish", label: "Adminlar & Xodimlar", icon: "admins" },
+        { permission: "admins", href: adminHref("/super/adminlar", pathname), label: "Adminlar & Xodimlar", icon: "admins" },
       ],
     },
   ];
@@ -279,8 +353,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   function logout() {
     const loginPath =
       admin?.role === "super_admin" ? "/rahbariyat/kirish" : adminHref("/kirish", pathname);
+    setAdmin(null);
+    setReady(false);
     adminLogout();
-    router.replace(loginPath);
+    try {
+      window.history.replaceState(null, "", loginPath);
+    } catch {}
+    window.location.replace(loginPath);
   }
 
   const renderNav = (
@@ -394,6 +473,35 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content Area */}
       <div className="lg:pl-64">
+        {/* Offline Warning Banner */}
+        {!isOnline && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-950 dark:text-amber-200 backdrop-blur-md"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base shrink-0" aria-hidden="true">⚠️</span>
+              <span className="font-semibold truncate">
+                Aloqa yo‘q — internetga ulanish uzilgan.
+              </span>
+              <span className="hidden md:inline text-amber-900/80 dark:text-amber-300/80 truncate">
+                O‘zgarishlar saqlanmasligi va yangi ma‘lumotlar yuklanmasligi mumkin.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (navigator.onLine) setIsOnline(true);
+                else window.location.reload();
+              }}
+              className="rounded-lg bg-amber-500/20 px-2.5 py-1 text-2xs font-bold text-amber-900 dark:text-amber-100 hover:bg-amber-500/30 transition-colors shrink-0"
+            >
+              Qayta tekshirish
+            </button>
+          </div>
+        )}
+
         {/* Global Operations Header */}
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-line bg-card/90 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3 flex-1 max-w-xl">
@@ -410,8 +518,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-4 shrink-0">
             <div className="hidden sm:flex items-center gap-2 text-xs text-muted">
-              <span className="h-2 w-2 rounded-full bg-success" />
-              <span>Bozor Tizimi: Faol</span>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isOnline ? "bg-success" : "bg-danger animate-pulse"
+                }`}
+              />
+              <span>{isOnline ? "Bozor Tizimi: Faol" : "Aloqa yo'q (Oflayn)"}</span>
             </div>
             <div className="flex items-center gap-2 border-l border-line pl-4">
               <span className="hidden md:inline-block text-xs font-semibold text-ink">

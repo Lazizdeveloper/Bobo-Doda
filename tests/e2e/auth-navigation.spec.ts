@@ -183,7 +183,7 @@ test.describe("Auth Navigation & Existing Session Redirect Regression Suite", ()
       expect(page.url()).toContain("/mutaxassis");
 
       await page.goto("/", { waitUntil: "networkidle" });
-      expect(page.url()).toBe("http://localhost:3010/");
+      expect(new URL(page.url()).pathname).toBe("/");
     }
 
     await context.close();

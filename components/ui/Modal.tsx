@@ -95,7 +95,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
       <div
         ref={panelRef}
         tabIndex={-1}
-        className={`sb-fade-in relative my-8 w-full ${sizeClasses[size || "md"]} rounded-card border border-line bg-card p-6 shadow-overlay max-h-[90vh] overflow-y-auto`}
+        className={`sb-fade-in relative my-8 w-full ${sizeClasses[size || "md"]} rounded-card border border-line bg-card p-6 shadow-overlay max-h-[90vh] overflow-y-auto [overflow-wrap:anywhere] [word-break:break-word]`}
       >
         <div className="mb-3 flex items-start justify-between gap-4">
           <h3 className="font-heading text-lg font-bold text-ink">{title}</h3>
@@ -110,7 +110,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: M
             </svg>
           </button>
         </div>
-        <div className="text-sm text-muted">{children}</div>
+        <div className="text-sm text-muted [overflow-wrap:anywhere] [word-break:break-word]">{children}</div>
         {footer && <div className="mt-6 flex justify-end gap-3">{footer}</div>}
       </div>
     </div>

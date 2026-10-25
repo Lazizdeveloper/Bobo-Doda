@@ -38,6 +38,7 @@ import {
   type StaffPayout,
   type StaffLedgerTransaction,
 } from "@/lib/api/admin";
+import { adminErrorText } from "@/lib/admin-error-text";
 import type { WithdrawalRequest } from "@/lib/types";
 import { formatDate, formatMoney } from "@/lib/format";
 
@@ -123,6 +124,10 @@ export default function PaymentsPage() {
       setRejectError("Rad etish sababini kamida 5 ta belgidan iborat qilib yozing.");
       return;
     }
+    if (rejectReason.length > 500) {
+      setRejectError("Rad etish sababi 500 ta belgidan oshmasligi shart.");
+      return;
+    }
     setWithdrawalActionBusy(true);
     setRejectError("");
     try {
@@ -132,8 +137,8 @@ export default function PaymentsPage() {
       setSelectedWithdrawal(null);
       setRejectReason("");
       load();
-    } catch {
-      setRejectError("Rad etishda xatolik yuz berdi.");
+    } catch (err) {
+      setRejectError(adminErrorText(err));
     } finally {
       setWithdrawalActionBusy(false);
     }
@@ -148,6 +153,10 @@ export default function PaymentsPage() {
       setRefundError("Sabab kamida 10 ta belgidan iborat bo'lishi kerak.");
       return;
     }
+    if (refundReason.length > 500) {
+      setRefundError("Sabab 500 ta belgidan oshmasligi shart.");
+      return;
+    }
     setBusy(true);
     setRefundError("");
     try {
@@ -157,8 +166,8 @@ export default function PaymentsPage() {
       setRefundContractId("");
       setRefundReason("");
       load();
-    } catch {
-      setRefundError("Xatolik yuz berdi — shartnoma ID yoki holatini tekshiring.");
+    } catch (err) {
+      setRefundError(adminErrorText(err));
     } finally {
       setBusy(false);
     }
@@ -434,12 +443,40 @@ export default function PaymentsPage() {
           </>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 [overflow-wrap:anywhere] [word-break:break-word]">
           <p className="text-xs text-muted">
             Summa har doim shartnomaning to'langan summasidan avtomatik olinadi — qo'lda kiritilmaydi. Faqat pre-settlement (faol, to'langan) shartnomalar uchun mumkin.
           </p>
           <Input label="Shartnoma ID" value={refundContractId} onChange={(e) => setRefundContractId(e.target.value)} />
-          <Textarea label="Sabab" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} rows={4} error={refundError} />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-ink">
+                Sabab <span className="text-danger">*</span>
+              </label>
+              <span className={`text-2xs font-mono font-medium ${refundReason.length > 500 ? "text-danger font-bold" : refundReason.trim().length >= 10 ? "text-success" : "text-muted"}`}>
+                {refundReason.length}/500
+              </span>
+            </div>
+            <Textarea
+              value={refundReason}
+              onChange={(e) => {
+                setRefundReason(e.target.value);
+                if (refundError) setRefundError("");
+              }}
+              rows={4}
+              maxLength={500}
+              placeholder="Qaytarish sababini batafsil yozing (10–500 belgi)..."
+              error={
+                refundError ||
+                (refundReason.length > 0 && refundReason.trim().length < 10
+                  ? "Sabab kamida 10 ta belgidan iborat bo‘lishi shart"
+                  : refundReason.length > 500
+                  ? "Sabab 500 ta belgidan oshmasligi shart"
+                  : undefined)
+              }
+              className="[overflow-wrap:anywhere] [word-break:break-word]"
+            />
+          </div>
         </div>
       </Modal>
 
@@ -452,24 +489,50 @@ export default function PaymentsPage() {
             <Button variant="ghost" onClick={() => setRejectModalOpen(false)} disabled={withdrawalActionBusy}>
               Bekor qilish
             </Button>
-            <Button variant="danger" loading={withdrawalActionBusy} onClick={handleRejectWithdrawal}>
+            <Button
+              variant="danger"
+              loading={withdrawalActionBusy}
+              onClick={handleRejectWithdrawal}
+              disabled={withdrawalActionBusy || rejectReason.trim().length < 5 || rejectReason.length > 500}
+            >
               Rad etish
             </Button>
           </>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 [overflow-wrap:anywhere] [word-break:break-word]">
           <p className="text-xs text-muted">
-            {selectedWithdrawal?.userName} foydalanuvchisining {selectedWithdrawal && formatMoney(selectedWithdrawal.amount)} so&apos;m yechish arizasini rad etish sababini yozing. Ushbu sabab mutaxassisga ko&apos;rsatiladi.
+            {selectedWithdrawal?.userName} foydalanuvchisining {selectedWithdrawal && formatMoney(selectedWithdrawal.amount)} yechish arizasini rad etish sababini yozing. Ushbu sabab mutaxassisga ko&apos;rsatiladi.
           </p>
-          <Textarea
-            label="Rad etish sababi"
-            placeholder="Masalan: Karta raqami noto'g'ri yoki karta bloklangan"
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            rows={3}
-            error={rejectError}
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-ink">
+                Rad etish sababi <span className="text-danger">*</span>
+              </label>
+              <span className={`text-2xs font-mono font-medium ${rejectReason.length > 500 ? "text-danger font-bold" : rejectReason.trim().length >= 5 ? "text-success" : "text-muted"}`}>
+                {rejectReason.length}/500
+              </span>
+            </div>
+            <Textarea
+              placeholder="Masalan: Karta raqami noto'g'ri yoki karta bloklangan (5–500 belgi)"
+              value={rejectReason}
+              onChange={(e) => {
+                setRejectReason(e.target.value);
+                if (rejectError) setRejectError("");
+              }}
+              rows={3}
+              maxLength={500}
+              error={
+                rejectError ||
+                (rejectReason.length > 0 && rejectReason.trim().length < 5
+                  ? "Sabab kamida 5 ta belgidan iborat bo‘lishi shart"
+                  : rejectReason.length > 500
+                  ? "Sabab 500 ta belgidan oshmasligi shart"
+                  : undefined)
+              }
+              className="[overflow-wrap:anywhere] [word-break:break-word]"
+            />
+          </div>
         </div>
       </Modal>
     </>

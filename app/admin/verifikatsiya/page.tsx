@@ -62,8 +62,10 @@ export default function VerificationQueuePage() {
   /* Global qidiruvdan kelgan deep-link — yozuvni topib ochadi */
   useAdminDeepLink("userId", findVerificationByUserId, setSelectedRecord);
 
+  /* Filtr o'zgarganda birinchi sahifaga qaytamiz va ochiq modalni yopamiz */
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedRecord(null);
   }, [debouncedSearch, statusFilter, rowsPerPage]);
 
   /* KPI — faset sanoqlaridan */
@@ -104,14 +106,19 @@ export default function VerificationQueuePage() {
 
   const handleReject = async () => {
     if (!selectedRecord) return;
-    if (note.trim().length < 10) {
-      setActionError("Rad etish sababi kamida 10 belgidan iborat bo'lishi shart.");
+    const trimmed = note.trim();
+    if (trimmed.length < 5) {
+      setActionError("Rad etish sababi kamida 5 ta belgidan iborat bo‘lishi shart.");
+      return;
+    }
+    if (note.length > 500) {
+      setActionError("Rad etish sababi 500 ta belgidan oshmasligi shart.");
       return;
     }
     setActionLoading(true);
     setActionError("");
     try {
-      await adminModerate("kyc", selectedRecord.id || selectedRecord.userId, { outcome: "reject", note: note.trim() });
+      await adminModerate("kyc", selectedRecord.id || selectedRecord.userId, { outcome: "reject", note: trimmed });
       setSelectedRecord(null);
       setNote("");
       load();
@@ -405,22 +412,59 @@ export default function VerificationQueuePage() {
             <InternalNotesWidget targetId={selectedRecord.userId} targetType="kyc" />
 
             {/* Rejection / Note Input */}
-            <div className="flex flex-col gap-2 border-t border-line pt-3">
+            <div className="flex flex-col gap-2 border-t border-line pt-3 [overflow-wrap:anywhere] [word-break:break-word]">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-ink">
+                  {selectedRecord.status === "rad_etilgan" ? "Rad etish sababi" : "Rad etish sababi (5–500 belgi)"}
+                </label>
+                {selectedRecord.status === "korib_chiqilmoqda" && (
+                  <span
+                    className={`text-2xs font-mono font-medium ${
+                      note.length > 500
+                        ? "text-danger font-bold"
+                        : note.trim().length >= 5
+                        ? "text-success"
+                        : "text-muted"
+                    }`}
+                    aria-live="polite"
+                  >
+                    {note.length}/500
+                  </span>
+                )}
+              </div>
               <Textarea
-                label={selectedRecord.status === "rad_etilgan" ? "Rad etish sababi" : "Rad etilsa - sabab yoki sharh (Kamida 10 ta belgi)"}
                 placeholder="Masalan: Hujjat rasmi xira, ismlar mos kelmadi..."
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(e) => {
+                  setNote(e.target.value);
+                  if (actionError) setActionError("");
+                }}
                 maxLength={500}
-                error={actionError}
+                error={
+                  actionError ||
+                  (note.length > 0 && note.trim().length < 5
+                    ? "Sabab kamida 5 ta belgidan iborat bo‘lishi shart"
+                    : note.length > 500
+                    ? "Sabab 500 ta belgidan oshmasligi shart"
+                    : undefined)
+                }
                 disabled={selectedRecord.status !== "korib_chiqilmoqda"}
+                className="[overflow-wrap:anywhere] [word-break:break-word]"
               />
+              <p className="text-3xs text-muted">
+                Rad etish uchun sabab 5–500 belgi oralig‘ida bo‘lishi shart. Ushbu izoh foydalanuvchiga va auditga yoziladi.
+              </p>
             </div>
 
             {/* Decision Actions */}
             {selectedRecord.status === "korib_chiqilmoqda" && (
               <div className="grid grid-cols-2 gap-2 border-t border-line pt-3">
-                <Button variant="danger" className="justify-center" onClick={handleReject} disabled={actionLoading}>
+                <Button
+                  variant="danger"
+                  className="justify-center"
+                  onClick={handleReject}
+                  disabled={actionLoading || note.trim().length < 5 || note.length > 500}
+                >
                   Rad etish
                 </Button>
                 <Button variant="primary" className="justify-center" onClick={handleApprove} disabled={actionLoading}>

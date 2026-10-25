@@ -6,16 +6,16 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
     orqali `/home/laziz/...` ostiga ko'chirilgan backend jurnali — steam-run
     sandboxi tashqi `/tmp` yo'llarini ko'rmaydi. */
 export const OTP_LOG_PATH =
-  process.env.E2E_OTP_LOG_PATH || "/home/laziz/bobololadono/scratch/backend-mirror.log";
+  process.env.E2E_OTP_LOG_PATH || "/home/laziz/Bobo-Doda/scratch/backend-mirror.log";
 export const DB_CMD =
   process.env.E2E_DB_CMD ||
-  "PGPASSWORD=app psql -h 127.0.0.1 -p 5432 -U bobololadono_app -d bobololadono";
+  "PGPASSWORD=app psql -h 127.0.0.1 -p 55433 -U bobololadono_app -d bobololadono_e2e";
 export const PAYMENT_TEST_WEBHOOK_SECRET =
   process.env.PAYMENT_TEST_WEBHOOK_SECRET || "test-only-insecure-secret-change-me";
 export const API_BASE = process.env.E2E_API_URL || "http://localhost:4000/api/v1";
 export const CATEGORY_ID = process.env.E2E_CATEGORY_ID || "01a092fb-037e-740b-9b72-83002432b73c"; // phase4-design (lokal seed)
 export const REDIS_CLI =
-  process.env.E2E_REDIS_CLI || "redis-cli -h 127.0.0.1 -p 6379";
+  process.env.E2E_REDIS_CLI || "redis-cli -h 127.0.0.1 -p 6390";
 
 /** Bosqich 21 — bitta telefon+maqsad uchun request-otp cooldown 60s
     (`OtpService`). Bir xil maqsadda haqiqiy UI orqali IKKI MARTA so'rashni
@@ -24,6 +24,15 @@ export const REDIS_CLI =
     to'g'ridan-to'g'ri Redis'dan o'chiramiz. */
 export function flushOtpCooldown(phone: string, purpose: "REGISTER" | "PASSWORD_RESET"): void {
   execSync(`${REDIS_CLI} DEL "ratelimit:cd:otp:cooldown:${phone}:${purpose}"`);
+}
+
+/** E2E testlarida staff login rate limitini (10 urinish/15 min) tozalash */
+export function flushStaffLoginRateLimit(): void {
+  try {
+    execSync(
+      `${REDIS_CLI} --raw eval "for _,k in ipairs(redis.call('keys', 'ratelimit:hit:staff-login:*')) do redis.call('del', k) end" 0 2>/dev/null`
+    );
+  } catch {}
 }
 
 /** `registerViaUi`/E2E fixture hisoblari uchun bir xil parol. */
@@ -55,10 +64,31 @@ export function freshPhone(): string {
 }
 
 export function latestOtpFor(phone: string): string {
-  const log = execSync(`grep "SMS DEV" "${OTP_LOG_PATH}" | grep "${phone}" | tail -1`).toString();
-  const m = log.match(/code: '(\d{6})'/);
-  if (!m) throw new Error(`OTP topilmadi (${phone}) — backend-mirror.log yangilanganmi? RUNBOOK §14ga qarang.`);
-  return m[1];
+  try {
+    const log = execSync(`grep "SMS DEV" "${OTP_LOG_PATH}" 2>/dev/null | grep "${phone}" | tail -1`).toString();
+    const m = log.match(/code: '(\d{6})'/);
+    if (m) return m[1];
+  } catch {
+    // fallback to Redis
+  }
+
+  try {
+    const keys = execSync(`${REDIS_CLI} keys "bull:otp-sms:*" 2>/dev/null`).toString().trim().split("\n");
+    for (const key of keys.reverse()) {
+      if (!key || key.endsWith(":events") || key.endsWith(":id") || key.endsWith(":stalled-check")) continue;
+      const dataStr = execSync(`${REDIS_CLI} hget "${key.trim()}" data 2>/dev/null`).toString().trim();
+      if (dataStr) {
+        const parsed = JSON.parse(dataStr);
+        if (parsed.phone === phone && parsed.code) {
+          return parsed.code;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  throw new Error(`OTP topilmadi (${phone}) — backend-mirror.log yoki Redis'da yo'q. RUNBOOK §14ga qarang.`);
 }
 
 /** Bosqich 21 — haqiqiy `/royxatdan-otish` UI oqimi orqali YANGI hisob
@@ -72,20 +102,47 @@ export function latestOtpFor(phone: string): string {
     admin E2E stack'ida (`:3010`, o'z OTP logi bilan) ham qayta ishlatish
     uchun — sukut qiymatlar asosiy stack (`:3000`, `backend-mirror.log`)
     bilan bir xil, mavjud chaqiruv joylari o'zgarmaydi. */
+export async function startRegistration(
+  page: Page,
+  phone: string,
+  opts: { baseUrl?: string } = {},
+): Promise<{ devOtp?: string }> {
+  const baseUrl = opts.baseUrl ?? "";
+  try {
+    execSync(`${REDIS_CLI} DEL "ratelimit:cd:otp:cooldown:${phone}:REGISTER" "ratelimit:hit:otp:ip:::1" "ratelimit:hit:otp:ip:127.0.0.1" 2>/dev/null`);
+  } catch {}
+  await page.goto(`${baseUrl}/royxatdan-otish`, { waitUntil: "networkidle" });
+  const local = phone.replace("+998", "");
+  await page.locator("input").first().fill(local);
+  const termsCheckbox = page.locator("#agree-terms-checkbox");
+  if (await termsCheckbox.count()) {
+    await termsCheckbox.check();
+  }
+
+  let interceptedDevOtp: string | undefined;
+  const otpPromise = page.waitForResponse(
+    (res) => res.url().includes("/auth/register/request-otp") && res.status() === 200,
+    { timeout: 8000 },
+  ).then(async (res) => {
+    const json = (await res.json().catch(() => ({}))) as { devOtp?: string };
+    if (json?.devOtp) interceptedDevOtp = String(json.devOtp);
+  }).catch(() => {});
+
+  await page.getByRole("button", { name: /Kod yuborish/i }).click();
+  await otpPromise;
+  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
+  await page.waitForTimeout(700);
+  return { devOtp: interceptedDevOtp };
+}
+
 export async function registerViaUi(
   page: Page,
   phone: string,
   opts: { baseUrl?: string; getCode?: (phone: string) => string } = {},
 ): Promise<void> {
-  const baseUrl = opts.baseUrl ?? "";
   const getCode = opts.getCode ?? latestOtpFor;
-  await page.goto(`${baseUrl}/royxatdan-otish`, { waitUntil: "networkidle" });
-  const local = phone.replace("+998", "");
-  await page.locator("input").first().fill(local);
-  await page.getByRole("button", { name: /Kod yuborish/i }).click();
-  await page.waitForURL("**/royxatdan-otish/tasdiqlash", { timeout: 10_000 });
-  await page.waitForTimeout(700); // backend log flush uchun
-  const code = getCode(phone);
+  const { devOtp } = await startRegistration(page, phone, opts);
+  const code = devOtp ?? getCode(phone);
   await page.locator("input").first().fill(code);
   await page.getByRole("button", { name: /Tasdiqlash/i }).click();
   await page.waitForURL("**/royxatdan-otish/parol", { timeout: 10_000 });

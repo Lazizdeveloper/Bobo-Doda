@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { MilestoneItem } from "@/components/shared/MilestoneItem";
 import { MilestoneProgress } from "@/components/shared/MilestoneProgress";
+import { DisputeControl } from "@/components/shared/DisputeControl";
 import { DisputeSummary } from "@/components/shared/DisputeSummary";
 import { ContractStatusBadge } from "@/components/shared/StatusBadge";
 import { ReceiptModal } from "@/components/shared/ReceiptModal";
@@ -83,15 +84,21 @@ export default function ShartnomaWorkroomPage() {
   async function handleSubmitWork(e: FormEvent) {
     e.preventDefault();
     if (!submitTarget || !contract) return;
-    if (!workLink.trim() && !workNote.trim()) {
+    const trimmedLink = workLink.trim();
+    const trimmedNote = workNote.trim();
+    if (!trimmedLink && !trimmedNote) {
       setLinkError(t("sm.errLink"));
+      return;
+    }
+    if (trimmedLink && !/^https?:\/\//i.test(trimmedLink)) {
+      setLinkError("Havola to'g'ri formatda bo'lishi kerak (https://...)");
       return;
     }
     setSubmitting(true);
     try {
       await milestonesService.submit(contract.id, submitTarget.id, {
-        link: workLink.trim() || undefined,
-        note: workNote.trim() || undefined,
+        link: trimmedLink || undefined,
+        note: trimmedNote || undefined,
       });
       setMilestones(await milestonesService.list(contract.id));
       toast(t("sm.done"));
@@ -190,8 +197,23 @@ export default function ShartnomaWorkroomPage() {
           </div>
         )}
 
-        {/* Escrow kafolati — real to'lov tasdiqlangan */}
-        {funded && (
+        {/* Shartnoma yakunlangan holati */}
+        {contract.status === "yakunlangan" && (
+          <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-emerald-500">
+            <div className="flex items-start gap-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 text-lg shadow-2xs">🎉</span>
+              <div className="flex-1">
+                <h3 className="font-heading text-sm font-black text-ink tracking-tight">Shartnoma muvaffaqiyatli yakunlandi</h3>
+                <p className="mt-2 text-xs sm:text-sm text-ink/90 leading-relaxed">
+                  Barcha ishlar qabul qilindi. To&apos;lov balansingizga to&apos;liq o&apos;tkazib berildi.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Escrow kafolati — real to'lov tasdiqlangan va shartnoma faol */}
+        {funded && contract.status !== "yakunlangan" && contract.status !== "bekor_qilingan" && (
           <div className="mt-4 rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-xs border-l-4 border-l-emerald-500">
             <div className="flex items-start gap-3.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 text-lg shadow-2xs">🛡️</span>
@@ -250,6 +272,12 @@ export default function ShartnomaWorkroomPage() {
           role="mutaxassis"
         />
       </section>
+
+      {contract.status === "faol" && !disputeOpen && (
+        <div className="flex justify-end gap-2">
+          <DisputeControl contractId={contract.id} onOpened={reload} />
+        </div>
+      )}
 
       {/* Ishni topshirish modali */}
       <Modal
