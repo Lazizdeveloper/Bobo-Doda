@@ -95,7 +95,7 @@ export function OfferModal({
         service?.title ||
         subject.trim() ||
         (mode === "message" ? "Loyiha bo'yicha muloqot" : "Yangi taklif");
-      const finalBudget = Number(budget) > 0 ? Number(budget) : 50_000;
+      const finalBudget = Number(budget) > 0 ? Number(budget) : 1_000;
 
       const offer = await offersService.create({
         sellerId,

@@ -1178,7 +1178,7 @@ export const en: Record<string, string> = {
   "jwiz.published": "Post published — proposals will start arriving",
   "jwiz.reviewHint": "Check the details. Once published, specialists will be able to submit their proposals.",
   "jwiz.errBudget": "Maximum budget cannot be less than minimum budget",
-  "jwiz.errBudgetMin": "Minimum budget must be at least 50,000 UZS",
+  "jwiz.errBudgetMin": "Minimum budget must be at least 1,000 UZS",
   "jwiz.deadlineLabel": "Deadline (optional)",
   "jwiz.deadlineHint": "Lets specialists give a realistic proposal — leave blank if flexible",
   "jwiz.errDeadline": "The deadline can't be in the past",

@@ -78,8 +78,8 @@ export default function TaklifYuborishPage() {
     e.preventDefault();
     if (!job) return;
     const next: Record<string, string> = {};
-    if (!bid || Number(bid) < 50_000) {
-      next.bid = Number(bid) > 0 ? "Taklif summasi kamida 50 000 so‘m bo‘lishi kerak" : t("prop.errBid");
+    if (!bid || Number(bid) < 1_000) {
+      next.bid = Number(bid) > 0 ? "Taklif summasi kamida 1 000 so‘m bo‘lishi kerak" : t("prop.errBid");
     }
     if (!deliveryDays || Number(deliveryDays) < 1) {
       next.deliveryDays = t("prop.errDelivery");
@@ -179,7 +179,7 @@ export default function TaklifYuborishPage() {
         <Card padding="lg" className="flex flex-col gap-4">
           <Input
             type="number"
-            min={50000}
+            min={1000}
             label={t("prop.bid")}
             value={bid}
             onChange={(e) => {

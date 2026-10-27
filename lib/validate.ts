@@ -4,8 +4,8 @@
 
 /** Pul summasi uchun yuqori chegara (10 mlrd so'm — real loyihalar ostida) */
 export const MAX_AMOUNT = 10_000_000_000;
-/** Ish e'loni uchun minimal byudjet (50 000 so'm) */
-export const MIN_JOB_BUDGET = 50_000;
+/** Ish e'loni uchun minimal byudjet (1 000 so'm — test uchun vaqtinchalik) */
+export const MIN_JOB_BUDGET = 1_000;
 /** Xizmat bajarish muddati chegaralari (kun) */
 export const MIN_DELIVERY_DAYS = 1;
 export const MAX_DELIVERY_DAYS = 365;

@@ -1369,8 +1369,8 @@ export const proposalsService: ProposalsService = {
     }),
   create: (input) =>
     call(async () => {
-      if (input.bidAmount < 50_000) {
-        throw new Error("MIN_BID_50000");
+      if (input.bidAmount < 1_000) {
+        throw new Error("MIN_BID_1000");
       }
       const me = await http<RealMe>("/me").catch(() => null);
       const uid = me?.id ?? sessionStore.read()?.userId ?? "me";

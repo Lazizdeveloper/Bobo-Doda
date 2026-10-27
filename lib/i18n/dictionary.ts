@@ -2064,8 +2064,8 @@ export const dictionary: Record<string, Entry> = {
     ru: "Максимальный бюджет не может быть меньше минимального",
   },
   "jwiz.errBudgetMin": {
-    uz: "Minimal byudjet kamida 50 000 so'm bo'lishi kerak",
-    ru: "Минимальный бюджет должен быть не менее 50 000 сум",
+    uz: "Minimal byudjet kamida 1 000 so'm bo'lishi kerak",
+    ru: "Минимальный бюджет должен быть не менее 1 000 сум",
   },
   "jwiz.deadlineLabel": { uz: "Muddat (ixtiyoriy)", ru: "Срок (по желанию)" },
   "jwiz.deadlineHint": {

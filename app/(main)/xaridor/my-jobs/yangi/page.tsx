@@ -350,7 +350,7 @@ export default function YangiElonPage() {
                   setBudgetMin(e.target.value);
                   if (errors.budget) setErrors((prev) => ({ ...prev, budget: "" }));
                 }}
-                placeholder="50000"
+                placeholder="1000"
                 hint={`Kamida ${formatMoney(MIN_JOB_BUDGET, lang)}`}
               />
               <Input
