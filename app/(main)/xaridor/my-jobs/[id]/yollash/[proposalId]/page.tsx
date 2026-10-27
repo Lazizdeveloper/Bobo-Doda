@@ -130,8 +130,10 @@ export default function YollashPage() {
       );
       toast(t("hire.done"));
       router.push(`/xaridor/contracts/${contract.id}`);
-    } catch {
-      toast(t("common.error"), "error");
+    } catch (err) {
+      console.error("handleHire error:", err);
+      const msg = err instanceof Error ? err.message : t("common.error");
+      toast(msg, "error");
       setHiring(false);
     }
   }

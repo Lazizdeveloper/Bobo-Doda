@@ -1502,14 +1502,14 @@ export const proposalsService: ProposalsService = {
       // Real backend orqali shartnoma yaratish
       const servicesPage = await http<Page<RealService>>(`/services${toQuery({ perPage: 50 })}`).catch(() => null);
       const activeService =
-        servicesPage?.items?.find((s) => s.sellerId === foundProp?.sellerId && s.status === "ACTIVE") ||
-        servicesPage?.items?.find((s) => s.status === "ACTIVE");
+        servicesPage?.items?.find((s) => s.sellerId === foundProp?.sellerId) ||
+        servicesPage?.items?.[0];
 
       if (activeService) {
         const sumMilestones = milestones.reduce((sum, m) => sum + m.amount, 0);
         const adaptedMilestones = milestones.map((m) => ({
-          title: m.title,
-          description: "",
+          title: m.title || "Ish bosqichi",
+          description: m.description || "",
           amount: m.amount,
           dueAt: m.dueDate ? new Date(m.dueDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString(),
         }));
