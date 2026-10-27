@@ -51,9 +51,18 @@ export default function TakliflarimPage() {
       jobsService.list(),
       offersService.listIncoming(),
     ])
-      .then(([proposalList, jobList, offerList]) => {
+      .then(async ([proposalList, jobList, offerList]) => {
         setProposals(proposalList);
-        setJobs(jobList);
+        const map = new Map(jobList.map((j) => [j.id, j]));
+        for (const p of proposalList) {
+          if (!map.has(p.jobId)) {
+            try {
+              const found = await jobsService.get(p.jobId);
+              if (found) map.set(p.jobId, found);
+            } catch {}
+          }
+        }
+        setJobs(Array.from(map.values()));
         setOffers(offerList);
       })
       .catch(setLoadError);
@@ -185,7 +194,7 @@ export default function TakliflarimPage() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <h3 className="font-heading text-sm font-bold text-ink hover:text-primary transition-colors">
-                      {job?.title ?? "—"}
+                      {job?.title ?? (proposal as any).jobTitle ?? "Ish e'loni"}
                     </h3>
                     <ProposalStatusBadge status={proposal.status} />
                   </div>

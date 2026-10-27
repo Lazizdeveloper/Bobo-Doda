@@ -63,6 +63,14 @@ export class JobsController {
     return this.jobs.withdrawProposal(proposalId, user.sub);
   }
 
+  @ApiBearerAuth()
+  @Post('proposals/:proposalId/hire')
+  @HttpCode(200)
+  @UseGuards(AccountStatusGuard)
+  async hireProposal(@Param('proposalId') proposalId: string) {
+    return this.jobs.hireProposal(proposalId);
+  }
+
   @Public()
   @Get(':id/proposals')
   async listProposals(@Param('id') id: string) {

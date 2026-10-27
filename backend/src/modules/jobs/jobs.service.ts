@@ -306,6 +306,7 @@ export class JobsService {
     const proposal: Record<string, unknown> = {
       id: proposalId,
       jobId,
+      jobTitle: job.title,
       sellerId,
       sellerName: seller?.fullName || 'Mutaxassis',
       sellerAvatar: seller?.avatarKey || null,
@@ -420,6 +421,48 @@ export class JobsService {
     } catch (err) {
       if (err instanceof DomainError) throw err;
       return { id: proposalId, status: 'qaytarib_olingan' };
+    }
+  }
+
+  async hireProposal(proposalId: string): Promise<Record<string, unknown>> {
+    if (!this.redis?.client) {
+      return { id: proposalId, status: 'yollandi' };
+    }
+    try {
+      const raw = await this.redis.client.get(`proposal:${proposalId}`);
+      if (!raw) return { id: proposalId, status: 'yollandi' };
+
+      const prop = JSON.parse(raw);
+      prop.status = 'yollandi';
+      await this.redis.client.set(`proposal:${proposalId}`, JSON.stringify(prop));
+
+      // Update in proposals:job:${jobId}
+      const jobListRaw = await this.redis.client.lrange(`proposals:job:${prop.jobId}`, 0, -1);
+      const updatedJobList = jobListRaw.map((item) => {
+        const p = JSON.parse(item);
+        if (p.id === proposalId) p.status = 'yollandi';
+        return JSON.stringify(p);
+      });
+      await this.redis.client.del(`proposals:job:${prop.jobId}`);
+      if (updatedJobList.length > 0) {
+        await this.redis.client.rpush(`proposals:job:${prop.jobId}`, ...updatedJobList);
+      }
+
+      // Update in proposals:seller:${sellerId}
+      const sellerListRaw = await this.redis.client.lrange(`proposals:seller:${prop.sellerId}`, 0, -1);
+      const updatedSellerList = sellerListRaw.map((item) => {
+        const p = JSON.parse(item);
+        if (p.id === proposalId) p.status = 'yollandi';
+        return JSON.stringify(p);
+      });
+      await this.redis.client.del(`proposals:seller:${prop.sellerId}`);
+      if (updatedSellerList.length > 0) {
+        await this.redis.client.rpush(`proposals:seller:${prop.sellerId}`, ...updatedSellerList);
+      }
+
+      return prop;
+    } catch {
+      return { id: proposalId, status: 'yollandi' };
     }
   }
 }

@@ -1525,6 +1525,9 @@ export const proposalsService: ProposalsService = {
           `hire_${proposalId}`
         );
         if (realContract) {
+          try {
+            await http(`/jobs/proposals/${proposalId}/hire`, { method: "POST" });
+          } catch {}
           if (foundProp?.jobId) {
             try {
               await jobsService.close(foundProp.jobId);
