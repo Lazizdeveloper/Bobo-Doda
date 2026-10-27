@@ -56,19 +56,24 @@ export default function YollashPage() {
         const myJobs = await jobsService.listMine().catch(() => []);
         return myJobs.find((j) => j.id === params.id) ?? null;
       }),
-      proposalsService.get(params.proposalId),
+      proposalsService.get(params.proposalId).then(async (prop) => {
+        if (prop) return prop;
+        const jobProps = await proposalsService.listForJob(params.id).catch(() => []);
+        return jobProps.find((p) => p.id === params.proposalId) ?? null;
+      }),
     ])
       .then(async ([foundJob, found]) => {
         setJob(foundJob);
         setProposal(found);
         if (found) {
-          setSpec(await catalogService.getSpecialist(found.sellerId));
+          const specData = await catalogService.getSpecialist(found.sellerId).catch(() => null);
+          setSpec(specData);
           /* Boshlang'ich: butun taklif bitta bosqich sifatida */
           setRows([
             {
-              title: "",
+              title: "1-bosqich: Ishni to'liq bajarish",
               amount: String(found.bidAmount),
-              dueDate: defaultDue(14),
+              dueDate: defaultDue(found.estimatedDeliveryDays || 7),
             },
           ]);
         }

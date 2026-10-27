@@ -1496,6 +1496,9 @@ export const proposalsService: ProposalsService = {
           }
         } catch {}
       }
+      if (!foundProp) {
+        foundProp = await proposalsService.get(proposalId);
+      }
       // Real backend orqali shartnoma yaratish
       const servicesPage = await http<Page<RealService>>(`/services${toQuery({ perPage: 50 })}`).catch(() => null);
       const activeService =
