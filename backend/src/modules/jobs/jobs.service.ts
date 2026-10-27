@@ -20,9 +20,9 @@ export class JobsService {
   ) {}
 
   async create(buyerId: string, dto: CreateJobDto): Promise<JobWithRelations> {
-    if (dto.budgetMin < 50_000) {
-      throw new DomainError('INVALID_AMOUNT', "Minimal byudjet kamida 50 000 so'm bo'lishi kerak", {
-        fieldErrors: { budgetMin: "Minimal byudjet kamida 50 000 so'm bo'lishi kerak" },
+    if (dto.budgetMin < 1_000) {
+      throw new DomainError('INVALID_AMOUNT', "Minimal byudjet kamida 1 000 so'm bo'lishi kerak", {
+        fieldErrors: { budgetMin: "Minimal byudjet kamida 1 000 so'm bo'lishi kerak" },
       });
     }
     if (dto.budgetMin > dto.budgetMax) {

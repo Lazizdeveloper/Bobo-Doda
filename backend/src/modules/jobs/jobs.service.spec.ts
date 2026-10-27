@@ -74,7 +74,7 @@ describe('JobsService', () => {
       expect(prisma.job?.create).toHaveBeenCalled();
     });
 
-    it('throws INVALID_AMOUNT when budgetMin < 50_000', async () => {
+    it('throws INVALID_AMOUNT when budgetMin < 1_000', async () => {
       await expect(
         service.create('01925b6a-8888-7000-8000-000000000002', {
           title: 'Veb-sayt yaratish kerak',
