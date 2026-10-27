@@ -357,5 +357,70 @@ export class JobsService {
       return [];
     }
   }
+
+  async getProposal(proposalId: string): Promise<Record<string, unknown> | null> {
+    if (!this.redis?.client) return null;
+    try {
+      const raw = await this.redis.client.get(`proposal:${proposalId}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async withdrawProposal(proposalId: string, sellerId: string): Promise<Record<string, unknown>> {
+    if (!this.redis?.client) {
+      return { id: proposalId, status: 'qaytarib_olingan' };
+    }
+    try {
+      const raw = await this.redis.client.get(`proposal:${proposalId}`);
+      if (!raw) {
+        return { id: proposalId, status: 'qaytarib_olingan' };
+      }
+      const prop = JSON.parse(raw);
+      if (prop.sellerId !== sellerId) {
+        throw new DomainError('FORBIDDEN', 'Bu taklif sizga tegishli emas');
+      }
+      prop.status = 'qaytarib_olingan';
+      await this.redis.client.set(`proposal:${proposalId}`, JSON.stringify(prop));
+
+      // Update in proposals:job:${jobId}
+      const jobListRaw = await this.redis.client.lrange(`proposals:job:${prop.jobId}`, 0, -1);
+      const updatedJobList = jobListRaw.map((item) => {
+        const p = JSON.parse(item);
+        if (p.id === proposalId) p.status = 'qaytarib_olingan';
+        return JSON.stringify(p);
+      });
+      await this.redis.client.del(`proposals:job:${prop.jobId}`);
+      if (updatedJobList.length > 0) {
+        await this.redis.client.rpush(`proposals:job:${prop.jobId}`, ...updatedJobList);
+      }
+
+      // Update in proposals:seller:${sellerId}
+      const sellerListRaw = await this.redis.client.lrange(`proposals:seller:${sellerId}`, 0, -1);
+      const updatedSellerList = sellerListRaw.map((item) => {
+        const p = JSON.parse(item);
+        if (p.id === proposalId) p.status = 'qaytarib_olingan';
+        return JSON.stringify(p);
+      });
+      await this.redis.client.del(`proposals:seller:${sellerId}`);
+      if (updatedSellerList.length > 0) {
+        await this.redis.client.rpush(`proposals:seller:${sellerId}`, ...updatedSellerList);
+      }
+
+      // Decrement job proposalsCount
+      try {
+        await this.prisma.job.update({
+          where: { id: prop.jobId },
+          data: { proposalsCount: { decrement: 1 } },
+        });
+      } catch {}
+
+      return prop;
+    } catch (err) {
+      if (err instanceof DomainError) throw err;
+      return { id: proposalId, status: 'qaytarib_olingan' };
+    }
+  }
 }
 

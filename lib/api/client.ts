@@ -1343,6 +1343,10 @@ export const proposalsService: ProposalsService = {
     }),
   get: (id: string) =>
     call(async () => {
+      try {
+        const remote = await http<Model.Proposal>(`/jobs/proposals/${id}`);
+        if (remote && remote.id) return remote;
+      } catch {}
       if (typeof window !== "undefined") {
         try {
           const all: Model.Proposal[] = JSON.parse(localStorage.getItem("bbd_my_proposals") || "[]");
@@ -1536,16 +1540,21 @@ export const proposalsService: ProposalsService = {
     }),
   withdraw: (id) =>
     call(async () => {
+      let updated: Model.Proposal | null = null;
+      try {
+        const remote = await http<Model.Proposal>(`/jobs/proposals/${id}/withdraw`, { method: "POST" });
+        if (remote && remote.id) updated = remote;
+      } catch {}
+
       if (typeof window !== "undefined") {
         try {
-          let updated: Model.Proposal | null = null;
           const myKey = "bbd_my_proposals";
           const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
           const found = existingMyProps.find((p) => p.id === id);
           if (found) {
             found.status = "qaytarib_olingan";
             localStorage.setItem(myKey, JSON.stringify(existingMyProps));
-            updated = found;
+            if (!updated) updated = found;
           }
 
           for (let i = 0; i < localStorage.length; i++) {
@@ -1560,10 +1569,10 @@ export const proposalsService: ProposalsService = {
               }
             }
           }
-          if (updated) return updated;
         } catch {}
       }
-      throw new Error("PROPOSAL_NOT_FOUND");
+      if (updated) return updated;
+      return { id, status: "qaytarib_olingan" } as Model.Proposal;
     }),
 };
 

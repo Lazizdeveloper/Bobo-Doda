@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, NotFoundException, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '@/modules/auth/decorators/public.decorator';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
@@ -42,6 +42,25 @@ export class JobsController {
   @UseGuards(AccountStatusGuard)
   async listMyProposals(@CurrentUser() user: AccessTokenPayload) {
     return this.jobs.listMyProposals(user.sub);
+  }
+
+  @Public()
+  @Get('proposals/:proposalId')
+  async getProposal(@Param('proposalId') proposalId: string) {
+    const prop = await this.jobs.getProposal(proposalId);
+    if (!prop) throw new NotFoundException('Proposal not found');
+    return prop;
+  }
+
+  @ApiBearerAuth()
+  @Post('proposals/:proposalId/withdraw')
+  @HttpCode(200)
+  @UseGuards(AccountStatusGuard)
+  async withdrawProposal(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('proposalId') proposalId: string,
+  ) {
+    return this.jobs.withdrawProposal(proposalId, user.sub);
   }
 
   @Public()
