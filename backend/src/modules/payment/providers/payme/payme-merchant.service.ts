@@ -89,16 +89,16 @@ export class PaymeMerchantService {
     const paymentId = this.extractPaymentId(params.account);
     const payment = await this.findPaymentOrThrow(paymentId);
     this.assertAmountMatches(payment, params.amount);
-    const activeTx = await this.prisma.paymeTransaction.findFirst({
+    const performedTx = await this.prisma.paymeTransaction.findFirst({
       where: {
         paymentId: payment.id,
-        state: { in: [PAYME_STATE.CREATED, PAYME_STATE.PERFORMED] },
+        state: PAYME_STATE.PERFORMED,
       },
     });
-    if (payment.status !== 'PENDING' || activeTx) {
+    if (payment.status !== 'PENDING' || performedTx) {
       throw new PaymeRpcError(
         PAYME_ERROR.ACCOUNT_NOT_FOUND,
-        'Bu hisob uchun faol transaksiya mavjud yoki to‘lov yakunlangan',
+        'Bu hisob uchun to‘lov allaqachon yakunlangan',
         PAYME_ACCOUNT_FIELD,
       );
     }
@@ -130,13 +130,30 @@ export class PaymeMerchantService {
     }
 
     if (payment.status !== 'PENDING') {
-      // Boshqa Payme transaksiyasi ALLAQACHON shu Payment uchun ochilgan
-      // (yoki Payment endi PENDING emas) — Pesochnitsa -31050 kutiladi
       throw new PaymeRpcError(
         PAYME_ERROR.ACCOUNT_NOT_FOUND,
-        'Bu hisob uchun boshqa transaksiya allaqachon mavjud',
+        'Bu hisob uchun to‘lov allaqachon yakunlangan',
         PAYME_ACCOUNT_FIELD,
       );
+    }
+
+    // Agar avvalgi urinishdan CREATED bo'lib qolib ketgan boshqa tranzaksiya bo'lsa,
+    // uni bekor qilib (CANCELLED_BEFORE_PERFORM) yangi urinishga yo'l ochamiz.
+    const staleCreated = await this.prisma.paymeTransaction.findFirst({
+      where: {
+        paymentId: payment.id,
+        state: PAYME_STATE.CREATED,
+      },
+    });
+    if (staleCreated && staleCreated.paymeTransactionId !== paymeTransactionId) {
+      await this.prisma.paymeTransaction.update({
+        where: { id: staleCreated.id },
+        data: {
+          state: PAYME_STATE.CANCELLED_BEFORE_PERFORM,
+          cancelTime: new Date(),
+          cancelReason: PAYME_REASON.CANCELLED_BEFORE_PERFORM,
+        },
+      });
     }
 
     const id = this.ids.next();

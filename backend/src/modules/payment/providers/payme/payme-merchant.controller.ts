@@ -74,14 +74,19 @@ export class PaymeMerchantController {
 
     const handler = this.methods[rpc.method];
     if (!handler) {
+      this.logger.warn(`Payme RPC method not found: ${rpc.method}`);
       return this.errorResponse(new PaymeRpcError(PAYME_ERROR.METHOD_NOT_FOUND, 'Metod topilmadi'), rpc.id);
     }
 
+    this.logger.log(`[Payme RPC] Incoming ${rpc.method} id=${rpc.id} params=${JSON.stringify(rpc.params)}`);
+
     try {
       const result = await handler(rpc.params);
+      this.logger.log(`[Payme RPC] Success ${rpc.method} id=${rpc.id} result=${JSON.stringify(result)}`);
       return { result, id: rpc.id };
     } catch (err) {
       if (err instanceof PaymeRpcError) {
+        this.logger.warn(`[Payme RPC] Known Error ${rpc.method} id=${rpc.id} code=${err.rpcCode} message=${err.message}`);
         return this.errorResponse(err, rpc.id);
       }
       // Kutilmagan (ichki) xato — mijozga hech qanday stack/SQL/sabab
