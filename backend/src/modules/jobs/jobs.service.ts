@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { JobStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@/infra/prisma/prisma.service';
+import { RedisService } from '@/infra/redis/redis.service';
 import { IdFactory } from '@/common/id/id.factory';
 import { DomainError, ForbiddenError, NotFoundError } from '@/common/errors/domain-error';
 import { somToTiyin } from '@/common/money/money.util';
 import type { Page } from '@/common/pagination/page-query.dto';
 import { CreateJobDto } from './dto/create-job.dto';
+import { CreateProposalDto } from './dto/create-proposal.dto';
 import { ListJobsQueryDto } from './dto/list-jobs-query.dto';
 import type { JobWithRelations } from './dto/job-response.dto';
 import type { AuditActor } from '@/common/audit/audit.service';
@@ -17,6 +19,7 @@ export class JobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ids: IdFactory,
+    @Optional() private readonly redis?: RedisService,
   ) {}
 
   async create(buyerId: string, dto: CreateJobDto): Promise<JobWithRelations> {
@@ -286,6 +289,73 @@ export class JobsService {
     }
 
     return updated;
+  }
+
+  async createProposal(jobId: string, sellerId: string, dto: CreateProposalDto): Promise<Record<string, unknown>> {
+    const job = await this.getByIdOrThrow(jobId);
+    if (job.status !== JobStatus.OPEN) {
+      throw new DomainError('INVALID_INPUT', "Yopilgan ishga taklif yuborib bo'lmaydi");
+    }
+
+    const seller = await this.prisma.user.findUnique({
+      where: { id: sellerId },
+      select: { id: true, fullName: true, avatarKey: true },
+    });
+
+    const proposalId = `prop_${this.ids.next()}`;
+    const proposal: Record<string, unknown> = {
+      id: proposalId,
+      jobId,
+      sellerId,
+      sellerName: seller?.fullName || 'Mutaxassis',
+      sellerAvatar: seller?.avatarKey || null,
+      bidAmount: dto.bidAmount,
+      coverLetter: dto.coverLetter.trim(),
+      screeningAnswers: dto.screeningAnswers || [],
+      attachedImages: dto.attachedImages || [],
+      status: 'korib_chiqilmoqda',
+      createdAt: new Date().toISOString(),
+      estimatedDeliveryDays: dto.estimatedDeliveryDays,
+    };
+
+    if (this.redis?.client) {
+      try {
+        await this.redis.client.rpush(`proposals:job:${jobId}`, JSON.stringify(proposal));
+        await this.redis.client.rpush(`proposals:seller:${sellerId}`, JSON.stringify(proposal));
+        await this.redis.client.set(`proposal:${proposalId}`, JSON.stringify(proposal));
+      } catch {
+        // Redis fallback if offline
+      }
+    }
+
+    try {
+      await this.prisma.job.update({
+        where: { id: jobId },
+        data: { proposalsCount: { increment: 1 } },
+      });
+    } catch {}
+
+    return proposal;
+  }
+
+  async listProposalsForJob(jobId: string): Promise<Record<string, unknown>[]> {
+    if (!this.redis?.client) return [];
+    try {
+      const raw = await this.redis.client.lrange(`proposals:job:${jobId}`, 0, -1);
+      return raw.map((r) => JSON.parse(r));
+    } catch {
+      return [];
+    }
+  }
+
+  async listMyProposals(sellerId: string): Promise<Record<string, unknown>[]> {
+    if (!this.redis?.client) return [];
+    try {
+      const raw = await this.redis.client.lrange(`proposals:seller:${sellerId}`, 0, -1);
+      return raw.map((r) => JSON.parse(r));
+    } catch {
+      return [];
+    }
   }
 }
 

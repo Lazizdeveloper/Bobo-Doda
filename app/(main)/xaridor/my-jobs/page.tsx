@@ -205,7 +205,7 @@ export default function ElonlarimPage() {
               ) : (
                 <div className="flex flex-col gap-4">
                   {filteredJobs.map((job) => {
-                    const count = jobProposalsMap.get(job.id)?.length ?? 0;
+                    const count = Math.max(jobProposalsMap.get(job.id)?.length || 0, job.proposalsCount || 0);
                     return (
                       <Card key={job.id} hoverable className="flex flex-col gap-3">
                         <div className="flex flex-wrap items-center gap-2">

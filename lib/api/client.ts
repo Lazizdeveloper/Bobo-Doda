@@ -1327,6 +1327,10 @@ export const jobsService: JobsService = {
 export const proposalsService: ProposalsService = {
   listMine: () =>
     call(async () => {
+      try {
+        const remote = await http<Model.Proposal[]>("/jobs/proposals/mine");
+        if (Array.isArray(remote) && remote.length > 0) return remote;
+      } catch {}
       if (typeof window !== "undefined") {
         try {
           const me = await http<RealMe>("/me").catch(() => null);
@@ -1359,6 +1363,10 @@ export const proposalsService: ProposalsService = {
     }),
   listForJob: (jobId: string) =>
     call(async () => {
+      try {
+        const remote = await http<Model.Proposal[]>(`/jobs/${jobId}/proposals`);
+        if (Array.isArray(remote) && remote.length > 0) return remote;
+      } catch {}
       if (typeof window !== "undefined") {
         try {
           const stored = localStorage.getItem(`bbd_proposals_${jobId}`);
@@ -1372,35 +1380,55 @@ export const proposalsService: ProposalsService = {
       if (input.bidAmount < 1_000) {
         throw new Error("MIN_BID_1000");
       }
-      const me = await http<RealMe>("/me").catch(() => null);
-      const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
-      const proposal: Model.Proposal = {
-        id: `prop_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        jobId: input.jobId,
-        sellerId: uid,
-        bidAmount: input.bidAmount,
-        coverLetter: input.coverLetter,
-        screeningAnswers: input.screeningAnswers || [],
-        attachedImages: input.attachedImages || [],
-        status: "korib_chiqilmoqda",
-        createdAt: new Date().toISOString(),
-        estimatedDeliveryDays: input.estimatedDeliveryDays,
-      };
+      let proposal: Model.Proposal | null = null;
+      try {
+        const res = await http<Model.Proposal>(`/jobs/${input.jobId}/proposals`, {
+          method: "POST",
+          body: {
+            bidAmount: input.bidAmount,
+            coverLetter: input.coverLetter,
+            screeningAnswers: input.screeningAnswers || [],
+            attachedImages: (input.attachedImages || []).slice(0, 5),
+            estimatedDeliveryDays: input.estimatedDeliveryDays,
+          },
+        });
+        if (res && res.id) proposal = res;
+      } catch {}
+
+      if (!proposal) {
+        const me = await http<RealMe>("/me").catch(() => null);
+        const uid = me?.id ?? sessionStore.read()?.userId ?? "me";
+        proposal = {
+          id: `prop_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+          jobId: input.jobId,
+          sellerId: uid,
+          bidAmount: input.bidAmount,
+          coverLetter: input.coverLetter,
+          screeningAnswers: input.screeningAnswers || [],
+          attachedImages: input.attachedImages || [],
+          status: "korib_chiqilmoqda",
+          createdAt: new Date().toISOString(),
+          estimatedDeliveryDays: input.estimatedDeliveryDays,
+        };
+      }
+
       if (typeof window !== "undefined") {
         try {
           const jobKey = `bbd_proposals_${input.jobId}`;
           const existingJobProps: Model.Proposal[] = JSON.parse(localStorage.getItem(jobKey) || "[]");
-          localStorage.setItem(jobKey, JSON.stringify([proposal, ...existingJobProps]));
+          const next = [proposal, ...existingJobProps.filter((p) => p.id !== proposal!.id)];
+          localStorage.setItem(jobKey, JSON.stringify(next));
 
           const myKey = "bbd_my_proposals";
           const existingMyProps: Model.Proposal[] = JSON.parse(localStorage.getItem(myKey) || "[]");
-          localStorage.setItem(myKey, JSON.stringify([proposal, ...existingMyProps]));
+          const nextMy = [proposal, ...existingMyProps.filter((p) => p.id !== proposal!.id)];
+          localStorage.setItem(myKey, JSON.stringify(nextMy));
 
           const allJobs = getLocalJobs();
           const job = allJobs.find((j) => j.id === input.jobId);
           if (job) {
             job.proposalsCount = (job.proposalsCount || 0) + 1;
-            localStorage.setItem("bbd_public_jobs", JSON.stringify(allJobs));
+            saveLocalJob(job);
           }
         } catch {}
       }

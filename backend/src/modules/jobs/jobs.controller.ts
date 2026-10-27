@@ -7,6 +7,7 @@ import { AccountStatusGuard } from '@/common/guards/account-status.guard';
 import { Page } from '@/common/pagination/page-query.dto';
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
+import { CreateProposalDto } from './dto/create-proposal.dto';
 import { ListJobsQueryDto } from './dto/list-jobs-query.dto';
 import { JobResponseDto, toJobResponseDto } from './dto/job-response.dto';
 
@@ -34,6 +35,31 @@ export class JobsController {
     const pp = perPage ? Number(perPage) : 50;
     const res = await this.jobs.listMine(user.sub, p, pp);
     return { ...res, items: res.items.map(toJobResponseDto) };
+  }
+
+  @ApiBearerAuth()
+  @Get('proposals/mine')
+  @UseGuards(AccountStatusGuard)
+  async listMyProposals(@CurrentUser() user: AccessTokenPayload) {
+    return this.jobs.listMyProposals(user.sub);
+  }
+
+  @Public()
+  @Get(':id/proposals')
+  async listProposals(@Param('id') id: string) {
+    return this.jobs.listProposalsForJob(id);
+  }
+
+  @ApiBearerAuth()
+  @Post(':id/proposals')
+  @HttpCode(200)
+  @UseGuards(AccountStatusGuard)
+  async createProposal(
+    @CurrentUser() user: AccessTokenPayload,
+    @Param('id') id: string,
+    @Body() dto: CreateProposalDto,
+  ) {
+    return this.jobs.createProposal(id, user.sub, dto);
   }
 
   @Public()
